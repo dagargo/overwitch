@@ -1,1 +1,17 @@
-/usr/share/automake-1.16/INSTALL
+As with other autotools project, you need to run the following commands.
+
+autoreconf --install
+./configure
+make
+sudo make install
+
+The package dependencies for Debian based distributions are:
+
+    automake
+    libusb-1.0-0-dev
+    libjack-jackd2-dev
+    libsamplerate0-dev
+
+You can easily install them by running "sudo apt install automake libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev".
+
+After installing Overwitch, we could allow it to adjust its own priority to realtime with this command.
