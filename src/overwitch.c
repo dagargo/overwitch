@@ -417,10 +417,8 @@ static void
 overwitch_exit (int signo)
 {
   debug_print (0, "Maximum measured buffer latencies: %.1f ms, %.1f ms\n",
-	       (o2j_latency /
-		(ob.o2j_frame_bytes)) * 1000.0 / OB_SAMPLE_RATE,
-	       (j2o_latency / (ob.j2o_frame_bytes)) * 1000.0 /
-	       OB_SAMPLE_RATE);
+	       o2j_latency * 1000.0 / (ob.o2j_frame_bytes * OB_SAMPLE_RATE),
+	       j2o_latency * 1000.0 / (ob.j2o_frame_bytes * OB_SAMPLE_RATE));
 
   overbridge_set_status (&ob, OB_STATUS_STOP);
 }

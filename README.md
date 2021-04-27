@@ -25,7 +25,7 @@ The package dependencies for Debian based distributions are:
 
 You can easily install them by running `sudo apt install automake libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev`.
 
-After installing Overwitch, we could allow it to adjust its own priority to realtime with this command.
+After installing Overwitch, we could let it adjust its own priority to realtime with this command.
 
 ```
 $ sudo setcap 'cap_sys_nice=eip' $(which overwitch)
