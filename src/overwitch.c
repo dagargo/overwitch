@@ -130,17 +130,11 @@ overwitch_buffer_size_cb (jack_nframes_t nframes, void *arg)
   return 0;
 }
 
-int
+static int
 overwitch_thread_xrun_cb (void *arg)
 {
   error_print ("JACK xrun\n");
   return 0;
-}
-
-static void
-overwitch_thread_init_cb (void *arg)
-{
-  set_self_max_priority ();
 }
 
 static long
@@ -480,12 +474,6 @@ overwitch_run ()
       goto cleanup_jack;
     }
 
-  if (jack_set_thread_init_callback (client, overwitch_thread_init_cb, NULL))
-    {
-      ret = EXIT_FAILURE;
-      goto cleanup_jack;
-    }
-
   if (jack_set_xrun_callback (client, overwitch_thread_xrun_cb, NULL))
     {
       ret = EXIT_FAILURE;
@@ -558,8 +546,6 @@ overwitch_run ()
 
   memset (j2o_buf_in, 0, j2o_buf_max_size);
   memset (o2j_buf_in, 0, o2j_buf_max_size);
-
-  set_self_max_priority ();
 
   if (overbridge_run (&ob, client))
     {

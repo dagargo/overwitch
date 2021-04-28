@@ -93,20 +93,6 @@ get_nth_usb_out_blk (struct overbridge *ob, int n)
   return (struct overbridge_usb_blk *) blk;
 }
 
-// http://man7.org/linux/man-pages/man3/pthread_setschedparam.3.html
-void
-set_self_max_priority ()
-{
-  struct sched_param sched;
-  memset (&sched, 0, sizeof (sched));
-  sched.sched_priority = sched_get_priority_max (SCHED_FIFO);
-  int r = pthread_setschedparam (pthread_self (), SCHED_FIFO, &sched);
-  if (r != 0)
-    {
-      error_print ("Could not set real time priority to this thread\n");
-    }
-}
-
 static int
 prepare_transfers (struct overbridge *ob)
 {
@@ -439,7 +425,6 @@ run (void *data)
   struct overbridge *ob = data;
 
   debug_print (1, "Preparing device...\n");
-  set_self_max_priority ();
   //We don't want our counter to restart before the Overwitch one.
   jt_cb_counter_init_ext (&ob->counter, ob->jclient, OB_COUNTER_FRAMES * 100,
 			  OB_FRAMES_PER_TRANSFER);
