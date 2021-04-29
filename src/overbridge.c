@@ -240,9 +240,7 @@ set_usb_output_data_blks (struct overbridge *ob)
     {
       if (rsj2o >= ob->j2o_buf_size)
 	{
-	  jack_ringbuffer_read_advance (ob->j2o_rb, rsj2o - ob->j2o_buf_size);
-	  jack_ringbuffer_read (ob->j2o_rb, (void *) ob->j2o_buf,
-				ob->j2o_buf_size);
+	  jack_ringbuffer_read_advance (ob->j2o_rb, rsj2o);
 	  running = 1;
 	}
     }

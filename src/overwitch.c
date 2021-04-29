@@ -205,7 +205,7 @@ overwitch_o2j_reader (void *cb_data, float **data)
     {
       if (rso2j >= o2j_buf_size)
 	{
-	  jack_ringbuffer_read (ob.o2j_rb, (void *) o2j_buf_in, o2j_buf_size);
+	  jack_ringbuffer_read_advance (ob.o2j_rb, rso2j);
 	  frames = bufsize;
 	  running = 1;
 	}
