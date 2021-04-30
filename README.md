@@ -117,11 +117,25 @@ else
 fi
 ```
 
-After starting Ardour, I change its priority and scheduling to 99 and `SCHED_FIFO` and apply the same to `jackd`. All threads in Overwitch are configured in a similar fashion by default, so you do not need to do anything else.
+While using a RT kernel, after starting Ardour, I change the RT priorities of the audio related processes.
 
 ```
-$ sudo chrt -r -p 99 `pidof ardour-5.12.0`
-$ sudo chrt -r -p 99 `pidof jackd`
+sudo chrt -f -p 40 -a $(pidof jackd)
+sudo chrt -f -p 35 -a $(pidof overwitch)
+sudo chrt -f -p 30 -a $(pidof ardour-5.12.0)
+```
+
+I use this RT kernel.
+
+```
+$ uname -v
+#1 SMP PREEMPT_RT Debian 5.10.28-1 (2021-04-09)
+```
+
+With `rtirq-init` package installed I simply let the script reconfigure the priorities of IRQ handling threads.
+
+```
+$ sudo /etc/init.d/rtirq start
 ```
 
 ## Adding devices
