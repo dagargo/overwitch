@@ -521,10 +521,10 @@ overbridge_init (struct overbridge *ob)
       ob->j2o_buf = malloc (ob->j2o_buf_size);
       ob->o2j_buf = malloc (ob->o2j_buf_size);
 
-      ob->j2o_rb = jack_ringbuffer_create (ob->j2o_buf_size * 2);
+      ob->j2o_rb = jack_ringbuffer_create (ob->j2o_buf_size * 4);
       jack_ringbuffer_mlock (ob->j2o_rb);
 
-      ob->o2j_rb = jack_ringbuffer_create (ob->o2j_buf_size * 2);
+      ob->o2j_rb = jack_ringbuffer_create (ob->o2j_buf_size * 4);
       jack_ringbuffer_mlock (ob->o2j_rb);
 
       ob->o2j_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc.outputs;
