@@ -234,7 +234,6 @@ set_usb_output_data_blks (struct overbridge *ob)
 		 OB_FRAMES_PER_TRANSFER);
 	    }
 	}
-
     }
   else
     {
