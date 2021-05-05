@@ -247,7 +247,7 @@ overwitch_j2o ()
   int inc;
   int frames;
   size_t bytes;
-  size_t rsj2o;
+  size_t wsj2o;
   static int waiting = 1;
   static double j2o_acc = .0;
 
@@ -275,14 +275,14 @@ overwitch_j2o ()
     }
 
   bytes = gen_frames * ob.j2o_frame_bytes;
-  rsj2o = jack_ringbuffer_read_space (ob.j2o_rb);
-  if (rsj2o < ob.j2o_buf_size * 2 - bytes)
+  wsj2o = jack_ringbuffer_write_space (ob.j2o_rb);
+  if (bytes <= wsj2o)
     {
       jack_ringbuffer_write (ob.j2o_rb, (void *) j2o_buf_out, bytes);
     }
   else
     {
-      error_print ("j2o: Skipping writing at %ld...\n", rsj2o);
+      error_print ("j2o: Ring buffer overflow\n");
     }
 }
 

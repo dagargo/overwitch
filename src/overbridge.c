@@ -120,7 +120,7 @@ static void
 set_usb_input_data_blks (struct overbridge *ob)
 {
   struct overbridge_usb_blk *blk;
-  size_t rso2j;
+  size_t wso2j;
   int32_t hv;
   jack_default_audio_sample_t *f;
   static int calibrating = 1;
@@ -160,15 +160,15 @@ set_usb_input_data_blks (struct overbridge *ob)
 	}
     }
 
-  rso2j = jack_ringbuffer_read_space (ob->o2j_rb);
-  if (rso2j < ob->o2j_buf_size)
+  wso2j = jack_ringbuffer_write_space (ob->o2j_rb);
+  if (ob->o2j_buf_size <= wso2j)
     {
       jack_ringbuffer_write (ob->o2j_rb, (void *) ob->o2j_buf,
 			     ob->o2j_buf_size);
     }
   else
     {
-      error_print ("o2j: Skipping writing at %ld...\n", rso2j);
+      error_print ("o2j: Ring buffer overflow\n");
     }
 }
 
