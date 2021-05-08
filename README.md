@@ -4,6 +4,8 @@ Overwitch is an Overbridge device client for JACK (JACK Audio Connection Kit).
 
 This project is based on the Overbridge USB reverse engineering done by Stefan Rehm in [dtdump](https://github.com/droelfdroelf/dtdump).
 
+The papers [Controlling adaptive resampling](https://kokkinizita.linuxaudio.org/papers/adapt-resamp.pdf) and [Using a DLL to filter time](https://kokkinizita.linuxaudio.org/papers/usingdll.pdf) by Fons Andriansen have been very helpful and inspiring, as well as his own implementation done in the zita resamplers found in the [alsa tools](https://github.com/jackaudio/tools) project.
+
 At the moment, it provides 12 input ports and 2 output ports for Elektron Digitakt and Digitone but no MIDI support. Overwitch works only with the first found device at the moment, so only a single Overwitch instance can be run for now.
 
 ## Installation
@@ -23,13 +25,7 @@ The package dependencies for Debian based distributions are:
 - libjack-jackd2-dev
 - libsamplerate0-dev
 
-You can easily install them by running `sudo apt install automake libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev`.
-
-After installing Overwitch, we could let it adjust its own priority to realtime with this command.
-
-```
-$ sudo setcap 'cap_sys_nice=eip' $(which overwitch)
-```
+You can easily install them by running `sudo apt install automake libusb-1.0-0-dev libjack1.5-jackd2-dev libsamplerate0-dev`.
 
 ## Usage
 
@@ -37,41 +33,23 @@ Simply, run `overwitch`. Press `Ctrl+C` to stop. You'll see an oputput like this
 
 ```
 $ overwitch
-DEBUG:overbridge.c:348:(overbridge_init_priv): Device: Digitakt
-DEBUG:overwitch.c:100:(overwitch_sample_rate_cb): JACK sample rate: 48000
-DEBUG:overbridge.c:463:(overbridge_run): Starting device...
-DEBUG:overwitch.c:122:(overwitch_buffer_size_cb): JACK buffer size: 64
-DEBUG:overbridge.c:433:(run): Calibrating device...
-DEBUG:overwitch.c:397:(overwitch_cal_cb): Calibration value: 0.999885
-DEBUG:overbridge.c:438:(run): Calibration finished
-DEBUG:overbridge.c:445:(run): Running device...
+DEBUG:overbridge.c:337:(overbridge_init_priv): Device: Digitakt
+DEBUG:overwitch.c:102:(overwitch_sample_rate_cb): JACK sample rate: 48000.000000
+DEBUG:overbridge.c:449:(overbridge_run): Starting device...
+DEBUG:overwitch.c:130:(overwitch_buffer_size_cb): JACK buffer size: 32
+DEBUG:overbridge.c:431:(run): Running device...
 ^C
 DEBUG:overwitch.c:423:(overwitch_exit): Maximum measured buffer latencies: 5.3 ms, 5.4 ms
 DEBUG:overwitch.c:590:(overwitch_run): Exiting...
 ```
 
-Overwitch needs to calibrate itself, which takes up to one minute. So you'll hear nothing until you see the running device message.
-The reason we need to perform some calibration is to keep latency under control at startup.
-
-You can skip this calibration if you use the calibration value above like this.
-
-```
-$ overwitch -r 0.999885
-DEBUG:overbridge.c:348:(overbridge_init_priv): Device: Digitakt
-DEBUG:overwitch.c:100:(overwitch_sample_rate_cb): JACK sample rate: 48000
-DEBUG:overbridge.c:463:(overbridge_run): Starting device...
-DEBUG:overwitch.c:122:(overwitch_buffer_size_cb): JACK buffer size: 64
-DEBUG:overbridge.c:445:(run): Running device...
-[...]
-```
-
-The calibration value depends on your setup, your audio interface, your sampling rate and your Overbridge device so use only the value you got from the calibration mode. Remember to run Overwitch in calibration mode every time you change anything on your setup.
+It takes around 30 seconds to self-tune. To limit latency to the lowest possible value, audio is not sent through during the first 20 seconds.
 
 ## Latency
 
 Device to JACK latency is different from JACK to device one. Here, we are referring to device to JACK latency, which is the multitrack recording latency.
 
-The minimum theoretical latency is the device frames (168 frames, 3.5 ms) plus the JACK buffer frames. Thus, the minimum theoretical latency is 4.8 ms for 64 frames buffer. Notice that some additional buffer frames are used in the resamplers but it is unknown how many.
+The minimum theoretical latency is the device frames (168 frames, 3.5 ms) plus the JACK buffer frames. Thus, the minimum theoretical latency is 4.8 ms for 64 frames buffer. Notice that some additional buffer frames are used in the resamplers but it is unknown how many. In practice, this latencies is below 6 ms.
 
 ## Tuning
 
@@ -117,32 +95,29 @@ else
 fi
 ```
 
-While using a RT kernel, after starting Ardour, I change the RT priorities of the audio related processes.
+While using a RT kernel, with `rtirq-init` package installed I simply let the script reconfigure the priorities of IRQ handling threads. After, starting Ardour, I change the RT priorities of the audio related processes.
 
 ```
-sudo chrt -f -p 40 -a $(pidof jackd)
-sudo chrt -f -p 35 -a $(pidof overwitch)
-sudo chrt -f -p 30 -a $(pidof ardour-5.12.0)
+$ sudo /etc/init.d/rtirq start
+$ sudo chrt -f -p 40 -a $(pidof jackd)
+$ sudo chrt -f -p 35 -a $(pidof overwitch)
+$ sudo chrt -f -p 30 -a $(pidof ardour-5.12.0)
 ```
 
-I use this RT kernel.
+Currently I'm using this RT kernel.
 
 ```
 $ uname -v
 #1 SMP PREEMPT_RT Debian 5.10.28-1 (2021-04-09)
 ```
 
-With `rtirq-init` package installed I simply let the script reconfigure the priorities of IRQ handling threads.
-
-```
-$ sudo /etc/init.d/rtirq start
-```
-
 ## Adding devices
 
 Hopefully, new devices could be easily added in the `overbridge.c` file. However, since Overwitch works only with the first found device at the moment, if you have several devices, connect only the one that you want to use for now.
 
-To define a new device, just add a new struct like this and add the new constant to the array. USB PIDs are already defined there. Try to use the same names as in the device and capitalize the first letter.
+To define a new device, just add a new struct like this and add the new constant to the array. USB PIDs are already defined there. Try to use the same names as in the device and capitalize the first letter or use acronyms.
+
+For instance, if you are adding the Analog Rytm MKII, you could do it like this. Naming style might subject to change.
 
 ```
 static const struct overbridge_device_desc ARMK2_DESC = {
@@ -152,8 +127,8 @@ static const struct overbridge_device_desc ARMK2_DESC = {
   .outputs = 12,
   .input_track_names = {"Output L", "Output R"},
   .output_track_names =
-    {"Master L", "Master R", "Track 1", "Track 2", "Track 3", "Track 4",
-     "Track 5", "Track 6", "Track 7", "Track 8", "Input L", "Input R"}
+    {"Master L", "Master R", "BD", "SD", "RS-CP",
+     "BT", "LT", "MT-HT", "CH-OH", "CY-CB", "Input L", "Input R"}
 };
 
 static const struct overbridge_device_desc OB_DEVICE_DESCS[] = {

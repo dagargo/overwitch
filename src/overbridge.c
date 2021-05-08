@@ -123,26 +123,18 @@ set_usb_input_data_blks (struct overbridge *ob)
   size_t wso2j;
   int32_t hv;
   jack_default_audio_sample_t *f;
-  static int calibrating = 1;
-  static int waiting = 1;
+  double e;
+  int startup;
 
+  e = jack_get_time () * 1.0e-6 - ob->i1.time;
   pthread_spin_lock (&ob->lock);
-  jt_cb_counter_inc (&ob->counter);
+  ob->i0.time = ob->i1.time;
+  ob->i1.time += ob->b * e + ob->e2;
+  ob->e2 += ob->c * e;
+  ob->i0.frames = ob->i1.frames;
+  ob->i1.frames += OB_FRAMES_PER_TRANSFER;
+  startup = ob->startup;
   pthread_spin_unlock (&ob->lock);
-
-  if (calibrating && overbridge_get_status (ob) == OB_STATUS_CAL)
-    {
-      return;
-    }
-
-  calibrating = 0;
-
-  if (waiting && !overbridge_is_o2j_reading (ob))
-    {
-      return;
-    }
-
-  waiting = 0;
 
   f = ob->o2j_buf;
   for (int i = 0; i < OB_BLOCKS_PER_TRANSFER; i++)
@@ -160,6 +152,11 @@ set_usb_input_data_blks (struct overbridge *ob)
 	}
     }
 
+  if (startup)
+    {
+      return;
+    }
+
   wso2j = jack_ringbuffer_write_space (ob->o2j_rb);
   if (ob->o2j_buf_size <= wso2j)
     {
@@ -168,7 +165,7 @@ set_usb_input_data_blks (struct overbridge *ob)
     }
   else
     {
-      error_print ("o2j: Ring buffer overflow\n");
+      error_print ("o2j: Buffer overflow. Discarding data...\n");
     }
 }
 
@@ -183,17 +180,6 @@ set_usb_output_data_blks (struct overbridge *ob)
   jack_default_audio_sample_t *f;
   int res;
   static int running = 0;
-  static int calibrating = 1;
-
-  if (calibrating)
-    {
-      if (overbridge_get_status (ob) != OB_STATUS_RUN)
-	{
-	  return;
-	}
-      overbridge_set_j2o_reading (ob, 1);
-      calibrating = 0;
-    }
 
   rsj2o = jack_ringbuffer_read_space (ob->j2o_rb);
   if (running)
@@ -205,8 +191,8 @@ set_usb_output_data_blks (struct overbridge *ob)
 
       if (rsj2o >= ob->j2o_buf_size)
 	{
-	  bytes = ob->j2o_buf_size;
-	  jack_ringbuffer_read (ob->j2o_rb, (void *) ob->j2o_buf, bytes);
+	  jack_ringbuffer_read (ob->j2o_rb, (void *) ob->j2o_buf,
+				ob->j2o_buf_size);
 	}
       else
 	{
@@ -218,7 +204,7 @@ set_usb_output_data_blks (struct overbridge *ob)
 	  jack_ringbuffer_read (ob->j2o_rb, (void *) ob->j2o_buf_res, bytes);
 	  ob->j2o_data.input_frames = frames;
 	  ob->j2o_data.src_ratio = (double) OB_FRAMES_PER_TRANSFER / frames;
-	  //We should NOT use the simple API but since this only happens occasionally and mostly at startup, this has very low impact on audio quality.
+	  //We should NOT use the simple API but since this only happens very occasionally and mostly at startup, this has very low impact on audio quality.
 	  res = src_simple (&ob->j2o_data, SRC_SINC_FASTEST,
 			    ob->device_desc.inputs);
 	  if (res)
@@ -229,7 +215,7 @@ set_usb_output_data_blks (struct overbridge *ob)
 	  else if (ob->j2o_data.output_frames_gen != OB_FRAMES_PER_TRANSFER)
 	    {
 	      error_print
-		("j2o: Unexpected frames with ratio %.16f (output %ld, expected %d)\n",
+		("j2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
 		 ob->j2o_data.src_ratio, ob->j2o_data.output_frames_gen,
 		 OB_FRAMES_PER_TRANSFER);
 	    }
@@ -285,6 +271,7 @@ cb_xfr_out (struct libusb_transfer *xfr)
     {
       error_print ("Error on USB out transfer\n");
     }
+  set_usb_output_data_blks (xfr->user_data);
   // We have to make sure that the out cycle is always started after its callback
   // Race condition on slower systems!
   prepare_cycle_out (xfr->user_data);
@@ -293,7 +280,6 @@ cb_xfr_out (struct libusb_transfer *xfr)
 static void
 prepare_cycle_out (struct overbridge *ob)
 {
-  set_usb_output_data_blks (ob);
   libusb_fill_interrupt_transfer (ob->xfr_out, ob->device,
 				  0x03, (void *) ob->usb_data_out,
 				  ob->usb_data_out_blk_len *
@@ -420,36 +406,35 @@ void *
 run (void *data)
 {
   struct overbridge *ob = data;
+  double w;
+  double dtime;
 
-  debug_print (1, "Preparing device...\n");
-  //We don't want our counter to restart before the Overwitch one.
-  jt_cb_counter_init_ext (&ob->counter, ob->jclient, OB_COUNTER_FRAMES * 100,
-			  OB_FRAMES_PER_TRANSFER);
-  debug_print (1, "Waiting for JACK...\n");
-  overbridge_set_status (ob, OB_STATUS_WAIT);
-  while (overbridge_get_status (ob) == OB_STATUS_WAIT);
+  //TODO: add reference to zita and paper
+  //TODO: constants
+  dtime = OB_FRAMES_PER_TRANSFER / OB_SAMPLE_RATE;
+  w = 2 * M_PI * 0.1 * dtime;
+  ob->b = 1.6 * w;
+  ob->c = w * w;
+
+  //TODO: add this to xrun handler and perhaps clear the buffers. See paper.
+  ob->e2 = dtime;
+  ob->i0.time = jack_get_time () * 1.0e-6;
+  ob->i1.time = ob->i0.time + ob->e2;
+
+  ob->i0.frames = 0;
+  ob->i1.frames = OB_FRAMES_PER_TRANSFER;
+
   prepare_cycle_in (ob);
   prepare_cycle_out (ob);
-  if (overbridge_get_status (ob) == OB_STATUS_CAL)
+
+  overbridge_set_status (ob, OB_STATUS_RUN);
+  debug_print (0, "Running device...\n");
+
+  while (overbridge_get_status (ob) == OB_STATUS_RUN)
     {
-      debug_print (0, "Calibrating device...\n");
-      while (overbridge_get_status (ob) == OB_STATUS_CAL)
-	{
-	  libusb_handle_events_completed (NULL, NULL);
-	}
-      debug_print (0, "Calibration finished\n");
+      libusb_handle_events_completed (NULL, NULL);
     }
-  //Ready
-  if (overbridge_get_status (ob) != OB_STATUS_STOP)
-    {
-      debug_print (1, "Starting device...\n");
-      overbridge_set_status (ob, OB_STATUS_RUN);
-      debug_print (0, "Running device...\n");
-      while (overbridge_get_status (ob) == OB_STATUS_RUN)
-	{
-	  libusb_handle_events_completed (NULL, NULL);
-	}
-    }
+
   return NULL;
 }
 
@@ -459,8 +444,7 @@ overbridge_run (struct overbridge *ob, jack_client_t * jclient)
   int ret;
 
   ob->s_counter = 0;
-  ob->j2o_reading = 0;
-  ob->o2j_reading = 0;
+  ob->startup = 1;
   ob->jclient = jclient;
   debug_print (0, "Starting device...\n");
   ret = pthread_create (&ob->tinfo, NULL, run, ob);
@@ -519,6 +503,8 @@ overbridge_init (struct overbridge *ob)
 	OB_FRAMES_PER_TRANSFER * OB_BYTES_PER_FRAME * ob->device_desc.outputs;
       ob->j2o_buf = malloc (ob->j2o_buf_size);
       ob->o2j_buf = malloc (ob->o2j_buf_size);
+      memset (ob->j2o_buf, 0, ob->j2o_buf_size);
+      memset (ob->o2j_buf, 0, ob->o2j_buf_size);
 
       ob->j2o_rb = jack_ringbuffer_create (ob->j2o_buf_size * 4);
       jack_ringbuffer_mlock (ob->j2o_rb);
@@ -531,6 +517,7 @@ overbridge_init (struct overbridge *ob)
 
       //o2j resampler
       ob->j2o_buf_res = malloc (ob->j2o_buf_size);
+      memset (ob->j2o_buf_res, 0, ob->j2o_buf_size);
       ob->j2o_data.data_in = ob->j2o_buf_res;
       ob->j2o_data.data_out = ob->j2o_buf;
       ob->j2o_data.end_of_input = 1;
@@ -573,41 +560,5 @@ overbridge_set_status (struct overbridge *ob, overbridge_status_t status)
 {
   pthread_spin_lock (&ob->lock);
   ob->status = status;
-  pthread_spin_unlock (&ob->lock);
-}
-
-int
-overbridge_is_j2o_reading (struct overbridge *ob)
-{
-  int j2o_reading;
-  pthread_spin_lock (&ob->lock);
-  j2o_reading = ob->j2o_reading;
-  pthread_spin_unlock (&ob->lock);
-  return j2o_reading;
-}
-
-void
-overbridge_set_j2o_reading (struct overbridge *ob, int reading)
-{
-  pthread_spin_lock (&ob->lock);
-  ob->j2o_reading = reading;
-  pthread_spin_unlock (&ob->lock);
-}
-
-int
-overbridge_is_o2j_reading (struct overbridge *ob)
-{
-  int o2j_reading;
-  pthread_spin_lock (&ob->lock);
-  o2j_reading = ob->o2j_reading;
-  pthread_spin_unlock (&ob->lock);
-  return o2j_reading;
-}
-
-void
-overbridge_set_o2j_reading (struct overbridge *ob, int reading)
-{
-  pthread_spin_lock (&ob->lock);
-  ob->o2j_reading = reading;
   pthread_spin_unlock (&ob->lock);
 }

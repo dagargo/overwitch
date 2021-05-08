@@ -35,14 +35,17 @@
 #include "overbridge.h"
 
 #define JACK_MAX_BUF_SIZE 128
+#define LOG_CONTROL_CYCLES 2000
+//The lower the value, the lower the error at startup. If 1, there will be errors in the converters.
+//Choosing a multiple of 2 might result in no error, which is undesirable.
+#define MAX_READ_FRAMES 5
 
 struct overbridge ob;
 jack_client_t *client;
 jack_port_t **output_ports;
 jack_port_t **input_ports;
 jack_nframes_t bufsize = 0;
-jack_nframes_t samplerate = 0;
-struct jt_cb_counter counter;
+double samplerate;
 size_t o2j_buf_size;
 size_t j2o_buf_size;
 jack_default_audio_sample_t *j2o_buf_in;
@@ -63,27 +66,27 @@ double jsr;
 double obsr;
 double j2o_ratio;
 double o2j_ratio;
-int calibration;
+jack_nframes_t kj;
+double _w0;
+double _w1;
+double _w2;
+int kdel;
+double _z1 = 0.0;
+double _z2 = 0.0;
+double _z3 = 0.0;
+double o2j_ratio_max;
+double o2j_ratio_min;
+int read_frames;
 
-static inline void
-overwitch_print_status (int force)
+//Taken from aken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
+void
+overwitch_set_loop_filter (double bw)
 {
-  size_t rso2j;
-  size_t wsj2o;
-  size_t wso2j;
-  size_t rsj2o;
-
-  if (debug_level || force)
-    {
-      rso2j = jack_ringbuffer_read_space (ob.o2j_rb);
-      wso2j = jack_ringbuffer_write_space (ob.o2j_rb);
-      rsj2o = jack_ringbuffer_read_space (ob.j2o_rb);
-      wsj2o = jack_ringbuffer_write_space (ob.j2o_rb);
-      debug_print (1,
-		   "rbo2j %5ld, %5ld, %5ld; rbj2o %4ld, %4ld, %4ld; OB @ %.2f Hz; JACK @ %.2f Hz; ratios: %f, %f\n",
-		   rso2j, wso2j, o2j_latency, rsj2o, wsj2o, j2o_latency, obsr,
-		   jsr, o2j_ratio, j2o_ratio);
-    }
+  double w = 2.0 * M_PI * 20 * bw * bufsize / samplerate;
+  _w0 = 1.0 - exp (-w);
+  w = 2.0 * M_PI * bw * o2j_ratio / samplerate;
+  _w1 = w * 1.6;
+  _w2 = w * bufsize / 1.6;
 }
 
 int
@@ -95,7 +98,13 @@ overwitch_sample_rate_cb (jack_nframes_t nframes, void *arg)
     }
 
   samplerate = nframes;
-  debug_print (0, "JACK sample rate: %d\n", samplerate);
+  debug_print (0, "JACK sample rate: %.0f\n", samplerate);
+
+  o2j_ratio = samplerate / OB_SAMPLE_RATE;
+  j2o_ratio = 1.0 / o2j_ratio;
+  o2j_ratio_max = 1.05 * o2j_ratio;
+  o2j_ratio_min = 0.95 * o2j_ratio;
+
   return 0;
 }
 
@@ -119,10 +128,12 @@ overwitch_buffer_size_cb (jack_nframes_t nframes, void *arg)
   bufsize = nframes;
   debug_print (0, "JACK buffer size: %d\n", bufsize);
 
-  if (!counter.jack_get_time)
-    {
-      jt_cb_counter_init_jack (&counter, client, OB_COUNTER_FRAMES, bufsize);
-    }
+  kj = bufsize / -o2j_ratio;
+  read_frames = bufsize * j2o_ratio;
+
+  kdel = OB_FRAMES_PER_TRANSFER + 1.5 * (bufsize < 64 ? 64 : bufsize);
+  debug_print (2, "Target delay: %f ms (%d frames)\n",
+	       kdel * 1000 / OB_SAMPLE_RATE, kdel);
 
   o2j_buf_size = bufsize * ob.o2j_frame_bytes;
   j2o_buf_size = bufsize * ob.j2o_frame_bytes;
@@ -176,15 +187,10 @@ overwitch_o2j_reader (void *cb_data, float **data)
 	  o2j_latency = rso2j;
 	}
 
-      if (rso2j >= o2j_buf_size)
+      if (rso2j >= ob.o2j_frame_bytes)
 	{
-	  frames = bufsize;
-	  bytes = o2j_buf_size;
-	  jack_ringbuffer_read (ob.o2j_rb, (void *) o2j_buf_in, bytes);
-	}
-      else if (rso2j >= ob.o2j_frame_bytes)
-	{
-	  frames = (rso2j / ob.o2j_frame_bytes);
+	  frames = rso2j / ob.o2j_frame_bytes;
+	  frames = frames > MAX_READ_FRAMES ? MAX_READ_FRAMES : frames;
 	  bytes = frames * ob.o2j_frame_bytes;
 	  jack_ringbuffer_read (ob.o2j_rb, (void *) o2j_buf_in, bytes);
 	}
@@ -198,7 +204,7 @@ overwitch_o2j_reader (void *cb_data, float **data)
 		      &o2j_buf_in[(last_frames - 1) * ob.device_desc.outputs],
 		      ob.o2j_frame_bytes);
 	    }
-	  frames = 1;
+	  frames = MAX_READ_FRAMES;
 	}
     }
   else
@@ -211,10 +217,11 @@ overwitch_o2j_reader (void *cb_data, float **data)
 	}
       else
 	{
-	  frames = 1;
+	  frames = MAX_READ_FRAMES;
 	}
     }
 
+  read_frames += frames;
   last_frames = frames;
   return frames;
 }
@@ -223,14 +230,8 @@ static inline void
 overwitch_o2j ()
 {
   long gen_frames;
-  static int ready = 1;
 
-  if (ready)
-    {
-      overbridge_set_o2j_reading (&ob, 1);
-      ready = 0;
-    }
-
+  read_frames = 0;
   gen_frames = src_callback_read (o2j_state, o2j_ratio, bufsize, o2j_buf_out);
   if (gen_frames != bufsize)
     {
@@ -248,15 +249,12 @@ overwitch_j2o ()
   int frames;
   size_t bytes;
   size_t wsj2o;
-  static int waiting = 1;
+  int startup;
   static double j2o_acc = .0;
 
-  if (waiting && !overbridge_is_j2o_reading (&ob))
-    {
-      return;
-    }
-
-  waiting = 0;
+  pthread_spin_lock (&ob.lock);
+  startup = ob.startup;
+  pthread_spin_unlock (&ob.lock);
 
   memcpy (&j2o_queue[j2o_queue_len], j2o_aux, j2o_buf_size);
   j2o_queue_len += bufsize;
@@ -270,8 +268,13 @@ overwitch_j2o ()
   if (gen_frames != frames)
     {
       error_print
-	("j2o: Unexpected frames with ratio %.16f (output %ld, expected %d)\n",
+	("j2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
 	 j2o_ratio, gen_frames, frames);
+    }
+
+  if (startup)
+    {
+      return;
     }
 
   bytes = gen_frames * ob.j2o_frame_bytes;
@@ -282,38 +285,89 @@ overwitch_j2o ()
     }
   else
     {
-      error_print ("j2o: Ring buffer overflow\n");
+      error_print ("j2o: Buffer overflow. Discarding data...\n");
+    }
+}
+
+static inline void
+overwitch_compute_ratios ()
+{
+  jack_nframes_t current_frames;
+  jack_time_t current_usecs;
+  jack_time_t next_usecs;
+  float period_usecs;
+  jack_nframes_t ko0;
+  jack_nframes_t ko1;
+  double to0;
+  double to1;
+  double tj;
+  static int i = 0;
+  static double sum_o2j_ratio = 0.0;
+  static double sum_j2o_ratio = 0.0;
+
+  if (jack_get_cycle_times (client,
+			    &current_frames,
+			    &current_usecs, &next_usecs, &period_usecs))
+    {
+      error_print ("Error while getting JACK time\n");
+    }
+
+  pthread_spin_lock (&ob.lock);
+  j2o_latency = ob.j2o_latency;
+  ko0 = ob.i0.frames;
+  to0 = ob.i0.time;
+  ko1 = ob.i1.frames;
+  to1 = ob.i1.time;
+  pthread_spin_unlock (&ob.lock);
+
+  kj += read_frames;
+  tj = current_usecs * 1.0e-6;
+
+  jack_nframes_t n = ko1 - ko0;
+  double dob = n * (tj - to0) / (to1 - to0);
+  n = ko0 - kj;
+  double err = n + dob - kdel;
+
+  _z1 += _w0 * (_w1 * err - _z1);
+  _z2 += _w0 * (_z1 - _z2);
+  _z3 += _w2 * _z2;
+  o2j_ratio = 1.0 - _z2 - _z3;
+  if (o2j_ratio > o2j_ratio_max)
+    {
+      o2j_ratio = o2j_ratio_max;
+    }
+  if (o2j_ratio < o2j_ratio_min)
+    {
+      o2j_ratio = o2j_ratio_min;
+    }
+  j2o_ratio = 1.0 / o2j_ratio;
+
+  i++;
+  sum_o2j_ratio += o2j_ratio;
+  sum_j2o_ratio += j2o_ratio;
+  if (i == LOG_CONTROL_CYCLES)
+    {
+      debug_print (1,
+		   "max. latencies (ms): %.1f, %.1f; avg. ratios: %f, %f\n",
+		   o2j_latency * 1000.0 / (ob.o2j_frame_bytes *
+					   OB_SAMPLE_RATE),
+		   j2o_latency * 1000.0 / (ob.j2o_frame_bytes *
+					   OB_SAMPLE_RATE),
+		   sum_o2j_ratio / LOG_CONTROL_CYCLES,
+		   sum_j2o_ratio / LOG_CONTROL_CYCLES);
+      i = 0;
+      sum_o2j_ratio = 0.0;
+      sum_j2o_ratio = 0.0;
     }
 }
 
 static inline int
-overwitch_run_cb (jack_nframes_t nframes)
+overwitch_process_cb (jack_nframes_t nframes, void *arg)
 {
   jack_default_audio_sample_t *buffer[OB_MAX_TRACKS];
-  int check;
   float *f;
-  static int not_running = 1;
 
-  if (not_running && overbridge_get_status (&ob) != OB_STATUS_RUN)
-    {
-      overbridge_set_status (&ob, OB_STATUS_READY);
-      not_running = 0;
-    }
-
-  pthread_spin_lock (&ob.lock);
-  check = jt_cb_counter_inc (&counter);
-  jsr = counter.estimated_sr;
-  if (check)
-    {
-      obsr = jt_cb_counter_restart (&ob.counter);
-      j2o_latency = ob.j2o_latency;
-
-      o2j_ratio = jsr / obsr;
-      j2o_ratio = obsr / jsr;
-
-      overwitch_print_status (0);
-    }
-  pthread_spin_unlock (&ob.lock);
+  overwitch_compute_ratios ();
 
   //o2j
 
@@ -354,63 +408,10 @@ overwitch_run_cb (jack_nframes_t nframes)
   return 0;
 }
 
-static inline int
-overwitch_cal_cb ()
-{
-  int check;
-  static int skip = 1;
-  static int waiting = 1;
-
-  if (waiting && overbridge_get_status (&ob) == OB_STATUS_WAIT)
-    {
-      overbridge_set_status (&ob, OB_STATUS_CAL);
-      waiting = 0;
-    }
-
-  pthread_spin_lock (&ob.lock);
-  check = jt_cb_counter_inc (&counter);
-  jsr = counter.estimated_sr;
-  if (check)
-    {
-      obsr = jt_cb_counter_restart (&ob.counter);
-      j2o_latency = ob.j2o_latency;
-      if (skip)
-	{
-	  o2j_ratio = jsr / obsr;
-	  j2o_ratio = obsr / jsr;
-
-	  skip--;
-	}
-    }
-  pthread_spin_unlock (&ob.lock);
-
-  if (skip == 0)
-    {
-      debug_print (0, "Calibration value: %f\n", o2j_ratio);
-    }
-
-  return skip;
-}
-
-static int
-overwitch_process_cb (jack_nframes_t nframes, void *arg)
-{
-  if (calibration)
-    {
-      calibration = overwitch_cal_cb ();
-    }
-  else
-    {
-      overwitch_run_cb (nframes);
-    }
-
-  return 0;
-}
-
 static void
 overwitch_exit (int signo)
 {
-  debug_print (0, "Maximum measured buffer latencies: %.1f ms, %.1f ms\n",
+  debug_print (0, "Max. latencies (ms): %.1f, %.1f\n",
 	       o2j_latency * 1000.0 / (ob.o2j_frame_bytes * OB_SAMPLE_RATE),
 	       j2o_latency * 1000.0 / (ob.j2o_frame_bytes * OB_SAMPLE_RATE));
 
@@ -553,8 +554,7 @@ overwitch_run ()
       goto cleanup_jack;
     }
 
-  //Device USB is synchronized to JACK client so we ensure that JACK is started after.
-  sleep (1);
+  overwitch_set_loop_filter (1.0);
 
   if (jack_activate (client))
     {
@@ -562,6 +562,19 @@ overwitch_run ()
       ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
+
+  sleep (5);
+
+  debug_print (2, "Retunning loop filter...\n");
+  overwitch_set_loop_filter (0.05);
+
+  sleep (15);
+
+  debug_print (2, "Ready\n");
+
+  pthread_spin_lock (&ob.lock);
+  ob.startup = 0;
+  pthread_spin_unlock (&ob.lock);
 
   overbridge_wait (&ob);
 
@@ -600,10 +613,9 @@ int
 main (int argc, char *argv[])
 {
   int c;
-  int vflg = 0, rflg = 0, errflg = 0;
-  char *ratio;
+  int vflg = 0, errflg = 0;
 
-  while ((c = getopt (argc, argv, "hvr:")) != -1)
+  while ((c = getopt (argc, argv, "hv")) != -1)
     {
       switch (c)
 	{
@@ -613,10 +625,6 @@ main (int argc, char *argv[])
 	case 'v':
 	  vflg++;
 	  break;
-	case 'r':
-	  rflg++;
-	  ratio = optarg;
-	  break;
 	case '?':
 	  errflg++;
 	}
@@ -625,17 +633,6 @@ main (int argc, char *argv[])
   if (vflg)
     {
       debug_level = vflg;
-    }
-
-  if (rflg)
-    {
-      calibration = 0;
-      o2j_ratio = atof (ratio);
-      j2o_ratio = 1.0 / o2j_ratio;
-    }
-  else
-    {
-      calibration = 1;
     }
 
   if (errflg > 0)

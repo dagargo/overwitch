@@ -152,15 +152,13 @@
 #include "stdint.h"
 #include "utils.h"
 
-#define OB_SAMPLE_RATE 48000
+#define OB_SAMPLE_RATE 48000.0
 #define OB_BLOCKS_PER_TRANSFER 24
 #define OB_FRAMES_PER_BLOCK 7
 #define OB_FRAMES_PER_TRANSFER (OB_FRAMES_PER_BLOCK * OB_BLOCKS_PER_TRANSFER)
 #define OB_BYTES_PER_FRAME sizeof(jack_default_audio_sample_t)
 #define OB_PADDING_SIZE 28
 #define OB_MAX_TRACKS 12
-// With this value looks like ratio mesurements have 5 decimal places precision.
-#define OB_COUNTER_FRAMES (OB_FRAMES_PER_TRANSFER * 128 * 50)
 
 struct overbridge_usb_blk
 {
@@ -186,9 +184,6 @@ typedef enum
 typedef enum
 {
   OB_STATUS_STOP = 0,
-  OB_STATUS_WAIT,
-  OB_STATUS_CAL,
-  OB_STATUS_READY,
   OB_STATUS_RUN
 } overbridge_status_t;
 
@@ -210,11 +205,15 @@ struct overbridge
   pthread_t tinfo;
   uint16_t s_counter;
   libusb_device_handle *device;
-  struct jt_cb_counter counter;
   struct overbridge_device_desc device_desc;
   jack_client_t *jclient;
-  int j2o_reading;
-  int o2j_reading;
+  struct instant i0;
+  struct instant i1;
+  //TODO: create struct for LP filter
+  double e2;
+  double b;
+  double c;
+  int startup;
   struct libusb_transfer *xfr_in;
   struct libusb_transfer *xfr_out;
   char *usb_data_in;

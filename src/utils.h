@@ -26,25 +26,9 @@
 
 extern int debug_level;
 
-//JACK time callback counter
-struct jt_cb_counter
+struct instant
 {
-  int counter;
-  int iters;
-  size_t frames_per_iter;
-  jack_time_t start_t;
-  jack_time_t last_t;
-  double estimated_sr;
-  const jack_client_t *jclient;
-  void (*jack_get_time) (const jack_client_t *, jack_time_t *);
+  double time;
+  //TODO: prevent overflow (32 bits value) ??????????????
+  jack_nframes_t frames;
 };
-
-int jt_cb_counter_inc (struct jt_cb_counter *);
-
-double jt_cb_counter_restart (struct jt_cb_counter *);
-
-void jt_cb_counter_init_jack (struct jt_cb_counter *, const jack_client_t *,
-			      size_t, size_t);
-
-void jt_cb_counter_init_ext (struct jt_cb_counter *, const jack_client_t *,
-			     size_t, size_t);
