@@ -249,11 +249,11 @@ overwitch_j2o ()
   int frames;
   size_t bytes;
   size_t wsj2o;
-  int startup;
+  overbridge_status_t status;
   static double j2o_acc = .0;
 
   pthread_spin_lock (&ob.lock);
-  startup = ob.startup;
+  status = ob.status;
   pthread_spin_unlock (&ob.lock);
 
   memcpy (&j2o_queue[j2o_queue_len], j2o_aux, j2o_buf_size);
@@ -272,7 +272,7 @@ overwitch_j2o ()
 	 j2o_ratio, gen_frames, frames);
     }
 
-  if (startup)
+  if (status < OB_STATUS_RUN)
     {
       return;
     }
@@ -573,7 +573,7 @@ overwitch_run ()
   debug_print (2, "Ready\n");
 
   pthread_spin_lock (&ob.lock);
-  ob.startup = 0;
+  ob.status = OB_STATUS_RUN;
   pthread_spin_unlock (&ob.lock);
 
   overbridge_wait (&ob);

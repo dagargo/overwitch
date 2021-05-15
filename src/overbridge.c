@@ -124,7 +124,7 @@ set_usb_input_data_blks (struct overbridge *ob)
   int32_t hv;
   jack_default_audio_sample_t *f;
   double e;
-  int startup;
+  overbridge_status_t status;
 
   e = jack_get_time () * 1.0e-6 - ob->i1.time;
   pthread_spin_lock (&ob->lock);
@@ -133,7 +133,7 @@ set_usb_input_data_blks (struct overbridge *ob)
   ob->e2 += ob->c * e;
   ob->i0.frames = ob->i1.frames;
   ob->i1.frames += OB_FRAMES_PER_TRANSFER;
-  startup = ob->startup;
+  status = ob->status;
   pthread_spin_unlock (&ob->lock);
 
   f = ob->o2j_buf;
@@ -152,7 +152,7 @@ set_usb_input_data_blks (struct overbridge *ob)
 	}
     }
 
-  if (startup)
+  if (status < OB_STATUS_RUN)
     {
       return;
     }
@@ -427,10 +427,9 @@ run (void *data)
   prepare_cycle_in (ob);
   prepare_cycle_out (ob);
 
-  overbridge_set_status (ob, OB_STATUS_RUN);
   debug_print (0, "Running device...\n");
 
-  while (overbridge_get_status (ob) == OB_STATUS_RUN)
+  while (overbridge_get_status (ob) >= OB_STATUS_STARTUP)
     {
       libusb_handle_events_completed (NULL, NULL);
     }
@@ -444,7 +443,7 @@ overbridge_run (struct overbridge *ob, jack_client_t * jclient)
   int ret;
 
   ob->s_counter = 0;
-  ob->startup = 1;
+  ob->status = OB_STATUS_STARTUP;
   ob->jclient = jclient;
   debug_print (0, "Starting device...\n");
   ret = pthread_create (&ob->tinfo, NULL, run, ob);

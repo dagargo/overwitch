@@ -184,6 +184,7 @@ typedef enum
 typedef enum
 {
   OB_STATUS_STOP = 0,
+  OB_STATUS_STARTUP,
   OB_STATUS_RUN
 } overbridge_status_t;
 
@@ -213,7 +214,6 @@ struct overbridge
   double e2;
   double b;
   double c;
-  int startup;
   struct libusb_transfer *xfr_in;
   struct libusb_transfer *xfr_out;
   char *usb_data_in;
