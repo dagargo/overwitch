@@ -409,8 +409,7 @@ run (void *data)
   double w;
   double dtime;
 
-  //TODO: add reference to zita and paper
-  //TODO: constants
+  //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc.
   dtime = OB_FRAMES_PER_TRANSFER / OB_SAMPLE_RATE;
   w = 2 * M_PI * 0.1 * dtime;
   ob->b = 1.6 * w;

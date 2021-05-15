@@ -34,22 +34,22 @@ Simply, run `overwitch`. Press `Ctrl+C` to stop. You'll see an oputput like this
 ```
 $ overwitch
 DEBUG:overbridge.c:337:(overbridge_init_priv): Device: Digitakt
-DEBUG:overwitch.c:102:(overwitch_sample_rate_cb): JACK sample rate: 48000.000000
+DEBUG:overwitch.c:102:(overwitch_sample_rate_cb): JACK sample rate: 48000
 DEBUG:overbridge.c:449:(overbridge_run): Starting device...
 DEBUG:overwitch.c:130:(overwitch_buffer_size_cb): JACK buffer size: 32
 DEBUG:overbridge.c:431:(run): Running device...
 ^C
-DEBUG:overwitch.c:423:(overwitch_exit): Maximum measured buffer latencies: 5.3 ms, 5.4 ms
+DEBUG:overwitch.c:452:(overwitch_exit): Max. latencies (ms): 4.8, 4.7
 DEBUG:overwitch.c:590:(overwitch_run): Exiting...
 ```
 
-It takes around 30 seconds to self-tune. To limit latency to the lowest possible value, audio is not sent through during the first 20 seconds.
+To limit latency to the lowest possible value, audio is not sent through during the first seconds.
 
 ## Latency
 
-Device to JACK latency is different from JACK to device one. Here, we are referring to device to JACK latency, which is the multitrack recording latency.
+Device to JACK latency is different from JACK to device latency though they are very close.
 
-The minimum theoretical latency is the device frames (168 frames, 3.5 ms) plus the JACK buffer frames. Thus, the minimum theoretical latency is 4.8 ms for 64 frames buffer. Notice that some additional buffer frames are used in the resamplers but it is unknown how many. In practice, this latencies is below 6 ms.
+The minimum theoretical latency is the device frames (168 frames, 3.5 ms) plus the JACK buffer frames. Thus, the minimum theoretical latency is 4.8 ms for 64 frames buffer. Notice that some additional buffer frames are used in the resamplers but it is unknown how many. In practice, both latencies are below 6 ms in this scenario and below 5 ms if using 32 frames.
 
 ## Tuning
 
@@ -111,9 +111,13 @@ $ uname -v
 #1 SMP PREEMPT_RT Debian 5.10.28-1 (2021-04-09)
 ```
 
+With this configuration I get no JACK xruns with 64 frames buffer (2 periods) and occasional xruns with 32 frames buffer (3 periods) with network enabled and under normal usage conditions.
+
+Although you can run Overwitch with verbose output this is **not recommended** unless you are debugging the application.
+
 ## Adding devices
 
-Hopefully, new devices could be easily added in the `overbridge.c` file. However, since Overwitch works only with the first found device at the moment, if you have several devices, connect only the one that you want to use for now.
+Hopefully, Overbridge 2 devices could be easily added in the `overbridge.c` file. However, since Overwitch works only with the first found device at the moment, if you have several devices, connect only the one that you want to use for now.
 
 To define a new device, just add a new struct like this and add the new constant to the array. USB PIDs are already defined there. Try to use the same names as in the device and capitalize the first letter or use acronyms.
 
@@ -135,3 +139,5 @@ static const struct overbridge_device_desc OB_DEVICE_DESCS[] = {
   DIGITAKT_DESC, DIGITONE_DESC, ARMK2_DESC
 };
 ```
+
+It is unknown if Overbridge 1 devices will work.

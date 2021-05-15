@@ -35,7 +35,6 @@
 #include "overbridge.h"
 
 #define JACK_MAX_BUF_SIZE 128
-#define LOG_CONTROL_CYCLES 2000
 //The lower the value, the lower the error at startup. If 1, there will be errors in the converters.
 //Choosing a multiple of 2 might result in no error, which is undesirable.
 #define MAX_READ_FRAMES 5
@@ -77,11 +76,12 @@ double _z3 = 0.0;
 double o2j_ratio_max;
 double o2j_ratio_min;
 int read_frames;
+int log_control_cycles;
 
-//Taken from aken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 void
 overwitch_set_loop_filter (double bw)
 {
+  //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
   double w = 2.0 * M_PI * 20 * bw * bufsize / samplerate;
   _w0 = 1.0 - exp (-w);
   w = 2.0 * M_PI * bw * o2j_ratio / samplerate;
@@ -131,9 +131,11 @@ overwitch_buffer_size_cb (jack_nframes_t nframes, void *arg)
   kj = bufsize / -o2j_ratio;
   read_frames = bufsize * j2o_ratio;
 
-  kdel = OB_FRAMES_PER_TRANSFER + 1.5 * (bufsize < 64 ? 64 : bufsize);
+  kdel = OB_FRAMES_PER_TRANSFER + 1.5 * bufsize;
   debug_print (2, "Target delay: %f ms (%d frames)\n",
 	       kdel * 1000 / OB_SAMPLE_RATE, kdel);
+
+  log_control_cycles = 2 * samplerate / bufsize;
 
   o2j_buf_size = bufsize * ob.o2j_frame_bytes;
   j2o_buf_size = bufsize * ob.j2o_frame_bytes;
@@ -301,9 +303,11 @@ overwitch_compute_ratios ()
   double to0;
   double to1;
   double tj;
+  overbridge_status_t status;
   static int i = 0;
   static double sum_o2j_ratio = 0.0;
   static double sum_j2o_ratio = 0.0;
+  static double last_o2j_ratio = 0.0;
 
   if (jack_get_cycle_times (client,
 			    &current_frames,
@@ -318,8 +322,10 @@ overwitch_compute_ratios ()
   to0 = ob.i0.time;
   ko1 = ob.i1.frames;
   to1 = ob.i1.time;
+  status = ob.status;
   pthread_spin_unlock (&ob.lock);
 
+  //The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
   kj += read_frames;
   tj = current_usecs * 1.0e-6;
 
@@ -345,7 +351,7 @@ overwitch_compute_ratios ()
   i++;
   sum_o2j_ratio += o2j_ratio;
   sum_j2o_ratio += j2o_ratio;
-  if (i == LOG_CONTROL_CYCLES)
+  if (i == log_control_cycles)
     {
       debug_print (1,
 		   "max. latencies (ms): %.1f, %.1f; avg. ratios: %f, %f\n",
@@ -353,11 +359,44 @@ overwitch_compute_ratios ()
 					   OB_SAMPLE_RATE),
 		   j2o_latency * 1000.0 / (ob.j2o_frame_bytes *
 					   OB_SAMPLE_RATE),
-		   sum_o2j_ratio / LOG_CONTROL_CYCLES,
-		   sum_j2o_ratio / LOG_CONTROL_CYCLES);
+		   sum_o2j_ratio / log_control_cycles,
+		   sum_j2o_ratio / log_control_cycles);
+
       i = 0;
       sum_o2j_ratio = 0.0;
       sum_j2o_ratio = 0.0;
+
+      if (status == OB_STATUS_STARTUP)
+	{
+	  debug_print (2, "Retunning loop filter...\n");
+	  overwitch_set_loop_filter (0.05);
+
+	  //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
+	  int n = (int) (floor (err + 0.5));
+	  kj += n;
+	  err -= n;
+
+	  pthread_spin_lock (&ob.lock);
+	  ob.status = OB_STATUS_TUNE;
+	  pthread_spin_unlock (&ob.lock);
+
+	  last_o2j_ratio = o2j_ratio;
+
+	  return;
+	}
+    }
+
+  if (status == OB_STATUS_TUNE
+      && abs (last_o2j_ratio - o2j_ratio) < 0.0000001)
+    {
+      pthread_spin_lock (&ob.lock);
+      ob.status = OB_STATUS_RUN;
+      pthread_spin_unlock (&ob.lock);
+    }
+
+  if (status < OB_STATUS_RUN)
+    {
+      last_o2j_ratio = o2j_ratio;
     }
 }
 
@@ -562,19 +601,6 @@ overwitch_run ()
       ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
-
-  sleep (5);
-
-  debug_print (2, "Retunning loop filter...\n");
-  overwitch_set_loop_filter (0.05);
-
-  sleep (15);
-
-  debug_print (2, "Ready\n");
-
-  pthread_spin_lock (&ob.lock);
-  ob.status = OB_STATUS_RUN;
-  pthread_spin_unlock (&ob.lock);
 
   overbridge_wait (&ob);
 

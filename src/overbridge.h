@@ -185,6 +185,7 @@ typedef enum
 {
   OB_STATUS_STOP = 0,
   OB_STATUS_STARTUP,
+  OB_STATUS_TUNE,
   OB_STATUS_RUN
 } overbridge_status_t;
 
@@ -210,7 +211,6 @@ struct overbridge
   jack_client_t *jclient;
   struct instant i0;
   struct instant i1;
-  //TODO: create struct for LP filter
   double e2;
   double b;
   double c;

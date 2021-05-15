@@ -29,6 +29,5 @@ extern int debug_level;
 struct instant
 {
   double time;
-  //TODO: prevent overflow (32 bits value) ??????????????
   jack_nframes_t frames;
 };
