@@ -148,8 +148,6 @@
 #include <jack/ringbuffer.h>
 #include <samplerate.h>
 #include <pthread.h>
-#include "stdbool.h"
-#include "stdint.h"
 #include "utils.h"
 
 #define OB_SAMPLE_RATE 48000.0

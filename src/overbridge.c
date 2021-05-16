@@ -27,10 +27,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
-#include <unistd.h>
 #include <math.h>
 
 #define ELEKTRON_VID 0x1935

@@ -25,7 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
-#include <limits.h>
 #include <arpa/inet.h>
 #include <math.h>
 #include <jack/intclient.h>
