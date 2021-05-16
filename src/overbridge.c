@@ -69,8 +69,30 @@ static const struct overbridge_device_desc DIGITONE_DESC = {
      "Input L", "Input R"}
 };
 
+static const struct overbridge_device_desc AFMK2_DESC = {
+  .pid = AFMK2_PID,
+  .name = "Analog Four MKII",
+  .inputs = 2,
+  .outputs = 8,
+  .input_track_names = {"Output L", "Output R"},
+  .output_track_names =
+    {"Master L", "Master R", "Track 1", "Track 2", "Track 3",
+     "Track 4", "Input L", "Input R"}
+};
+
+static const struct overbridge_device_desc ARMK2_DESC = {
+  .pid = ARMK2_PID,
+  .name = "Analog Rytm MKII",
+  .inputs = 2,
+  .outputs = 12,
+  .input_track_names = {"Output L", "Output R"},
+  .output_track_names =
+    {"Master L", "Master R", "BD", "SD", "RS-CP",
+     "BT", "LT", "MT-HT", "CH-OH", "CY-CB", "Input L", "Input R"}
+};
+
 static const struct overbridge_device_desc OB_DEVICE_DESCS[] = {
-  DIGITAKT_DESC, DIGITONE_DESC
+  DIGITAKT_DESC, DIGITONE_DESC, AFMK2_DESC, ARMK2_DESC
 };
 
 static const int OB_DEVICE_DESCS_N =
