@@ -515,10 +515,11 @@ overbridge_init (struct overbridge *ob)
 	  blk->header = htons (0x07ff);
 	}
 
-      ob->j2o_buf_size =
-	OB_FRAMES_PER_TRANSFER * OB_BYTES_PER_FRAME * ob->device_desc.inputs;
-      ob->o2j_buf_size =
-	OB_FRAMES_PER_TRANSFER * OB_BYTES_PER_FRAME * ob->device_desc.outputs;
+      ob->j2o_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc.inputs;
+      ob->o2j_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc.outputs;
+
+      ob->j2o_buf_size = OB_FRAMES_PER_TRANSFER * ob->j2o_frame_bytes;
+      ob->o2j_buf_size = OB_FRAMES_PER_TRANSFER * ob->o2j_frame_bytes;
       ob->j2o_buf = malloc (ob->j2o_buf_size);
       ob->o2j_buf = malloc (ob->o2j_buf_size);
       memset (ob->j2o_buf, 0, ob->j2o_buf_size);
@@ -529,9 +530,6 @@ overbridge_init (struct overbridge *ob)
 
       ob->o2j_rb = jack_ringbuffer_create (ob->o2j_buf_size * 4);
       jack_ringbuffer_mlock (ob->o2j_rb);
-
-      ob->o2j_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc.outputs;
-      ob->j2o_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc.inputs;
 
       //o2j resampler
       ob->j2o_buf_res = malloc (ob->j2o_buf_size);
