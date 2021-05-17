@@ -132,7 +132,7 @@ overwitch_buffer_size_cb (jack_nframes_t nframes, void *arg)
   read_frames = bufsize * j2o_ratio;
 
   kdel = OB_FRAMES_PER_TRANSFER + 1.5 * bufsize;
-  debug_print (2, "Target delay: %f ms (%d frames)\n",
+  debug_print (2, "Target delay: %.1f ms (%d frames)\n",
 	       kdel * 1000 / OB_SAMPLE_RATE, kdel);
 
   log_control_cycles = LOG_TIME * samplerate / bufsize;
