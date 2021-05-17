@@ -363,7 +363,7 @@ overwitch_compute_ratios ()
     }
 
   if (status == OB_STATUS_TUNE
-      && abs (last_o2j_ratio - o2j_ratio) < 0.0000001)
+      && fabs (last_o2j_ratio - o2j_ratio) < 0.0000001)
     {
       debug_print (2, "Running...\n");
 
