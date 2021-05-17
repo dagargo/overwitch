@@ -37,7 +37,7 @@
 //The lower the value, the lower the error at startup. If 1, there will be errors in the converters.
 //Choosing a multiple of 2 might result in no error, which is undesirable.
 #define MAX_READ_FRAMES 5
-#define LOG_TIME 2
+#define LOG_TIME 5
 
 struct overbridge ob;
 jack_client_t *client;
@@ -331,24 +331,10 @@ overwitch_compute_ratios ()
   kj += read_frames;
   tj = current_usecs * 1.0e-6;
 
-  jack_nframes_t n = ko1 - ko0;
-  double dob = n * (tj - to0) / (to1 - to0);
-  n = ko0 - kj;
-  double err = n + dob - kdel;
-
-  _z1 += _w0 * (_w1 * err - _z1);
-  _z2 += _w0 * (_z1 - _z2);
-  _z3 += _w2 * _z2;
-  o2j_ratio = 1.0 - _z2 - _z3;
-  if (o2j_ratio > o2j_ratio_max)
-    {
-      o2j_ratio = o2j_ratio_max;
-    }
-  if (o2j_ratio < o2j_ratio_min)
-    {
-      o2j_ratio = o2j_ratio_min;
-    }
-  j2o_ratio = 1.0 / o2j_ratio;
+  jack_nframes_t frames = ko1 - ko0;
+  double dob = frames * (tj - to0) / (to1 - to0);
+  frames = ko0 - kj;
+  double err = frames + dob - kdel;
 
   if (status == OB_STATUS_BOOT)
     {
@@ -358,6 +344,8 @@ overwitch_compute_ratios ()
       err -= n;
 
       debug_print (2, "Starting up...\n");
+
+      overwitch_set_loop_filter (1.0);
 
       pthread_spin_lock (&ob.lock);
       ob.status = OB_STATUS_STARTUP;
@@ -375,6 +363,20 @@ overwitch_compute_ratios ()
     }
 
   last_o2j_ratio = o2j_ratio;
+
+  _z1 += _w0 * (_w1 * err - _z1);
+  _z2 += _w0 * (_z1 - _z2);
+  _z3 += _w2 * _z2;
+  o2j_ratio = 1.0 - _z2 - _z3;
+  if (o2j_ratio > o2j_ratio_max)
+    {
+      o2j_ratio = o2j_ratio_max;
+    }
+  if (o2j_ratio < o2j_ratio_min)
+    {
+      o2j_ratio = o2j_ratio_min;
+    }
+  j2o_ratio = 1.0 / o2j_ratio;
 
   i++;
   sum_o2j_ratio += o2j_ratio;
@@ -598,8 +600,6 @@ overwitch_run ()
       ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
-
-  overwitch_set_loop_filter (1.0);
 
   if (jack_activate (client))
     {
