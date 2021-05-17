@@ -84,9 +84,9 @@ static const struct overbridge_device_desc ARMK2_DESC = {
   .inputs = 2,
   .outputs = 12,
   .input_track_names = {"Output L", "Output R"},
-  .output_track_names =
-    {"Master L", "Master R", "BD", "SD", "RS-CP",
-     "BT", "LT", "MT-HT", "CH-OH", "CY-CB", "Input L", "Input R"}
+  .output_track_names = {"Master L", "Master R", "BD", "SD", "RS-CP",
+			 "BT", "LT", "MT-HT", "CH-OH", "CY-CB", "Input L",
+			 "Input R"}
 };
 
 static const struct overbridge_device_desc OB_DEVICE_DESCS[] = {
@@ -448,7 +448,7 @@ run (void *data)
 
   debug_print (0, "Running device...\n");
 
-  while (overbridge_get_status (ob) >= OB_STATUS_STARTUP)
+  while (overbridge_get_status (ob) >= OB_STATUS_BOOT)
     {
       libusb_handle_events_completed (NULL, NULL);
     }
@@ -462,7 +462,7 @@ overbridge_run (struct overbridge *ob, jack_client_t * jclient)
   int ret;
 
   ob->s_counter = 0;
-  ob->status = OB_STATUS_STARTUP;
+  ob->status = OB_STATUS_BOOT;
   ob->jclient = jclient;
   debug_print (0, "Starting device...\n");
   ret = pthread_create (&ob->tinfo, NULL, run, ob);

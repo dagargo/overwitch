@@ -37,6 +37,7 @@
 //The lower the value, the lower the error at startup. If 1, there will be errors in the converters.
 //Choosing a multiple of 2 might result in no error, which is undesirable.
 #define MAX_READ_FRAMES 5
+#define LOG_TIME 2
 
 struct overbridge ob;
 jack_client_t *client;
@@ -134,7 +135,7 @@ overwitch_buffer_size_cb (jack_nframes_t nframes, void *arg)
   debug_print (2, "Target delay: %f ms (%d frames)\n",
 	       kdel * 1000 / OB_SAMPLE_RATE, kdel);
 
-  log_control_cycles = 2 * samplerate / bufsize;
+  log_control_cycles = LOG_TIME * samplerate / bufsize;
 
   o2j_buf_size = bufsize * ob.o2j_frame_bytes;
   j2o_buf_size = bufsize * ob.j2o_frame_bytes;
@@ -347,6 +348,32 @@ overwitch_compute_ratios ()
     }
   j2o_ratio = 1.0 / o2j_ratio;
 
+  if (status == OB_STATUS_BOOT)
+    {
+      //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
+      int n = (int) (floor (err + 0.5));
+      kj += n;
+      err -= n;
+
+      debug_print (2, "Starting up...\n");
+
+      pthread_spin_lock (&ob.lock);
+      ob.status = OB_STATUS_STARTUP;
+      pthread_spin_unlock (&ob.lock);
+    }
+
+  if (status == OB_STATUS_TUNE
+      && abs (last_o2j_ratio - o2j_ratio) < 0.0000001)
+    {
+      debug_print (2, "Running...\n");
+
+      pthread_spin_lock (&ob.lock);
+      ob.status = OB_STATUS_RUN;
+      pthread_spin_unlock (&ob.lock);
+    }
+
+  last_o2j_ratio = o2j_ratio;
+
   i++;
   sum_o2j_ratio += o2j_ratio;
   sum_j2o_ratio += j2o_ratio;
@@ -367,35 +394,13 @@ overwitch_compute_ratios ()
 
       if (status == OB_STATUS_STARTUP)
 	{
-	  debug_print (2, "Retunning loop filter...\n");
+	  debug_print (2, "Tunning...\n");
 	  overwitch_set_loop_filter (0.05);
-
-	  //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
-	  int n = (int) (floor (err + 0.5));
-	  kj += n;
-	  err -= n;
 
 	  pthread_spin_lock (&ob.lock);
 	  ob.status = OB_STATUS_TUNE;
 	  pthread_spin_unlock (&ob.lock);
-
-	  last_o2j_ratio = o2j_ratio;
-
-	  return;
 	}
-    }
-
-  if (status == OB_STATUS_TUNE
-      && abs (last_o2j_ratio - o2j_ratio) < 0.0000001)
-    {
-      pthread_spin_lock (&ob.lock);
-      ob.status = OB_STATUS_RUN;
-      pthread_spin_unlock (&ob.lock);
-    }
-
-  if (status < OB_STATUS_RUN)
-    {
-      last_o2j_ratio = o2j_ratio;
     }
 }
 

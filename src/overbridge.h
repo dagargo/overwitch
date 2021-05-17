@@ -182,6 +182,7 @@ typedef enum
 typedef enum
 {
   OB_STATUS_STOP = 0,
+  OB_STATUS_BOOT,
   OB_STATUS_STARTUP,
   OB_STATUS_TUNE,
   OB_STATUS_RUN
