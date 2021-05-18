@@ -160,14 +160,15 @@ set_usb_input_data_blks (struct overbridge *ob)
   for (int i = 0; i < OB_BLOCKS_PER_TRANSFER; i++)
     {
       blk = get_nth_usb_in_blk (ob, i);
+      int pos = 0;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  int s_offset = j * ob->device_desc.outputs;
 	  for (int k = 0; k < ob->device_desc.outputs; k++)
 	    {
-	      hv = ntohl (blk->data[s_offset + k]);
+	      hv = ntohl (blk->data[pos]);
 	      *f = hv / (float) INT_MAX;
 	      f++;
+	      pos++;
 	    }
 	}
     }
@@ -258,14 +259,15 @@ set_usb_output_data_blks (struct overbridge *ob)
       blk = get_nth_usb_out_blk (ob, i);
       ob->s_counter += OB_FRAMES_PER_BLOCK;
       blk->s_counter = htons (ob->s_counter);
+      int pos = 0;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  int s_offset = j * ob->device_desc.inputs;
 	  for (int k = 0; k < ob->device_desc.inputs; k++)
 	    {
 	      hv = htonl (*f * INT_MAX);
-	      blk->data[s_offset + k] = hv;
+	      blk->data[pos] = hv;
 	      f++;
+	      pos++;
 	    }
 	}
     }
