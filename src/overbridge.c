@@ -459,13 +459,12 @@ run (void *data)
 }
 
 int
-overbridge_run (struct overbridge *ob, jack_client_t * jclient)
+overbridge_run (struct overbridge *ob)
 {
   int ret;
 
   ob->s_counter = 0;
   ob->status = OB_STATUS_BOOT;
-  ob->jclient = jclient;
   debug_print (0, "Starting device...\n");
   ret = pthread_create (&ob->tinfo, NULL, run, ob);
   if (ret)

@@ -595,7 +595,7 @@ overwitch_run ()
   memset (j2o_buf_in, 0, j2o_buf_max_size);
   memset (o2j_buf_in, 0, o2j_buf_max_size);
 
-  if (overbridge_run (&ob, client))
+  if (overbridge_run (&ob))
     {
       ret = EXIT_FAILURE;
       goto cleanup_jack;

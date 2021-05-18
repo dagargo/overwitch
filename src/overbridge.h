@@ -207,7 +207,6 @@ struct overbridge
   uint16_t s_counter;
   libusb_device_handle *device;
   struct overbridge_device_desc device_desc;
-  jack_client_t *jclient;
   struct instant i0;
   struct instant i1;
   double e2;
@@ -238,7 +237,7 @@ void set_self_max_priority ();
 
 overbridge_err_t overbridge_init (struct overbridge *);
 
-int overbridge_run (struct overbridge *, jack_client_t *);
+int overbridge_run (struct overbridge *);
 
 void overbridge_destroy (struct overbridge *);
 
