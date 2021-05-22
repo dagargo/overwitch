@@ -358,7 +358,8 @@ overbridge_init_priv (struct overbridge *ob)
   if (ob->device)
     {
       ob->device_desc = OB_DEVICE_DESCS[i];
-      debug_print (0, "Device: %s\n", ob->device_desc.name);
+      printf ("Device: %s (outputs: %d, inputs: %d)\n", ob->device_desc.name,
+	      ob->device_desc.outputs, ob->device_desc.inputs);
     }
   else
     {
@@ -450,8 +451,6 @@ run (void *data)
   prepare_cycle_in (ob);
   prepare_cycle_out (ob);
 
-  debug_print (0, "Running device...\n");
-
   while (overbridge_get_status (ob) >= OB_STATUS_BOOT)
     {
       libusb_handle_events_completed (NULL, NULL);
@@ -467,7 +466,7 @@ overbridge_run (struct overbridge *ob)
 
   ob->s_counter = 0;
   ob->status = OB_STATUS_BOOT;
-  debug_print (0, "Starting device...\n");
+  debug_print (1, "Starting device thread...\n");
   ret = pthread_create (&ob->tinfo, NULL, run, ob);
   if (ret)
     {

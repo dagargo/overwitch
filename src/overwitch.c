@@ -505,7 +505,7 @@ overwitch_run ()
 
   if (status & JackServerStarted)
     {
-      debug_print (0, "JACK server started\n");
+      debug_print (1, "JACK server started\n");
     }
 
   if (status & JackNameNotUnique)
@@ -608,7 +608,7 @@ overwitch_run ()
 
   overbridge_wait (&ob);
 
-  debug_print (0, "Exiting...\n");
+  debug_print (1, "Exiting...\n");
   jack_deactivate (client);
 
 cleanup_jack:
