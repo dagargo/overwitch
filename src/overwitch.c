@@ -87,45 +87,18 @@ overwitch_set_loop_filter (double bw)
   _w2 = w * bufsize / 1.6;
 }
 
-int
-overwitch_sample_rate_cb (jack_nframes_t nframes, void *arg)
+static void
+overwitch_init_sample_rate ()
 {
-  if (samplerate)
-    {
-      return 1;
-    }
-
-  samplerate = nframes;
-  debug_print (0, "JACK sample rate: %.0f\n", samplerate);
-
   o2j_ratio = samplerate / OB_SAMPLE_RATE;
   j2o_ratio = 1.0 / o2j_ratio;
   o2j_ratio_max = 1.05 * o2j_ratio;
   o2j_ratio_min = 0.95 * o2j_ratio;
-
-  return 0;
 }
 
-int
-overwitch_buffer_size_cb (jack_nframes_t nframes, void *arg)
+static void
+overwitch_init_buffer_size ()
 {
-  if (bufsize)
-    {
-      return 1;
-    }
-
-  if (nframes > OB_FRAMES_PER_TRANSFER)
-    {
-      error_print
-	("JACK buffer size is greater than device buffer size (%d > %d)\n",
-	 nframes, OB_FRAMES_PER_TRANSFER);
-      overbridge_set_status (&ob, OB_STATUS_STOP);
-      return 1;
-    }
-
-  bufsize = nframes;
-  debug_print (0, "JACK buffer size: %d\n", bufsize);
-
   kj = bufsize / -o2j_ratio;
   read_frames = bufsize * j2o_ratio;
 
@@ -137,8 +110,6 @@ overwitch_buffer_size_cb (jack_nframes_t nframes, void *arg)
 
   o2j_buf_size = bufsize * ob.o2j_frame_bytes;
   j2o_buf_size = bufsize * ob.j2o_frame_bytes;
-
-  return 0;
 }
 
 static int
@@ -382,7 +353,7 @@ overwitch_compute_ratios ()
   if (i == log_control_cycles)
     {
       debug_print (1,
-		   "max. latencies (ms): %.1f, %.1f; avg. ratios: %f, %f\n",
+		   "Max. latencies (ms): %.1f, %.1f; avg. ratios: %f, %f\n",
 		   o2j_latency * 1000.0 / (ob.o2j_frame_bytes *
 					   OB_SAMPLE_RATE),
 		   j2o_latency * 1000.0 / (ob.j2o_frame_bytes *
@@ -456,9 +427,9 @@ overwitch_process_cb (jack_nframes_t nframes, void *arg)
 static void
 overwitch_exit (int signo)
 {
-  debug_print (0, "Max. latencies (ms): %.1f, %.1f\n",
-	       o2j_latency * 1000.0 / (ob.o2j_frame_bytes * OB_SAMPLE_RATE),
-	       j2o_latency * 1000.0 / (ob.j2o_frame_bytes * OB_SAMPLE_RATE));
+  printf ("Max. latencies (ms): %.1f, %.1f\n",
+	  o2j_latency * 1000.0 / (ob.o2j_frame_bytes * OB_SAMPLE_RATE),
+	  j2o_latency * 1000.0 / (ob.j2o_frame_bytes * OB_SAMPLE_RATE));
 
   overbridge_set_status (&ob, OB_STATUS_STOP);
 }
@@ -526,17 +497,22 @@ overwitch_run ()
       goto cleanup_jack;
     }
 
-  if (jack_set_buffer_size_callback (client, overwitch_buffer_size_cb, NULL))
-    {
-      ret = EXIT_FAILURE;
-      goto cleanup_jack;
-    }
+  samplerate = jack_get_sample_rate (client);
+  printf ("JACK sample rate: %.0f\n", samplerate);
+  overwitch_init_sample_rate ();
 
-  if (jack_set_sample_rate_callback (client, overwitch_sample_rate_cb, NULL))
+  bufsize = jack_get_buffer_size (client);
+  if (bufsize > OB_FRAMES_PER_TRANSFER)
     {
+      error_print
+	("JACK buffer size is greater than device buffer size (%d > %d)\n",
+	 bufsize, OB_FRAMES_PER_TRANSFER);
+      overbridge_set_status (&ob, OB_STATUS_STOP);
       ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
+  printf ("JACK buffer size: %d\n", bufsize);
+  overwitch_init_buffer_size ();
 
   output_ports = malloc (sizeof (jack_port_t *) * ob.device_desc.outputs);
   for (int i = 0; i < ob.device_desc.outputs; i++)
