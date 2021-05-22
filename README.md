@@ -25,7 +25,20 @@ The package dependencies for Debian based distributions are:
 - libjack-jackd2-dev
 - libsamplerate0-dev
 
-You can easily install them by running `sudo apt install automake libusb-1.0-0-dev libjack1.5-jackd2-dev libsamplerate0-dev`.
+You can easily install them by running `sudo apt install automake libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev`.
+
+After, you need to allow user permission to use the devices so create a file in `/etc/udev/rules.d/elektron.rules` with the following content.
+
+```
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1935", MODE="0666"
+SUBSYSTEM=="usb_device", ATTRS{idVendor}=="1935", MODE="0666"
+```
+
+And do not forget to activate these rules.
+
+```
+$ sudo udevadm control --reload-rules && sudo udevadm trigger
+```
 
 ## Usage
 
@@ -123,16 +136,20 @@ To define a new device, just add a new struct like this and add the new constant
 
 For instance, if you are adding the Analog Rytm MKII, you could do it like this. Naming style might subject to change.
 
+Notice that the definition of the device must match the device itself, so outputs and inputs amount must match the ones the device has and must be in the same order. As this struct defines the device, an input is a port the device will read data from and an output is a port the device will write data to.
+
 ```
 static const struct overbridge_device_desc ARMK2_DESC = {
   .pid = ARMK2_PID,
   .name = "Analog Rytm MKII",
-  .inputs = 2,
+  .inputs = 12,
   .outputs = 12,
-  .input_track_names = {"Output L", "Output R"},
-  .output_track_names =
-    {"Master L", "Master R", "BD", "SD", "RS-CP",
-     "BT", "LT", "MT-HT", "CH-OH", "CY-CB", "Input L", "Input R"}
+  .input_track_names =
+    {"Main L", "Main R", "Main FX L", "Main FX R", "BD", "SD", "RS/CP", "BT",
+     "LT", "MT/HT", "CH/OH", "CY/CB"},
+  .output_track_names = {"Main L", "Main R", "BD", "SD", "RS/CP",
+			 "BT", "LT", "MT/HT", "CH/OH", "CY/CB", "Input L",
+			 "Input R"}
 };
 
 static const struct overbridge_device_desc OB_DEVICE_DESCS[] = {
