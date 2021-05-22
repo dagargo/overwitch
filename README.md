@@ -27,7 +27,9 @@ The package dependencies for Debian based distributions are:
 
 You can easily install them by running `sudo apt install automake libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev`.
 
-After, you need to allow user permission to use the devices so create a file in `/etc/udev/rules.d/elektron.rules` with the following content.
+As this will install `jackd2`, you would be asked to configure it to be run with real time priority. Be sure to answer yes. With this, the `audio` group would be able to run processes with real time priority. Be sure to be in the `audio` group too.
+
+After, you need to allow users to use the USB devices. For doing so, create the file `/etc/udev/rules.d/elektron.rules` with the following content. This will allows us to use any device from Elektron.
 
 ```
 SUBSYSTEM=="usb", ATTRS{idVendor}=="1935", MODE="0666"
@@ -42,10 +44,10 @@ $ sudo udevadm control --reload-rules && sudo udevadm trigger
 
 ## Usage
 
-Simply, run `overwitch`. Press `Ctrl+C` to stop. You'll see an oputput like this.
+It is recommended to run `overwitch` with real time priority, so run it like this. Press `Ctrl+C` to stop. You'll see an oputput like this.
 
 ```
-$ overwitch
+$ chrt -f 35 overwitch -v
 DEBUG:overbridge.c:337:(overbridge_init_priv): Device: Digitakt
 DEBUG:overwitch.c:102:(overwitch_sample_rate_cb): JACK sample rate: 48000
 DEBUG:overbridge.c:449:(overbridge_run): Starting device...
@@ -108,23 +110,23 @@ else
 fi
 ```
 
-While using a RT kernel, with `rtirq-init` package installed I simply let the script reconfigure the priorities of IRQ handling threads. After, starting Ardour, I change the RT priorities of the audio related processes.
+With `rtirq-init` package installed I simply let the script reconfigure the priorities of IRQ handling threads. After, I run the audio related processes with real time priorities. This helps a lot to reduce latency and xruns.
 
 ```
 $ sudo /etc/init.d/rtirq start
-$ sudo chrt -f -p 40 -a $(pidof jackd)
-$ sudo chrt -f -p 35 -a $(pidof overwitch)
-$ sudo chrt -f -p 30 -a $(pidof ardour-5.12.0)
+$ chrt -f -p 40 -a $(pidof jackd)
+$ chrt -f -p 35 -a $(pidof overwitch)
+$ chrt -f -p 30 -a $(pidof ardour-5.12.0)
 ```
 
-Currently I'm using this RT kernel.
+Currently I'm using this RT kernel. You don't need an RT kernel but it will help even more to reduce latency and xruns.
 
 ```
 $ uname -v
 #1 SMP PREEMPT_RT Debian 5.10.28-1 (2021-04-09)
 ```
 
-With this configuration I get no JACK xruns with 64 frames buffer (2 periods) and occasional xruns with 32 frames buffer (3 periods) with network enabled and under normal usage conditions.
+With all this configuration I get no JACK xruns with 64 frames buffer (2 periods) and occasional xruns with 32 frames buffer (3 periods) with network enabled and under normal usage conditions.
 
 Although you can run Overwitch with verbose output this is **not recommended** unless you are debugging the application.
 
