@@ -34,8 +34,6 @@
 #include "overbridge.h"
 
 #define JACK_MAX_BUF_SIZE 128
-//The lower the value, the lower the error at startup. If 1, there will be errors in the converters.
-//Choosing a multiple of 2 might result in no error, which is undesirable.
 #define MAX_READ_FRAMES 5
 #define LOG_TIME 5
 
