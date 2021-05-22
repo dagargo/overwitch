@@ -35,6 +35,7 @@
 
 #define JACK_MAX_BUF_SIZE 128
 #define MAX_READ_FRAMES 5
+#define STARTUP_TIME 5
 #define LOG_TIME 5
 
 struct overbridge ob;
@@ -106,7 +107,7 @@ overwitch_init_buffer_size ()
   debug_print (2, "Target delay: %.1f ms (%d frames)\n",
 	       kdel * 1000 / OB_SAMPLE_RATE, kdel);
 
-  log_control_cycles = LOG_TIME * samplerate / bufsize;
+  log_control_cycles = STARTUP_TIME * samplerate / bufsize;
 
   o2j_buf_size = bufsize * ob.o2j_frame_bytes;
   j2o_buf_size = bufsize * ob.j2o_frame_bytes;
@@ -353,13 +354,13 @@ overwitch_compute_ratios ()
   if (i == log_control_cycles)
     {
       debug_print (1,
-		   "Max. latencies (ms): %.1f, %.1f; avg. ratios: %f, %f\n",
+		   "Max. latencies (ms): %.1f, %.1f; avg. ratios: %f, %f; curr. ratios: %f, %f\n",
 		   o2j_latency * 1000.0 / (ob.o2j_frame_bytes *
 					   OB_SAMPLE_RATE),
 		   j2o_latency * 1000.0 / (ob.j2o_frame_bytes *
 					   OB_SAMPLE_RATE),
 		   sum_o2j_ratio / log_control_cycles,
-		   sum_j2o_ratio / log_control_cycles);
+		   sum_j2o_ratio / log_control_cycles, o2j_ratio, j2o_ratio);
 
       i = 0;
       sum_o2j_ratio = 0.0;
@@ -373,6 +374,8 @@ overwitch_compute_ratios ()
 	  pthread_spin_lock (&ob.lock);
 	  ob.status = OB_STATUS_TUNE;
 	  pthread_spin_unlock (&ob.lock);
+
+	  log_control_cycles = LOG_TIME * samplerate / bufsize;
 	}
     }
 }
