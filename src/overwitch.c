@@ -36,7 +36,8 @@
 #define JACK_MAX_BUF_SIZE 128
 #define MAX_READ_FRAMES 5
 #define STARTUP_TIME 5
-#define LOG_TIME 5
+#define LOG_TIME 2
+#define RATIO_DIFF_THRES 0.00001
 
 struct overbridge ob;
 jack_client_t *client;
@@ -279,7 +280,9 @@ overwitch_compute_ratios ()
   static int i = 0;
   static double sum_o2j_ratio = 0.0;
   static double sum_j2o_ratio = 0.0;
-  static double last_o2j_ratio = 0.0;
+  static double o2j_ratio_avg = 0.0;
+  static double j2o_ratio_avg = 0.0;
+  static double last_o2j_ratio_avg = 0.0;
 
   if (jack_get_cycle_times (client,
 			    &current_frames,
@@ -322,18 +325,6 @@ overwitch_compute_ratios ()
       pthread_spin_unlock (&ob.lock);
     }
 
-  if (status == OB_STATUS_TUNE
-      && fabs (last_o2j_ratio - o2j_ratio) < 0.0000001)
-    {
-      debug_print (2, "Running...\n");
-
-      pthread_spin_lock (&ob.lock);
-      ob.status = OB_STATUS_RUN;
-      pthread_spin_unlock (&ob.lock);
-    }
-
-  last_o2j_ratio = o2j_ratio;
-
   _z1 += _w0 * (_w1 * err - _z1);
   _z2 += _w0 * (_z1 - _z2);
   _z3 += _w2 * _z2;
@@ -353,14 +344,18 @@ overwitch_compute_ratios ()
   sum_j2o_ratio += j2o_ratio;
   if (i == log_control_cycles)
     {
+      last_o2j_ratio_avg = o2j_ratio_avg;
+
+      o2j_ratio_avg = sum_o2j_ratio / log_control_cycles;
+      j2o_ratio_avg = sum_j2o_ratio / log_control_cycles;
+
       debug_print (1,
 		   "Max. latencies (ms): %.1f, %.1f; avg. ratios: %f, %f; curr. ratios: %f, %f\n",
 		   o2j_latency * 1000.0 / (ob.o2j_frame_bytes *
 					   OB_SAMPLE_RATE),
 		   j2o_latency * 1000.0 / (ob.j2o_frame_bytes *
 					   OB_SAMPLE_RATE),
-		   sum_o2j_ratio / log_control_cycles,
-		   sum_j2o_ratio / log_control_cycles, o2j_ratio, j2o_ratio);
+		   o2j_ratio_avg, j2o_ratio_avg, o2j_ratio, j2o_ratio);
 
       i = 0;
       sum_o2j_ratio = 0.0;
@@ -376,6 +371,17 @@ overwitch_compute_ratios ()
 	  pthread_spin_unlock (&ob.lock);
 
 	  log_control_cycles = LOG_TIME * samplerate / bufsize;
+	}
+
+      if (status == OB_STATUS_TUNE
+	  && fabs (o2j_ratio_avg - last_o2j_ratio_avg) < RATIO_DIFF_THRES)
+	{
+	  debug_print (2, "Running...\n");
+	  overwitch_set_loop_filter (0.02);
+
+	  pthread_spin_lock (&ob.lock);
+	  ob.status = OB_STATUS_RUN;
+	  pthread_spin_unlock (&ob.lock);
 	}
     }
 }
