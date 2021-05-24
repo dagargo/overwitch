@@ -144,6 +144,7 @@ set_usb_input_data_blks (struct overbridge *ob)
   int32_t hv;
   jack_default_audio_sample_t *f;
   double e;
+  int32_t *s;
   overbridge_status_t status;
 
   e = jack_get_time () * 1.0e-6 - ob->i1.time;
@@ -160,15 +161,15 @@ set_usb_input_data_blks (struct overbridge *ob)
   for (int i = 0; i < OB_BLOCKS_PER_TRANSFER; i++)
     {
       blk = get_nth_usb_in_blk (ob, i);
-      int pos = 0;
+      s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
 	  for (int k = 0; k < ob->device_desc.outputs; k++)
 	    {
-	      hv = ntohl (blk->data[pos]);
+	      hv = ntohl (*s);
 	      *f = hv / (float) INT_MAX;
 	      f++;
-	      pos++;
+	      s++;
 	    }
 	}
     }
@@ -200,6 +201,7 @@ set_usb_output_data_blks (struct overbridge *ob)
   long frames;
   jack_default_audio_sample_t *f;
   int res;
+  int32_t *s;
   static int running = 0;
 
   rsj2o = jack_ringbuffer_read_space (ob->j2o_rb);
@@ -259,15 +261,15 @@ set_usb_output_data_blks (struct overbridge *ob)
       blk = get_nth_usb_out_blk (ob, i);
       ob->s_counter += OB_FRAMES_PER_BLOCK;
       blk->s_counter = htons (ob->s_counter);
-      int pos = 0;
+      s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
 	  for (int k = 0; k < ob->device_desc.inputs; k++)
 	    {
 	      hv = htonl (*f * INT_MAX);
-	      blk->data[pos] = hv;
+	      *s = hv;
 	      f++;
-	      pos++;
+	      s++;
 	    }
 	}
     }
