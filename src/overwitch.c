@@ -30,6 +30,8 @@
 #include <jack/intclient.h>
 #include <jack/thread.h>
 #include <libgen.h>
+#define _GNU_SOURCE
+#include <getopt.h>
 
 #include "overbridge.h"
 
@@ -38,6 +40,7 @@
 #define STARTUP_TIME 5
 #define LOG_TIME 2
 #define RATIO_DIFF_THRES 0.00001
+#define DEFAULT_QUALITY 2
 
 struct overbridge ob;
 jack_client_t *client;
@@ -77,6 +80,7 @@ double o2j_ratio_max;
 double o2j_ratio_min;
 int read_frames;
 int log_control_cycles;
+int quality = DEFAULT_QUALITY;
 
 void
 overwitch_set_loop_filter (double bw)
@@ -556,10 +560,10 @@ overwitch_run ()
     }
 
   j2o_state =
-    src_callback_new (overwitch_j2o_reader, SRC_SINC_FASTEST,
+    src_callback_new (overwitch_j2o_reader, quality,
 		      ob.device_desc.inputs, NULL, NULL);
   o2j_state =
-    src_callback_new (overwitch_o2j_reader, SRC_SINC_FASTEST,
+    src_callback_new (overwitch_o2j_reader, quality,
 		      ob.device_desc.outputs, NULL, NULL);
 
   j2o_buf_max_size =
@@ -621,25 +625,46 @@ overwitch_help (char *executable_path)
 
   fprintf (stderr, "%s\n", PACKAGE_STRING);
   exec_name = basename (executable_path);
-  fprintf (stderr, "Usage: %s [-r ratio] [-v]\n", exec_name);
+  fprintf (stderr, "Usage: %s [-q quality] [-v] [-h]\n", exec_name);
 }
 
 int
 main (int argc, char *argv[])
 {
-  int c;
+  int opt;
   int vflg = 0, errflg = 0;
+  char *endstr;
+  int long_index = 0;
 
-  while ((c = getopt (argc, argv, "hv")) != -1)
+  static struct option long_options[] = {
+    {"quality", 1, NULL, 'q'},
+    {"verbose", 0, NULL, 'v'},
+    {"help", 0, NULL, 'h'},
+    {NULL, 0, NULL, 0}
+  };
+
+  while ((opt = getopt_long_only (argc, argv, "",
+				  long_options, &long_index)) != -1)
     {
-      switch (c)
+      switch (opt)
 	{
-	case 'h':
-	  overwitch_help (argv[0]);
-	  exit (EXIT_SUCCESS);
+	case 'q':
+	  quality = (int) strtol (optarg, &endstr, 10);
+	  if (errno || endstr == optarg || *endstr != '\0' || quality > 4
+	      || quality < 0)
+	    {
+	      quality = DEFAULT_QUALITY;
+	      fprintf (stderr,
+		       "Quality value %s not valid. Using quality value %d...\n",
+		       optarg, quality);
+	    }
+	  break;
 	case 'v':
 	  vflg++;
 	  break;
+	case 'h':
+	  overwitch_help (argv[0]);
+	  exit (EXIT_SUCCESS);
 	case '?':
 	  errflg++;
 	}
