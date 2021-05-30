@@ -35,7 +35,6 @@
 
 #include "overbridge.h"
 
-#define JACK_MAX_BUF_SIZE 128
 #define MAX_READ_FRAMES 5
 #define STARTUP_TIME 5
 #define LOG_TIME 2
@@ -455,8 +454,8 @@ overwitch_run ()
   int ob_status;
   char *client_name;
   struct sigaction action;
-  size_t o2j_buf_max_size;
-  size_t j2o_buf_max_size;
+  size_t o2j_bufsize;
+  size_t j2o_bufsize;
   int ret = 0;
 
   action.sa_handler = overwitch_exit;
@@ -515,15 +514,6 @@ overwitch_run ()
   overwitch_init_sample_rate ();
 
   bufsize = jack_get_buffer_size (client);
-  if (bufsize > OB_FRAMES_PER_TRANSFER)
-    {
-      error_print
-	("JACK buffer size is greater than device buffer size (%d > %d)\n",
-	 bufsize, OB_FRAMES_PER_TRANSFER);
-      overbridge_set_status (&ob, OB_STATUS_STOP);
-      ret = EXIT_FAILURE;
-      goto cleanup_jack;
-    }
   printf ("JACK buffer size: %d\n", bufsize);
   overwitch_init_buffer_size ();
 
@@ -566,21 +556,19 @@ overwitch_run ()
     src_callback_new (overwitch_o2j_reader, quality,
 		      ob.device_desc.outputs, NULL, NULL);
 
-  j2o_buf_max_size =
-    JACK_MAX_BUF_SIZE * OB_BYTES_PER_FRAME * ob.device_desc.inputs;
-  j2o_buf_in = malloc (j2o_buf_max_size);
-  j2o_buf_out = malloc (j2o_buf_max_size * 4.5);	//Up to 192 kHz and a few samples more
-  j2o_aux = malloc (j2o_buf_max_size);
-  j2o_queue = malloc (j2o_buf_max_size * 4.5);	//Up to 192 kHz and a few samples more
+  j2o_bufsize = bufsize * OB_BYTES_PER_FRAME * ob.device_desc.inputs;
+  j2o_buf_in = malloc (j2o_bufsize);
+  j2o_buf_out = malloc (j2o_bufsize * 4.5);	//Up to 192 kHz and a few samples more
+  j2o_aux = malloc (j2o_bufsize);
+  j2o_queue = malloc (j2o_bufsize * 4.5);	//Up to 192 kHz and a few samples more
   j2o_queue_len = 0;
 
-  o2j_buf_max_size =
-    JACK_MAX_BUF_SIZE * OB_BYTES_PER_FRAME * ob.device_desc.outputs;
-  o2j_buf_in = malloc (o2j_buf_max_size);
-  o2j_buf_out = malloc (o2j_buf_max_size);
+  o2j_bufsize = bufsize * OB_BYTES_PER_FRAME * ob.device_desc.outputs;
+  o2j_buf_in = malloc (o2j_bufsize);
+  o2j_buf_out = malloc (o2j_bufsize);
 
-  memset (j2o_buf_in, 0, j2o_buf_max_size);
-  memset (o2j_buf_in, 0, o2j_buf_max_size);
+  memset (j2o_buf_in, 0, j2o_bufsize);
+  memset (o2j_buf_in, 0, o2j_bufsize);
 
   if (overbridge_run (&ob))
     {
