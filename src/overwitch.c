@@ -303,6 +303,15 @@ overwitch_compute_ratios ()
   status = ob.status;
   pthread_spin_unlock (&ob.lock);
 
+  if (status == OB_STATUS_BOOT)
+    {
+      pthread_spin_lock (&ob.lock);
+      ob.status = OB_STATUS_SKIP;
+      pthread_spin_unlock (&ob.lock);
+
+      return;
+    }
+
   //The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
   kj += read_frames;
   tj = current_usecs * 1.0e-6;
@@ -312,7 +321,7 @@ overwitch_compute_ratios ()
   frames = ko0 - kj;
   double err = frames + dob - kdel;
 
-  if (status == OB_STATUS_BOOT)
+  if (status == OB_STATUS_SKIP)
     {
       //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
       int n = (int) (floor (err + 0.5));
