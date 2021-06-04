@@ -525,6 +525,7 @@ overwitch_run ()
   bufsize = jack_get_buffer_size (client);
   printf ("JACK buffer size: %d\n", bufsize);
   overwitch_init_buffer_size ();
+  overbridge_init_ring_bufs (&ob, bufsize);
 
   output_ports = malloc (sizeof (jack_port_t *) * ob.device_desc.outputs);
   for (int i = 0; i < ob.device_desc.outputs; i++)

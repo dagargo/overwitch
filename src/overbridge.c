@@ -529,12 +529,6 @@ overbridge_init (struct overbridge *ob)
       memset (ob->j2o_buf, 0, ob->j2o_buf_size);
       memset (ob->o2j_buf, 0, ob->o2j_buf_size);
 
-      ob->j2o_rb = jack_ringbuffer_create (ob->j2o_buf_size * 4);
-      jack_ringbuffer_mlock (ob->j2o_rb);
-
-      ob->o2j_rb = jack_ringbuffer_create (ob->o2j_buf_size * 4);
-      jack_ringbuffer_mlock (ob->o2j_rb);
-
       //o2j resampler
       ob->j2o_buf_res = malloc (ob->j2o_buf_size);
       memset (ob->j2o_buf_res, 0, ob->j2o_buf_size);
@@ -549,6 +543,18 @@ overbridge_init (struct overbridge *ob)
       usb_shutdown (ob);
     }
   return r;
+}
+
+void
+overbridge_init_ring_bufs (struct overbridge *ob, jack_nframes_t jbufsize)
+{
+  size_t max_bufsize =
+    OB_FRAMES_PER_TRANSFER > jbufsize ? OB_FRAMES_PER_TRANSFER : jbufsize;
+  ob->j2o_rb = jack_ringbuffer_create (max_bufsize * ob->j2o_frame_bytes * 4);
+  jack_ringbuffer_mlock (ob->j2o_rb);
+
+  ob->o2j_rb = jack_ringbuffer_create (max_bufsize * ob->o2j_frame_bytes * 4);
+  jack_ringbuffer_mlock (ob->o2j_rb);
 }
 
 void

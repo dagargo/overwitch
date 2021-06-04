@@ -238,6 +238,8 @@ void set_self_max_priority ();
 
 overbridge_err_t overbridge_init (struct overbridge *);
 
+void overbridge_init_ring_bufs (struct overbridge *, jack_nframes_t);
+
 int overbridge_run (struct overbridge *);
 
 void overbridge_destroy (struct overbridge *);
