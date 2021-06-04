@@ -349,6 +349,8 @@ overbridge_init_priv (struct overbridge *ob)
 
   for (i = 0; i < OB_DEVICE_DESCS_N; i++)
     {
+      debug_print (2, "Checking for %s...\n", OB_DEVICE_DESCS[i].name);
+
       ob->device =
 	libusb_open_device_with_vid_pid (NULL, ELEKTRON_VID,
 					 OB_DEVICE_DESCS[i].pid);
