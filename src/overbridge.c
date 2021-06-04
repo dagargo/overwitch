@@ -365,7 +365,7 @@ overbridge_init_priv (struct overbridge *ob)
     }
   else
     {
-      return OB_NO_USB_DEV_FOUND;
+      return OB_CANT_OPEN_DEV;
     }
 
   ret = libusb_set_configuration (ob->device, 1);
@@ -424,7 +424,7 @@ usb_shutdown (struct overbridge *ob)
 }
 
 static const char *ob_err_strgs[] = { "ok", "libusb init failed",
-  "no matching usb device found", "can't set usb config",
+  "can't open any device", "can't set usb config",
   "can't claim usb interface", "can't set usb alt setting",
   "can't cleat endpoint", "can't prepare transfer"
 };
