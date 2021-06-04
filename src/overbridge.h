@@ -247,11 +247,3 @@ void overbridge_wait (struct overbridge *);
 overbridge_status_t overbridge_get_status (struct overbridge *);
 
 void overbridge_set_status (struct overbridge *, overbridge_status_t);
-
-int overbridge_is_j2o_reading (struct overbridge *);
-
-void overbridge_set_j2o_reading (struct overbridge *, int);
-
-int overbridge_is_o2j_reading (struct overbridge *);
-
-void overbridge_set_o2j_reading (struct overbridge *, int);
