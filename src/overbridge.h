@@ -191,7 +191,7 @@ typedef enum
 
 struct overbridge_device_desc
 {
-  int pid;
+  uint16_t pid;
   char *name;
   int inputs;
   int outputs;
