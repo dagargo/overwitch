@@ -220,7 +220,7 @@ set_usb_output_data_blks (struct overbridge *ob)
       else
 	{
 	  debug_print (2,
-		       "j2o: Can not read enough data from ring buffer (%ld < %ld). Resampling...\n",
+		       "j2o: Can not read enough data from ring buffer (%zu < %zu). Resampling...\n",
 		       rsj2o, ob->j2o_buf_size);
 	  frames = rsj2o / ob->j2o_frame_bytes;
 	  bytes = frames * ob->j2o_frame_bytes;
