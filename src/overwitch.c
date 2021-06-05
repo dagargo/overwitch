@@ -81,6 +81,13 @@ int read_frames;
 int log_control_cycles;
 int quality = DEFAULT_QUALITY;
 
+static struct option options[] = {
+  {"resampling-quality", 1, NULL, 'q'},
+  {"verbose", 0, NULL, 'v'},
+  {"help", 0, NULL, 'h'},
+  {NULL, 0, NULL, 0}
+};
+
 void
 overwitch_set_loop_filter (double bw)
 {
@@ -620,10 +627,23 @@ void
 overwitch_help (char *executable_path)
 {
   char *exec_name;
+  struct option *option;
 
   fprintf (stderr, "%s\n", PACKAGE_STRING);
   exec_name = basename (executable_path);
-  fprintf (stderr, "Usage: %s [-q quality] [-v] [-h]\n", exec_name);
+  fprintf (stderr, "Usage: %s [options]\n", exec_name);
+  fprintf (stderr, "Options:\n");
+  option = options;
+  while (option->name)
+    {
+      fprintf (stderr, "  --%s -%c", option->name, option->val);
+      if (option->has_arg)
+	{
+	  fprintf (stderr, " value");
+	}
+      fprintf (stderr, "\n");
+      option++;
+    }
 }
 
 int
@@ -634,15 +654,8 @@ main (int argc, char *argv[])
   char *endstr;
   int long_index = 0;
 
-  static struct option long_options[] = {
-    {"quality", 1, NULL, 'q'},
-    {"verbose", 0, NULL, 'v'},
-    {"help", 0, NULL, 'h'},
-    {NULL, 0, NULL, 0}
-  };
-
   while ((opt = getopt_long_only (argc, argv, "",
-				  long_options, &long_index)) != -1)
+				  options, &long_index)) != -1)
     {
       switch (opt)
 	{
