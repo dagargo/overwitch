@@ -654,8 +654,7 @@ main (int argc, char *argv[])
   char *endstr;
   int long_index = 0;
 
-  while ((opt = getopt_long_only (argc, argv, "",
-				  options, &long_index)) != -1)
+  while ((opt = getopt_long (argc, argv, "q:vh", options, &long_index)) != -1)
     {
       switch (opt)
 	{
