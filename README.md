@@ -6,7 +6,7 @@ This project is based on the Overbridge USB reverse engineering done by Stefan R
 
 The papers [Controlling adaptive resampling](https://kokkinizita.linuxaudio.org/papers/adapt-resamp.pdf) and [Using a DLL to filter time](https://kokkinizita.linuxaudio.org/papers/usingdll.pdf) by Fons Adriaensen have been very helpful and inspiring, as well as his own implementation done in the zita resamplers found in the [alsa tools](https://github.com/jackaudio/tools) project.
 
-At the moment, it provides 12 input ports and 2 output ports for Elektron Digitakt and Digitone but no MIDI support. Overwitch works only with the first found device at the moment, so only a single Overwitch instance can be run for now.
+At the moment, it provides 12 input ports and 2 output ports for Elektron Digitakt and Digitone but no MIDI support. In order to work with several devices, different instances of Overwitch must be run.
 
 ## Installation
 
@@ -51,7 +51,7 @@ $ overwitch -l
 Bus 001 Port 003 Device 006: ID 1935:000c Digitakt
 ```
 
-Then, you can indicate which device you want to use like this. It is recommended to run `overwitch` with real time priority, so run it like this. Press `Ctrl+C` to stop. You'll see an oputput like this. Note that we are using the verbose option here but it is not recommended to use it and it is showed here for illustrative pursoses only.
+Then, you can indicate which device you want to use like this. It is recommended to run `overwitch` with real time priority, so run it with `chrt`. To stop, just press `Ctrl+C`. You'll see an oputput like the one below. Notice that we are using the verbose option here but it is **not recommended** to use it and it is showed here for illustrative pursoses only.
 
 ```
 $ chrt -f 35 overwitch -d Digitakt -v
@@ -72,7 +72,7 @@ DEBUG:overwitch.c:607:(overwitch_run): Exiting...
 
 To limit latency to the lowest possible value, audio is not sent through during the first seconds.
 
-You can list all the available options with this.
+You can list all the available options with `-h`.
 
 ```
 $ overwitch -h
@@ -158,13 +158,13 @@ Although you can run Overwitch with verbose output this is **not recommended** u
 
 ## Adding devices
 
-Hopefully, Overbridge 2 devices could be easily added in the `overbridge.c` file. However, since Overwitch works only with the first found device at the moment, if you have several devices, connect only the one that you want to use for now.
+Hopefully, Overbridge 2 devices could be easily added in the `overbridge.c` file.
 
-To define a new device, just add a new struct like this and add the new constant to the array. USB PIDs are already defined there. Try to use the same names as in the device and capitalize the first letter or use acronyms.
-
-For instance, if you are adding the Analog Rytm MKII, you could do it like this. Naming style might subject to change.
+To define a new device, just add a new struct like this and add the new constant to the array. USB PIDs are already defined there. For instance, if you are adding the Analog Rytm MKII, you could do it like in the example below.
 
 Notice that the definition of the device must match the device itself, so outputs and inputs amount must match the ones the device has and must be in the same order. As this struct defines the device, an input is a port the device will read data from and an output is a port the device will write data to.
+
+Naming style might be subject to change.
 
 ```
 static const struct overbridge_device_desc ARMK2_DESC = {
