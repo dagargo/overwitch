@@ -51,10 +51,11 @@ static const struct overbridge_device_desc DIGITAKT_DESC = {
   .name = "Digitakt",
   .inputs = 2,
   .outputs = 12,
-  .input_track_names = {"Output L", "Output R"},
+  .input_track_names = {"Main L", "Main R"},
   .output_track_names =
-    {"Master L", "Master R", "Track 1", "Track 2", "Track 3", "Track 4",
-     "Track 5", "Track 6", "Track 7", "Track 8", "Input L", "Input R"}
+    {"Main L", "Main R", "Kick 1", "Snare 2", "Tom 3", "Clap 4",
+     "Cowbell 5", "Closed Hat 6", "Open Hat 7", "Cymbal 8", "Input L",
+     "Input R"}
 };
 
 static const struct overbridge_device_desc DIGITONE_DESC = {
@@ -62,9 +63,9 @@ static const struct overbridge_device_desc DIGITONE_DESC = {
   .name = "Digitone",
   .inputs = 2,
   .outputs = 12,
-  .input_track_names = {"Output L", "Output R"},
+  .input_track_names = {"Main L", "Main R"},
   .output_track_names =
-    {"Master L", "Master R", "Track 1 L", "Track 1 R", "Track 2 L",
+    {"Main L", "Main R", "Track 1 L", "Track 1 R", "Track 2 L",
      "Track 2 R", "Track 3 L", "Track 3 R", "Track 4 L", "Track 4 R",
      "Input L", "Input R"}
 };
@@ -72,22 +73,26 @@ static const struct overbridge_device_desc DIGITONE_DESC = {
 static const struct overbridge_device_desc AFMK2_DESC = {
   .pid = AFMK2_PID,
   .name = "Analog Four MKII",
-  .inputs = 2,
+  .inputs = 6,
   .outputs = 8,
-  .input_track_names = {"Output L", "Output R"},
+  .input_track_names =
+    {"Main L", "Main R", "Synth Track 1", "Synth Track 2", "Synth Track 3",
+     "Synth Track 4"},
   .output_track_names =
-    {"Master L", "Master R", "Track 1", "Track 2", "Track 3",
-     "Track 4", "Input L", "Input R"}
+    {"Main L", "Main R", "Synth Track 1", "Synth Track 2", "Synth Track 3",
+     "Synth Track 4", "Input L", "Input R"}
 };
 
 static const struct overbridge_device_desc ARMK2_DESC = {
   .pid = ARMK2_PID,
   .name = "Analog Rytm MKII",
-  .inputs = 2,
+  .inputs = 12,
   .outputs = 12,
-  .input_track_names = {"Output L", "Output R"},
-  .output_track_names = {"Master L", "Master R", "BD", "SD", "RS-CP",
-			 "BT", "LT", "MT-HT", "CH-OH", "CY-CB", "Input L",
+  .input_track_names =
+    {"Main L", "Main R", "Main FX L", "Main FX R", "BD", "SD", "RS/CP", "BT",
+     "LT", "MT/HT", "CH/OH", "CY/CB"},
+  .output_track_names = {"Main L", "Main R", "BD", "SD", "RS/CP",
+			 "BT", "LT", "MT/HT", "CH/OH", "CY/CB", "Input L",
 			 "Input R"}
 };
 
