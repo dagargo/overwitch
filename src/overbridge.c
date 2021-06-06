@@ -53,8 +53,8 @@ static const struct overbridge_device_desc DIGITAKT_DESC = {
   .outputs = 12,
   .input_track_names = {"Main L Input", "Main R Input"},
   .output_track_names =
-    {"Main L", "Main R", "Kick 1", "Snare 2", "Tom 3", "Clap 4",
-     "Cowbell 5", "Closed Hat 6", "Open Hat 7", "Cymbal 8", "Input L",
+    {"Main L", "Main R", "Track 1", "Track 2", "Track 3", "Track 4",
+     "Track 5", "Track 6", "Track 7", "Track 8", "Input L",
      "Input R"}
 };
 
