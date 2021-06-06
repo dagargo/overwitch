@@ -44,21 +44,47 @@ $ sudo udevadm control --reload-rules && sudo udevadm trigger
 
 ## Usage
 
-It is recommended to run `overwitch` with real time priority, so run it like this. Press `Ctrl+C` to stop. You'll see an oputput like this.
+First, list the available devices.
 
 ```
-$ chrt -f 35 overwitch -v
-DEBUG:overbridge.c:337:(overbridge_init_priv): Device: Digitakt
-DEBUG:overwitch.c:102:(overwitch_sample_rate_cb): JACK sample rate: 48000
-DEBUG:overbridge.c:449:(overbridge_run): Starting device...
-DEBUG:overwitch.c:130:(overwitch_buffer_size_cb): JACK buffer size: 32
-DEBUG:overbridge.c:431:(run): Running device...
+$ overwitch -l
+Bus 001 Port 003 Device 006: ID 1935:000c Digitakt
+```
+
+Then, you can indicate which device you want to use like this. It is recommended to run `overwitch` with real time priority, so run it like this. Press `Ctrl+C` to stop. You'll see an oputput like this. Note that we are using the verbose option here but it is not recommended to use it and it is showed here for illustrative pursoses only.
+
+```
+$ chrt -f 35 overwitch -d Digitakt -v
+Device: Digitakt (outputs: 12, inputs: 2)
+JACK sample rate: 48000
+JACK buffer size: 64
+DEBUG:overbridge.c:480:(overbridge_run): Starting device thread...
+DEBUG:overwitch.c:379:(overwitch_compute_ratios): Max. latencies (ms): 0.0, 0.0; avg. ratios: 0.999791, 1.000209; curr. ratios: 0.999762, 1.000238
+DEBUG:overwitch.c:379:(overwitch_compute_ratios): Max. latencies (ms): 0.0, 0.0; avg. ratios: 0.999847, 1.000153; curr. ratios: 0.999918, 1.000082
+DEBUG:overwitch.c:379:(overwitch_compute_ratios): Max. latencies (ms): 0.0, 0.0; avg. ratios: 0.999899, 1.000101; curr. ratios: 0.999931, 1.000069
+DEBUG:overwitch.c:379:(overwitch_compute_ratios): Max. latencies (ms): 0.0, 0.0; avg. ratios: 0.999912, 1.000088; curr. ratios: 0.999888, 1.000112
+DEBUG:overwitch.c:379:(overwitch_compute_ratios): Max. latencies (ms): 0.0, 0.0; avg. ratios: 0.999911, 1.000089; curr. ratios: 0.999876, 1.000124
+DEBUG:overwitch.c:379:(overwitch_compute_ratios): Max. latencies (ms): 5.3, 5.1; avg. ratios: 0.999883, 1.000117; curr. ratios: 0.999892, 1.000108
 ^C
-DEBUG:overwitch.c:452:(overwitch_exit): Max. latencies (ms): 4.8, 4.7
-DEBUG:overwitch.c:590:(overwitch_run): Exiting...
+Max. latencies (ms): 5.6, 5.6
+DEBUG:overwitch.c:607:(overwitch_run): Exiting...
 ```
 
 To limit latency to the lowest possible value, audio is not sent through during the first seconds.
+
+You can list all the available options with this.
+
+```
+$ overwitch -h
+overwitch 0.2
+Usage: overwitch [options]
+Options:
+  --use-device, -d value
+  --resampling-quality, -q value
+  --list-devices, -l
+  --verbose, -v
+  --help, -h
+```
 
 ## Latency
 
