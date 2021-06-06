@@ -173,8 +173,9 @@ static const struct overbridge_device_desc ARMK2_DESC = {
   .inputs = 12,
   .outputs = 12,
   .input_track_names =
-    {"Main L", "Main R", "Main FX L", "Main FX R", "BD", "SD", "RS/CP", "BT",
-     "LT", "MT/HT", "CH/OH", "CY/CB"},
+    {"Main L Input", "Main R Input", "Main FX L Input", "Main FX R Input",
+     "BD Input", "SD Input", "RS/CP Input", "BT Input",
+     "LT Input", "MT/HT Input", "CH/OH Input", "CY/CB Input"},
   .output_track_names = {"Main L", "Main R", "BD", "SD", "RS/CP",
 			 "BT", "LT", "MT/HT", "CH/OH", "CY/CB", "Input L",
 			 "Input R"}

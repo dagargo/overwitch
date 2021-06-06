@@ -51,7 +51,7 @@ static const struct overbridge_device_desc DIGITAKT_DESC = {
   .name = "Digitakt",
   .inputs = 2,
   .outputs = 12,
-  .input_track_names = {"Main L", "Main R"},
+  .input_track_names = {"Main L Input", "Main R Input"},
   .output_track_names =
     {"Main L", "Main R", "Kick 1", "Snare 2", "Tom 3", "Clap 4",
      "Cowbell 5", "Closed Hat 6", "Open Hat 7", "Cymbal 8", "Input L",
@@ -63,7 +63,7 @@ static const struct overbridge_device_desc DIGITONE_DESC = {
   .name = "Digitone",
   .inputs = 2,
   .outputs = 12,
-  .input_track_names = {"Main L", "Main R"},
+  .input_track_names = {"Main L Input", "Main R Input"},
   .output_track_names =
     {"Main L", "Main R", "Track 1 L", "Track 1 R", "Track 2 L",
      "Track 2 R", "Track 3 L", "Track 3 R", "Track 4 L", "Track 4 R",
@@ -75,9 +75,9 @@ static const struct overbridge_device_desc AFMK2_DESC = {
   .name = "Analog Four MKII",
   .inputs = 6,
   .outputs = 8,
-  .input_track_names =
-    {"Main L", "Main R", "Synth Track 1", "Synth Track 2", "Synth Track 3",
-     "Synth Track 4"},
+  .input_track_names = {"Main L Input", "Main R Input", "Synth Track 1 Input",
+			"Synth Track 2 Input", "Synth Track 3 Input",
+			"Synth Track 4 Input"},
   .output_track_names =
     {"Main L", "Main R", "Synth Track 1", "Synth Track 2", "Synth Track 3",
      "Synth Track 4", "Input L", "Input R"}
@@ -89,8 +89,9 @@ static const struct overbridge_device_desc ARMK2_DESC = {
   .inputs = 12,
   .outputs = 12,
   .input_track_names =
-    {"Main L", "Main R", "Main FX L", "Main FX R", "BD", "SD", "RS/CP", "BT",
-     "LT", "MT/HT", "CH/OH", "CY/CB"},
+    {"Main L Input", "Main R Input", "Main FX L Input", "Main FX R Input",
+     "BD Input", "SD Input", "RS/CP Input", "BT Input",
+     "LT Input", "MT/HT Input", "CH/OH Input", "CY/CB Input"},
   .output_track_names = {"Main L", "Main R", "BD", "SD", "RS/CP",
 			 "BT", "LT", "MT/HT", "CH/OH", "CY/CB", "Input L",
 			 "Input R"}
