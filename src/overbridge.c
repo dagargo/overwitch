@@ -44,6 +44,8 @@
 #define AHMK2_PID 0x0016
 #define DKEYS_PID 0x001c
 
+#define MAX_USB_DEPTH 7
+
 static const struct overbridge_device_desc DIGITAKT_DESC = {
   .pid = DTAKT_PID,
   .name = "Digitakt",
@@ -334,7 +336,7 @@ prepare_cycle_in (struct overbridge *ob)
 
 // initialization taken from sniffed session
 
-static int
+static overbridge_err_t
 overbridge_init_priv (struct overbridge *ob)
 {
   int i;
@@ -495,7 +497,7 @@ overbridge_err_t
 overbridge_init (struct overbridge *ob)
 {
   struct overbridge_usb_blk *blk;
-  int r = overbridge_init_priv (ob);
+  overbridge_err_t r = overbridge_init_priv (ob);
 
   if (r == OB_OK)
     {
@@ -589,4 +591,65 @@ overbridge_set_status (struct overbridge *ob, overbridge_status_t status)
   pthread_spin_lock (&ob->lock);
   ob->status = status;
   pthread_spin_unlock (&ob->lock);
+}
+
+overbridge_err_t
+overbridge_list_devices ()
+{
+  libusb_context *context = NULL;
+  libusb_device **list = NULL;
+  int ret = 0;
+  ssize_t count = 0;
+  libusb_device *device;
+  struct libusb_device_descriptor desc;
+  size_t i;
+  int j;
+  int k;
+  int ports;
+  uint8_t port_numbers[MAX_USB_DEPTH];
+  uint8_t bus;
+  uint8_t address;
+
+  ret = libusb_init (&context);
+  if (ret != LIBUSB_SUCCESS)
+    {
+      return OB_LIBUSB_INIT_FAILED;
+    }
+
+  count = libusb_get_device_list (context, &list);
+
+  for (i = 0; i < count; i++)
+    {
+      device = list[i];
+      ret = libusb_get_device_descriptor (device, &desc);
+
+      if (desc.idVendor == ELEKTRON_VID)
+	{
+	  for (j = 0; j < OB_DEVICE_DESCS_N; j++)
+	    {
+	      if (OB_DEVICE_DESCS[j].pid == desc.idProduct)
+		{
+		  bus = libusb_get_bus_number (device);
+		  address = libusb_get_device_address (device);
+		  ports = libusb_get_port_numbers (device,
+						   port_numbers,
+						   MAX_USB_DEPTH);
+		  fprintf (stderr, "Bus %03d Port %03d", bus,
+			   port_numbers[0]);
+		  for (k = 1; k < ports; k++)
+		    {
+		      fprintf (stderr, ":%03d", port_numbers[k]);
+		    }
+		  fprintf (stderr, " Device %03d: ID %04x:%04x %s\n", address,
+			   desc.idVendor, desc.idProduct,
+			   OB_DEVICE_DESCS[j].name);
+		}
+	    }
+	}
+    }
+
+  libusb_free_device_list (list, count);
+  libusb_exit (context);
+
+  return OB_OK;
 }

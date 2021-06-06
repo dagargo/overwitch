@@ -249,3 +249,5 @@ void overbridge_wait (struct overbridge *);
 overbridge_status_t overbridge_get_status (struct overbridge *);
 
 void overbridge_set_status (struct overbridge *, overbridge_status_t);
+
+overbridge_err_t overbridge_list_devices ();

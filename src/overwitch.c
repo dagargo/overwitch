@@ -83,6 +83,7 @@ int quality = DEFAULT_QUALITY;
 
 static struct option options[] = {
   {"resampling-quality", 1, NULL, 'q'},
+  {"list-devices", 0, NULL, 'l'},
   {"verbose", 0, NULL, 'v'},
   {"help", 0, NULL, 'h'},
   {NULL, 0, NULL, 0}
@@ -467,7 +468,7 @@ overwitch_run ()
 {
   jack_options_t options = JackNullOption;
   jack_status_t status;
-  int ob_status;
+  overbridge_err_t ob_status;
   char *client_name;
   struct sigaction action;
   size_t o2j_bufsize;
@@ -484,7 +485,7 @@ overwitch_run ()
   ob_status = overbridge_init (&ob);
   if (ob_status)
     {
-      error_print ("Device error: %s\n", overbrigde_get_err_str (ob_status));
+      error_print ("USB error: %s\n", overbrigde_get_err_str (ob_status));
       exit (EXIT_FAILURE);
     }
 
@@ -636,7 +637,7 @@ overwitch_help (char *executable_path)
   option = options;
   while (option->name)
     {
-      fprintf (stderr, "  --%s -%c", option->name, option->val);
+      fprintf (stderr, "  --%s, -%c", option->name, option->val);
       if (option->has_arg)
 	{
 	  fprintf (stderr, " value");
@@ -650,11 +651,12 @@ int
 main (int argc, char *argv[])
 {
   int opt;
-  int vflg = 0, errflg = 0;
+  int vflg = 0, lflg = 0, errflg = 0;
   char *endstr;
   int long_index = 0;
+  overbridge_err_t ob_status;
 
-  while ((opt = getopt_long (argc, argv, "q:vh", options, &long_index)) != -1)
+  while ((opt = getopt_long (argc, argv, "q:lvh", options, &long_index)) != -1)
     {
       switch (opt)
 	{
@@ -668,6 +670,9 @@ main (int argc, char *argv[])
 		       "Quality value %s not valid. Using quality value %d...\n",
 		       optarg, quality);
 	    }
+	  break;
+	case 'l':
+	  lflg++;
 	  break;
 	case 'v':
 	  vflg++;
@@ -683,6 +688,17 @@ main (int argc, char *argv[])
   if (vflg)
     {
       debug_level = vflg;
+    }
+
+  if (lflg)
+    {
+      ob_status = overbridge_list_devices ();
+      if (ob_status)
+	{
+	  error_print ("USB error: %s\n", overbrigde_get_err_str (ob_status));
+	  exit (EXIT_FAILURE);
+	}
+      exit (EXIT_SUCCESS);
     }
 
   if (errflg > 0)
