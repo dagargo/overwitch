@@ -674,7 +674,7 @@ main (int argc, char *argv[])
 	    {
 	      quality = DEFAULT_QUALITY;
 	      fprintf (stderr,
-		       "Quality value %s not valid. Using quality value %d...\n",
+		       "Resampling quality value %s not valid. Using value %d...\n",
 		       optarg, quality);
 	    }
 	  break;
