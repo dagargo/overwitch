@@ -337,7 +337,7 @@ prepare_cycle_in (struct overbridge *ob)
 // initialization taken from sniffed session
 
 static overbridge_err_t
-overbridge_init_priv (struct overbridge *ob)
+overbridge_init_priv (struct overbridge *ob, char *device_name)
 {
   int i;
   int ret;
@@ -351,6 +351,11 @@ overbridge_init_priv (struct overbridge *ob)
 
   for (i = 0; i < OB_DEVICE_DESCS_N; i++)
     {
+      if (strcmp (OB_DEVICE_DESCS[i].name, device_name))
+	{
+	  break;
+	}
+
       debug_print (2, "Checking for %s...\n", OB_DEVICE_DESCS[i].name);
 
       ob->device =
@@ -428,7 +433,7 @@ usb_shutdown (struct overbridge *ob)
 }
 
 static const char *ob_err_strgs[] = { "ok", "libusb init failed",
-  "can't open any device", "can't set usb config",
+  "can't open device", "can't set usb config",
   "can't claim usb interface", "can't set usb alt setting",
   "can't cleat endpoint", "can't prepare transfer"
 };
@@ -494,10 +499,10 @@ overbrigde_get_err_str (overbridge_err_t errcode)
 }
 
 overbridge_err_t
-overbridge_init (struct overbridge *ob)
+overbridge_init (struct overbridge *ob, char *device_name)
 {
   struct overbridge_usb_blk *blk;
-  overbridge_err_t r = overbridge_init_priv (ob);
+  overbridge_err_t r = overbridge_init_priv (ob, device_name);
 
   if (r == OB_OK)
     {

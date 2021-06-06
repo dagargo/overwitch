@@ -82,6 +82,7 @@ int log_control_cycles;
 int quality = DEFAULT_QUALITY;
 
 static struct option options[] = {
+  {"use-device", 1, NULL, 'd'},
   {"resampling-quality", 1, NULL, 'q'},
   {"list-devices", 0, NULL, 'l'},
   {"verbose", 0, NULL, 'v'},
@@ -464,7 +465,7 @@ overwitch_exit (int signo)
 }
 
 static int
-overwitch_run ()
+overwitch_run (char *device_name)
 {
   jack_options_t options = JackNullOption;
   jack_status_t status;
@@ -482,7 +483,7 @@ overwitch_run ()
   sigaction (SIGINT, &action, NULL);
   sigaction (SIGTERM, &action, NULL);
 
-  ob_status = overbridge_init (&ob);
+  ob_status = overbridge_init (&ob, device_name);
   if (ob_status)
     {
       error_print ("USB error: %s\n", overbrigde_get_err_str (ob_status));
@@ -651,15 +652,21 @@ int
 main (int argc, char *argv[])
 {
   int opt;
-  int vflg = 0, lflg = 0, errflg = 0;
+  int vflg = 0, lflg = 0, dflg = 0, errflg = 0;
   char *endstr;
+  char *device = NULL;
   int long_index = 0;
   overbridge_err_t ob_status;
 
-  while ((opt = getopt_long (argc, argv, "q:lvh", options, &long_index)) != -1)
+  while ((opt = getopt_long (argc, argv, "d:q:lvh",
+			     options, &long_index)) != -1)
     {
       switch (opt)
 	{
+	case 'd':
+	  device = optarg;
+	  dflg++;
+	  break;
 	case 'q':
 	  quality = (int) strtol (optarg, &endstr, 10);
 	  if (errno || endstr == optarg || *endstr != '\0' || quality > 4
@@ -685,6 +692,12 @@ main (int argc, char *argv[])
 	}
     }
 
+  if (errflg > 0)
+    {
+      overwitch_help (argv[0]);
+      exit (EXIT_FAILURE);
+    }
+
   if (vflg)
     {
       debug_level = vflg;
@@ -695,17 +708,18 @@ main (int argc, char *argv[])
       ob_status = overbridge_list_devices ();
       if (ob_status)
 	{
-	  error_print ("USB error: %s\n", overbrigde_get_err_str (ob_status));
+	  fprintf (stderr, "USB error: %s\n",
+		   overbrigde_get_err_str (ob_status));
 	  exit (EXIT_FAILURE);
 	}
       exit (EXIT_SUCCESS);
     }
 
-  if (errflg > 0)
+  if (dflg != 1)
     {
-      overwitch_help (argv[0]);
+      fprintf (stderr, "No device provided\n");
       exit (EXIT_FAILURE);
     }
 
-  return overwitch_run ();
+  return overwitch_run (device);
 }

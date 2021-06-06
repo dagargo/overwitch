@@ -236,7 +236,7 @@ const char *overbrigde_get_err_str (overbridge_err_t);
 
 void set_self_max_priority ();
 
-overbridge_err_t overbridge_init (struct overbridge *);
+overbridge_err_t overbridge_init (struct overbridge *, char *);
 
 void overbridge_init_ring_bufs (struct overbridge *, jack_nframes_t);
 
