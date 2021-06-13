@@ -5,6 +5,9 @@ AC_PREREQ([2.69])
 AC_INIT([overwitch],[0.2],[dagargo@gmail.com])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
+AM_PROG_LIBTOOL
+AC_SEARCH_LIBS([sqrt], [m])
+AC_CONFIG_MACRO_DIRS([m4])
 AM_INIT_AUTOMAKE
 
 # Checks for programs.
@@ -12,6 +15,7 @@ AC_PROG_CC
 
 # Checks for libraries.
 PKG_CHECK_MODULES(libusb, libusb, HAVE_LIBUSB=1, HAVE_LIBUSB=0)
+PKG_CHECK_MODULES(JACK, jack >= 0.100.0)
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdio.h unistd.h stdlib.h errno.h string.h signal.h libusb.h limits.h])
