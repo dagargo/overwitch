@@ -392,11 +392,6 @@ overbridge_init_priv (struct overbridge *ob, char *device_name)
     {
       return OB_CANT_SET_USB_CONFIG;
     }
-  ret = libusb_set_configuration (ob->device, 1);
-  if (LIBUSB_SUCCESS != ret)
-    {
-      return OB_CANT_SET_USB_CONFIG;
-    }
   ret = libusb_claim_interface (ob->device, 2);
   if (LIBUSB_SUCCESS != ret)
     {
