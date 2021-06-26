@@ -46,6 +46,9 @@
 
 #define MAX_USB_DEPTH 7
 
+#define AUDIO_IN_EP  0x83
+#define AUDIO_OUT_EP 0x03
+
 static const struct overbridge_device_desc DIGITAKT_DESC = {
   .pid = DTAKT_PID,
   .name = "Digitakt",
@@ -315,7 +318,7 @@ static void
 prepare_cycle_out (struct overbridge *ob)
 {
   libusb_fill_interrupt_transfer (ob->xfr_out, ob->device,
-				  0x03, (void *) ob->usb_data_out,
+				  AUDIO_OUT_EP, (void *) ob->usb_data_out,
 				  ob->usb_data_out_blk_len *
 				  ob->blocks_per_transfer, cb_xfr_out, ob,
 				  100);
@@ -330,7 +333,7 @@ static void
 prepare_cycle_in (struct overbridge *ob)
 {
   libusb_fill_interrupt_transfer (ob->xfr_in, ob->device,
-				  0x83, (void *) ob->usb_data_in,
+				  AUDIO_IN_EP, (void *) ob->usb_data_in,
 				  ob->usb_data_in_blk_len *
 				  ob->blocks_per_transfer, cb_xfr_in, ob,
 				  100);
