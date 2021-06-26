@@ -161,12 +161,12 @@ set_usb_input_data_blks (struct overbridge *ob)
   ob->i1.time += ob->b * e + ob->e2;
   ob->e2 += ob->c * e;
   ob->i0.frames = ob->i1.frames;
-  ob->i1.frames += OB_FRAMES_PER_TRANSFER;
+  ob->i1.frames += ob->frames_per_transfer;
   status = ob->status;
   pthread_spin_unlock (&ob->lock);
 
   f = ob->o2j_buf;
-  for (int i = 0; i < OB_BLOCKS_PER_TRANSFER; i++)
+  for (int i = 0; i < ob->blocks_per_transfer; i++)
     {
       blk = get_nth_usb_in_blk (ob, i);
       s = blk->data;
@@ -234,7 +234,7 @@ set_usb_output_data_blks (struct overbridge *ob)
 	  bytes = frames * ob->j2o_frame_bytes;
 	  jack_ringbuffer_read (ob->j2o_rb, (void *) ob->j2o_buf_res, bytes);
 	  ob->j2o_data.input_frames = frames;
-	  ob->j2o_data.src_ratio = (double) OB_FRAMES_PER_TRANSFER / frames;
+	  ob->j2o_data.src_ratio = (double) ob->frames_per_transfer / frames;
 	  //We should NOT use the simple API but since this only happens very occasionally and mostly at startup, this has very low impact on audio quality.
 	  res = src_simple (&ob->j2o_data, SRC_SINC_FASTEST,
 			    ob->device_desc.inputs);
@@ -243,12 +243,12 @@ set_usb_output_data_blks (struct overbridge *ob)
 	      debug_print (2, "j2o: Error while resampling: %s\n",
 			   src_strerror (res));
 	    }
-	  else if (ob->j2o_data.output_frames_gen != OB_FRAMES_PER_TRANSFER)
+	  else if (ob->j2o_data.output_frames_gen != ob->frames_per_transfer)
 	    {
 	      error_print
 		("j2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
 		 ob->j2o_data.src_ratio, ob->j2o_data.output_frames_gen,
-		 OB_FRAMES_PER_TRANSFER);
+		 ob->frames_per_transfer);
 	    }
 	}
     }
@@ -264,7 +264,7 @@ set_usb_output_data_blks (struct overbridge *ob)
     }
 
   f = ob->j2o_buf;
-  for (int i = 0; i < OB_BLOCKS_PER_TRANSFER; i++)
+  for (int i = 0; i < ob->blocks_per_transfer; i++)
     {
       blk = get_nth_usb_out_blk (ob, i);
       ob->s_counter += OB_FRAMES_PER_BLOCK;
@@ -317,7 +317,7 @@ prepare_cycle_out (struct overbridge *ob)
   libusb_fill_interrupt_transfer (ob->xfr_out, ob->device,
 				  0x03, (void *) ob->usb_data_out,
 				  ob->usb_data_out_blk_len *
-				  OB_BLOCKS_PER_TRANSFER, cb_xfr_out, ob,
+				  ob->blocks_per_transfer, cb_xfr_out, ob,
 				  100);
   int r = libusb_submit_transfer (ob->xfr_out);
   if (r != 0)
@@ -332,7 +332,8 @@ prepare_cycle_in (struct overbridge *ob)
   libusb_fill_interrupt_transfer (ob->xfr_in, ob->device,
 				  0x83, (void *) ob->usb_data_in,
 				  ob->usb_data_in_blk_len *
-				  OB_BLOCKS_PER_TRANSFER, cb_xfr_in, ob, 100);
+				  ob->blocks_per_transfer, cb_xfr_in, ob,
+				  100);
   int r = libusb_submit_transfer (ob->xfr_in);
   if (r != 0)
     {
@@ -452,7 +453,7 @@ run (void *data)
   double dtime;
 
   //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc.
-  dtime = OB_FRAMES_PER_TRANSFER / OB_SAMPLE_RATE;
+  dtime = ob->frames_per_transfer / OB_SAMPLE_RATE;
   w = 2 * M_PI * 0.1 * dtime;
   ob->b = 1.6 * w;
   ob->c = w * w;
@@ -463,7 +464,7 @@ run (void *data)
   ob->i1.time = ob->i0.time + ob->e2;
 
   ob->i0.frames = 0;
-  ob->i1.frames = OB_FRAMES_PER_TRANSFER;
+  ob->i1.frames = ob->frames_per_transfer;
 
   prepare_cycle_in (ob);
   prepare_cycle_out (ob);
@@ -505,7 +506,8 @@ overbrigde_get_err_str (overbridge_err_t errcode)
 }
 
 overbridge_err_t
-overbridge_init (struct overbridge *ob, char *device_name)
+overbridge_init (struct overbridge *ob, char *device_name,
+		 int blocks_per_transfer)
 {
   struct overbridge_usb_blk *blk;
   overbridge_err_t r = overbridge_init_priv (ob, device_name);
@@ -514,21 +516,24 @@ overbridge_init (struct overbridge *ob, char *device_name)
     {
       pthread_spin_init (&ob->lock, PTHREAD_PROCESS_SHARED);
 
+      ob->blocks_per_transfer = blocks_per_transfer;
+      ob->frames_per_transfer = OB_FRAMES_PER_BLOCK * ob->blocks_per_transfer;
+
       ob->usb_data_in_blk_len =
 	sizeof (struct overbridge_usb_blk) +
 	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ob->device_desc.outputs;
       ob->usb_data_out_blk_len =
 	sizeof (struct overbridge_usb_blk) +
 	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ob->device_desc.inputs;
-      int usb_data_in_len = ob->usb_data_in_blk_len * OB_BLOCKS_PER_TRANSFER;
+      int usb_data_in_len = ob->usb_data_in_blk_len * ob->blocks_per_transfer;
       int usb_data_out_len =
-	ob->usb_data_out_blk_len * OB_BLOCKS_PER_TRANSFER;
+	ob->usb_data_out_blk_len * ob->blocks_per_transfer;
       ob->usb_data_in = malloc (usb_data_in_len);
       ob->usb_data_out = malloc (usb_data_out_len);
       memset (ob->usb_data_in, 0, usb_data_in_len);
       memset (ob->usb_data_out, 0, usb_data_out_len);
 
-      for (int i = 0; i < OB_BLOCKS_PER_TRANSFER; i++)
+      for (int i = 0; i < ob->blocks_per_transfer; i++)
 	{
 	  blk = get_nth_usb_out_blk (ob, i);
 	  blk->header = htons (0x07ff);
@@ -537,8 +542,8 @@ overbridge_init (struct overbridge *ob, char *device_name)
       ob->j2o_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc.inputs;
       ob->o2j_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc.outputs;
 
-      ob->j2o_buf_size = OB_FRAMES_PER_TRANSFER * ob->j2o_frame_bytes;
-      ob->o2j_buf_size = OB_FRAMES_PER_TRANSFER * ob->o2j_frame_bytes;
+      ob->j2o_buf_size = ob->frames_per_transfer * ob->j2o_frame_bytes;
+      ob->o2j_buf_size = ob->frames_per_transfer * ob->o2j_frame_bytes;
       ob->j2o_buf = malloc (ob->j2o_buf_size);
       ob->o2j_buf = malloc (ob->o2j_buf_size);
       memset (ob->j2o_buf, 0, ob->j2o_buf_size);
@@ -550,8 +555,8 @@ overbridge_init (struct overbridge *ob, char *device_name)
       ob->j2o_data.data_in = ob->j2o_buf_res;
       ob->j2o_data.data_out = ob->j2o_buf;
       ob->j2o_data.end_of_input = 1;
-      ob->j2o_data.input_frames = OB_FRAMES_PER_TRANSFER;
-      ob->j2o_data.output_frames = OB_FRAMES_PER_TRANSFER;
+      ob->j2o_data.input_frames = ob->frames_per_transfer;
+      ob->j2o_data.output_frames = ob->frames_per_transfer;
     }
   else
     {
@@ -564,7 +569,7 @@ void
 overbridge_init_ring_bufs (struct overbridge *ob, jack_nframes_t jbufsize)
 {
   size_t max_bufsize =
-    OB_FRAMES_PER_TRANSFER > jbufsize ? OB_FRAMES_PER_TRANSFER : jbufsize;
+    ob->frames_per_transfer > jbufsize ? ob->frames_per_transfer : jbufsize;
   ob->j2o_rb = jack_ringbuffer_create (max_bufsize * ob->j2o_frame_bytes * 4);
   jack_ringbuffer_mlock (ob->j2o_rb);
 

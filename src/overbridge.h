@@ -151,9 +151,7 @@
 #include "utils.h"
 
 #define OB_SAMPLE_RATE 48000.0
-#define OB_BLOCKS_PER_TRANSFER 24
 #define OB_FRAMES_PER_BLOCK 7
-#define OB_FRAMES_PER_TRANSFER (OB_FRAMES_PER_BLOCK * OB_BLOCKS_PER_TRANSFER)
 #define OB_BYTES_PER_FRAME sizeof(jack_default_audio_sample_t)
 #define OB_PADDING_SIZE 28
 #define OB_MAX_TRACKS 12
@@ -201,6 +199,8 @@ struct overbridge_device_desc
 
 struct overbridge
 {
+  int blocks_per_transfer;
+  int frames_per_transfer;
   pthread_spinlock_t lock;
   overbridge_status_t status;
   size_t j2o_latency;
@@ -236,7 +236,7 @@ const char *overbrigde_get_err_str (overbridge_err_t);
 
 void set_self_max_priority ();
 
-overbridge_err_t overbridge_init (struct overbridge *, char *);
+overbridge_err_t overbridge_init (struct overbridge *, char *, int);
 
 void overbridge_init_ring_bufs (struct overbridge *, jack_nframes_t);
 

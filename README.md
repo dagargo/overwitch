@@ -81,6 +81,7 @@ Usage: overwitch [options]
 Options:
   --use-device, -d value
   --resampling-quality, -q value
+  --transfer-blocks, -b value
   --list-devices, -l
   --verbose, -v
   --help, -h
@@ -88,9 +89,11 @@ Options:
 
 ## Latency
 
-Device to JACK latency is different from JACK to device latency though they are very close.
+Device to JACK latency is different from JACK to device latency though they are very close. These latencies are the transferred frames to and from the device and, by default, these are performed in 24 groups (blocks) of 7 frames (168 frames).
 
-The minimum theoretical latency is the device frames (168 frames, 3.5 ms) plus the JACK buffer frames. Thus, the minimum theoretical latency is 4.8 ms for 64 frames buffer. Notice that some additional buffer frames are used in the resamplers but it is unknown how many. In practice, both latencies are below 6 ms in this scenario and below 5 ms if using 32 frames.
+Thus, the minimum theoretical latency is the device frames plus the JACK buffer frames plus some additional buffer frames are used in the resamplers but it is unknown how many.
+
+But looks like this block amount can be changed. With the option `-b` we can override this value indicating how many blocks are processed at a time. The default value is 24 but values between 2 and 32 can be used. Notice that this option is **highly experimental**.
 
 ## Tuning
 

@@ -40,6 +40,7 @@
 #define LOG_TIME 2
 #define RATIO_DIFF_THRES 0.00001
 #define DEFAULT_QUALITY 2
+#define DEFAULT_BLOCKS 24
 
 struct overbridge ob;
 jack_client_t *client;
@@ -84,6 +85,7 @@ int quality = DEFAULT_QUALITY;
 static struct option options[] = {
   {"use-device", 1, NULL, 'd'},
   {"resampling-quality", 1, NULL, 'q'},
+  {"transfer-blocks", 1, NULL, 'b'},
   {"list-devices", 0, NULL, 'l'},
   {"verbose", 0, NULL, 'v'},
   {"help", 0, NULL, 'h'},
@@ -116,7 +118,7 @@ overwitch_init_buffer_size ()
   kj = bufsize / -o2j_ratio;
   read_frames = bufsize * j2o_ratio;
 
-  kdel = OB_FRAMES_PER_TRANSFER + 1.5 * bufsize;
+  kdel = (OB_FRAMES_PER_BLOCK * ob.blocks_per_transfer) + 1.5 * bufsize;
   debug_print (2, "Target delay: %.1f ms (%d frames)\n",
 	       kdel * 1000 / OB_SAMPLE_RATE, kdel);
 
@@ -465,7 +467,7 @@ overwitch_exit (int signo)
 }
 
 static int
-overwitch_run (char *device_name)
+overwitch_run (char *device_name, int blocks_per_transfer)
 {
   jack_options_t options = JackNullOption;
   jack_status_t status;
@@ -483,7 +485,7 @@ overwitch_run (char *device_name)
   sigaction (SIGINT, &action, NULL);
   sigaction (SIGTERM, &action, NULL);
 
-  ob_status = overbridge_init (&ob, device_name);
+  ob_status = overbridge_init (&ob, device_name, blocks_per_transfer);
   if (ob_status)
     {
       error_print ("USB error: %s\n", overbrigde_get_err_str (ob_status));
@@ -652,13 +654,14 @@ int
 main (int argc, char *argv[])
 {
   int opt;
-  int vflg = 0, lflg = 0, dflg = 0, errflg = 0;
+  int vflg = 0, lflg = 0, dflg = 0, bflg = 0, errflg = 0;
   char *endstr;
   char *device = NULL;
   int long_index = 0;
   overbridge_err_t ob_status;
+  int blocks_per_transfer = DEFAULT_BLOCKS;
 
-  while ((opt = getopt_long (argc, argv, "d:q:lvh",
+  while ((opt = getopt_long (argc, argv, "d:q:b:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
@@ -677,6 +680,17 @@ main (int argc, char *argv[])
 		       "Resampling quality value must be in [0..4]. Using value %d...\n",
 		       quality);
 	    }
+	  break;
+	case 'b':
+	  blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
+	  if (blocks_per_transfer < 2 || blocks_per_transfer > 32)
+	    {
+	      blocks_per_transfer = DEFAULT_BLOCKS;
+	      fprintf (stderr,
+		       "Blocks value must be in [8..24]. Using value %d...\n",
+		       blocks_per_transfer);
+	    }
+	  bflg++;
 	  break;
 	case 'l':
 	  lflg++;
@@ -721,5 +735,11 @@ main (int argc, char *argv[])
       exit (EXIT_FAILURE);
     }
 
-  return overwitch_run (device);
+  if (bflg > 1)
+    {
+      fprintf (stderr, "Undetermined blocks\n");
+      exit (EXIT_FAILURE);
+    }
+
+  return overwitch_run (device, blocks_per_transfer);
 }
