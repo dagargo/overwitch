@@ -674,8 +674,8 @@ main (int argc, char *argv[])
 	    {
 	      quality = DEFAULT_QUALITY;
 	      fprintf (stderr,
-		       "Resampling quality value %s not valid. Using value %d...\n",
-		       optarg, quality);
+		       "Resampling quality value must be in [0..4]. Using value %d...\n",
+		       quality);
 	    }
 	  break;
 	case 'l':
