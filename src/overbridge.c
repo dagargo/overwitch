@@ -417,12 +417,12 @@ overbridge_init_priv (struct overbridge *ob, char *device_name)
     {
       return OB_CANT_SET_ALT_SETTING;
     }
-  ret = libusb_clear_halt (ob->device, 131);
+  ret = libusb_clear_halt (ob->device, AUDIO_IN_EP);
   if (LIBUSB_SUCCESS != ret)
     {
       return OB_CANT_CLEAR_EP;
     }
-  ret = libusb_clear_halt (ob->device, 3);
+  ret = libusb_clear_halt (ob->device, AUDIO_OUT_EP);
   if (LIBUSB_SUCCESS != ret)
     {
       return OB_CANT_CLEAR_EP;
