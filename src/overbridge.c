@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <math.h>
+#include <time.h>
 
 #define ELEKTRON_VID 0x1935
 
@@ -48,6 +49,15 @@
 
 #define AUDIO_IN_EP  0x83
 #define AUDIO_OUT_EP 0x03
+#define MIDI_IN_EP   0x81
+#define MIDI_OUT_EP  0x01
+
+#define MIDI_BUF_EVENTS 64
+#define MIDI_BUF_SIZE (MIDI_BUF_EVENTS * OB_MIDI_EVENT_SIZE)
+
+#define USB_BULK_MIDI_SIZE 512
+
+#define MIN_TIME_NS 1000
 
 static const struct overbridge_device_desc DIGITAKT_DESC = {
   .pid = DTAKT_PID,
@@ -107,8 +117,9 @@ static const struct overbridge_device_desc OB_DEVICE_DESCS[] = {
 static const int OB_DEVICE_DESCS_N =
   sizeof (OB_DEVICE_DESCS) / sizeof (struct overbridge_device_desc);
 
-static void prepare_cycle_in ();	// forward declaration
-static void prepare_cycle_out ();	// forward declaration
+static void prepare_cycle_in ();
+static void prepare_cycle_out ();
+static void prepare_cycle_in_midi ();
 
 static struct overbridge_usb_blk *
 get_nth_usb_in_blk (struct overbridge *ob, int n)
@@ -132,11 +143,25 @@ prepare_transfers (struct overbridge *ob)
     {
       return -ENOMEM;
     }
+
   ob->xfr_out = libusb_alloc_transfer (0);
   if (!ob->xfr_out)
     {
       return -ENOMEM;
     }
+
+  ob->xfr_in_midi = libusb_alloc_transfer (0);
+  if (!ob->xfr_in_midi)
+    {
+      return -ENOMEM;
+    }
+
+  ob->xfr_out_midi = libusb_alloc_transfer (0);
+  if (!ob->xfr_out_midi)
+    {
+      return -ENOMEM;
+    }
+
   return LIBUSB_SUCCESS;
 }
 
@@ -145,6 +170,8 @@ free_transfers (struct overbridge *ob)
 {
   libusb_free_transfer (ob->xfr_in);
   libusb_free_transfer (ob->xfr_out);
+  libusb_free_transfer (ob->xfr_in_midi);
+  libusb_free_transfer (ob->xfr_out_midi);
 }
 
 static void
@@ -314,6 +341,75 @@ cb_xfr_out (struct libusb_transfer *xfr)
   prepare_cycle_out (xfr->user_data);
 }
 
+static void LIBUSB_CALL
+cb_xfr_in_midi (struct libusb_transfer *xfr)
+{
+  struct ob_midi_event event;
+  int length;
+  overbridge_status_t status;
+  struct overbridge *ob = xfr->user_data;
+
+  pthread_spin_lock (&ob->lock);
+  status = ob->status;
+  pthread_spin_unlock (&ob->lock);
+
+  if (status < OB_STATUS_RUN)
+    {
+      goto end;
+    }
+
+  if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
+    {
+      length = 0;
+      event.frames = jack_frame_time (ob->jclient);
+
+      while (length < xfr->actual_length)
+	{
+	  memcpy (event.bytes, &ob->o2j_midi_data[length],
+		  OB_MIDI_EVENT_SIZE);
+	  //Note-off, Note-on, Poly-KeyPress, Control Change, Program Change, Channel Pressure, PitchBend Change, Single Byte
+	  if (event.bytes[0] >= 0x08 && event.bytes[0] <= 0x0f)
+	    {
+	      debug_print (2, "o2j MIDI: %02x, %02x, %02x, %02x (%u)\n",
+			   event.bytes[0], event.bytes[1], event.bytes[2],
+			   event.bytes[3], event.frames);
+
+	      if (jack_ringbuffer_write_space (ob->o2j_rb_midi) >=
+		  sizeof (struct ob_midi_event))
+		{
+		  jack_ringbuffer_write (ob->o2j_rb_midi, (void *) &event,
+					 sizeof (struct ob_midi_event));
+		}
+	      else
+		{
+		  error_print
+		    ("o2j: Buffer MIDI overflow. Discarding data...\n");
+		}
+	    }
+	  length += OB_MIDI_EVENT_SIZE;
+	}
+    }
+  else
+    {
+      if (xfr->status != LIBUSB_TRANSFER_TIMED_OUT)
+	{
+	  error_print ("Error on USB MIDI in transfer\n");
+	}
+    }
+
+end:
+  prepare_cycle_in_midi (ob);
+}
+
+static void LIBUSB_CALL
+cb_xfr_out_midi (struct libusb_transfer *xfr)
+{
+  if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
+    {
+      error_print ("Error on USB MIDI out transfer\n");
+    }
+}
+
 static void
 prepare_cycle_out (struct overbridge *ob)
 {
@@ -341,6 +437,34 @@ prepare_cycle_in (struct overbridge *ob)
   if (r != 0)
     {
       error_print ("Error when submitting USB in trasfer\n");
+    }
+}
+
+static void
+prepare_cycle_in_midi (struct overbridge *ob)
+{
+  libusb_fill_bulk_transfer (ob->xfr_in_midi, ob->device,
+			     MIDI_IN_EP, (void *) ob->o2j_midi_data,
+			     USB_BULK_MIDI_SIZE, cb_xfr_in_midi, ob, 100);
+
+  int r = libusb_submit_transfer (ob->xfr_in_midi);
+  if (r != 0)
+    {
+      error_print ("Error when submitting USB MIDI in trasfer\n");
+    }
+}
+
+static void
+prepare_cycle_out_midi (struct overbridge *ob)
+{
+  libusb_fill_bulk_transfer (ob->xfr_out_midi, ob->device, MIDI_OUT_EP,
+			     (void *) ob->j2o_midi_data,
+			     USB_BULK_MIDI_SIZE, cb_xfr_out_midi, ob, 100);
+
+  int r = libusb_submit_transfer (ob->xfr_out_midi);
+  if (r != 0)
+    {
+      error_print ("Error when submitting USB MIDI OUT trasfer\n");
     }
 }
 
@@ -392,12 +516,17 @@ overbridge_init_priv (struct overbridge *ob, char *device_name)
     {
       return OB_CANT_SET_USB_CONFIG;
     }
-  ret = libusb_claim_interface (ob->device, 2);
+  ret = libusb_claim_interface (ob->device, 1);
   if (LIBUSB_SUCCESS != ret)
     {
       return OB_CANT_CLAIM_IF;
     }
-  ret = libusb_claim_interface (ob->device, 1);
+  ret = libusb_set_interface_alt_setting (ob->device, 1, 3);
+  if (LIBUSB_SUCCESS != ret)
+    {
+      return OB_CANT_SET_ALT_SETTING;
+    }
+  ret = libusb_claim_interface (ob->device, 2);
   if (LIBUSB_SUCCESS != ret)
     {
       return OB_CANT_CLAIM_IF;
@@ -407,7 +536,12 @@ overbridge_init_priv (struct overbridge *ob, char *device_name)
     {
       return OB_CANT_SET_ALT_SETTING;
     }
-  ret = libusb_set_interface_alt_setting (ob->device, 1, 3);
+  ret = libusb_claim_interface (ob->device, 3);
+  if (LIBUSB_SUCCESS != ret)
+    {
+      return OB_CANT_CLAIM_IF;
+    }
+  ret = libusb_set_interface_alt_setting (ob->device, 3, 0);
   if (LIBUSB_SUCCESS != ret)
     {
       return OB_CANT_SET_ALT_SETTING;
@@ -422,11 +556,22 @@ overbridge_init_priv (struct overbridge *ob, char *device_name)
     {
       return OB_CANT_CLEAR_EP;
     }
+  ret = libusb_clear_halt (ob->device, MIDI_IN_EP);
+  if (LIBUSB_SUCCESS != ret)
+    {
+      return OB_CANT_CLEAR_EP;
+    }
+  ret = libusb_clear_halt (ob->device, MIDI_OUT_EP);
+  if (LIBUSB_SUCCESS != ret)
+    {
+      return OB_CANT_CLEAR_EP;
+    }
   ret = prepare_transfers (ob);
   if (LIBUSB_SUCCESS != ret)
     {
       return OB_CANT_PREPARE_TRANSFER;
     }
+
   return OB_OK;
 }
 
@@ -442,6 +587,93 @@ static const char *ob_err_strgs[] = { "ok", "libusb init failed",
   "can't claim usb interface", "can't set usb alt setting",
   "can't cleat endpoint", "can't prepare transfer"
 };
+
+void *
+run_j2o_midi (void *data)
+{
+  overbridge_status_t status;
+  int pos;
+  jack_time_t first_event_time;
+  jack_time_t last_time;
+  jack_time_t event_time;
+  jack_time_t diff;
+  struct timespec req;
+  struct ob_midi_event event;
+  struct overbridge *ob = data;
+
+  last_time = 0;
+  do
+    {
+      pthread_spin_lock (&ob->lock);
+      status = ob->status;
+      pthread_spin_unlock (&ob->lock);
+
+      memset (ob->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
+      diff = 0;
+      pos = 0;
+      first_event_time = 0;
+
+      while (jack_ringbuffer_read_space (ob->j2o_rb_midi) >=
+	     sizeof (struct ob_midi_event) && pos < USB_BULK_MIDI_SIZE)
+	{
+	  jack_ringbuffer_peek (ob->j2o_rb_midi, (void *) &event,
+				sizeof (struct ob_midi_event));
+	  event_time = jack_frames_to_time (ob->jclient, event.frames);
+
+	  if (!first_event_time)
+	    {
+	      first_event_time = event_time;
+	      last_time = event_time;
+	    }
+	  else
+	    {
+	      if (first_event_time != event_time)
+		{
+		  if (last_time)
+		    {
+		      diff = event_time - last_time;
+		    }
+		  else
+		    {
+		      diff = 0;
+		    }
+		  last_time = event_time;
+		  break;
+		}
+	    }
+
+	  memcpy (&ob->j2o_midi_data[pos], event.bytes, OB_MIDI_EVENT_SIZE);
+	  pos += OB_MIDI_EVENT_SIZE;
+	  jack_ringbuffer_read_advance (ob->j2o_rb_midi,
+					sizeof (struct ob_midi_event));
+	}
+
+
+      if (pos)
+      {
+      debug_print (2, "Event frames: %u; diff: %lu\n", event.frames, diff);
+      prepare_cycle_out_midi (ob);
+        }
+      pos = 0;
+
+      if (diff)
+	{
+	  req.tv_sec = diff / 1000000;
+	  req.tv_nsec = (diff % 1000000) * 1000;
+	}
+      else
+	{
+	  req.tv_sec = 0;
+	  req.tv_nsec = MIN_TIME_NS;
+	}
+      nanosleep (&req, NULL);
+      last_time = jack_get_time ();
+
+    }
+  while (status);
+
+  return NULL;
+}
 
 void *
 run (void *data)
@@ -466,6 +698,7 @@ run (void *data)
 
   prepare_cycle_in (ob);
   prepare_cycle_out (ob);
+  prepare_cycle_in_midi (ob);
 
   while (overbridge_get_status (ob) >= OB_STATUS_BOOT)
     {
@@ -476,18 +709,40 @@ run (void *data)
 }
 
 int
-overbridge_run (struct overbridge *ob)
+overbridge_run (struct overbridge *ob, jack_client_t * client)
 {
   int ret;
+  size_t max_bufsize;
 
+  ob->jbufsize = jack_get_buffer_size (client);
+
+  max_bufsize =
+    ob->frames_per_transfer >
+    ob->jbufsize ? ob->frames_per_transfer : ob->jbufsize;
+  ob->j2o_rb = jack_ringbuffer_create (max_bufsize * ob->j2o_frame_bytes * 4);
+  jack_ringbuffer_mlock (ob->j2o_rb);
+  ob->o2j_rb = jack_ringbuffer_create (max_bufsize * ob->o2j_frame_bytes * 4);
+  jack_ringbuffer_mlock (ob->o2j_rb);
+
+  ob->jclient = client;
   ob->s_counter = 0;
   ob->status = OB_STATUS_BOOT;
+
+  debug_print (1, "Starting MIDI thread...\n");
+  ret = pthread_create (&ob->tinfo, NULL, run_j2o_midi, ob);
+  if (ret)
+    {
+      error_print ("Could not start MIDI thread\n");
+      return ret;
+    }
+
   debug_print (1, "Starting device thread...\n");
   ret = pthread_create (&ob->tinfo, NULL, run, ob);
   if (ret)
     {
       error_print ("Could not start device thread\n");
     }
+
   return ret;
 }
 
@@ -555,6 +810,16 @@ overbridge_init (struct overbridge *ob, char *device_name,
       ob->j2o_data.end_of_input = 1;
       ob->j2o_data.input_frames = ob->frames_per_transfer;
       ob->j2o_data.output_frames = ob->frames_per_transfer;
+
+      //MIDI
+      ob->j2o_midi_data = malloc (USB_BULK_MIDI_SIZE);
+      ob->o2j_midi_data = malloc (USB_BULK_MIDI_SIZE);
+      memset (ob->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
+      memset (ob->o2j_midi_data, 0, USB_BULK_MIDI_SIZE);
+      ob->j2o_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 4);
+      ob->o2j_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 4);
+      jack_ringbuffer_mlock (ob->j2o_rb_midi);
+      jack_ringbuffer_mlock (ob->o2j_rb_midi);
     }
   else
     {
@@ -564,29 +829,20 @@ overbridge_init (struct overbridge *ob, char *device_name,
 }
 
 void
-overbridge_init_ring_bufs (struct overbridge *ob, jack_nframes_t jbufsize)
-{
-  size_t max_bufsize =
-    ob->frames_per_transfer > jbufsize ? ob->frames_per_transfer : jbufsize;
-  ob->j2o_rb = jack_ringbuffer_create (max_bufsize * ob->j2o_frame_bytes * 4);
-  jack_ringbuffer_mlock (ob->j2o_rb);
-
-  ob->o2j_rb = jack_ringbuffer_create (max_bufsize * ob->o2j_frame_bytes * 4);
-  jack_ringbuffer_mlock (ob->o2j_rb);
-}
-
-void
 overbridge_destroy (struct overbridge *ob)
 {
   usb_shutdown (ob);
   free_transfers (ob);
   jack_ringbuffer_free (ob->j2o_rb);
   jack_ringbuffer_free (ob->o2j_rb);
+  jack_ringbuffer_free (ob->o2j_rb_midi);
   free (ob->j2o_buf);
   free (ob->j2o_buf_res);
   free (ob->o2j_buf);
   free (ob->usb_data_in);
   free (ob->usb_data_out);
+  free (ob->j2o_midi_data);
+  free (ob->o2j_midi_data);
 }
 
 overbridge_status_t
@@ -654,8 +910,8 @@ overbridge_list_devices ()
 		    {
 		      fprintf (stderr, ":%03d", port_numbers[k]);
 		    }
-		  fprintf (stderr, " Device %03d: ID %04x:%04x %s\n", address,
-			   desc.idVendor, desc.idProduct,
+		  fprintf (stderr, " Device %03d: ID %04x:%04x %s\n",
+			   address, desc.idVendor, desc.idProduct,
 			   OB_DEVICE_DESCS[j].name);
 		}
 	    }

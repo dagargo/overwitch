@@ -29,6 +29,7 @@
 #include <math.h>
 #include <jack/intclient.h>
 #include <jack/thread.h>
+#include <jack/midiport.h>
 #include <libgen.h>
 #define _GNU_SOURCE
 #include <getopt.h>
@@ -42,10 +43,14 @@
 #define DEFAULT_QUALITY 2
 #define DEFAULT_BLOCKS 24
 
+#define MSG_ERROR_PORT_REGISTER "Error while registering JACK port\n"
+
 struct overbridge ob;
 jack_client_t *client;
 jack_port_t **output_ports;
 jack_port_t **input_ports;
+jack_port_t *midi_output_port;
+jack_port_t *midi_input_port;
 jack_nframes_t bufsize = 0;
 double samplerate;
 size_t o2j_buf_size;
@@ -79,6 +84,8 @@ double _z3 = 0.0;
 double o2j_ratio_max;
 double o2j_ratio_min;
 int read_frames;
+jack_nframes_t current_frames;
+
 int log_control_cycles;
 int quality = DEFAULT_QUALITY;
 
@@ -281,7 +288,6 @@ overwitch_j2o ()
 static inline void
 overwitch_compute_ratios ()
 {
-  jack_nframes_t current_frames;
   jack_time_t current_usecs;
   jack_time_t next_usecs;
   float period_usecs;
@@ -409,6 +415,144 @@ overwitch_compute_ratios ()
     }
 }
 
+static inline void
+overwitch_o2j_midi (jack_nframes_t nframes)
+{
+  size_t data_size;
+  void *midi_port_buf;
+  jack_midi_data_t *jmidi;
+  struct ob_midi_event event;
+  jack_nframes_t last_frames;
+  jack_nframes_t frames;
+
+  midi_port_buf = jack_port_get_buffer (midi_output_port, nframes);
+  jack_midi_clear_buffer (midi_port_buf);
+  last_frames = 0;
+
+  while (jack_ringbuffer_read_space (ob.o2j_rb_midi) >=
+	 sizeof (struct ob_midi_event))
+    {
+      jack_ringbuffer_peek (ob.o2j_rb_midi, (void *) &event,
+			    sizeof (struct ob_midi_event));
+
+      frames = (current_frames - event.frames) % nframes;
+
+      debug_print (2, "Event frames: %u\n", frames);
+
+      if (frames < last_frames)
+	{
+	  debug_print (2, "Skipping until the next cycle...\n");
+	  last_frames = 0;
+	  break;
+	}
+      last_frames = frames;
+
+      jack_ringbuffer_read_advance (ob.o2j_rb_midi,
+				    sizeof (struct ob_midi_event));
+
+      if (event.bytes[0] == 0x0f)
+	{
+	  data_size = 1;
+	}
+      else
+	{
+	  data_size = 3;
+	}
+      jmidi = jack_midi_event_reserve (midi_port_buf, frames, data_size);
+      if (jmidi)
+	{
+	  jmidi[0] = event.bytes[1];
+	  if (data_size == 3)
+	    {
+	      jmidi[1] = event.bytes[2];
+	      jmidi[2] = event.bytes[3];
+	    }
+	}
+    }
+}
+
+static inline void
+overwitch_j2o_midi (jack_nframes_t nframes)
+{
+  jack_midi_event_t jevent;
+  void *midi_port_buf;
+  struct ob_midi_event oevent;
+  jack_nframes_t event_count;
+  jack_midi_data_t status_byte;
+  overbridge_status_t status;
+
+  pthread_spin_lock (&ob.lock);
+  status = ob.status;
+  pthread_spin_unlock (&ob.lock);
+
+  if (status < OB_STATUS_RUN)
+    {
+      return;
+    }
+
+  midi_port_buf = jack_port_get_buffer (midi_input_port, nframes);
+  event_count = jack_midi_get_event_count (midi_port_buf);
+
+  for (int i = 0; i < event_count; i++)
+    {
+      oevent.bytes[0] = 0;
+      jack_midi_event_get (&jevent, midi_port_buf, i);
+      status_byte = jevent.buffer[0];
+
+      if (jevent.size == 1 && status_byte >= 0xf8 && status_byte <= 0xfc)
+	{
+	  oevent.bytes[0] = 0x0f;	//Single Byte
+	  oevent.bytes[1] = jevent.buffer[0];
+	}
+      else if (jevent.size == 3)
+	{
+	  switch (status_byte & 0xf0)
+	    {
+	    case 0x80:		//Note-off
+	      oevent.bytes[0] = 0x08;
+	      break;
+	    case 0x90:		//Note-on
+	      oevent.bytes[0] = 0x09;
+	      break;
+	    case 0xa0:		//Poly-KeyPress
+	      oevent.bytes[0] = 0x0a;
+	      break;
+	    case 0xb0:		//Control Change
+	      oevent.bytes[0] = 0x0b;
+	      break;
+	    case 0xc0:		//Program Change
+	      oevent.bytes[0] = 0x0c;
+	      break;
+	    case 0xd0:		//Channel Pressure
+	      oevent.bytes[0] = 0x0d;
+	      break;
+	    case 0xe0:		//PitchBend Change
+	      oevent.bytes[0] = 0x0e;
+	      break;
+	    }
+	  oevent.bytes[1] = jevent.buffer[0];
+	  oevent.bytes[2] = jevent.buffer[1];
+	  oevent.bytes[3] = jevent.buffer[2];
+	}
+
+      oevent.frames = jevent.time;
+
+      if (oevent.bytes[0])
+	{
+	  if (jack_ringbuffer_write_space (ob.j2o_rb_midi) >=
+	      sizeof (struct ob_midi_event))
+	    {
+	      jack_ringbuffer_write (ob.j2o_rb_midi, (void *) &oevent,
+				     sizeof (struct ob_midi_event));
+	    }
+	  else
+	    {
+	      error_print ("j2o: Buffer MIDI overflow. Discarding data...\n");
+	    }
+	}
+    }
+}
+
 static inline int
 overwitch_process_cb (jack_nframes_t nframes, void *arg)
 {
@@ -417,9 +561,9 @@ overwitch_process_cb (jack_nframes_t nframes, void *arg)
 
   overwitch_compute_ratios ();
 
-  //o2j
-
   overwitch_o2j ();
+
+  //o2j
 
   f = o2j_buf_out;
   for (int i = 0; i < ob.device_desc.outputs; i++)
@@ -452,6 +596,10 @@ overwitch_process_cb (jack_nframes_t nframes, void *arg)
     }
 
   overwitch_j2o ();
+
+  overwitch_o2j_midi (nframes);
+
+  overwitch_j2o_midi (nframes);
 
   return 0;
 }
@@ -536,7 +684,6 @@ overwitch_run (char *device_name, int blocks_per_transfer)
   bufsize = jack_get_buffer_size (client);
   printf ("JACK buffer size: %d\n", bufsize);
   overwitch_init_buffer_size ();
-  overbridge_init_ring_bufs (&ob, bufsize);
 
   output_ports = malloc (sizeof (jack_port_t *) * ob.device_desc.outputs);
   for (int i = 0; i < ob.device_desc.outputs; i++)
@@ -548,7 +695,7 @@ overwitch_run (char *device_name, int blocks_per_transfer)
 
       if (output_ports[i] == NULL)
 	{
-	  error_print ("No more JACK ports available\n");
+	  error_print (MSG_ERROR_PORT_REGISTER);
 	  ret = EXIT_FAILURE;
 	  goto cleanup_jack;
 	}
@@ -564,10 +711,34 @@ overwitch_run (char *device_name, int blocks_per_transfer)
 
       if (input_ports[i] == NULL)
 	{
-	  error_print ("No more JACK ports available\n");
+	  error_print (MSG_ERROR_PORT_REGISTER);
 	  ret = EXIT_FAILURE;
 	  goto cleanup_jack;
 	}
+    }
+
+  midi_output_port =
+    jack_port_register (client,
+			"MIDI out",
+			JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+
+  if (midi_output_port == NULL)
+    {
+      error_print (MSG_ERROR_PORT_REGISTER);
+      ret = EXIT_FAILURE;
+      goto cleanup_jack;
+    }
+
+  midi_input_port =
+    jack_port_register (client,
+			"MIDI in",
+			JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+
+  if (midi_input_port == NULL)
+    {
+      error_print (MSG_ERROR_PORT_REGISTER);
+      ret = EXIT_FAILURE;
+      goto cleanup_jack;
     }
 
   j2o_state =
@@ -591,7 +762,7 @@ overwitch_run (char *device_name, int blocks_per_transfer)
   memset (j2o_buf_in, 0, j2o_bufsize);
   memset (o2j_buf_in, 0, o2j_bufsize);
 
-  if (overbridge_run (&ob))
+  if (overbridge_run (&ob, client))
     {
       ret = EXIT_FAILURE;
       goto cleanup_jack;

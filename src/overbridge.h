@@ -146,6 +146,7 @@
 
 #include <libusb.h>
 #include <jack/ringbuffer.h>
+#include <jack/midiport.h>
 #include <samplerate.h>
 #include <pthread.h>
 #include "utils.h"
@@ -155,6 +156,8 @@
 #define OB_BYTES_PER_FRAME sizeof(jack_default_audio_sample_t)
 #define OB_PADDING_SIZE 28
 #define OB_MAX_TRACKS 12
+
+#define OB_MIDI_EVENT_SIZE 4
 
 struct overbridge_usb_blk
 {
@@ -230,6 +233,21 @@ struct overbridge
   //j2o resampler
   jack_default_audio_sample_t *j2o_buf_res;
   SRC_DATA j2o_data;
+  //MIDI
+  jack_client_t *jclient;
+  unsigned char *j2o_midi_data;
+  unsigned char *o2j_midi_data;
+  struct libusb_transfer *xfr_out_midi;
+  struct libusb_transfer *xfr_in_midi;
+  jack_nframes_t jbufsize;
+  jack_ringbuffer_t *j2o_rb_midi;
+  jack_ringbuffer_t *o2j_rb_midi;
+};
+
+struct ob_midi_event
+{
+  jack_nframes_t frames;
+  jack_midi_data_t bytes[OB_MIDI_EVENT_SIZE];
 };
 
 const char *overbrigde_get_err_str (overbridge_err_t);
@@ -238,9 +256,7 @@ void set_self_max_priority ();
 
 overbridge_err_t overbridge_init (struct overbridge *, char *, int);
 
-void overbridge_init_ring_bufs (struct overbridge *, jack_nframes_t);
-
-int overbridge_run (struct overbridge *);
+int overbridge_run (struct overbridge *, jack_client_t *);
 
 void overbridge_destroy (struct overbridge *);
 
