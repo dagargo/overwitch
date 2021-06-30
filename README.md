@@ -29,7 +29,7 @@ You can easily install them by running `sudo apt install automake libusb-1.0-0-d
 
 As this will install `jackd2`, you would be asked to configure it to be run with real time priority. Be sure to answer yes. With this, the `audio` group would be able to run processes with real time priority. Be sure to be in the `audio` group too.
 
-After, you need to allow users to use the USB devices. For doing so, create the file `/etc/udev/rules.d/elektron.rules` with the following content. This will allows us to use any device from Elektron.
+After, you need to allow users to use the USB devices. For doing so, create the file `/etc/udev/rules.d/elektron.rules` with the following content. This will allow us to use any device from Elektron.
 
 ```
 SUBSYSTEM=="usb", ATTRS{idVendor}=="1935", MODE="0666"
