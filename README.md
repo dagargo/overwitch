@@ -42,6 +42,8 @@ And do not forget to activate these rules.
 $ sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
+You might want to add the names for the vendor and products in `/lib/udev/hwdb.d/20-usb-vendor-model.hwdb` but it is not necessary.
+
 ## Usage
 
 First, list the available devices.
