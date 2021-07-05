@@ -435,7 +435,7 @@ overwitch_o2j_midi (jack_nframes_t nframes)
       jack_ringbuffer_peek (ob.o2j_rb_midi, (void *) &event,
 			    sizeof (struct ob_midi_event));
 
-      frames = (current_frames - event.frames) % nframes;
+      frames = event.frames % nframes;
 
       debug_print (2, "Event frames: %u\n", frames);
 

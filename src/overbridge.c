@@ -604,10 +604,6 @@ run_j2o_midi (void *data)
   last_time = 0;
   do
     {
-      pthread_spin_lock (&ob->lock);
-      status = ob->status;
-      pthread_spin_unlock (&ob->lock);
-
       memset (ob->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
       diff = 0;
       pos = 0;
@@ -629,14 +625,7 @@ run_j2o_midi (void *data)
 	    {
 	      if (first_event_time != event_time)
 		{
-		  if (last_time)
-		    {
-		      diff = event_time - last_time;
-		    }
-		  else
-		    {
-		      diff = 0;
-		    }
+		  diff = event_time - last_time;
 		  last_time = event_time;
 		  break;
 		}
@@ -648,12 +637,12 @@ run_j2o_midi (void *data)
 					sizeof (struct ob_midi_event));
 	}
 
-
       if (pos)
-      {
-      debug_print (2, "Event frames: %u; diff: %lu\n", event.frames, diff);
-      prepare_cycle_out_midi (ob);
-        }
+	{
+	  debug_print (2, "Event frames: %u; diff: %lu\n", event.frames,
+		       diff);
+	  prepare_cycle_out_midi (ob);
+	}
       pos = 0;
 
       if (diff)
@@ -669,6 +658,9 @@ run_j2o_midi (void *data)
       nanosleep (&req, NULL);
       last_time = jack_get_time ();
 
+      pthread_spin_lock (&ob->lock);
+      status = ob->status;
+      pthread_spin_unlock (&ob->lock);
     }
   while (status);
 
