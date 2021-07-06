@@ -1,0 +1,11 @@
+usb:v1935*
+ ID_VENDOR_FROM_DATABASE=Elektron Music Machines
+
+usb:v1935p000C*
+ ID_MODEL_FROM_DATABASE=Digitakt Overbridge
+
+usb:v1935p000D*
+ ID_MODEL_FROM_DATABASE=Digitakt MIDI
+
+usb:v1935p102C*
+ ID_MODEL_FROM_DATABASE=Digitakt Audio/MIDI

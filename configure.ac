@@ -30,5 +30,12 @@ AC_SUBST(SAMPLERATE_LIBS)
 # Checks for library functions.
 AC_FUNC_MALLOC
 
-AC_CONFIG_FILES([Makefile src/Makefile])
+etc_udev="/etc/udev"
+AC_CHECK_FILE([$etc_udev],
+udev="yes",
+udev="no"
+)
+AM_CONDITIONAL([UDEV], [test $udev = "yes"])
+
+AC_CONFIG_FILES([Makefile src/Makefile udev/Makefile])
 AC_OUTPUT

@@ -29,21 +29,6 @@ You can easily install them by running `sudo apt install automake libusb-1.0-0-d
 
 As this will install `jackd2`, you would be asked to configure it to be run with real time priority. Be sure to answer yes. With this, the `audio` group would be able to run processes with real time priority. Be sure to be in the `audio` group too.
 
-After, you need to allow users to use the USB devices. For doing so, create the file `/etc/udev/rules.d/elektron.rules` with the following content. This will allow us to use any device from Elektron.
-
-```
-SUBSYSTEM=="usb", ATTRS{idVendor}=="1935", MODE="0666"
-SUBSYSTEM=="usb_device", ATTRS{idVendor}=="1935", MODE="0666"
-```
-
-And do not forget to activate these rules.
-
-```
-$ sudo udevadm control --reload-rules && sudo udevadm trigger
-```
-
-You might want to add the names for the vendor and products in `/lib/udev/hwdb.d/20-usb-vendor-model.hwdb` but it is not necessary.
-
 ## Usage
 
 First, list the available devices.
