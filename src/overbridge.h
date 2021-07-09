@@ -207,7 +207,7 @@ struct overbridge
   pthread_spinlock_t lock;
   overbridge_status_t status;
   size_t j2o_latency;
-  pthread_t tinfo;
+  pthread_t midi_tinfo;
   uint16_t s_counter;
   libusb_device_handle *device;
   struct overbridge_device_desc device_desc;

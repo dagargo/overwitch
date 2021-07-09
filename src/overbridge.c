@@ -31,6 +31,7 @@
 #include <arpa/inet.h>
 #include <math.h>
 #include <time.h>
+#include <unistd.h>
 
 #define ELEKTRON_VID 0x1935
 
@@ -57,7 +58,7 @@
 
 #define USB_BULK_MIDI_SIZE 512
 
-#define MIN_TIME_NS 1000
+#define SAMPLE_TIME_NS (1000000000 / ((int)OB_SAMPLE_RATE))
 
 static const struct overbridge_device_desc DIGITAKT_DESC = {
   .pid = DTAKT_PID,
@@ -600,6 +601,7 @@ run_j2o_midi (void *data)
   struct timespec req;
   struct ob_midi_event event;
   struct overbridge *ob = data;
+  int sleep_time_ns = SAMPLE_TIME_NS * jack_get_buffer_size (ob->jclient) / 2; //Average wait time
 
   last_time = 0;
   do
@@ -643,7 +645,6 @@ run_j2o_midi (void *data)
 		       diff);
 	  prepare_cycle_out_midi (ob);
 	}
-      pos = 0;
 
       if (diff)
 	{
@@ -653,7 +654,7 @@ run_j2o_midi (void *data)
       else
 	{
 	  req.tv_sec = 0;
-	  req.tv_nsec = MIN_TIME_NS;
+          req.tv_nsec = sleep_time_ns;
 	}
       nanosleep (&req, NULL);
       last_time = jack_get_time ();
@@ -721,7 +722,7 @@ overbridge_run (struct overbridge *ob, jack_client_t * client)
   ob->status = OB_STATUS_BOOT;
 
   debug_print (1, "Starting MIDI thread...\n");
-  ret = pthread_create (&ob->tinfo, NULL, run_j2o_midi, ob);
+  ret = pthread_create (&ob->midi_tinfo, NULL, run_j2o_midi, ob);
   if (ret)
     {
       error_print ("Could not start MIDI thread\n");
@@ -729,7 +730,7 @@ overbridge_run (struct overbridge *ob, jack_client_t * client)
     }
 
   debug_print (1, "Starting device thread...\n");
-  ret = pthread_create (&ob->tinfo, NULL, run, ob);
+  ret = pthread_create (&ob->midi_tinfo, NULL, run, ob);
   if (ret)
     {
       error_print ("Could not start device thread\n");
@@ -741,7 +742,7 @@ overbridge_run (struct overbridge *ob, jack_client_t * client)
 void
 overbridge_wait (struct overbridge *ob)
 {
-  pthread_join (ob->tinfo, NULL);
+  pthread_join (ob->midi_tinfo, NULL);
 }
 
 const char *
