@@ -601,7 +601,7 @@ run_j2o_midi (void *data)
   struct timespec req;
   struct ob_midi_event event;
   struct overbridge *ob = data;
-  int sleep_time_ns = SAMPLE_TIME_NS * jack_get_buffer_size (ob->jclient) / 2; //Average wait time
+  int sleep_time_ns = SAMPLE_TIME_NS * jack_get_buffer_size (ob->jclient) / 2;	//Average wait time
 
   last_time = 0;
   do
@@ -654,7 +654,7 @@ run_j2o_midi (void *data)
       else
 	{
 	  req.tv_sec = 0;
-          req.tv_nsec = sleep_time_ns;
+	  req.tv_nsec = sleep_time_ns;
 	}
       nanosleep (&req, NULL);
       last_time = jack_get_time ();
@@ -826,8 +826,14 @@ overbridge_destroy (struct overbridge *ob)
 {
   usb_shutdown (ob);
   free_transfers (ob);
-  jack_ringbuffer_free (ob->j2o_rb);
-  jack_ringbuffer_free (ob->o2j_rb);
+  if (ob->j2o_rb)
+    {
+      jack_ringbuffer_free (ob->j2o_rb);
+    }
+  if (ob->o2j_rb)
+    {
+      jack_ringbuffer_free (ob->o2j_rb);
+    }
   jack_ringbuffer_free (ob->o2j_rb_midi);
   free (ob->j2o_buf);
   free (ob->j2o_buf_res);
