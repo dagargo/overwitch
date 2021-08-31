@@ -1,6 +1,12 @@
 usb:v1935*
  ID_VENDOR_FROM_DATABASE=Elektron Music Machines
 
+usb:v1935p0003*
+ ID_MODEL_FROM_DATABASE=Analog Four MIDI
+
+usb:v1935p0004*
+ ID_MODEL_FROM_DATABASE=Analog Four Overbridge
+
 usb:v1935p000C*
  ID_MODEL_FROM_DATABASE=Digitakt Overbridge
 
