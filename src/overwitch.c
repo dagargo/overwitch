@@ -43,9 +43,16 @@ static struct option options[] = {
 static struct jclient jclient;
 
 static void
-overwitch_exit (int signo)
+overwitch_signal_handler (int signo)
 {
-  jclient_exit (&jclient);
+  if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
+    {
+      jclient_exit (&jclient);
+    }
+  else if (signo == SIGUSR1)
+    {
+      jclient_print_status (&jclient);
+    }
 }
 
 void
@@ -84,12 +91,13 @@ main (int argc, char *argv[])
   int blocks_per_transfer = DEFAULT_BLOCKS;
   int quality = DEFAULT_QUALITY;
 
-  action.sa_handler = overwitch_exit;
+  action.sa_handler = overwitch_signal_handler;
   sigemptyset (&action.sa_mask);
   action.sa_flags = 0;
   sigaction (SIGHUP, &action, NULL);
   sigaction (SIGINT, &action, NULL);
   sigaction (SIGTERM, &action, NULL);
+  sigaction (SIGUSR1, &action, NULL);
 
   while ((opt = getopt_long (argc, argv, "d:q:b:lvh",
 			     options, &long_index)) != -1)

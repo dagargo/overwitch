@@ -564,14 +564,19 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 }
 
 void
-jclient_exit (struct jclient *jclient)
+jclient_print_status (struct jclient *jclient)
 {
   printf ("Max. latencies (ms): %.1f, %.1f\n",
 	  jclient->o2j_latency * 1000.0 / (jclient->ob.o2j_frame_bytes *
 					   OB_SAMPLE_RATE),
 	  jclient->j2o_latency * 1000.0 / (jclient->ob.j2o_frame_bytes *
 					   OB_SAMPLE_RATE));
+}
 
+void
+jclient_exit (struct jclient *jclient)
+{
+  jclient_print_status (jclient);
   overbridge_set_status (&jclient->ob, OB_STATUS_STOP);
 }
 
