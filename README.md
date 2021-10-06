@@ -1,12 +1,12 @@
 # Overwitch
 
-Overwitch is an Overbridge device client for JACK (JACK Audio Connection Kit).
+Overwitch is an Overbridge 2 device client for JACK (JACK Audio Connection Kit).
 
 This project is based on the Overbridge USB reverse engineering done by Stefan Rehm in [dtdump](https://github.com/droelfdroelf/dtdump).
 
 The papers [Controlling adaptive resampling](https://kokkinizita.linuxaudio.org/papers/adapt-resamp.pdf) and [Using a DLL to filter time](https://kokkinizita.linuxaudio.org/papers/usingdll.pdf) by Fons Adriaensen have been very helpful and inspiring, as well as his own implementation done in the zita resamplers found in the [alsa tools](https://github.com/jackaudio/tools) project.
 
-At the moment, it provides 12 input ports and 2 output ports for Elektron Digitakt and Digitone but no MIDI support. In order to work with several devices, different instances of Overwitch must be run.
+At the moment, it provides support for all Overbridge 2 devices, which are Analog Four MKII, Analog Rytm MKII, Digitakt, Digitone, Digitone Keys, Analog Heat and Analog Heat MKII.
 
 ## Installation
 
@@ -148,13 +148,11 @@ Although you can run Overwitch with verbose output this is **not recommended** u
 
 ## Adding devices
 
-Hopefully, Overbridge 2 devices could be easily added in the `overbridge.c` file.
+New Overbridge 2 devices could be easily added in the `overbridge.c` file as they all share the same protocol.
 
-To define a new device, just add a new struct like this and add the new constant to the array. USB PIDs are already defined there. For instance, if you are adding the Analog Rytm MKII, you could do it like in the example below.
+To define a new device, just add a new struct like this and add the new constant to the array. USB PIDs are already defined just above. For instance, if you were adding the Analog Rytm MKII, you could do it like in the example below.
 
-Notice that the definition of the device must match the device itself, so outputs and inputs amount must match the ones the device has and must be in the same order. As this struct defines the device, an input is a port the device will read data from and an output is a port the device will write data to.
-
-Naming style might be subject to change.
+Notice that the definition of the device must match the device itself, so outputs and inputs must match the ones the device has and must be in the same order. As this struct defines the device, an input is a port the device will read data from and an output is a port the device will write data to.
 
 ```
 static const struct overbridge_device_desc ARMK2_DESC = {
@@ -176,4 +174,4 @@ static const struct overbridge_device_desc OB_DEVICE_DESCS[] = {
 };
 ```
 
-It is unknown if Overbridge 1 devices will work.
+Overbridge 1 devices, which are Analog Four MKI, Analog Keys and Analog Rytm MKI, are not supported yet.
