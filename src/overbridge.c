@@ -521,7 +521,7 @@ overbridge_init_priv (struct overbridge *ob, char *device_name)
     {
       if (strcmp (OB_DEVICE_DESCS[i].name, device_name))
 	{
-	  break;
+	  continue;
 	}
 
       debug_print (2, "Checking for %s...\n", OB_DEVICE_DESCS[i].name);
