@@ -176,7 +176,8 @@ typedef enum
   OB_CANT_CLAIM_IF,
   OB_CANT_SET_ALT_SETTING,
   OB_CANT_CLEAR_EP,
-  OB_CANT_PREPARE_TRANSFER
+  OB_CANT_PREPARE_TRANSFER,
+  OB_CANT_FIND_DEV
 } overbridge_err_t;
 
 typedef enum

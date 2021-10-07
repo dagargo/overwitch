@@ -525,14 +525,15 @@ overbridge_init_priv (struct overbridge *ob, char *device_name)
 	}
 
       debug_print (2, "Checking for %s...\n", OB_DEVICE_DESCS[i].name);
-
       ob->device =
 	libusb_open_device_with_vid_pid (NULL, ELEKTRON_VID,
 					 OB_DEVICE_DESCS[i].pid);
-      if (ob->device)
-	{
-	  break;
-	}
+
+      break;
+    }
+  if (i == OB_DEVICE_DESCS_N)
+    {
+      return OB_CANT_FIND_DEV;
     }
   if (ob->device)
     {
@@ -619,7 +620,8 @@ usb_shutdown (struct overbridge *ob)
 static const char *ob_err_strgs[] = { "ok", "libusb init failed",
   "can't open device", "can't set usb config",
   "can't claim usb interface", "can't set usb alt setting",
-  "can't cleat endpoint", "can't prepare transfer"
+  "can't cleat endpoint", "can't prepare transfer",
+  "can't find a matching device"
 };
 
 void *
