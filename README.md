@@ -80,7 +80,7 @@ Device to JACK latency is different from JACK to device latency though they are 
 
 Thus, the minimum theoretical latency is the device frames plus the JACK buffer frames plus some additional buffer frames are used in the resamplers but it is unknown how many.
 
-But looks like this block amount can be changed. With the option `-b` we can override this value indicating how many blocks are processed at a time. The default value is 24 but values between 2 and 32 can be used. Notice that this option is **highly experimental**.
+But looks like this block amount can be changed. With the option `-b` we can override this value indicating how many blocks are processed at a time. The default value is 24 but values between 2 and 32 can be used.
 
 ## Tuning
 
