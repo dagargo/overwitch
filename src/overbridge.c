@@ -629,7 +629,6 @@ run_j2o_midi (void *data)
 {
   overbridge_status_t status;
   int pos;
-  jack_time_t first_event_time;
   jack_time_t last_time;
   jack_time_t event_time;
   jack_time_t diff;
@@ -638,13 +637,12 @@ run_j2o_midi (void *data)
   struct overbridge *ob = data;
   int sleep_time_ns = SAMPLE_TIME_NS * jack_get_buffer_size (ob->jclient) / 2;	//Average wait time
 
-  last_time = 0;
+  last_time = jack_get_time ();
   do
     {
       memset (ob->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
       diff = 0;
       pos = 0;
-      first_event_time = 0;
 
       while (jack_ringbuffer_read_space (ob->j2o_rb_midi) >=
 	     sizeof (struct ob_midi_event) && pos < USB_BULK_MIDI_SIZE)
@@ -653,19 +651,11 @@ run_j2o_midi (void *data)
 				sizeof (struct ob_midi_event));
 	  event_time = jack_frames_to_time (ob->jclient, event.frames);
 
-	  if (!first_event_time)
+	  if (event_time > last_time)
 	    {
-	      first_event_time = event_time;
+	      diff = event_time - last_time;
 	      last_time = event_time;
-	    }
-	  else
-	    {
-	      if (first_event_time != event_time)
-		{
-		  diff = event_time - last_time;
-		  last_time = event_time;
-		  break;
-		}
+	      break;
 	    }
 
 	  memcpy (&ob->j2o_midi_data[pos], event.bytes, OB_MIDI_EVENT_SIZE);
@@ -692,7 +682,6 @@ run_j2o_midi (void *data)
 	  req.tv_nsec = sleep_time_ns;
 	}
       nanosleep (&req, NULL);
-      last_time = jack_get_time ();
 
       pthread_spin_lock (&ob->lock);
       status = ob->status;
