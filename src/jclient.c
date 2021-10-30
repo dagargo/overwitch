@@ -584,7 +584,7 @@ int
 jclient_run (struct jclient *jclient, char *device_name,
 	     int blocks_per_transfer, int quality)
 {
-  jack_options_t options = JackNullOption;
+  jack_options_t options = JackNoStartServer;
   jack_status_t status;
   overbridge_err_t ob_status;
   char *client_name;
