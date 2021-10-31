@@ -43,9 +43,9 @@ jclient_init_dll (struct dll *dll)
   dll->_z1 = 0.0;
   dll->_z2 = 0.0;
   dll->_z3 = 0.0;
-  dll->o2j_ratio_sum = 0.0;
-  dll->o2j_ratio_avg = 0.0;
-  dll->last_o2j_ratio_avg = 0.0;
+  dll->ratio_sum = 0.0;
+  dll->ratio_avg = 0.0;
+  dll->last_ratio_avg = 0.0;
 }
 
 static void
@@ -54,7 +54,7 @@ jclient_set_loop_filter (struct jclient *jclient, double bw)
   //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
   double w = 2.0 * M_PI * 20 * bw * jclient->bufsize / jclient->samplerate;
   jclient->dll._w0 = 1.0 - exp (-w);
-  w = 2.0 * M_PI * bw * jclient->dll.o2j_ratio / jclient->samplerate;
+  w = 2.0 * M_PI * bw * jclient->dll.ratio / jclient->samplerate;
   jclient->dll._w1 = w * 1.6;
   jclient->dll._w2 = w * jclient->bufsize / 1.6;
 }
@@ -62,17 +62,17 @@ jclient_set_loop_filter (struct jclient *jclient, double bw)
 static void
 jclient_init_sample_rate (struct jclient *jclient)
 {
-  jclient->dll.o2j_ratio = jclient->samplerate / OB_SAMPLE_RATE;
-  jclient->dll.j2o_ratio = 1.0 / jclient->dll.o2j_ratio;
-  jclient->dll.o2j_ratio_max = 1.05 * jclient->dll.o2j_ratio;
-  jclient->dll.o2j_ratio_min = 0.95 * jclient->dll.o2j_ratio;
+  jclient->dll.ratio = jclient->samplerate / OB_SAMPLE_RATE;
+  jclient->j2o_dll.ratio = 1.0 / jclient->dll.ratio;
+  jclient->dll.ratio_max = 1.05 * jclient->dll.ratio;
+  jclient->dll.ratio_min = 0.95 * jclient->dll.ratio;
 }
 
 static void
 jclient_init_buffer_size (struct jclient *jclient)
 {
-  jclient->dll.kj = jclient->bufsize / -jclient->dll.o2j_ratio;
-  jclient->read_frames = jclient->bufsize * jclient->dll.j2o_ratio;
+  jclient->dll.kj = jclient->bufsize / -jclient->dll.ratio;
+  jclient->read_frames = jclient->bufsize * jclient->j2o_dll.ratio;
 
   jclient->dll.kdel =
     (OB_FRAMES_PER_BLOCK * jclient->ob.blocks_per_transfer) +
@@ -186,13 +186,13 @@ jclient_o2j (struct jclient *jclient)
 
   jclient->read_frames = 0;
   gen_frames =
-    src_callback_read (jclient->o2j_state, jclient->dll.o2j_ratio,
+    src_callback_read (jclient->o2j_state, jclient->dll.ratio,
 		       jclient->bufsize, jclient->o2j_buf_out);
   if (gen_frames != jclient->bufsize)
     {
       error_print
 	("o2j: Unexpected frames with ratio %f (output %ld, expected %d)\n",
-	 jclient->dll.o2j_ratio, gen_frames, jclient->bufsize);
+	 jclient->dll.ratio, gen_frames, jclient->bufsize);
     }
 }
 
@@ -210,19 +210,19 @@ jclient_j2o (struct jclient *jclient)
 	  jclient->j2o_buf_size);
   jclient->j2o_queue_len += jclient->bufsize;
 
-  j2o_acc += jclient->bufsize * (jclient->dll.j2o_ratio - 1.0);
+  j2o_acc += jclient->bufsize * (jclient->j2o_dll.ratio - 1.0);
   inc = trunc (j2o_acc);
   j2o_acc -= inc;
   frames = jclient->bufsize + inc;
 
   gen_frames =
-    src_callback_read (jclient->j2o_state, jclient->dll.j2o_ratio, frames,
+    src_callback_read (jclient->j2o_state, jclient->j2o_dll.ratio, frames,
 		       jclient->j2o_buf_out);
   if (gen_frames != frames)
     {
       error_print
 	("j2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
-	 jclient->dll.j2o_ratio, gen_frames, frames);
+	 jclient->j2o_dll.ratio, gen_frames, frames);
     }
 
   if (jclient->status < OB_STATUS_RUN)
@@ -314,33 +314,33 @@ jclient_compute_ratios (struct jclient *jclient)
   dll->_z1 += dll->_w0 * (dll->_w1 * err - dll->_z1);
   dll->_z2 += dll->_w0 * (dll->_z1 - dll->_z2);
   dll->_z3 += dll->_w2 * dll->_z2;
-  dll->o2j_ratio = 1.0 - dll->_z2 - dll->_z3;
-  if (dll->o2j_ratio > dll->o2j_ratio_max)
+  dll->ratio = 1.0 - dll->_z2 - dll->_z3;
+  if (dll->ratio > dll->ratio_max)
     {
-      dll->o2j_ratio = dll->o2j_ratio_max;
+      dll->ratio = dll->ratio_max;
     }
-  if (dll->o2j_ratio < dll->o2j_ratio_min)
+  if (dll->ratio < dll->ratio_min)
     {
-      dll->o2j_ratio = dll->o2j_ratio_min;
+      dll->ratio = dll->ratio_min;
     }
-  dll->j2o_ratio = 1.0 / dll->o2j_ratio;
+  jclient->j2o_dll.ratio = 1.0 / dll->ratio;
 
   i++;
-  dll->o2j_ratio_sum += dll->o2j_ratio;
+  dll->ratio_sum += dll->ratio;
   if (i == jclient->log_control_cycles)
     {
-      dll->last_o2j_ratio_avg = dll->o2j_ratio_avg;
+      dll->last_ratio_avg = dll->ratio_avg;
 
-      dll->o2j_ratio_avg = dll->o2j_ratio_sum / jclient->log_control_cycles;
+      dll->ratio_avg = dll->ratio_sum / jclient->log_control_cycles;
 
       debug_print (1,
 		   "Max. latencies (ms): %.1f; avg. ratios: %f; curr. ratios: %f\n",
 		   jclient->o2j_latency * 1000.0 /
 		   (jclient->ob.o2j_frame_bytes * OB_SAMPLE_RATE),
-		   dll->o2j_ratio_avg, dll->o2j_ratio);
+		   dll->ratio_avg, dll->ratio);
 
       i = 0;
-      dll->o2j_ratio_sum = 0.0;
+      dll->ratio_sum = 0.0;
 
       if (jclient->status == OB_STATUS_STARTUP)
 	{
@@ -356,8 +356,7 @@ jclient_compute_ratios (struct jclient *jclient)
 	}
 
       if (jclient->status == OB_STATUS_TUNE
-	  && fabs (dll->o2j_ratio_avg - dll->last_o2j_ratio_avg) <
-	  RATIO_DIFF_THRES)
+	  && fabs (dll->ratio_avg - dll->last_ratio_avg) < RATIO_DIFF_THRES)
 	{
 	  debug_print (2, "Running...\n");
 	  jclient_set_loop_filter (jclient, 0.02);

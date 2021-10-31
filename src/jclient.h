@@ -22,8 +22,7 @@
 
 struct dll
 {
-  double j2o_ratio;
-  double o2j_ratio;
+  double ratio;
   jack_nframes_t kj;
   double _w0;
   double _w1;
@@ -32,16 +31,17 @@ struct dll
   double _z1;
   double _z2;
   double _z3;
-  double o2j_ratio_max;
-  double o2j_ratio_min;
-  double o2j_ratio_sum;
-  double o2j_ratio_avg;
-  double last_o2j_ratio_avg;
+  double ratio_max;
+  double ratio_min;
+  double ratio_sum;
+  double ratio_avg;
+  double last_ratio_avg;
 };
 
 struct jclient
 {
   struct overbridge ob;
+  struct dll j2o_dll;
   struct dll dll;
   jack_client_t *client;
   jack_port_t **output_ports;
