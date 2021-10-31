@@ -270,10 +270,10 @@ jclient_compute_ratios (struct jclient *jclient)
 
   pthread_spin_lock (&jclient->ob.lock);
   jclient->j2o_latency = jclient->ob.j2o_latency;
-  ko0 = jclient->ob.i0.frames;
-  to0 = jclient->ob.i0.time;
-  ko1 = jclient->ob.i1.frames;
-  to1 = jclient->ob.i1.time;
+  ko0 = jclient->ob.o2j_counter.i0.frames;
+  to0 = jclient->ob.o2j_counter.i0.time;
+  ko1 = jclient->ob.o2j_counter.i1.frames;
+  to1 = jclient->ob.o2j_counter.i1.time;
   jclient->status = jclient->ob.status;
   pthread_spin_unlock (&jclient->ob.lock);
 
