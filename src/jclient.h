@@ -34,7 +34,7 @@ struct dll
   double _z3;
   double o2j_ratio_max;
   double o2j_ratio_min;
-  double sum_o2j_ratio;
+  double o2j_ratio_sum;
   double o2j_ratio_avg;
   double last_o2j_ratio_avg;
 };
