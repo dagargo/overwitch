@@ -44,9 +44,7 @@ jclient_init_dll (struct dll *dll)
   dll->_z2 = 0.0;
   dll->_z3 = 0.0;
   dll->sum_o2j_ratio = 0.0;
-  dll->sum_j2o_ratio = 0.0;
   dll->o2j_ratio_avg = 0.0;
-  dll->j2o_ratio_avg = 0.0;
   dll->last_o2j_ratio_avg = 0.0;
 }
 
@@ -329,26 +327,20 @@ jclient_compute_ratios (struct jclient *jclient)
 
   i++;
   dll->sum_o2j_ratio += dll->o2j_ratio;
-  dll->sum_j2o_ratio += dll->j2o_ratio;
   if (i == jclient->log_control_cycles)
     {
       dll->last_o2j_ratio_avg = dll->o2j_ratio_avg;
 
       dll->o2j_ratio_avg = dll->sum_o2j_ratio / jclient->log_control_cycles;
-      dll->j2o_ratio_avg = dll->sum_j2o_ratio / jclient->log_control_cycles;
 
       debug_print (1,
-		   "Max. latencies (ms): %.1f, %.1f; avg. ratios: %f, %f; curr. ratios: %f, %f\n",
+		   "Max. latencies (ms): %.1f; avg. ratios: %f; curr. ratios: %f\n",
 		   jclient->o2j_latency * 1000.0 /
 		   (jclient->ob.o2j_frame_bytes * OB_SAMPLE_RATE),
-		   jclient->j2o_latency * 1000.0 /
-		   (jclient->ob.j2o_frame_bytes * OB_SAMPLE_RATE),
-		   dll->o2j_ratio_avg, dll->j2o_ratio_avg, dll->o2j_ratio,
-		   dll->j2o_ratio);
+		   dll->o2j_ratio_avg, dll->o2j_ratio);
 
       i = 0;
       dll->sum_o2j_ratio = 0.0;
-      dll->sum_j2o_ratio = 0.0;
 
       if (jclient->status == OB_STATUS_STARTUP)
 	{
