@@ -49,21 +49,21 @@ jclient_init_dll (struct dll *dll)
 }
 
 static void
-jclient_set_loop_filter (struct jclient *jclient, double bw)
+jclient_set_loop_filter (struct jclient *jclient, struct dll * dll, double bw)
 {
   //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
   double w = 2.0 * M_PI * 20 * bw * jclient->bufsize / jclient->samplerate;
-  jclient->o2j_dll._w0 = 1.0 - exp (-w);
-  w = 2.0 * M_PI * bw * jclient->o2j_dll.ratio / jclient->samplerate;
-  jclient->o2j_dll._w1 = w * 1.6;
-  jclient->o2j_dll._w2 = w * jclient->bufsize / 1.6;
+  dll->_w0 = 1.0 - exp (-w);
+  w = 2.0 * M_PI * bw * dll->ratio / jclient->samplerate;
+  dll->_w1 = w * 1.6;
+  dll->_w2 = w * jclient->bufsize / 1.6;
 }
 
 static void
 jclient_init_sample_rate (struct jclient *jclient)
 {
   jclient->o2j_dll.ratio = jclient->samplerate / OB_SAMPLE_RATE;
-  jclient->j2o_dll.ratio = 1.0 / jclient->o2j_dll.ratio;
+  jclient->j2o_dll.ratio = jclient->samplerate / OB_SAMPLE_RATE;
   jclient->o2j_dll.ratio_max = 1.05 * jclient->o2j_dll.ratio;
   jclient->o2j_dll.ratio_min = 0.95 * jclient->o2j_dll.ratio;
 }
@@ -78,7 +78,8 @@ jclient_init_buffer_size (struct jclient *jclient)
     (OB_FRAMES_PER_BLOCK * jclient->ob.blocks_per_transfer) +
     1.5 * (jclient->bufsize);
   debug_print (2, "Target delay: %.1f ms (%d frames)\n",
-	       jclient->o2j_dll.kdel * 1000 / OB_SAMPLE_RATE, jclient->o2j_dll.kdel);
+	       jclient->o2j_dll.kdel * 1000 / OB_SAMPLE_RATE,
+	       jclient->o2j_dll.kdel);
 
   jclient->log_control_cycles =
     STARTUP_TIME * jclient->samplerate / jclient->bufsize;
@@ -304,7 +305,7 @@ jclient_compute_ratios (struct jclient *jclient)
 
       debug_print (2, "Starting up...\n");
 
-      jclient_set_loop_filter (jclient, 1.0);
+      jclient_set_loop_filter (jclient, dll, 1.0);
 
       pthread_spin_lock (&jclient->ob.lock);
       jclient->ob.status = OB_STATUS_STARTUP;
@@ -345,7 +346,7 @@ jclient_compute_ratios (struct jclient *jclient)
       if (jclient->status == OB_STATUS_STARTUP)
 	{
 	  debug_print (2, "Tunning...\n");
-	  jclient_set_loop_filter (jclient, 0.05);
+	  jclient_set_loop_filter (jclient, dll, 0.05);
 
 	  pthread_spin_lock (&jclient->ob.lock);
 	  jclient->ob.status = OB_STATUS_TUNE;
@@ -359,7 +360,7 @@ jclient_compute_ratios (struct jclient *jclient)
 	  && fabs (dll->ratio_avg - dll->last_ratio_avg) < RATIO_DIFF_THRES)
 	{
 	  debug_print (2, "Running...\n");
-	  jclient_set_loop_filter (jclient, 0.02);
+	  jclient_set_loop_filter (jclient, dll, 0.02);
 
 	  pthread_spin_lock (&jclient->ob.lock);
 	  jclient->ob.status = OB_STATUS_RUN;
