@@ -245,7 +245,7 @@ jclient_j2o (struct jclient *jclient)
 }
 
 static inline void
-jclient_compute_ratios (struct jclient *jclient)
+jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 {
   jack_time_t current_usecs;
   jack_time_t next_usecs;
@@ -259,7 +259,6 @@ jclient_compute_ratios (struct jclient *jclient)
   double dob;
   double err;
   int n;
-  struct dll *dll = &jclient->o2j_dll;
   static int i = 0;
 
   if (jack_get_cycle_times (jclient->client,
@@ -510,7 +509,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   jack_default_audio_sample_t *buffer[OB_MAX_TRACKS];
   struct jclient *jclient = arg;
 
-  jclient_compute_ratios (jclient);
+  jclient_compute_ratios (jclient, &jclient->o2j_dll);
 
   jclient_o2j (jclient);
 
