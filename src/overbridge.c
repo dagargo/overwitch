@@ -274,6 +274,7 @@ set_usb_output_data_blks (struct overbridge *ob)
   jack_default_audio_sample_t *f;
   int res;
   int32_t *s;
+  double e;
   static int running = 0;
 
   rsj2o = jack_ringbuffer_read_space (ob->j2o_rb);
@@ -286,6 +287,16 @@ set_usb_output_data_blks (struct overbridge *ob)
 
       if (rsj2o >= ob->j2o_buf_size)
 	{
+	  e = jack_get_time () * 1.0e-6 - ob->j2o_counter.i1.time;
+	  pthread_spin_lock (&ob->lock);
+	  ob->j2o_counter.i0.time = ob->j2o_counter.i1.time;
+	  ob->j2o_counter.i1.time +=
+	    ob->j2o_counter.b * e + ob->j2o_counter.e2;
+	  ob->j2o_counter.e2 += ob->j2o_counter.c * e;
+	  ob->j2o_counter.i0.frames = ob->j2o_counter.i1.frames;
+	  ob->j2o_counter.i1.frames += ob->frames_per_transfer;
+	  pthread_spin_unlock (&ob->lock);
+
 	  jack_ringbuffer_read (ob->j2o_rb, (void *) ob->j2o_buf,
 				ob->j2o_buf_size);
 	}
@@ -702,14 +713,21 @@ run (void *data)
   //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc.
   dtime = ob->frames_per_transfer / OB_SAMPLE_RATE;
   w = 2 * M_PI * 0.1 * dtime;
-  ob->o2j_counter.b = 1.6 * w;
-  ob->o2j_counter.c = w * w;
+  ob->j2o_counter.b = 1.6 * w;
+  ob->j2o_counter.c = w * w;
+  ob->o2j_counter.b = ob->j2o_counter.b;
+  ob->o2j_counter.c = ob->j2o_counter.c;
 
   //TODO: add this to xrun handler and perhaps clear the buffers. See paper.
-  ob->o2j_counter.e2 = dtime;
-  ob->o2j_counter.i0.time = jack_get_time () * 1.0e-6;
-  ob->o2j_counter.i1.time = ob->o2j_counter.i0.time + ob->o2j_counter.e2;
+  ob->j2o_counter.e2 = dtime;
+  ob->j2o_counter.i0.time = jack_get_time () * 1.0e-6;
+  ob->j2o_counter.i1.time = ob->o2j_counter.i0.time + ob->o2j_counter.e2;
+  ob->o2j_counter.e2 = ob->j2o_counter.e2;
+  ob->o2j_counter.i0.time = ob->j2o_counter.i0.time;
+  ob->o2j_counter.i1.time = ob->j2o_counter.i1.time;
 
+  ob->j2o_counter.i0.frames = 0;
+  ob->j2o_counter.i1.frames = ob->frames_per_transfer;
   ob->o2j_counter.i0.frames = 0;
   ob->o2j_counter.i1.frames = ob->frames_per_transfer;
 
