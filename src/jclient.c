@@ -53,32 +53,32 @@ jclient_set_loop_filter (struct jclient *jclient, double bw)
 {
   //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
   double w = 2.0 * M_PI * 20 * bw * jclient->bufsize / jclient->samplerate;
-  jclient->dll._w0 = 1.0 - exp (-w);
-  w = 2.0 * M_PI * bw * jclient->dll.ratio / jclient->samplerate;
-  jclient->dll._w1 = w * 1.6;
-  jclient->dll._w2 = w * jclient->bufsize / 1.6;
+  jclient->o2j_dll._w0 = 1.0 - exp (-w);
+  w = 2.0 * M_PI * bw * jclient->o2j_dll.ratio / jclient->samplerate;
+  jclient->o2j_dll._w1 = w * 1.6;
+  jclient->o2j_dll._w2 = w * jclient->bufsize / 1.6;
 }
 
 static void
 jclient_init_sample_rate (struct jclient *jclient)
 {
-  jclient->dll.ratio = jclient->samplerate / OB_SAMPLE_RATE;
-  jclient->j2o_dll.ratio = 1.0 / jclient->dll.ratio;
-  jclient->dll.ratio_max = 1.05 * jclient->dll.ratio;
-  jclient->dll.ratio_min = 0.95 * jclient->dll.ratio;
+  jclient->o2j_dll.ratio = jclient->samplerate / OB_SAMPLE_RATE;
+  jclient->j2o_dll.ratio = 1.0 / jclient->o2j_dll.ratio;
+  jclient->o2j_dll.ratio_max = 1.05 * jclient->o2j_dll.ratio;
+  jclient->o2j_dll.ratio_min = 0.95 * jclient->o2j_dll.ratio;
 }
 
 static void
 jclient_init_buffer_size (struct jclient *jclient)
 {
-  jclient->dll.kj = jclient->bufsize / -jclient->dll.ratio;
+  jclient->o2j_dll.kj = jclient->bufsize / -jclient->o2j_dll.ratio;
   jclient->read_frames = jclient->bufsize * jclient->j2o_dll.ratio;
 
-  jclient->dll.kdel =
+  jclient->o2j_dll.kdel =
     (OB_FRAMES_PER_BLOCK * jclient->ob.blocks_per_transfer) +
     1.5 * (jclient->bufsize);
   debug_print (2, "Target delay: %.1f ms (%d frames)\n",
-	       jclient->dll.kdel * 1000 / OB_SAMPLE_RATE, jclient->dll.kdel);
+	       jclient->o2j_dll.kdel * 1000 / OB_SAMPLE_RATE, jclient->o2j_dll.kdel);
 
   jclient->log_control_cycles =
     STARTUP_TIME * jclient->samplerate / jclient->bufsize;
@@ -186,13 +186,13 @@ jclient_o2j (struct jclient *jclient)
 
   jclient->read_frames = 0;
   gen_frames =
-    src_callback_read (jclient->o2j_state, jclient->dll.ratio,
+    src_callback_read (jclient->o2j_state, jclient->o2j_dll.ratio,
 		       jclient->bufsize, jclient->o2j_buf_out);
   if (gen_frames != jclient->bufsize)
     {
       error_print
 	("o2j: Unexpected frames with ratio %f (output %ld, expected %d)\n",
-	 jclient->dll.ratio, gen_frames, jclient->bufsize);
+	 jclient->o2j_dll.ratio, gen_frames, jclient->bufsize);
     }
 }
 
@@ -258,7 +258,7 @@ jclient_compute_ratios (struct jclient *jclient)
   double dob;
   double err;
   int n;
-  struct dll *dll = &jclient->dll;
+  struct dll *dll = &jclient->o2j_dll;
   static int i = 0;
 
   if (jack_get_cycle_times (jclient->client,
@@ -725,7 +725,7 @@ jclient_run (struct jclient *jclient, char *device_name,
       goto cleanup_jack;
     }
 
-  jclient_init_dll (&jclient->dll);
+  jclient_init_dll (&jclient->o2j_dll);
 
   if (jack_activate (jclient->client))
     {
