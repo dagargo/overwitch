@@ -274,7 +274,6 @@ set_usb_output_data_blks (struct overbridge *ob)
   jack_default_audio_sample_t *f;
   int res;
   int32_t *s;
-  double e;
   static int running = 0;
 
   rsj2o = jack_ringbuffer_read_space (ob->j2o_rb);
@@ -287,7 +286,7 @@ set_usb_output_data_blks (struct overbridge *ob)
 
       if (rsj2o >= ob->j2o_buf_size)
 	{
-	  e = jack_get_time () * 1.0e-6 - ob->j2o_counter.i1.time;
+	  double e = jack_get_time () * 1.0e-6 - ob->j2o_counter.i1.time;
 	  pthread_spin_lock (&ob->lock);
 	  ob->j2o_counter.i0.time = ob->j2o_counter.i1.time;
 	  ob->j2o_counter.i1.time +=
@@ -721,10 +720,10 @@ run (void *data)
   //TODO: add this to xrun handler and perhaps clear the buffers. See paper.
   ob->j2o_counter.e2 = dtime;
   ob->j2o_counter.i0.time = jack_get_time () * 1.0e-6;
-  ob->j2o_counter.i1.time = ob->o2j_counter.i0.time + ob->o2j_counter.e2;
-  ob->o2j_counter.e2 = ob->j2o_counter.e2;
+  ob->j2o_counter.i1.time = ob->j2o_counter.i0.time + ob->j2o_counter.e2;
+  ob->o2j_counter.e2 = dtime;
   ob->o2j_counter.i0.time = ob->j2o_counter.i0.time;
-  ob->o2j_counter.i1.time = ob->j2o_counter.i1.time;
+  ob->o2j_counter.i1.time = ob->o2j_counter.i0.time + ob->o2j_counter.e2;
 
   ob->j2o_counter.i0.frames = 0;
   ob->j2o_counter.i1.frames = ob->frames_per_transfer;

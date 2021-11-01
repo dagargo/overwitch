@@ -63,7 +63,7 @@ static void
 jclient_init_sample_rate (struct jclient *jclient)
 {
   jclient->o2j_dll.ratio = jclient->samplerate / OB_SAMPLE_RATE;
-  jclient->j2o_dll.ratio = jclient->samplerate / OB_SAMPLE_RATE;
+  jclient->j2o_dll.ratio = jclient->o2j_dll.ratio;
   jclient->o2j_dll.ratio_max = 1.05 * jclient->o2j_dll.ratio;
   jclient->o2j_dll.ratio_min = 0.95 * jclient->o2j_dll.ratio;
 }
