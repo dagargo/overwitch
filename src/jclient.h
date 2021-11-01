@@ -36,6 +36,11 @@ struct dll
   double ratio_sum;
   double ratio_avg;
   double last_ratio_avg;
+  double err;
+  jack_nframes_t ko0;
+  jack_nframes_t ko1;
+  double to0;
+  double to1;
 };
 
 struct jclient

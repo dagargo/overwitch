@@ -49,7 +49,7 @@ jclient_init_dll (struct dll *dll)
 }
 
 static void
-jclient_set_loop_filter (struct jclient *jclient, struct dll * dll, double bw)
+jclient_set_loop_filter (struct jclient *jclient, struct dll *dll, double bw)
 {
   //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
   double w = 2.0 * M_PI * 20 * bw * jclient->bufsize / jclient->samplerate;
@@ -245,20 +245,38 @@ jclient_j2o (struct jclient *jclient)
 }
 
 static inline void
+jclient_update_err (struct dll *dll, jack_time_t current_usecs)
+{
+  double tj = current_usecs * 1.0e-6;
+  jack_nframes_t frames = dll->ko1 - dll->ko0;
+  double dob = frames * (tj - dll->to0) / (dll->to1 - dll->to0);
+  frames = dll->ko0 - dll->kj;
+  dll->err = frames + dob - dll->kdel;
+}
+
+static inline void
+jclient_update_dll (struct dll *dll)
+{
+  dll->_z1 += dll->_w0 * (dll->_w1 * dll->err - dll->_z1);
+  dll->_z2 += dll->_w0 * (dll->_z1 - dll->_z2);
+  dll->_z3 += dll->_w2 * dll->_z2;
+  dll->ratio = 1.0 - dll->_z2 - dll->_z3;
+  if (dll->ratio > dll->ratio_max)
+    {
+      dll->ratio = dll->ratio_max;
+    }
+  if (dll->ratio < dll->ratio_min)
+    {
+      dll->ratio = dll->ratio_min;
+    }
+}
+
+static inline void
 jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 {
   jack_time_t current_usecs;
   jack_time_t next_usecs;
   float period_usecs;
-  jack_nframes_t ko0;
-  jack_nframes_t ko1;
-  double to0;
-  double to1;
-  double tj;
-  jack_nframes_t frames;
-  double dob;
-  double err;
-  int n;
   static int i = 0;
 
   if (jack_get_cycle_times (jclient->client,
@@ -270,10 +288,10 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
   pthread_spin_lock (&jclient->ob.lock);
   jclient->j2o_latency = jclient->ob.j2o_latency;
-  ko0 = jclient->ob.o2j_counter.i0.frames;
-  to0 = jclient->ob.o2j_counter.i0.time;
-  ko1 = jclient->ob.o2j_counter.i1.frames;
-  to1 = jclient->ob.o2j_counter.i1.time;
+  dll->ko0 = jclient->ob.o2j_counter.i0.frames;
+  dll->to0 = jclient->ob.o2j_counter.i0.time;
+  dll->ko1 = jclient->ob.o2j_counter.i1.frames;
+  dll->to1 = jclient->ob.o2j_counter.i1.time;
   jclient->status = jclient->ob.status;
   pthread_spin_unlock (&jclient->ob.lock);
 
@@ -288,19 +306,14 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
   //The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
   dll->kj += jclient->read_frames;
-  tj = current_usecs * 1.0e-6;
-
-  frames = ko1 - ko0;
-  dob = frames * (tj - to0) / (to1 - to0);
-  frames = ko0 - dll->kj;
-  err = frames + dob - dll->kdel;
+  jclient_update_err (dll, current_usecs);
 
   if (jclient->status == OB_STATUS_SKIP)
     {
       //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
-      n = (int) (floor (err + 0.5));
+      int n = (int) (floor (dll->err + 0.5));
       dll->kj += n;
-      err -= n;
+      dll->err -= n;
 
       debug_print (2, "Starting up...\n");
 
@@ -311,18 +324,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
       pthread_spin_unlock (&jclient->ob.lock);
     }
 
-  dll->_z1 += dll->_w0 * (dll->_w1 * err - dll->_z1);
-  dll->_z2 += dll->_w0 * (dll->_z1 - dll->_z2);
-  dll->_z3 += dll->_w2 * dll->_z2;
-  dll->ratio = 1.0 - dll->_z2 - dll->_z3;
-  if (dll->ratio > dll->ratio_max)
-    {
-      dll->ratio = dll->ratio_max;
-    }
-  if (dll->ratio < dll->ratio_min)
-    {
-      dll->ratio = dll->ratio_min;
-    }
+  jclient_update_dll (dll);
   jclient->j2o_dll.ratio = 1.0 / dll->ratio;
 
   i++;
