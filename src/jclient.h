@@ -41,6 +41,7 @@ struct dll
   jack_nframes_t ko1;
   double to0;
   double to1;
+  int frames;
 };
 
 struct jclient
@@ -73,7 +74,6 @@ struct jclient
   int cycles_to_skip;
   double jsr;
   double obsr;
-  int read_frames;
   jack_nframes_t current_frames;
   int log_control_cycles;
   overbridge_status_t status;

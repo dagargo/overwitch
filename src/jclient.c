@@ -72,7 +72,7 @@ static void
 jclient_init_buffer_size (struct jclient *jclient)
 {
   jclient->o2j_dll.kj = jclient->bufsize / -jclient->o2j_dll.ratio;
-  jclient->read_frames = jclient->bufsize * jclient->j2o_dll.ratio;
+  jclient->o2j_dll.frames = jclient->bufsize * jclient->j2o_dll.ratio;
 
   jclient->o2j_dll.kdel =
     (OB_FRAMES_PER_BLOCK * jclient->ob.blocks_per_transfer) +
@@ -175,7 +175,7 @@ jclient_o2j_reader (void *cb_data, float **data)
 	}
     }
 
-  jclient->read_frames += frames;
+  jclient->o2j_dll.frames += frames;
   last_frames = frames;
   return frames;
 }
@@ -185,7 +185,7 @@ jclient_o2j (struct jclient *jclient)
 {
   long gen_frames;
 
-  jclient->read_frames = 0;
+  jclient->o2j_dll.frames = 0;
   gen_frames =
     src_callback_read (jclient->o2j_state, jclient->o2j_dll.ratio,
 		       jclient->bufsize, jclient->o2j_buf_out);
@@ -305,7 +305,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
     }
 
   //The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
-  dll->kj += jclient->read_frames;
+  dll->kj += dll->frames;
   jclient_update_err (dll, current_usecs);
 
   if (jclient->status == OB_STATUS_SKIP)
