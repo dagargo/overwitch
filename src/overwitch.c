@@ -51,7 +51,7 @@ overwitch_signal_handler (int signo)
     }
   else if (signo == SIGUSR1)
     {
-      jclient_print_status (&jclient);
+      jclient_print_status (&jclient, "\n");
     }
 }
 

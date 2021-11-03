@@ -37,38 +37,19 @@
 
 #define MSG_ERROR_PORT_REGISTER "Error while registering JACK port\n"
 
-static void
-jclient_init_dll (struct dll *dll, int jack_sr, int jack_frames_per_transfer,
-		  int ob_frames_per_transfer)
+#define LATENCY_MSG_LEN 1024
+
+void
+jclient_print_status (struct jclient *jclient, const char *end)
 {
-  dll->_z1 = 0.0;
-  dll->_z2 = 0.0;
-  dll->_z3 = 0.0;
-  dll->ratio_sum = 0.0;
-  dll->ratio_avg = 0.0;
-  dll->last_ratio_avg = 0.0;
-
-  dll->ratio = jack_sr / OB_SAMPLE_RATE;
-  dll->ratio_max = 1.05 * dll->ratio;
-  dll->ratio_min = 0.95 * dll->ratio;
-
-  dll->kj = jack_frames_per_transfer / -dll->ratio;
-  dll->frames = ob_frames_per_transfer / dll->ratio;
-  dll->kdel = ob_frames_per_transfer + 1.5 * jack_frames_per_transfer;
+  printf ("Max. o2j latency: %.1f ms, max. j2o latency: %.1f ms%s",
+	  jclient->o2j_latency * 1000.0 / (jclient->ob.o2j_frame_bytes *
+					   OB_SAMPLE_RATE),
+	  jclient->j2o_latency * 1000.0 / (jclient->ob.j2o_frame_bytes *
+					   OB_SAMPLE_RATE), end);
 }
 
-static void
-jclient_set_loop_filter (struct jclient *jclient, struct dll *dll, double bw)
-{
-  //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
-  double w = 2.0 * M_PI * 20 * bw * jclient->bufsize / jclient->samplerate;
-  dll->_w0 = 1.0 - exp (-w);
-  w = 2.0 * M_PI * bw * dll->ratio / jclient->samplerate;
-  dll->_w1 = w * 1.6;
-  dll->_w2 = w * jclient->bufsize / 1.6;
-}
-
-static void
+void
 jclient_init_buffer_size (struct jclient *jclient)
 {
   debug_print (2, "Target delay: %.1f ms (%d frames)\n",
@@ -169,7 +150,7 @@ jclient_o2j_reader (void *cb_data, float **data)
 	}
     }
 
-  jclient->o2j_dll.frames += frames;
+  jclient->o2j_dll.kj += frames;
   last_frames = frames;
   return frames;
 }
@@ -179,7 +160,6 @@ jclient_o2j (struct jclient *jclient)
 {
   long gen_frames;
 
-  jclient->o2j_dll.frames = 0;
   gen_frames =
     src_callback_read (jclient->o2j_state, jclient->o2j_dll.ratio,
 		       jclient->bufsize, jclient->o2j_buf_out);
@@ -205,19 +185,19 @@ jclient_j2o (struct jclient *jclient)
 	  jclient->j2o_buf_size);
   jclient->j2o_queue_len += jclient->bufsize;
 
-  j2o_acc += jclient->bufsize * (jclient->j2o_dll.ratio - 1.0);
+  j2o_acc += jclient->bufsize * (jclient->j2o_ratio - 1.0);
   inc = trunc (j2o_acc);
   j2o_acc -= inc;
   frames = jclient->bufsize + inc;
 
   gen_frames =
-    src_callback_read (jclient->j2o_state, jclient->j2o_dll.ratio, frames,
+    src_callback_read (jclient->j2o_state, jclient->j2o_ratio, frames,
 		       jclient->j2o_buf_out);
   if (gen_frames != frames)
     {
       error_print
 	("j2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
-	 jclient->j2o_dll.ratio, gen_frames, frames);
+	 jclient->j2o_ratio, gen_frames, frames);
     }
 
   if (jclient->status < OB_STATUS_RUN)
@@ -239,39 +219,13 @@ jclient_j2o (struct jclient *jclient)
 }
 
 static inline void
-jclient_update_err (struct dll *dll, jack_time_t current_usecs)
-{
-  double tj = current_usecs * 1.0e-6;
-  jack_nframes_t frames = dll->ko1 - dll->ko0;
-  double dob = frames * (tj - dll->to0) / (dll->to1 - dll->to0);
-  frames = dll->ko0 - dll->kj;
-  dll->err = frames + dob - dll->kdel;
-}
-
-static inline void
-jclient_update_dll (struct dll *dll)
-{
-  dll->_z1 += dll->_w0 * (dll->_w1 * dll->err - dll->_z1);
-  dll->_z2 += dll->_w0 * (dll->_z1 - dll->_z2);
-  dll->_z3 += dll->_w2 * dll->_z2;
-  dll->ratio = 1.0 - dll->_z2 - dll->_z3;
-  if (dll->ratio > dll->ratio_max)
-    {
-      dll->ratio = dll->ratio_max;
-    }
-  if (dll->ratio < dll->ratio_min)
-    {
-      dll->ratio = dll->ratio_min;
-    }
-}
-
-static inline void
 jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 {
   jack_time_t current_usecs;
   jack_time_t next_usecs;
   float period_usecs;
   static int i = 0;
+  static char latency_msg[LATENCY_MSG_LEN];
 
   if (jack_get_cycle_times (jclient->client,
 			    &jclient->current_frames,
@@ -282,10 +236,10 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
   pthread_spin_lock (&jclient->ob.lock);
   jclient->j2o_latency = jclient->ob.j2o_latency;
-  dll->ko0 = jclient->ob.o2j_counter.i0.frames;
-  dll->to0 = jclient->ob.o2j_counter.i0.time;
-  dll->ko1 = jclient->ob.o2j_counter.i1.frames;
-  dll->to1 = jclient->ob.o2j_counter.i1.time;
+  dll->ko0 = jclient->ob.o2j_dll_counter.i0.frames;
+  dll->to0 = jclient->ob.o2j_dll_counter.i0.time;
+  dll->ko1 = jclient->ob.o2j_dll_counter.i1.frames;
+  dll->to1 = jclient->ob.o2j_dll_counter.i1.time;
   jclient->status = jclient->ob.status;
   pthread_spin_unlock (&jclient->ob.lock);
 
@@ -298,9 +252,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
       return;
     }
 
-  //The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
-  dll->kj += dll->frames;
-  jclient_update_err (dll, current_usecs);
+  dll_update_err (dll, current_usecs);
 
   if (jclient->status == OB_STATUS_SKIP)
     {
@@ -311,15 +263,15 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
       debug_print (2, "Starting up...\n");
 
-      jclient_set_loop_filter (jclient, dll, 1.0);
+      dll_set_loop_filter (dll, 1.0, jclient->bufsize, jclient->samplerate);
 
       pthread_spin_lock (&jclient->ob.lock);
       jclient->ob.status = OB_STATUS_STARTUP;
       pthread_spin_unlock (&jclient->ob.lock);
     }
 
-  jclient_update_dll (dll);
-  jclient->j2o_dll.ratio = 1.0 / dll->ratio;
+  dll_update (dll);
+  jclient->j2o_ratio = 1.0 / dll->ratio;
 
   i++;
   dll->ratio_sum += dll->ratio;
@@ -329,11 +281,13 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
       dll->ratio_avg = dll->ratio_sum / jclient->log_control_cycles;
 
-      debug_print (1,
-		   "Max. latencies (ms): %.1f; avg. ratios: %f; curr. ratios: %f\n",
-		   jclient->o2j_latency * 1000.0 /
-		   (jclient->ob.o2j_frame_bytes * OB_SAMPLE_RATE),
-		   dll->ratio_avg, dll->ratio);
+      if (debug_level)
+	{
+	  snprintf (latency_msg, LATENCY_MSG_LEN,
+		    "; o2j ratio avg.: %f; curr. o2j ratio: %f\n",
+		    dll->ratio_avg, dll->ratio);
+	  jclient_print_status (jclient, latency_msg);
+	}
 
       i = 0;
       dll->ratio_sum = 0.0;
@@ -341,7 +295,8 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
       if (jclient->status == OB_STATUS_STARTUP)
 	{
 	  debug_print (2, "Tunning...\n");
-	  jclient_set_loop_filter (jclient, dll, 0.05);
+	  dll_set_loop_filter (dll, 0.05, jclient->bufsize,
+			       jclient->samplerate);
 
 	  pthread_spin_lock (&jclient->ob.lock);
 	  jclient->ob.status = OB_STATUS_TUNE;
@@ -355,7 +310,8 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 	  && fabs (dll->ratio_avg - dll->last_ratio_avg) < RATIO_DIFF_THRES)
 	{
 	  debug_print (2, "Running...\n");
-	  jclient_set_loop_filter (jclient, dll, 0.02);
+	  dll_set_loop_filter (dll, 0.02, jclient->bufsize,
+			       jclient->samplerate);
 
 	  pthread_spin_lock (&jclient->ob.lock);
 	  jclient->ob.status = OB_STATUS_RUN;
@@ -551,19 +507,9 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 }
 
 void
-jclient_print_status (struct jclient *jclient)
-{
-  printf ("Max. latencies (ms): %.1f, %.1f\n",
-	  jclient->o2j_latency * 1000.0 / (jclient->ob.o2j_frame_bytes *
-					   OB_SAMPLE_RATE),
-	  jclient->j2o_latency * 1000.0 / (jclient->ob.j2o_frame_bytes *
-					   OB_SAMPLE_RATE));
-}
-
-void
 jclient_exit (struct jclient *jclient)
 {
-  jclient_print_status (jclient);
+  jclient_print_status (jclient, "\n");
   overbridge_set_status (&jclient->ob, OB_STATUS_STOP);
 }
 
@@ -719,9 +665,8 @@ jclient_run (struct jclient *jclient, char *device_name,
       goto cleanup_jack;
     }
 
-  jclient_init_dll (&jclient->o2j_dll, jclient->samplerate, jclient->bufsize,
-		    jclient->ob.frames_per_transfer);
-  jclient->j2o_dll.ratio = 1.0 / jclient->o2j_dll.ratio;
+  dll_init (&jclient->o2j_dll, jclient->samplerate, OB_SAMPLE_RATE,
+	    jclient->bufsize, jclient->ob.frames_per_transfer);
   jclient_init_buffer_size (jclient);
 
   if (jack_activate (jclient->client))

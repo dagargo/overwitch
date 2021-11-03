@@ -200,15 +200,6 @@ struct overbridge_device_desc
   char *output_track_names[OB_MAX_TRACKS];
 };
 
-struct counter
-{
-  struct instant i0;
-  struct instant i1;
-  double e2;
-  double b;
-  double c;
-};
-
 struct overbridge
 {
   int blocks_per_transfer;
@@ -220,8 +211,7 @@ struct overbridge
   uint16_t s_counter;
   libusb_device_handle *device;
   struct overbridge_device_desc device_desc;
-  struct counter j2o_counter;
-  struct counter o2j_counter;
+  struct dll_counter o2j_dll_counter;
   struct libusb_transfer *xfr_in;
   struct libusb_transfer *xfr_out;
   char *usb_data_in;

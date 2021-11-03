@@ -30,3 +30,47 @@ struct instant
   double time;
   jack_nframes_t frames;
 };
+
+struct dll_counter
+{
+  struct instant i0;
+  struct instant i1;
+  double e2;
+  double b;
+  double c;
+};
+
+struct dll
+{
+  double ratio;
+  jack_nframes_t kj;
+  double _w0;
+  double _w1;
+  double _w2;
+  int kdel;
+  double _z1;
+  double _z2;
+  double _z3;
+  double ratio_max;
+  double ratio_min;
+  double ratio_sum;
+  double ratio_avg;
+  double last_ratio_avg;
+  double err;
+  jack_nframes_t ko0;
+  jack_nframes_t ko1;
+  double to0;
+  double to1;
+};
+
+void dll_counter_init (struct dll_counter *, double, int);
+
+void dll_counter_inc (struct dll_counter *, int);
+
+void dll_init (struct dll *, double, double, int, int);
+
+void dll_set_loop_filter (struct dll *, double, int, double);
+
+void dll_update_err (struct dll *, jack_time_t);
+
+void dll_update (struct dll *);

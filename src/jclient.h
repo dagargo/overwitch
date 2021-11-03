@@ -20,35 +20,11 @@
 
 #include "overbridge.h"
 
-struct dll
-{
-  double ratio;
-  jack_nframes_t kj;
-  double _w0;
-  double _w1;
-  double _w2;
-  int kdel;
-  double _z1;
-  double _z2;
-  double _z3;
-  double ratio_max;
-  double ratio_min;
-  double ratio_sum;
-  double ratio_avg;
-  double last_ratio_avg;
-  double err;
-  jack_nframes_t ko0;
-  jack_nframes_t ko1;
-  double to0;
-  double to1;
-  int frames;
-};
-
 struct jclient
 {
   struct overbridge ob;
-  struct dll j2o_dll;
   struct dll o2j_dll;
+  double j2o_ratio;
   jack_client_t *client;
   jack_port_t **output_ports;
   jack_port_t **input_ports;
@@ -83,4 +59,4 @@ int jclient_run (struct jclient *, char *, int, int);
 
 void jclient_exit (struct jclient *);
 
-void jclient_print_status (struct jclient *);
+void jclient_print_status (struct jclient *, const char *);
