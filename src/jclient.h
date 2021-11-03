@@ -53,6 +53,7 @@ struct jclient
   jack_nframes_t current_frames;
   int log_control_cycles;
   overbridge_status_t status;
+  int xrun;
 };
 
 int jclient_run (struct jclient *, char *, int, int);

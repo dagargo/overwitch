@@ -64,9 +64,11 @@ jclient_init_buffer_size (struct jclient *jclient)
 }
 
 static int
-jclient_thread_xrun_cb (void *arg)
+jclient_thread_xrun_cb (void *cb_data)
 {
+  struct jclient *jclient = cb_data;
   error_print ("JACK xrun\n");
+  jclient->xrun = 1;
   return 0;
 }
 
@@ -86,7 +88,7 @@ jclient_j2o_reader (void *cb_data, float **data)
 
   ret = jclient->j2o_queue_len;
   memcpy (jclient->j2o_buf_in, jclient->j2o_queue,
-	  jclient->j2o_queue_len * jclient->ob.j2o_frame_bytes);
+	  ret * jclient->ob.j2o_frame_bytes);
   jclient->j2o_queue_len = 0;
 
   return ret;
@@ -119,6 +121,12 @@ jclient_o2j_reader (void *cb_data, float **data)
 	  bytes = frames * jclient->ob.o2j_frame_bytes;
 	  jack_ringbuffer_read (jclient->ob.o2j_rb,
 				(void *) jclient->o2j_buf_in, bytes);
+	  if (jclient->xrun)
+	    {
+	      jack_ringbuffer_read (jclient->ob.o2j_rb,
+				    (void *) jclient->o2j_buf_in, bytes);
+	      jclient->o2j_dll.kj += frames;
+	    }
 	}
       else
 	{
@@ -181,9 +189,14 @@ jclient_j2o (struct jclient *jclient)
   size_t wsj2o;
   static double j2o_acc = .0;
 
-  memcpy (&jclient->j2o_queue[jclient->j2o_queue_len], jclient->j2o_aux,
-	  jclient->j2o_buf_size);
+  memcpy (&jclient->j2o_queue
+	  [jclient->j2o_queue_len * jclient->ob.j2o_frame_bytes],
+	  jclient->j2o_aux, jclient->j2o_buf_size);
   jclient->j2o_queue_len += jclient->bufsize;
+
+  //In the j2o case, we do not need to take care of the xruns as the only thing
+  //that could happen is that the Overbridge side at the other end of the
+  //j2o ring buffer might need to resample to compensate for the missing frames.
 
   j2o_acc += jclient->bufsize * (jclient->j2o_ratio - 1.0);
   inc = trunc (j2o_acc);
@@ -200,8 +213,9 @@ jclient_j2o (struct jclient *jclient)
 	 jclient->j2o_ratio, gen_frames, frames);
     }
 
-  if (jclient->status < OB_STATUS_RUN)
+  if (jclient->status < OB_STATUS_RUN || jclient->xrun)
     {
+      jclient->xrun = 0;
       return;
     }
 
@@ -566,7 +580,9 @@ jclient_run (struct jclient *jclient, char *device_name,
       goto cleanup_jack;
     }
 
-  if (jack_set_xrun_callback (jclient->client, jclient_thread_xrun_cb, NULL))
+  jclient->xrun = 0;
+  if (jack_set_xrun_callback
+      (jclient->client, jclient_thread_xrun_cb, jclient))
     {
       ret = EXIT_FAILURE;
       goto cleanup_jack;

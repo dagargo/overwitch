@@ -349,7 +349,8 @@ cb_xfr_in (struct libusb_transfer *xfr)
     }
   else
     {
-      error_print ("Error on USB in transfer\n");
+      error_print ("Error on USB in transfer: %s\n",
+		   libusb_strerror (xfr->status));
     }
   // start new cycle even if this one did not succeed
   prepare_cycle_in (xfr->user_data);
@@ -360,7 +361,8 @@ cb_xfr_out (struct libusb_transfer *xfr)
 {
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
     {
-      error_print ("Error on USB out transfer\n");
+      error_print ("Error on USB out transfer: %s\n",
+		   libusb_strerror (xfr->status));
     }
   set_usb_output_data_blks (xfr->user_data);
   // We have to make sure that the out cycle is always started after its callback
@@ -420,7 +422,8 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
     {
       if (xfr->status != LIBUSB_TRANSFER_TIMED_OUT)
 	{
-	  error_print ("Error on USB MIDI in transfer\n");
+	  error_print ("Error on USB MIDI in transfer: %s\n",
+		       libusb_strerror (xfr->status));
 	}
     }
 
@@ -433,7 +436,8 @@ cb_xfr_out_midi (struct libusb_transfer *xfr)
 {
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
     {
-      error_print ("Error on USB MIDI out transfer\n");
+      error_print ("Error on USB MIDI out transfer: %s\n",
+		   libusb_strerror (xfr->status));
     }
 }
 
@@ -448,7 +452,8 @@ prepare_cycle_out (struct overbridge *ob)
   int r = libusb_submit_transfer (ob->xfr_out);
   if (r != 0)
     {
-      error_print ("Error when submitting USB out trasfer\n");
+      error_print ("Error when submitting USB out trasfer: %s\n",
+		   libusb_strerror (r));
     }
 }
 
@@ -463,7 +468,8 @@ prepare_cycle_in (struct overbridge *ob)
   int r = libusb_submit_transfer (ob->xfr_in);
   if (r != 0)
     {
-      error_print ("Error when submitting USB in trasfer\n");
+      error_print ("Error when submitting USB in trasfer: %s\n",
+		   libusb_strerror (r));
     }
 }
 
@@ -477,7 +483,8 @@ prepare_cycle_in_midi (struct overbridge *ob)
   int r = libusb_submit_transfer (ob->xfr_in_midi);
   if (r != 0)
     {
-      error_print ("Error when submitting USB MIDI in trasfer\n");
+      error_print ("Error when submitting USB MIDI in trasfer: %s\n",
+		   libusb_strerror (r));
     }
 }
 
@@ -491,7 +498,8 @@ prepare_cycle_out_midi (struct overbridge *ob)
   int r = libusb_submit_transfer (ob->xfr_out_midi);
   if (r != 0)
     {
-      error_print ("Error when submitting USB MIDI OUT trasfer\n");
+      error_print ("Error when submitting USB MIDI OUT trasfer: %s\n",
+		   libusb_strerror (r));
     }
 }
 
@@ -686,7 +694,7 @@ run_j2o_midi (void *data)
 }
 
 void *
-run (void *data)
+run_audio_and_o2j_midi (void *data)
 {
   struct overbridge *ob = data;
 
@@ -734,7 +742,7 @@ overbridge_run (struct overbridge *ob, jack_client_t * client)
     }
 
   debug_print (1, "Starting device thread...\n");
-  ret = pthread_create (&ob->midi_tinfo, NULL, run, ob);
+  ret = pthread_create (&ob->midi_tinfo, NULL, run_audio_and_o2j_midi, ob);
   if (ret)
     {
       error_print ("Could not start device thread\n");

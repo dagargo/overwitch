@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 #include "utils.h"
 
 int debug_level = 0;
