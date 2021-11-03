@@ -38,7 +38,8 @@
 #define MSG_ERROR_PORT_REGISTER "Error while registering JACK port\n"
 
 static void
-jclient_init_dll (struct dll *dll)
+jclient_init_dll (struct dll *dll, int jack_sr, int jack_frames_per_transfer,
+		  int ob_frames_per_transfer)
 {
   dll->_z1 = 0.0;
   dll->_z2 = 0.0;
@@ -46,6 +47,14 @@ jclient_init_dll (struct dll *dll)
   dll->ratio_sum = 0.0;
   dll->ratio_avg = 0.0;
   dll->last_ratio_avg = 0.0;
+
+  dll->ratio = jack_sr / OB_SAMPLE_RATE;
+  dll->ratio_max = 1.05 * dll->ratio;
+  dll->ratio_min = 0.95 * dll->ratio;
+
+  dll->kj = jack_frames_per_transfer / -dll->ratio;
+  dll->frames = ob_frames_per_transfer / dll->ratio;
+  dll->kdel = ob_frames_per_transfer + 1.5 * jack_frames_per_transfer;
 }
 
 static void
@@ -60,23 +69,8 @@ jclient_set_loop_filter (struct jclient *jclient, struct dll *dll, double bw)
 }
 
 static void
-jclient_init_sample_rate (struct jclient *jclient)
-{
-  jclient->o2j_dll.ratio = jclient->samplerate / OB_SAMPLE_RATE;
-  jclient->j2o_dll.ratio = jclient->o2j_dll.ratio;
-  jclient->o2j_dll.ratio_max = 1.05 * jclient->o2j_dll.ratio;
-  jclient->o2j_dll.ratio_min = 0.95 * jclient->o2j_dll.ratio;
-}
-
-static void
 jclient_init_buffer_size (struct jclient *jclient)
 {
-  jclient->o2j_dll.kj = jclient->bufsize / -jclient->o2j_dll.ratio;
-  jclient->o2j_dll.frames = jclient->bufsize * jclient->j2o_dll.ratio;
-
-  jclient->o2j_dll.kdel =
-    (OB_FRAMES_PER_BLOCK * jclient->ob.blocks_per_transfer) +
-    1.5 * (jclient->bufsize);
   debug_print (2, "Target delay: %.1f ms (%d frames)\n",
 	       jclient->o2j_dll.kdel * 1000 / OB_SAMPLE_RATE,
 	       jclient->o2j_dll.kdel);
@@ -634,11 +628,9 @@ jclient_run (struct jclient *jclient, char *device_name,
 
   jclient->samplerate = jack_get_sample_rate (jclient->client);
   printf ("JACK sample rate: %.0f\n", jclient->samplerate);
-  jclient_init_sample_rate (jclient);
 
   jclient->bufsize = jack_get_buffer_size (jclient->client);
   printf ("JACK buffer size: %d\n", jclient->bufsize);
-  jclient_init_buffer_size (jclient);
 
   jclient->output_ports =
     malloc (sizeof (jack_port_t *) * jclient->ob.device_desc.outputs);
@@ -727,7 +719,10 @@ jclient_run (struct jclient *jclient, char *device_name,
       goto cleanup_jack;
     }
 
-  jclient_init_dll (&jclient->o2j_dll);
+  jclient_init_dll (&jclient->o2j_dll, jclient->samplerate, jclient->bufsize,
+		    jclient->ob.frames_per_transfer);
+  jclient->j2o_dll.ratio = 1.0 / jclient->o2j_dll.ratio;
+  jclient_init_buffer_size (jclient);
 
   if (jack_activate (jclient->client))
     {
