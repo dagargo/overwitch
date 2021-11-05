@@ -349,7 +349,7 @@ cb_xfr_in (struct libusb_transfer *xfr)
     }
   else
     {
-      error_print ("Error on USB in transfer: %s\n",
+      error_print ("o2j: Error on USB audio transfer: %s\n",
 		   libusb_strerror (xfr->status));
     }
   // start new cycle even if this one did not succeed
@@ -361,7 +361,7 @@ cb_xfr_out (struct libusb_transfer *xfr)
 {
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
     {
-      error_print ("Error on USB out transfer: %s\n",
+      error_print ("j2o: Error on USB audio transfer: %s\n",
 		   libusb_strerror (xfr->status));
     }
   set_usb_output_data_blks (xfr->user_data);
@@ -378,10 +378,7 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
   overbridge_status_t status;
   struct overbridge *ob = xfr->user_data;
 
-  pthread_spin_lock (&ob->lock);
-  status = ob->status;
-  pthread_spin_unlock (&ob->lock);
-
+  status = overbridge_get_status (ob);
   if (status < OB_STATUS_RUN)
     {
       goto end;
@@ -449,11 +446,12 @@ prepare_cycle_out (struct overbridge *ob)
 				  ob->usb_data_out_blk_len *
 				  ob->blocks_per_transfer, cb_xfr_out, ob,
 				  100);
-  int r = libusb_submit_transfer (ob->xfr_out);
-  if (r != 0)
+
+  int err = libusb_submit_transfer (ob->xfr_out);
+  if (err)
     {
-      error_print ("Error when submitting USB out trasfer: %s\n",
-		   libusb_strerror (r));
+      error_print ("j2o: Error when submitting USB audio transfer: %s\n",
+		   libusb_strerror (err));
     }
 }
 
@@ -465,11 +463,12 @@ prepare_cycle_in (struct overbridge *ob)
 				  ob->usb_data_in_blk_len *
 				  ob->blocks_per_transfer, cb_xfr_in, ob,
 				  100);
-  int r = libusb_submit_transfer (ob->xfr_in);
-  if (r != 0)
+
+  int err = libusb_submit_transfer (ob->xfr_in);
+  if (err)
     {
-      error_print ("Error when submitting USB in trasfer: %s\n",
-		   libusb_strerror (r));
+      error_print ("o2j: Error when submitting USB audio in transfer: %s\n",
+		   libusb_strerror (err));
     }
 }
 
@@ -480,11 +479,11 @@ prepare_cycle_in_midi (struct overbridge *ob)
 			     MIDI_IN_EP, (void *) ob->o2j_midi_data,
 			     USB_BULK_MIDI_SIZE, cb_xfr_in_midi, ob, 100);
 
-  int r = libusb_submit_transfer (ob->xfr_in_midi);
-  if (r != 0)
+  int err = libusb_submit_transfer (ob->xfr_in_midi);
+  if (err)
     {
-      error_print ("Error when submitting USB MIDI in trasfer: %s\n",
-		   libusb_strerror (r));
+      error_print ("o2j: Error when submitting USB MIDI transfer: %s\n",
+		   libusb_strerror (err));
     }
 }
 
@@ -495,11 +494,11 @@ prepare_cycle_out_midi (struct overbridge *ob)
 			     (void *) ob->j2o_midi_data,
 			     USB_BULK_MIDI_SIZE, cb_xfr_out_midi, ob, 100);
 
-  int r = libusb_submit_transfer (ob->xfr_out_midi);
-  if (r != 0)
+  int err = libusb_submit_transfer (ob->xfr_out_midi);
+  if (err)
     {
-      error_print ("Error when submitting USB MIDI OUT trasfer: %s\n",
-		   libusb_strerror (r));
+      error_print ("j2o: Error when submitting USB MIDI transfer: %s\n",
+		   libusb_strerror (err));
     }
 }
 
@@ -686,9 +685,7 @@ run_j2o_midi (void *data)
 	}
       nanosleep (&req, NULL);
 
-      pthread_spin_lock (&ob->lock);
-      status = ob->status;
-      pthread_spin_unlock (&ob->lock);
+      status = overbridge_get_status (ob);
     }
   while (status);
 
@@ -729,9 +726,9 @@ overbridge_run (struct overbridge *ob, jack_client_t * client, int priority)
   max_bufsize =
     ob->frames_per_transfer >
     ob->jbufsize ? ob->frames_per_transfer : ob->jbufsize;
-  ob->j2o_rb = jack_ringbuffer_create (max_bufsize * ob->j2o_frame_bytes * 4);
+  ob->j2o_rb = jack_ringbuffer_create (max_bufsize * ob->j2o_frame_bytes * 8);
   jack_ringbuffer_mlock (ob->j2o_rb);
-  ob->o2j_rb = jack_ringbuffer_create (max_bufsize * ob->o2j_frame_bytes * 4);
+  ob->o2j_rb = jack_ringbuffer_create (max_bufsize * ob->o2j_frame_bytes * 8);
   jack_ringbuffer_mlock (ob->o2j_rb);
 
   ob->jclient = client;
@@ -829,8 +826,8 @@ overbridge_init (struct overbridge *ob, char *device_name,
       ob->o2j_midi_data = malloc (USB_BULK_MIDI_SIZE);
       memset (ob->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
       memset (ob->o2j_midi_data, 0, USB_BULK_MIDI_SIZE);
-      ob->j2o_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 4);
-      ob->o2j_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 4);
+      ob->j2o_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
+      ob->o2j_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
       jack_ringbuffer_mlock (ob->j2o_rb_midi);
       jack_ringbuffer_mlock (ob->o2j_rb_midi);
     }
@@ -864,7 +861,7 @@ overbridge_destroy (struct overbridge *ob)
   free (ob->o2j_midi_data);
 }
 
-overbridge_status_t
+inline overbridge_status_t
 overbridge_get_status (struct overbridge *ob)
 {
   overbridge_status_t status;
@@ -874,7 +871,7 @@ overbridge_get_status (struct overbridge *ob)
   return status;
 }
 
-void
+inline void
 overbridge_set_status (struct overbridge *ob, overbridge_status_t status)
 {
   pthread_spin_lock (&ob->lock);

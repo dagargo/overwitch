@@ -40,7 +40,7 @@
 #define LATENCY_MSG_LEN 1024
 
 void
-jclient_print_status (struct jclient *jclient, const char *end)
+jclient_print_latencies (struct jclient *jclient, const char *end)
 {
   printf ("Max. o2j latency: %.1f ms, max. j2o latency: %.1f ms%s",
 	  jclient->o2j_latency * 1000.0 / (jclient->ob.o2j_frame_bytes *
@@ -260,10 +260,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
   if (jclient->status == OB_STATUS_BOOT)
     {
-      pthread_spin_lock (&jclient->ob.lock);
-      jclient->ob.status = OB_STATUS_SKIP;
-      pthread_spin_unlock (&jclient->ob.lock);
-
+      overbridge_set_status (&jclient->ob, OB_STATUS_SKIP);
       return;
     }
 
@@ -280,9 +277,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
       dll_set_loop_filter (dll, 1.0, jclient->bufsize, jclient->samplerate);
 
-      pthread_spin_lock (&jclient->ob.lock);
-      jclient->ob.status = OB_STATUS_STARTUP;
-      pthread_spin_unlock (&jclient->ob.lock);
+      overbridge_set_status (&jclient->ob, OB_STATUS_STARTUP);
     }
 
   dll_update (dll);
@@ -301,7 +296,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 	  snprintf (latency_msg, LATENCY_MSG_LEN,
 		    "; o2j ratio avg.: %f; curr. o2j ratio: %f\n",
 		    dll->ratio_avg, dll->ratio);
-	  jclient_print_status (jclient, latency_msg);
+	  jclient_print_latencies (jclient, latency_msg);
 	}
 
       i = 0;
@@ -313,9 +308,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 	  dll_set_loop_filter (dll, 0.05, jclient->bufsize,
 			       jclient->samplerate);
 
-	  pthread_spin_lock (&jclient->ob.lock);
-	  jclient->ob.status = OB_STATUS_TUNE;
-	  pthread_spin_unlock (&jclient->ob.lock);
+	  overbridge_set_status (&jclient->ob, OB_STATUS_TUNE);
 
 	  jclient->log_control_cycles =
 	    LOG_TIME * jclient->samplerate / jclient->bufsize;
@@ -328,9 +321,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 	  dll_set_loop_filter (dll, 0.02, jclient->bufsize,
 			       jclient->samplerate);
 
-	  pthread_spin_lock (&jclient->ob.lock);
-	  jclient->ob.status = OB_STATUS_RUN;
-	  pthread_spin_unlock (&jclient->ob.lock);
+	  overbridge_set_status (&jclient->ob, OB_STATUS_RUN);
 	}
     }
 }
@@ -525,7 +516,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 void
 jclient_exit (struct jclient *jclient)
 {
-  jclient_print_status (jclient, "\n");
+  jclient_print_latencies (jclient, "\n");
   overbridge_set_status (&jclient->ob, OB_STATUS_STOP);
 }
 
@@ -668,9 +659,9 @@ jclient_run (struct jclient *jclient, char *device_name,
   j2o_bufsize =
     jclient->bufsize * OB_BYTES_PER_FRAME * jclient->ob.device_desc.inputs;
   jclient->j2o_buf_in = malloc (j2o_bufsize);
-  jclient->j2o_buf_out = malloc (j2o_bufsize * 4.5);	//Up to 192 kHz and a few samples more
+  jclient->j2o_buf_out = malloc (j2o_bufsize * 8);	//Up to 384 kHz
   jclient->j2o_aux = malloc (j2o_bufsize);
-  jclient->j2o_queue = malloc (j2o_bufsize * 4.5);	//Up to 192 kHz and a few samples more
+  jclient->j2o_queue = malloc (j2o_bufsize * 8);	//Up to 384 kHz
   jclient->j2o_queue_len = 0;
 
   o2j_bufsize =

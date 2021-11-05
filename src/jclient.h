@@ -60,4 +60,4 @@ int jclient_run (struct jclient *, char *, int, int, int);
 
 void jclient_exit (struct jclient *);
 
-void jclient_print_status (struct jclient *, const char *);
+void jclient_print_latencies (struct jclient *, const char *);
