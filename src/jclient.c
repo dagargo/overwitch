@@ -656,16 +656,15 @@ jclient_run (struct jclient *jclient, char *device_name,
     src_callback_new (jclient_o2j_reader, quality,
 		      jclient->ob.device_desc.outputs, NULL, jclient);
 
-  j2o_bufsize =
-    jclient->bufsize * OB_BYTES_PER_FRAME * jclient->ob.device_desc.inputs;
-  jclient->j2o_buf_in = malloc (j2o_bufsize);
-  jclient->j2o_buf_out = malloc (j2o_bufsize * 8);	//Up to 384 kHz
+  j2o_bufsize = jclient->bufsize * jclient->ob.j2o_frame_bytes;
+  //The 8 times scale allow up to more than 192 kHz sample rate in JACK.
+  jclient->j2o_buf_in = malloc (j2o_bufsize * 8);
+  jclient->j2o_buf_out = malloc (j2o_bufsize * 8);
   jclient->j2o_aux = malloc (j2o_bufsize);
-  jclient->j2o_queue = malloc (j2o_bufsize * 8);	//Up to 384 kHz
+  jclient->j2o_queue = malloc (j2o_bufsize * 8);
   jclient->j2o_queue_len = 0;
 
-  o2j_bufsize =
-    jclient->bufsize * OB_BYTES_PER_FRAME * jclient->ob.device_desc.outputs;
+  o2j_bufsize = jclient->bufsize * jclient->ob.o2j_frame_bytes;
   jclient->o2j_buf_in = malloc (o2j_bufsize);
   jclient->o2j_buf_out = malloc (o2j_bufsize);
 
