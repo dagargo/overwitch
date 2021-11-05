@@ -38,10 +38,10 @@ $ overwitch -l
 Bus 001 Port 003 Device 006: ID 1935:000c Digitakt
 ```
 
-Then, you can indicate which device you want to use like this. It is recommended to run `overwitch` with real time priority, so run it with `chrt`. To stop, just press `Ctrl+C`. You'll see an oputput like the one below. Notice that we are using the verbose option here but it is **not recommended** to use it and it is showed here for illustrative pursoses only.
+Then, you can indicate which device you want to use like this. It is recommended to run `overwitch` with real time priority, so run it with `chrt`. To stop, just press `Ctrl+C`. You'll see an oputput like the one below. Notice that we are using the verbose option here but it is **not recommended** to use it and it is showed here for illustrative purposes only.
 
 ```
-$ chrt -f 35 overwitch -d Digitakt -v
+$ overwitch -d Digitakt -v
 Device: Digitakt (outputs: 12, inputs: 2)
 JACK sample rate: 48000
 JACK buffer size: 64
@@ -69,6 +69,7 @@ Options:
   --use-device, -d value
   --resampling-quality, -q value
   --transfer-blocks, -b value
+  --rt-overbridge-priority, -p value
   --list-devices, -l
   --verbose, -v
   --help, -h
@@ -126,13 +127,13 @@ else
 fi
 ```
 
-With `rtirq-init` package installed I simply let the script reconfigure the priorities of IRQ handling threads. After, I run the audio related processes with real time priorities. This helps a lot to reduce latency and xruns.
+With `rtirq-init` package installed I simply let the script reconfigure the priorities of IRQ handling threads and then I run JACK, Overwitch and the desired applications. Notice that real time priorities are set by default so there is **no need** to set explicitely these.
 
 ```
 $ sudo /etc/init.d/rtirq start
-$ chrt -f -p 40 -a $(pidof jackd)
-$ chrt -f -p 35 -a $(pidof overwitch)
-$ chrt -f -p 30 -a $(pidof ardour-5.12.0)
+$ jackd ...
+$ overwitch -b 8 -q 2 -d Digitakt
+$ ardour
 ```
 
 Currently I'm using this RT kernel. You don't need an RT kernel but it will help even more to reduce latency and xruns.

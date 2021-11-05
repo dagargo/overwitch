@@ -638,6 +638,8 @@ run_j2o_midi (void *data)
   struct overbridge *ob = data;
   int sleep_time_ns = SAMPLE_TIME_NS * jack_get_buffer_size (ob->jclient) / 2;	//Average wait time
 
+  set_rt_priority (ob->priority);
+
   last_time = jack_get_time ();
   do
     {
@@ -698,6 +700,8 @@ run_audio_and_o2j_midi (void *data)
 {
   struct overbridge *ob = data;
 
+  set_rt_priority (ob->priority);
+
   dll_counter_init (&ob->o2j_dll_counter, OB_SAMPLE_RATE,
 		    ob->frames_per_transfer);
 
@@ -714,12 +718,13 @@ run_audio_and_o2j_midi (void *data)
 }
 
 int
-overbridge_run (struct overbridge *ob, jack_client_t * client)
+overbridge_run (struct overbridge *ob, jack_client_t * client, int priority)
 {
   int ret;
   size_t max_bufsize;
 
   ob->jbufsize = jack_get_buffer_size (client);
+  ob->priority = priority;
 
   max_bufsize =
     ob->frames_per_transfer >

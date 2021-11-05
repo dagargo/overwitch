@@ -29,11 +29,13 @@
 
 #define DEFAULT_QUALITY 2
 #define DEFAULT_BLOCKS 24
+#define DEFAULT_PRIORITY -1	//With this value the default priority will be used.
 
 static struct option options[] = {
   {"use-device", 1, NULL, 'd'},
   {"resampling-quality", 1, NULL, 'q'},
   {"transfer-blocks", 1, NULL, 'b'},
+  {"rt-overbridge-priority", 1, NULL, 'p'},
   {"list-devices", 0, NULL, 'l'},
   {"verbose", 0, NULL, 'v'},
   {"help", 0, NULL, 'h'},
@@ -82,7 +84,7 @@ int
 main (int argc, char *argv[])
 {
   int opt;
-  int vflg = 0, lflg = 0, dflg = 0, bflg = 0, errflg = 0;
+  int vflg = 0, lflg = 0, dflg = 0, bflg = 0, pflg = 0, errflg = 0;
   char *endstr;
   char *device = NULL;
   int long_index = 0;
@@ -90,6 +92,7 @@ main (int argc, char *argv[])
   struct sigaction action;
   int blocks_per_transfer = DEFAULT_BLOCKS;
   int quality = DEFAULT_QUALITY;
+  int priority = DEFAULT_PRIORITY;
 
   action.sa_handler = overwitch_signal_handler;
   sigemptyset (&action.sa_mask);
@@ -99,7 +102,7 @@ main (int argc, char *argv[])
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGUSR1, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "d:q:b:lvh",
+  while ((opt = getopt_long (argc, argv, "d:q:b:p:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
@@ -121,7 +124,8 @@ main (int argc, char *argv[])
 	  break;
 	case 'b':
 	  blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
-	  if (blocks_per_transfer < 2 || blocks_per_transfer > 32)
+	  if (errno || endstr == optarg || *endstr != '\0'
+	      || blocks_per_transfer < 2 || blocks_per_transfer > 32)
 	    {
 	      blocks_per_transfer = DEFAULT_BLOCKS;
 	      fprintf (stderr,
@@ -129,6 +133,17 @@ main (int argc, char *argv[])
 		       blocks_per_transfer);
 	    }
 	  bflg++;
+	  break;
+	case 'p':
+	  priority = (int) strtol (optarg, &endstr, 10);
+	  if (errno || endstr == optarg || *endstr != '\0' || priority < 0
+	      || priority > 99)
+	    {
+	      priority = -1;
+	      fprintf (stderr,
+		       "Priority value must be in [0..99]. Using default JACK value...\n");
+	    }
+	  pflg++;
 	  break;
 	case 'l':
 	  lflg++;
@@ -179,6 +194,12 @@ main (int argc, char *argv[])
       exit (EXIT_FAILURE);
     }
 
+  if (pflg > 1)
+    {
+      fprintf (stderr, "Undetermined priority\n");
+      exit (EXIT_FAILURE);
+    }
 
-  return jclient_run (&jclient, device, blocks_per_transfer, quality);
+  return jclient_run (&jclient, device, blocks_per_transfer, quality,
+		      priority);
 }

@@ -19,6 +19,7 @@
  */
 
 #include <jack/jack.h>
+#include <jack/thread.h>
 
 #define debug_print(level, format, ...) if (level <= debug_level) fprintf(stderr, "DEBUG:" __FILE__ ":%d:(%s): " format, __LINE__, __FUNCTION__, ## __VA_ARGS__)
 #define error_print(format, ...) fprintf(stderr, "\x1b[31mERROR:" __FILE__ ":%d:(%s): " format "\x1b[m", __LINE__, __FUNCTION__, ## __VA_ARGS__)
@@ -74,3 +75,5 @@ void dll_set_loop_filter (struct dll *, double, int, double);
 void dll_update_err (struct dll *, jack_time_t);
 
 void dll_update (struct dll *);
+
+void set_rt_priority (int);

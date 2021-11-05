@@ -208,6 +208,7 @@ struct overbridge
   overbridge_status_t status;
   size_t j2o_latency;
   pthread_t midi_tinfo;
+  int priority;
   uint16_t s_counter;
   libusb_device_handle *device;
   struct overbridge_device_desc device_desc;
@@ -252,7 +253,7 @@ void set_self_max_priority ();
 
 overbridge_err_t overbridge_init (struct overbridge *, char *, int);
 
-int overbridge_run (struct overbridge *, jack_client_t *);
+int overbridge_run (struct overbridge *, jack_client_t *, int);
 
 void overbridge_destroy (struct overbridge *);
 

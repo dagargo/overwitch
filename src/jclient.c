@@ -529,7 +529,7 @@ jclient_exit (struct jclient *jclient)
 
 int
 jclient_run (struct jclient *jclient, char *device_name,
-	     int blocks_per_transfer, int quality)
+	     int blocks_per_transfer, int quality, int priority)
 {
   jack_options_t options = JackNoStartServer;
   jack_status_t status;
@@ -593,6 +593,12 @@ jclient_run (struct jclient *jclient, char *device_name,
 
   jclient->bufsize = jack_get_buffer_size (jclient->client);
   printf ("JACK buffer size: %d\n", jclient->bufsize);
+
+  if (priority < 0)
+    {
+      priority = jack_client_real_time_priority (jclient->client);
+    }
+  debug_print (1, "Using RT priority %d...\n", priority);
 
   jclient->output_ports =
     malloc (sizeof (jack_port_t *) * jclient->ob.device_desc.outputs);
@@ -675,7 +681,7 @@ jclient_run (struct jclient *jclient, char *device_name,
   memset (jclient->j2o_buf_in, 0, j2o_bufsize);
   memset (jclient->o2j_buf_in, 0, o2j_bufsize);
 
-  if (overbridge_run (&jclient->ob, jclient->client))
+  if (overbridge_run (&jclient->ob, jclient->client, priority))
     {
       ret = EXIT_FAILURE;
       goto cleanup_jack;

@@ -56,7 +56,7 @@ struct jclient
   int xrun;
 };
 
-int jclient_run (struct jclient *, char *, int, int);
+int jclient_run (struct jclient *, char *, int, int, int);
 
 void jclient_exit (struct jclient *);
 

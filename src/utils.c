@@ -115,3 +115,13 @@ dll_set_loop_filter (struct dll *dll, double bw,
   dll->_w1 = w * 1.6;
   dll->_w2 = w * output_frames_per_transfer / 1.6;
 }
+
+void
+set_rt_priority (int priority)
+{
+  int err = jack_acquire_real_time_scheduling (pthread_self (), priority);
+  if (err)
+    {
+      error_print ("Could not set real time priority!!!!!!!!!!!!!!!1\n");
+    }
+}
