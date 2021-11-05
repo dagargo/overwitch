@@ -207,6 +207,7 @@ struct overbridge
   pthread_spinlock_t lock;
   overbridge_status_t status;
   size_t j2o_latency;
+  pthread_t audio_and_o2j_midi;
   pthread_t midi_tinfo;
   int priority;
   uint16_t s_counter;
