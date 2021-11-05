@@ -131,7 +131,8 @@ jclient_o2j_reader (void *cb_data, float **data)
       else
 	{
 	  debug_print (2,
-		       "o2j: Can not read data from ring buffer. Replicating last sample...\n");
+		       "o2j: Audio ring buffer underflow (%zu < %zu). Replicating last sample ... \n ",
+		       rso2j, jclient->ob.o2j_buf_size);
 	  if (last_frames > 1)
 	    {
 	      memcpy (jclient->o2j_buf_in,
@@ -228,7 +229,7 @@ jclient_j2o (struct jclient *jclient)
     }
   else
     {
-      error_print ("j2o: Buffer overflow. Discarding data...\n");
+      error_print ("j2o: Audio ring buffer overflow. Discarding data...\n");
     }
 }
 
@@ -462,7 +463,8 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 	    }
 	  else
 	    {
-	      error_print ("j2o: Buffer MIDI overflow. Discarding data...\n");
+	      error_print
+		("j2o: MIDI ring buffer overflow. Discarding data...\n");
 	    }
 	}
     }
@@ -635,9 +637,8 @@ jclient_run (struct jclient *jclient, char *device_name,
     }
 
   jclient->midi_output_port =
-    jack_port_register (jclient->client,
-			"MIDI out",
-			JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+    jack_port_register (jclient->client, "MIDI out", JACK_DEFAULT_MIDI_TYPE,
+			JackPortIsOutput, 0);
 
   if (jclient->midi_output_port == NULL)
     {
@@ -647,9 +648,8 @@ jclient_run (struct jclient *jclient, char *device_name,
     }
 
   jclient->midi_input_port =
-    jack_port_register (jclient->client,
-			"MIDI in",
-			JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+    jack_port_register (jclient->client, "MIDI in", JACK_DEFAULT_MIDI_TYPE,
+			JackPortIsInput, 0);
 
   if (jclient->midi_input_port == NULL)
     {

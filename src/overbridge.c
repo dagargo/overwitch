@@ -252,7 +252,7 @@ set_usb_input_data_blks (struct overbridge *ob)
     }
   else
     {
-      error_print ("o2j: Buffer overflow. Discarding data...\n");
+      error_print ("o2j: Audio ring buffer overflow. Discarding data...\n");
     }
 }
 
@@ -285,7 +285,7 @@ set_usb_output_data_blks (struct overbridge *ob)
       else
 	{
 	  debug_print (2,
-		       "j2o: Can not read enough data from ring buffer (%zu < %zu). Resampling...\n",
+		       "j2o: Audio ring buffer underflow (%zu < %zu). Resampling...\n",
 		       rsj2o, ob->j2o_buf_size);
 	  frames = rsj2o / ob->j2o_frame_bytes;
 	  bytes = frames * ob->j2o_frame_bytes;
@@ -412,7 +412,7 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 	      else
 		{
 		  error_print
-		    ("o2j: Buffer MIDI overflow. Discarding data...\n");
+		    ("o2j: MIDI ring buffer overflow. Discarding data...\n");
 		}
 	    }
 	  length += OB_MIDI_EVENT_SIZE;
