@@ -210,7 +210,7 @@ free_transfers (struct overbridge *ob)
 static void
 set_usb_input_data_blks (struct overbridge *ob)
 {
-  struct overbridge_usb_blk *blk;
+  struct overbridge_usb_blk *blk[ob->blocks_per_transfer];
   size_t wso2j;
   int32_t hv;
   jack_default_audio_sample_t *f;
@@ -223,21 +223,30 @@ set_usb_input_data_blks (struct overbridge *ob)
   pthread_spin_unlock (&ob->lock);
 
   f = ob->o2j_buf;
+
+  pthread_spin_lock (&ob->lock);
   for (int i = 0; i < ob->blocks_per_transfer; i++)
     {
-      blk = get_nth_usb_in_blk (ob, i);
-      s = blk->data;
-      for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
-	{
-	  for (int k = 0; k < ob->device_desc.outputs; k++)
-	    {
-	      hv = ntohl (*s);
-	      *f = hv / (float) INT_MAX;
-	      f++;
-	      s++;
-	    }
-	}
+     blk[i] = get_nth_usb_in_blk (ob,i);
     }
+  pthread_spin_unlock (&ob->lock);
+
+  pthread_spin_lock (&ob->lock);
+  for (int i = 0; i < ob->blocks_per_transfer; i++)
+    {
+      s = blk[i]->data;
+      for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
+        {
+          for (int k = 0; k < ob->device_desc.outputs; k++)
+            {
+              hv = ntohl (*s);
+              *f = (float) hv / INT_MAX;
+              f++;
+              s++;
+            }
+        }
+    }
+  pthread_spin_unlock (&ob->lock);
 
   if (status < OB_STATUS_RUN)
     {
