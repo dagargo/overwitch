@@ -375,6 +375,9 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 {
   struct ob_midi_event event;
   int length;
+  struct timespec sleeptime;
+  int sleep_time_ns = SAMPLE_TIME_NS * 1000 ;  //Average wait time
+  sleeptime.tv_nsec = sleep_time_ns;
   overbridge_status_t status;
   struct overbridge *ob = xfr->user_data;
 
@@ -413,6 +416,7 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 		}
 	    }
 	  length += OB_MIDI_EVENT_SIZE;
+	  nanosleep(&sleeptime, NULL);
 	}
     }
   else
