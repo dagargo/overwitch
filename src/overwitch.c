@@ -125,7 +125,7 @@ main (int argc, char *argv[])
 	case 'b':
 	  blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
 	  if (errno || endstr == optarg || *endstr != '\0'
-	      || blocks_per_transfer < 2 || blocks_per_transfer > 32)
+	      || blocks_per_transfer < 2 || blocks_per_transfer > 640)
 	    {
 	      blocks_per_transfer = DEFAULT_BLOCKS;
 	      fprintf (stderr,
