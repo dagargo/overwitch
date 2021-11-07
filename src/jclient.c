@@ -230,6 +230,7 @@ jclient_j2o (struct jclient *jclient)
   else
     {
       error_print ("j2o: Audio ring buffer overflow. Discarding data...\n");
+      jack_ringbuffer_reset (jclient->ob.j2o_rb);
     }
 }
 
