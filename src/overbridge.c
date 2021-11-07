@@ -712,10 +712,9 @@ run_j2o_midi (void *data)
 }
 
 void *
-run_audio_and_o2j_midi (void *data)
+run_audio (void *data)
 {
   struct overbridge *ob = data;
-
   set_rt_priority (ob->priority);
 
   dll_counter_init (&ob->o2j_dll_counter, OB_SAMPLE_RATE,
@@ -723,6 +722,22 @@ run_audio_and_o2j_midi (void *data)
 
   prepare_cycle_in (ob);
   prepare_cycle_out (ob);
+
+  while (overbridge_get_status (ob) >= OB_STATUS_BOOT)
+    {
+      libusb_handle_events_completed (NULL, NULL);
+    }
+
+  return NULL;
+}
+
+
+void *
+run_o2j_midi (void *data)
+{
+  struct overbridge *ob = data;
+  set_rt_priority (ob->priority);
+
   prepare_cycle_in_midi (ob);
 
   while (overbridge_get_status (ob) >= OB_STATUS_BOOT)
@@ -732,6 +747,9 @@ run_audio_and_o2j_midi (void *data)
 
   return NULL;
 }
+
+
+
 
 int
 overbridge_run (struct overbridge *ob, jack_client_t * client, int priority)
@@ -762,13 +780,22 @@ overbridge_run (struct overbridge *ob, jack_client_t * client, int priority)
       return ret;
     }
 
-  debug_print (1, "Starting audio and o2j MIDI thread...\n");
+  debug_print (1, "Starting audio thread...\n");
   ret =
-    pthread_create (&ob->audio_and_o2j_midi, NULL, run_audio_and_o2j_midi,
-		    ob);
+    pthread_create (&ob->audio, NULL, run_audio, ob);
   if (ret)
     {
       error_print ("Could not start device thread\n");
+      return ret;
+    }
+
+  debug_print (1, "Starting o2j MIDI thread...\n");
+  ret =
+    pthread_create (&ob->o2j_midi, NULL, run_o2j_midi,
+		    ob);
+  if (ret)
+    {
+      error_print ("Could not start o2j Midi thread\n");
     }
 
   return ret;
@@ -777,7 +804,8 @@ overbridge_run (struct overbridge *ob, jack_client_t * client, int priority)
 void
 overbridge_wait (struct overbridge *ob)
 {
-  pthread_join (ob->audio_and_o2j_midi, NULL);
+  pthread_join (ob->audio, NULL);
+  pthread_join (ob->o2j_midi, NULL);
   pthread_join (ob->midi_tinfo, NULL);
 }
 
