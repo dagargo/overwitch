@@ -745,7 +745,7 @@ overbridge_run (struct overbridge *ob, jack_client_t * client, int priority)
   max_bufsize =
     ob->frames_per_transfer >
     ob->jbufsize ? ob->frames_per_transfer : ob->jbufsize;
-  ob->j2o_rb = jack_ringbuffer_create (max_bufsize * ob->j2o_frame_bytes * 8);
+  ob->j2o_rb = jack_ringbuffer_create (max_bufsize * ob->j2o_frame_bytes * 8 * ob->device_desc.outputs);
   jack_ringbuffer_mlock (ob->j2o_rb);
   ob->o2j_rb = jack_ringbuffer_create (max_bufsize * ob->o2j_frame_bytes * 8);
   jack_ringbuffer_mlock (ob->o2j_rb);
