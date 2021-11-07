@@ -122,6 +122,6 @@ set_rt_priority (int priority)
   int err = jack_acquire_real_time_scheduling (pthread_self (), priority);
   if (err)
     {
-      error_print ("Could not set real time priority!!!!!!!!!!!!!!!1\n");
+      error_print ("Could not set real time priority\n");
     }
 }
