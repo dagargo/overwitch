@@ -454,13 +454,15 @@ cb_xfr_out_midi (struct libusb_transfer *xfr)
 static void
 prepare_cycle_out (struct overbridge *ob)
 {
-  libusb_fill_interrupt_transfer (ob->xfr_out, ob->device,
-				  AUDIO_OUT_EP, (void *) ob->usb_data_out,
+  pthread_spin_lock (&ob->lock);
+  libusb_fill_bulk_stream_transfer (ob->xfr_out, ob->device,
+				  AUDIO_OUT_EP, 1, (void *) ob->usb_data_out,
 				  ob->usb_data_out_blk_len *
 				  ob->blocks_per_transfer, cb_xfr_out, ob,
 				  100);
 
   int err = libusb_submit_transfer (ob->xfr_out);
+  pthread_spin_unlock (&ob->lock);
   if (err)
     {
       error_print ("j2o: Error when submitting USB audio transfer: %s\n",
@@ -471,13 +473,15 @@ prepare_cycle_out (struct overbridge *ob)
 static void
 prepare_cycle_in (struct overbridge *ob)
 {
-  libusb_fill_interrupt_transfer (ob->xfr_in, ob->device,
-				  AUDIO_IN_EP, (void *) ob->usb_data_in,
+  pthread_spin_lock (&ob->lock);
+  libusb_fill_bulk_stream_transfer (ob->xfr_in, ob->device,
+				  AUDIO_IN_EP, 2, (void *) ob->usb_data_in,
 				  ob->usb_data_in_blk_len *
 				  ob->blocks_per_transfer, cb_xfr_in, ob,
 				  100);
-
   int err = libusb_submit_transfer (ob->xfr_in);
+  pthread_spin_unlock (&ob->lock);
+
   if (err)
     {
       error_print ("o2j: Error when submitting USB audio in transfer: %s\n",
@@ -488,11 +492,12 @@ prepare_cycle_in (struct overbridge *ob)
 static void
 prepare_cycle_in_midi (struct overbridge *ob)
 {
-  libusb_fill_bulk_transfer (ob->xfr_in_midi, ob->device,
-			     MIDI_IN_EP, (void *) ob->o2j_midi_data,
-			     USB_BULK_MIDI_SIZE, cb_xfr_in_midi, ob, 100);
+  libusb_fill_bulk_stream_transfer (ob->xfr_in_midi, ob->device,
+			     MIDI_IN_EP, 3, (void *) ob->o2j_midi_data,
+			     USB_BULK_MIDI_SIZE * 32, cb_xfr_in_midi, ob, 1000);
 
   int err = libusb_submit_transfer (ob->xfr_in_midi);
+
   if (err)
     {
       error_print ("o2j: Error when submitting USB MIDI transfer: %s\n",
@@ -503,11 +508,12 @@ prepare_cycle_in_midi (struct overbridge *ob)
 static void
 prepare_cycle_out_midi (struct overbridge *ob)
 {
-  libusb_fill_bulk_transfer (ob->xfr_out_midi, ob->device, MIDI_OUT_EP,
+  libusb_fill_bulk_stream_transfer (ob->xfr_out_midi, ob->device, MIDI_OUT_EP, 4,
 			     (void *) ob->j2o_midi_data,
 			     USB_BULK_MIDI_SIZE, cb_xfr_out_midi, ob, 100);
 
   int err = libusb_submit_transfer (ob->xfr_out_midi);
+
   if (err)
     {
       error_print ("j2o: Error when submitting USB MIDI transfer: %s\n",
