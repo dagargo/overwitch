@@ -126,6 +126,7 @@ jclient_o2j_reader (void *cb_data, float **data)
 	      jack_ringbuffer_read (jclient->ob.o2j_rb,
 				    (void *) jclient->o2j_buf_in, bytes);
 	      jclient->o2j_dll.kj += frames;
+	      jclient->xrun = 0;
 	    }
 	}
       else
@@ -180,6 +181,9 @@ jclient_o2j (struct jclient *jclient)
     }
 }
 
+//In the j2o case, we do not need to take care of the xruns as the only thing
+//that could happen is that the Overbridge side at the other end of the
+//j2o ring buffer might need to resample to compensate for the missing frames.
 static inline void
 jclient_j2o (struct jclient *jclient)
 {
@@ -194,10 +198,6 @@ jclient_j2o (struct jclient *jclient)
 	  [jclient->j2o_queue_len * jclient->ob.j2o_frame_bytes],
 	  jclient->j2o_aux, jclient->j2o_buf_size);
   jclient->j2o_queue_len += jclient->bufsize;
-
-  //In the j2o case, we do not need to take care of the xruns as the only thing
-  //that could happen is that the Overbridge side at the other end of the
-  //j2o ring buffer might need to resample to compensate for the missing frames.
 
   j2o_acc += jclient->bufsize * (jclient->j2o_ratio - 1.0);
   inc = trunc (j2o_acc);
@@ -214,9 +214,8 @@ jclient_j2o (struct jclient *jclient)
 	 jclient->j2o_ratio, gen_frames, frames);
     }
 
-  if (jclient->status < OB_STATUS_RUN || jclient->xrun)
+  if (jclient->status < OB_STATUS_RUN)
     {
-      jclient->xrun = 0;
       return;
     }
 
