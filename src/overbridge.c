@@ -417,8 +417,11 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
     }
   else
     {
-      error_print ("Error on USB MIDI in transfer: %s\n",
-		   libusb_strerror (xfr->status));
+      if (xfr->status != LIBUSB_TRANSFER_TIMED_OUT)
+	{
+	  error_print ("Error on USB MIDI in transfer: %s\n",
+		       libusb_strerror (xfr->status));
+	}
     }
 
 end:
