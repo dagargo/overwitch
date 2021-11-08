@@ -627,7 +627,6 @@ static const char *ob_err_strgs[] = { "ok", "libusb init failed",
 void *
 run_j2o_midi (void *data)
 {
-  overbridge_status_t status;
   int pos;
   jack_time_t last_time;
   jack_time_t event_time;
@@ -639,16 +638,20 @@ run_j2o_midi (void *data)
 
   set_rt_priority (ob->priority);
 
+  pos = 0;
+  diff = 0;
   last_time = jack_get_time ();
-  do
+  while (1)
     {
-      memset (ob->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
-      diff = 0;
-      pos = 0;
-
       while (jack_ringbuffer_read_space (ob->j2o_rb_midi) >=
 	     sizeof (struct ob_midi_event) && pos < USB_BULK_MIDI_SIZE)
 	{
+	  if (!pos)
+	    {
+	      memset (ob->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
+	      diff = 0;
+	    }
+
 	  jack_ringbuffer_peek (ob->j2o_rb_midi, (void *) &event,
 				sizeof (struct ob_midi_event));
 	  event_time = jack_frames_to_time (ob->jclient, event.frames);
@@ -671,6 +674,7 @@ run_j2o_midi (void *data)
 	  debug_print (2, "Event frames: %u; diff: %lu\n", event.frames,
 		       diff);
 	  prepare_cycle_out_midi (ob);
+	  pos = 0;
 	}
 
       if (diff)
@@ -685,9 +689,11 @@ run_j2o_midi (void *data)
 	}
       nanosleep (&req, NULL);
 
-      status = overbridge_get_status (ob);
+      if (!overbridge_get_status (ob))
+	{
+	  break;
+	}
     }
-  while (status);
 
   return NULL;
 }
