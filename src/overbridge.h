@@ -211,6 +211,7 @@ struct overbridge
   pthread_t midi_tinfo;
   int priority;
   uint16_t s_counter;
+  libusb_context *context;
   libusb_device_handle *device;
   struct overbridge_device_desc device_desc;
   struct dll_counter o2j_dll_counter;

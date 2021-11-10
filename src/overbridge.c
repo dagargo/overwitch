@@ -507,7 +507,7 @@ overbridge_init_priv (struct overbridge *ob, char *device_name)
   int ret;
 
   // libusb setup
-  ret = libusb_init (NULL);
+  ret = libusb_init (&ob->context);
   if (ret != LIBUSB_SUCCESS)
     {
       return OB_LIBUSB_INIT_FAILED;
@@ -522,7 +522,7 @@ overbridge_init_priv (struct overbridge *ob, char *device_name)
 
       debug_print (2, "Checking for %s...\n", OB_DEVICE_DESCS[i].name);
       ob->device =
-	libusb_open_device_with_vid_pid (NULL, ELEKTRON_VID,
+	libusb_open_device_with_vid_pid (ob->context, ELEKTRON_VID,
 					 OB_DEVICE_DESCS[i].pid);
 
       break;
@@ -610,7 +610,7 @@ static void
 usb_shutdown (struct overbridge *ob)
 {
   libusb_close (ob->device);
-  libusb_exit (NULL);
+  libusb_exit (ob->context);
 }
 
 static const char *ob_err_strgs[] = { "ok", "libusb init failed",
@@ -715,7 +715,7 @@ run_audio_and_o2j_midi (void *data)
 
   while (overbridge_get_status (ob) >= OB_STATUS_BOOT)
     {
-      libusb_handle_events_completed (NULL, NULL);
+      libusb_handle_events_completed (ob->context, NULL);
     }
 
   return NULL;
