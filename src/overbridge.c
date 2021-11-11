@@ -445,7 +445,7 @@ prepare_cycle_out (struct overbridge *ob)
 				  AUDIO_OUT_EP, (void *) ob->usb_data_out,
 				  ob->usb_data_out_blk_len *
 				  ob->blocks_per_transfer, cb_xfr_out, ob,
-				  100);
+				  0);
 
   int err = libusb_submit_transfer (ob->xfr_out);
   if (err)
@@ -462,7 +462,7 @@ prepare_cycle_in (struct overbridge *ob)
 				  AUDIO_IN_EP, (void *) ob->usb_data_in,
 				  ob->usb_data_in_blk_len *
 				  ob->blocks_per_transfer, cb_xfr_in, ob,
-				  100);
+				  0);
 
   int err = libusb_submit_transfer (ob->xfr_in);
   if (err)
@@ -477,7 +477,7 @@ prepare_cycle_in_midi (struct overbridge *ob)
 {
   libusb_fill_bulk_transfer (ob->xfr_in_midi, ob->device,
 			     MIDI_IN_EP, (void *) ob->o2j_midi_data,
-			     USB_BULK_MIDI_SIZE, cb_xfr_in_midi, ob, 100);
+			     USB_BULK_MIDI_SIZE, cb_xfr_in_midi, ob, 0);
 
   int err = libusb_submit_transfer (ob->xfr_in_midi);
   if (err)
@@ -492,7 +492,7 @@ prepare_cycle_out_midi (struct overbridge *ob)
 {
   libusb_fill_bulk_transfer (ob->xfr_out_midi, ob->device, MIDI_OUT_EP,
 			     (void *) ob->j2o_midi_data,
-			     USB_BULK_MIDI_SIZE, cb_xfr_out_midi, ob, 100);
+			     USB_BULK_MIDI_SIZE, cb_xfr_out_midi, ob, 0);
 
   int err = libusb_submit_transfer (ob->xfr_out_midi);
   if (err)
