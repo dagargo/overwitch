@@ -491,9 +491,15 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
     {
       for (int j = 0; j < jclient->ob.device_desc.inputs; j++)
         {
-          buffer[j] = jack_port_get_buffer (jclient->input_ports[j], nframes);
-         *f = buffer[j][i];
-          f++;
+          if (jack_port_connected(jclient->input_ports[j])) {
+            buffer[j] = jack_port_get_buffer (jclient->input_ports[j], nframes);
+           *f = buffer[j][i];
+            f++;
+	  }
+	    else
+	  {
+	    continue;
+	  }
         }
     }
 
