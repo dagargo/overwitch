@@ -190,6 +190,7 @@ jclient_j2o (struct jclient *jclient)
   long gen_frames;
   int inc;
   int frames;
+  int connected_ports = 0;
   size_t bytes;
   size_t wsj2o;
   static double j2o_acc = .0;
@@ -203,6 +204,17 @@ jclient_j2o (struct jclient *jclient)
   inc = trunc (j2o_acc);
   j2o_acc -= inc;
   frames = jclient->bufsize + inc;
+
+  // we really only need to write to j2o_rb
+  // when audio in ports on the Elektron device
+  // are connected via jack
+  for (int i = 0; i < jclient->ob.device_desc.inputs; i++)
+     {
+       if (jack_port_connected(jclient->input_ports[i]))
+       {
+         connected_ports +=1;
+       }
+  }
 
   gen_frames =
     src_callback_read (jclient->j2o_state, jclient->j2o_ratio, frames,
@@ -221,15 +233,19 @@ jclient_j2o (struct jclient *jclient)
 
   bytes = gen_frames * jclient->ob.j2o_frame_bytes;
   wsj2o = jack_ringbuffer_write_space (jclient->ob.j2o_rb);
-  if (bytes <= wsj2o)
-    {
-      jack_ringbuffer_write (jclient->ob.j2o_rb,
-			     (void *) jclient->j2o_buf_out, bytes);
-    }
-  else
-    {
-      error_print ("j2o: Audio ring buffer overflow. Discarding data...\n");
-    }
+
+  if (connected_ports > 0 ) {
+    if (bytes <= wsj2o)
+      {
+        jack_ringbuffer_write (jclient->ob.j2o_rb,
+			       (void *) jclient->j2o_buf_out, bytes);
+
+      }
+    else
+      {
+        error_print ("j2o: Audio ring buffer overflow. Discarding data...\n");
+      }
+  }
 }
 
 static inline void
