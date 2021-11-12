@@ -444,6 +444,9 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 	    case 0xc0:		//Program Change
 	      oevent.bytes[0] = 0x0c;
 	      break;
+	    case 0xd0:		//Channel Pressure (After-touch)
+	      oevent.bytes[0] = 0x0d;
+	      break;
 	    }
 	  oevent.bytes[1] = jevent.buffer[0];
 	  oevent.bytes[2] = jevent.buffer[1];
@@ -452,22 +455,19 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 	{
 	  switch (status_byte & 0xf0)
 	    {
-	    case 0x80:		//Note-off
+	    case 0x80:		//Note Off
 	      oevent.bytes[0] = 0x08;
 	      break;
-	    case 0x90:		//Note-on
+	    case 0x90:		//Note On
 	      oevent.bytes[0] = 0x09;
 	      break;
-	    case 0xa0:		//Poly-KeyPress
+	    case 0xa0:		//Polyphonic Key Pressure
 	      oevent.bytes[0] = 0x0a;
 	      break;
 	    case 0xb0:		//Control Change
 	      oevent.bytes[0] = 0x0b;
 	      break;
-	    case 0xd0:		//Channel Pressure
-	      oevent.bytes[0] = 0x0d;
-	      break;
-	    case 0xe0:		//PitchBend Change
+	    case 0xe0:		//Pitch Bend Change
 	      oevent.bytes[0] = 0x0e;
 	      break;
 	    }
