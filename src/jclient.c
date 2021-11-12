@@ -219,12 +219,12 @@ jclient_j2o (struct jclient *jclient)
   // when audio in ports on the Elektron device
   // are connected via jack
   for (int i = 0; i < jclient->ob.device_desc.inputs; i++)
-     {
-       if (jack_port_connected(jclient->input_ports[i]))
-       {
-         connected_ports +=1;
-       }
-  }
+    {
+      if (jack_port_connected (jclient->input_ports[i]))
+	{
+	  connected_ports += 1;
+	}
+    }
 
   gen_frames =
     src_callback_read (jclient->j2o_state, jclient->j2o_ratio, frames,
@@ -244,18 +244,20 @@ jclient_j2o (struct jclient *jclient)
   bytes = gen_frames * jclient->ob.j2o_frame_bytes;
   wsj2o = jack_ringbuffer_write_space (jclient->ob.j2o_rb);
 
-  if (connected_ports > 0 ) {
-    if (bytes <= wsj2o)
-      {
-        jack_ringbuffer_write (jclient->ob.j2o_rb,
-			       (void *) jclient->j2o_buf_out, bytes);
+  if (connected_ports > 0)
+    {
+      if (bytes <= wsj2o)
+	{
+	  jack_ringbuffer_write (jclient->ob.j2o_rb,
+				 (void *) jclient->j2o_buf_out, bytes);
 
-      }
-    else
-      {
-        error_print ("j2o: Audio ring buffer overflow. Discarding data...\n");
-      }
-  }
+	}
+      else
+	{
+	  error_print
+	    ("j2o: Audio ring buffer overflow. Discarding data...\n");
+	}
+    }
 }
 
 static inline void
@@ -445,7 +447,7 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 	    }
 	  oevent.bytes[1] = jevent.buffer[0];
 	  oevent.bytes[2] = jevent.buffer[1];
-        }
+	}
       else if (jevent.size == 3)
 	{
 	  switch (status_byte & 0xf0)
@@ -510,12 +512,13 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   f = jclient->o2j_buf_out;
   for (int i = 0; i < nframes; i++)
     {
-      for (int j  = 0; j < jclient->ob.device_desc.outputs; j++)
-        {
-          buffer[j] = jack_port_get_buffer (jclient->output_ports[j], nframes);
-          buffer[j][i] = *f;
-          f++;
-        }
+      for (int j = 0; j < jclient->ob.device_desc.outputs; j++)
+	{
+	  buffer[j] =
+	    jack_port_get_buffer (jclient->output_ports[j], nframes);
+	  buffer[j][i] = *f;
+	  f++;
+	}
     }
 
   //j2o
@@ -524,17 +527,19 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   for (int i = 0; i < nframes; i++)
     {
       for (int j = 0; j < jclient->ob.device_desc.inputs; j++)
-        {
-          if (jack_port_connected(jclient->input_ports[j])) {
-            buffer[j] = jack_port_get_buffer (jclient->input_ports[j], nframes);
-           *f = buffer[j][i];
-            f++;
-	  }
-	    else
-	  {
-	    continue;
-	  }
-        }
+	{
+	  if (jack_port_connected (jclient->input_ports[j]))
+	    {
+	      buffer[j] =
+		jack_port_get_buffer (jclient->input_ports[j], nframes);
+	      *f = buffer[j][i];
+	      f++;
+	    }
+	  else
+	    {
+	      continue;
+	    }
+	}
     }
 
   jclient_j2o (jclient);
