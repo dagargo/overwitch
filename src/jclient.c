@@ -425,6 +425,17 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 	  oevent.bytes[0] = 0x0f;	//Single Byte
 	  oevent.bytes[1] = jevent.buffer[0];
 	}
+      else if (jevent.size == 2)
+	{
+	  switch (status_byte & 0xf0)
+	    {
+	    case 0xc0:		//Program Change
+	      oevent.bytes[0] = 0x0c;
+	      break;
+	    }
+	  oevent.bytes[1] = jevent.buffer[0];
+	  oevent.bytes[2] = jevent.buffer[1];
+        }
       else if (jevent.size == 3)
 	{
 	  switch (status_byte & 0xf0)
@@ -440,9 +451,6 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 	      break;
 	    case 0xb0:		//Control Change
 	      oevent.bytes[0] = 0x0b;
-	      break;
-	    case 0xc0:		//Program Change
-	      oevent.bytes[0] = 0x0c;
 	      break;
 	    case 0xd0:		//Channel Pressure
 	      oevent.bytes[0] = 0x0d;
