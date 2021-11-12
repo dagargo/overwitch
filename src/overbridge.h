@@ -225,6 +225,8 @@ struct overbridge
   size_t usb_data_out_blk_len;
   size_t j2o_buf_size;
   size_t o2j_buf_size;
+  int usb_data_in_len;
+  int usb_data_out_len;
   jack_default_audio_sample_t *j2o_buf;
   jack_default_audio_sample_t *o2j_buf;
   size_t o2j_frame_bytes;

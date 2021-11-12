@@ -50,11 +50,24 @@ jclient_print_latencies (struct jclient *jclient, const char *end)
 }
 
 void
-jclient_init_buffer_size (struct jclient *jclient)
+jclient_init (struct jclient *jclient)
 {
-  debug_print (2, "Target delay: %.1f ms (%d frames)\n",
-	       jclient->o2j_dll.kdel * 1000 / OB_SAMPLE_RATE,
-	       jclient->o2j_dll.kdel);
+  size_t j2o_bufsize = jclient->bufsize * jclient->ob.j2o_frame_bytes;
+  size_t o2j_bufsize = jclient->bufsize * jclient->ob.o2j_frame_bytes;
+
+  //The 8 times scale allow up to more than 192 kHz sample rate in JACK.
+  jclient->j2o_buf_in = malloc (j2o_bufsize * 8);
+  jclient->j2o_buf_out = malloc (j2o_bufsize * 8);
+  jclient->j2o_aux = malloc (j2o_bufsize);
+  jclient->j2o_queue = malloc (j2o_bufsize * 8);
+  jclient->j2o_queue_len = 0;
+
+
+  jclient->o2j_buf_in = malloc (o2j_bufsize);
+  jclient->o2j_buf_out = malloc (o2j_bufsize);
+
+  memset (jclient->j2o_buf_in, 0, j2o_bufsize);
+  memset (jclient->o2j_buf_in, 0, o2j_bufsize);
 
   jclient->log_control_cycles =
     STARTUP_TIME * jclient->samplerate / jclient->bufsize;
@@ -132,7 +145,7 @@ jclient_o2j_reader (void *cb_data, float **data)
       else
 	{
 	  debug_print (2,
-		       "o2j: Audio ring buffer underflow (%zu < %zu). Replicating last sample ... \n ",
+		       "o2j: Audio ring buffer underflow (%zu < %zu). Replicating last sample...\n",
 		       rso2j, jclient->ob.o2j_buf_size);
 	  if (last_frames > 1)
 	    {
@@ -148,16 +161,13 @@ jclient_o2j_reader (void *cb_data, float **data)
     {
       if (rso2j >= jclient->o2j_buf_size)
 	{
+	  debug_print (2, "o2j: Emptying buffer and running...\n");
 	  frames = rso2j / jclient->ob.o2j_frame_bytes;
 	  bytes = frames * jclient->ob.o2j_frame_bytes;
 	  jack_ringbuffer_read_advance (jclient->ob.o2j_rb, bytes);
-	  frames = MAX_READ_FRAMES;
 	  running = 1;
 	}
-      else
-	{
-	  frames = MAX_READ_FRAMES;
-	}
+      frames = MAX_READ_FRAMES;
     }
 
   jclient->o2j_dll.kj += frames;
@@ -551,8 +561,6 @@ jclient_run (struct jclient *jclient, char *device_name,
   jack_status_t status;
   overbridge_err_t ob_status;
   char *client_name;
-  size_t o2j_bufsize;
-  size_t j2o_bufsize;
   int ret = 0;
 
   ob_status =
@@ -679,20 +687,7 @@ jclient_run (struct jclient *jclient, char *device_name,
     src_callback_new (jclient_o2j_reader, quality,
 		      jclient->ob.device_desc.outputs, NULL, jclient);
 
-  j2o_bufsize = jclient->bufsize * jclient->ob.j2o_frame_bytes;
-  //The 8 times scale allow up to more than 192 kHz sample rate in JACK.
-  jclient->j2o_buf_in = malloc (j2o_bufsize * 8);
-  jclient->j2o_buf_out = malloc (j2o_bufsize * 8);
-  jclient->j2o_aux = malloc (j2o_bufsize);
-  jclient->j2o_queue = malloc (j2o_bufsize * 8);
-  jclient->j2o_queue_len = 0;
-
-  o2j_bufsize = jclient->bufsize * jclient->ob.o2j_frame_bytes;
-  jclient->o2j_buf_in = malloc (o2j_bufsize);
-  jclient->o2j_buf_out = malloc (o2j_bufsize);
-
-  memset (jclient->j2o_buf_in, 0, j2o_bufsize);
-  memset (jclient->o2j_buf_in, 0, o2j_bufsize);
+  jclient_init (jclient);
 
   if (overbridge_run (&jclient->ob, jclient->client, priority))
     {
@@ -700,9 +695,9 @@ jclient_run (struct jclient *jclient, char *device_name,
       goto cleanup_jack;
     }
 
+  overbridge_set_status (&jclient->ob, OB_STATUS_BOOT);
   dll_init (&jclient->o2j_dll, jclient->samplerate, OB_SAMPLE_RATE,
 	    jclient->bufsize, jclient->ob.frames_per_transfer);
-  jclient_init_buffer_size (jclient);
 
   if (jack_activate (jclient->client))
     {

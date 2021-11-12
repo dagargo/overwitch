@@ -313,6 +313,7 @@ set_usb_output_data_blks (struct overbridge *ob)
     {
       if (rsj2o >= ob->j2o_buf_size)
 	{
+	  debug_print (2, "j2o: Emptying buffer and running...\n");
 	  frames = rsj2o / ob->j2o_frame_bytes;
 	  bytes = frames * ob->j2o_frame_bytes;
 	  jack_ringbuffer_read_advance (ob->j2o_rb, bytes);
@@ -441,8 +442,7 @@ prepare_cycle_out (struct overbridge *ob)
 {
   libusb_fill_interrupt_transfer (ob->xfr_out, ob->device,
 				  AUDIO_OUT_EP, (void *) ob->usb_data_out,
-				  ob->usb_data_out_blk_len *
-				  ob->blocks_per_transfer, cb_xfr_out, ob, 0);
+				  ob->usb_data_out_len, cb_xfr_out, ob, 0);
 
   int err = libusb_submit_transfer (ob->xfr_out);
   if (err)
@@ -457,8 +457,7 @@ prepare_cycle_in (struct overbridge *ob)
 {
   libusb_fill_interrupt_transfer (ob->xfr_in, ob->device,
 				  AUDIO_IN_EP, (void *) ob->usb_data_in,
-				  ob->usb_data_in_blk_len *
-				  ob->blocks_per_transfer, cb_xfr_in, ob, 0);
+				  ob->usb_data_in_len, cb_xfr_in, ob, 0);
 
   int err = libusb_submit_transfer (ob->xfr_in);
   if (err)
@@ -706,6 +705,8 @@ run_audio_and_o2j_midi (void *data)
 
   set_rt_priority (ob->priority);
 
+  while (overbridge_get_status (ob) == OB_STATUS_STOP);
+
   dll_counter_init (&ob->o2j_dll_counter, OB_SAMPLE_RATE,
 		    ob->frames_per_transfer);
 
@@ -740,7 +741,7 @@ overbridge_run (struct overbridge *ob, jack_client_t * client, int priority)
 
   ob->jclient = client;
   ob->s_counter = 0;
-  ob->status = OB_STATUS_BOOT;
+  ob->status = OB_STATUS_STOP;
 
   debug_print (1, "Starting j2o MIDI thread...\n");
   ret = pthread_create (&ob->midi_tinfo, NULL, run_j2o_midi, ob);
@@ -795,13 +796,14 @@ overbridge_init (struct overbridge *ob, char *device_name,
       ob->usb_data_out_blk_len =
 	sizeof (struct overbridge_usb_blk) +
 	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ob->device_desc.inputs;
-      int usb_data_in_len = ob->usb_data_in_blk_len * ob->blocks_per_transfer;
-      int usb_data_out_len =
+
+      ob->usb_data_in_len = ob->usb_data_in_blk_len * ob->blocks_per_transfer;
+      ob->usb_data_out_len =
 	ob->usb_data_out_blk_len * ob->blocks_per_transfer;
-      ob->usb_data_in = malloc (usb_data_in_len);
-      ob->usb_data_out = malloc (usb_data_out_len);
-      memset (ob->usb_data_in, 0, usb_data_in_len);
-      memset (ob->usb_data_out, 0, usb_data_out_len);
+      ob->usb_data_in = malloc (ob->usb_data_in_len);
+      ob->usb_data_out = malloc (ob->usb_data_out_len);
+      memset (ob->usb_data_in, 0, ob->usb_data_in_len);
+      memset (ob->usb_data_out, 0, ob->usb_data_out_len);
 
       for (int i = 0; i < ob->blocks_per_transfer; i++)
 	{
