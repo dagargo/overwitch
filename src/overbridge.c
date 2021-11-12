@@ -375,11 +375,9 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 {
   struct ob_midi_event event;
   int length;
-  overbridge_status_t status;
   struct overbridge *ob = xfr->user_data;
 
-  status = overbridge_get_status (ob);
-  if (status < OB_STATUS_RUN)
+  if (overbridge_get_status (ob) < OB_STATUS_RUN)
     {
       goto end;
     }
@@ -444,8 +442,7 @@ prepare_cycle_out (struct overbridge *ob)
   libusb_fill_interrupt_transfer (ob->xfr_out, ob->device,
 				  AUDIO_OUT_EP, (void *) ob->usb_data_out,
 				  ob->usb_data_out_blk_len *
-				  ob->blocks_per_transfer, cb_xfr_out, ob,
-				  0);
+				  ob->blocks_per_transfer, cb_xfr_out, ob, 0);
 
   int err = libusb_submit_transfer (ob->xfr_out);
   if (err)
@@ -461,8 +458,7 @@ prepare_cycle_in (struct overbridge *ob)
   libusb_fill_interrupt_transfer (ob->xfr_in, ob->device,
 				  AUDIO_IN_EP, (void *) ob->usb_data_in,
 				  ob->usb_data_in_blk_len *
-				  ob->blocks_per_transfer, cb_xfr_in, ob,
-				  0);
+				  ob->blocks_per_transfer, cb_xfr_in, ob, 0);
 
   int err = libusb_submit_transfer (ob->xfr_in);
   if (err)
@@ -637,6 +633,11 @@ run_j2o_midi (void *data)
   int sleep_time_ns = SAMPLE_TIME_NS * jack_get_buffer_size (ob->jclient) / 2;	//Average wait time
 
   set_rt_priority (ob->priority);
+
+  while (overbridge_get_status (ob) < OB_STATUS_BOOT)
+    {
+      sleep (1);
+    }
 
   pos = 0;
   diff = 0;
