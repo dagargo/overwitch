@@ -268,50 +268,12 @@ set_usb_output_data_blks (struct overbridge *ob)
   int res;
   int32_t *s;
   static int running = 0;
+  int enabled = overbridge_is_j2o_audio_enable (ob);
 
   rsj2o = jack_ringbuffer_read_space (ob->j2o_rb);
-  if (running)
+  if (!running)
     {
-      if (ob->j2o_latency < rsj2o)
-	{
-	  ob->j2o_latency = rsj2o;
-	}
-
-      if (rsj2o >= ob->j2o_buf_size)
-	{
-	  jack_ringbuffer_read (ob->j2o_rb, (void *) ob->j2o_buf,
-				ob->j2o_buf_size);
-	}
-      else
-	{
-	  debug_print (2,
-		       "j2o: Audio ring buffer underflow (%zu < %zu). Resampling...\n",
-		       rsj2o, ob->j2o_buf_size);
-	  frames = rsj2o / ob->j2o_frame_bytes;
-	  bytes = frames * ob->j2o_frame_bytes;
-	  jack_ringbuffer_read (ob->j2o_rb, (void *) ob->j2o_buf_res, bytes);
-	  ob->j2o_data.input_frames = frames;
-	  ob->j2o_data.src_ratio = (double) ob->frames_per_transfer / frames;
-	  //We should NOT use the simple API but since this only happens very occasionally and mostly at startup, this has very low impact on audio quality.
-	  res = src_simple (&ob->j2o_data, SRC_SINC_FASTEST,
-			    ob->device_desc.inputs);
-	  if (res)
-	    {
-	      debug_print (2, "j2o: Error while resampling: %s\n",
-			   src_strerror (res));
-	    }
-	  else if (ob->j2o_data.output_frames_gen != ob->frames_per_transfer)
-	    {
-	      error_print
-		("j2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
-		 ob->j2o_data.src_ratio, ob->j2o_data.output_frames_gen,
-		 ob->frames_per_transfer);
-	    }
-	}
-    }
-  else
-    {
-      if (rsj2o >= ob->j2o_buf_size)
+      if (enabled && rsj2o >= ob->j2o_buf_size)
 	{
 	  debug_print (2, "j2o: Emptying buffer and running...\n");
 	  frames = rsj2o / ob->j2o_frame_bytes;
@@ -319,8 +281,55 @@ set_usb_output_data_blks (struct overbridge *ob)
 	  jack_ringbuffer_read_advance (ob->j2o_rb, bytes);
 	  running = 1;
 	}
+      goto set_blocks;
     }
 
+  if (!enabled)
+    {
+      running = 0;
+      debug_print (2, "j2o: Clearing buffer and stopping...\n");
+      memset (ob->j2o_buf, 0, ob->j2o_buf_size);
+      goto set_blocks;
+    }
+
+  if (ob->j2o_latency < rsj2o)
+    {
+      ob->j2o_latency = rsj2o;
+    }
+
+  if (rsj2o >= ob->j2o_buf_size)
+    {
+      jack_ringbuffer_read (ob->j2o_rb, (void *) ob->j2o_buf,
+			    ob->j2o_buf_size);
+    }
+  else
+    {
+      debug_print (2,
+		   "j2o: Audio ring buffer underflow (%zu < %zu). Resampling...\n",
+		   rsj2o, ob->j2o_buf_size);
+      frames = rsj2o / ob->j2o_frame_bytes;
+      bytes = frames * ob->j2o_frame_bytes;
+      jack_ringbuffer_read (ob->j2o_rb, (void *) ob->j2o_buf_res, bytes);
+      ob->j2o_data.input_frames = frames;
+      ob->j2o_data.src_ratio = (double) ob->frames_per_transfer / frames;
+      //We should NOT use the simple API but since this only happens very occasionally and mostly at startup, this has very low impact on audio quality.
+      res = src_simple (&ob->j2o_data, SRC_SINC_FASTEST,
+			ob->device_desc.inputs);
+      if (res)
+	{
+	  debug_print (2, "j2o: Error while resampling: %s\n",
+		       src_strerror (res));
+	}
+      else if (ob->j2o_data.output_frames_gen != ob->frames_per_transfer)
+	{
+	  error_print
+	    ("j2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
+	     ob->j2o_data.src_ratio, ob->j2o_data.output_frames_gen,
+	     ob->frames_per_transfer);
+	}
+    }
+
+set_blocks:
   f = ob->j2o_buf;
   for (int i = 0; i < ob->blocks_per_transfer; i++)
     {
@@ -790,6 +799,8 @@ overbridge_init (struct overbridge *ob, char *device_name,
       ob->blocks_per_transfer = blocks_per_transfer;
       ob->frames_per_transfer = OB_FRAMES_PER_BLOCK * ob->blocks_per_transfer;
 
+      ob->j2o_audio_enabled = 0;
+
       ob->usb_data_in_blk_len =
 	sizeof (struct overbridge_usb_blk) +
 	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ob->device_desc.outputs;
@@ -886,6 +897,26 @@ overbridge_set_status (struct overbridge *ob, overbridge_status_t status)
   pthread_spin_lock (&ob->lock);
   ob->status = status;
   pthread_spin_unlock (&ob->lock);
+}
+
+inline int
+overbridge_is_j2o_audio_enable (struct overbridge *ob)
+{
+  int enabled;
+  pthread_spin_lock (&ob->lock);
+  enabled = ob->j2o_audio_enabled;
+  pthread_spin_unlock (&ob->lock);
+  return enabled;
+}
+
+inline void
+overbridge_set_j2o_audio_enable (struct overbridge *ob, int enabled)
+{
+  enabled = enabled == 1;
+  pthread_spin_lock (&ob->lock);
+  ob->j2o_audio_enabled = enabled;
+  pthread_spin_unlock (&ob->lock);
+  debug_print (1, "Setting j2o audio to %d...\n", enabled);
 }
 
 overbridge_err_t

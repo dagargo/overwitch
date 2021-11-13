@@ -204,6 +204,7 @@ struct overbridge
 {
   int blocks_per_transfer;
   int frames_per_transfer;
+  int j2o_audio_enabled;
   pthread_spinlock_t lock;
   overbridge_status_t status;
   size_t j2o_latency;
@@ -268,3 +269,7 @@ overbridge_status_t overbridge_get_status (struct overbridge *);
 void overbridge_set_status (struct overbridge *, overbridge_status_t);
 
 overbridge_err_t overbridge_list_devices ();
+
+void overbridge_set_j2o_audio_enable (struct overbridge *, int);
+
+int overbridge_is_j2o_audio_enable (struct overbridge *);

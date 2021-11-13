@@ -85,6 +85,24 @@ jclient_thread_xrun_cb (void *cb_data)
   return 0;
 }
 
+static void
+jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
+			 void *cb_data)
+{
+  struct jclient *jclient = cb_data;
+  int j2o_enabled = 0;
+  //We only check for j2o (imput) ports as o2j must always be running.
+  for (int i = 0; i < jclient->ob.device_desc.inputs; i++)
+    {
+      if (jack_port_connected (jclient->input_ports[i]))
+	{
+	  j2o_enabled = 1;
+	  break;
+	}
+    }
+  overbridge_set_j2o_audio_enable (&jclient->ob, j2o_enabled);
+}
+
 static long
 jclient_j2o_reader (void *cb_data, float **data)
 {
@@ -200,7 +218,6 @@ jclient_j2o (struct jclient *jclient)
   long gen_frames;
   int inc;
   int frames;
-  int connected_ports = 0;
   size_t bytes;
   size_t wsj2o;
   static double j2o_acc = .0;
@@ -214,17 +231,6 @@ jclient_j2o (struct jclient *jclient)
   inc = trunc (j2o_acc);
   j2o_acc -= inc;
   frames = jclient->bufsize + inc;
-
-  // we really only need to write to j2o_rb
-  // when audio in ports on the Elektron device
-  // are connected via jack
-  for (int i = 0; i < jclient->ob.device_desc.inputs; i++)
-    {
-      if (jack_port_connected (jclient->input_ports[i]))
-	{
-	  connected_ports += 1;
-	}
-    }
 
   gen_frames =
     src_callback_read (jclient->j2o_state, jclient->j2o_ratio, frames,
@@ -244,19 +250,14 @@ jclient_j2o (struct jclient *jclient)
   bytes = gen_frames * jclient->ob.j2o_frame_bytes;
   wsj2o = jack_ringbuffer_write_space (jclient->ob.j2o_rb);
 
-  if (connected_ports > 0)
+  if (bytes <= wsj2o)
     {
-      if (bytes <= wsj2o)
-	{
-	  jack_ringbuffer_write (jclient->ob.j2o_rb,
-				 (void *) jclient->j2o_buf_out, bytes);
-
-	}
-      else
-	{
-	  error_print
-	    ("j2o: Audio ring buffer overflow. Discarding data...\n");
-	}
+      jack_ringbuffer_write (jclient->ob.j2o_rb,
+			     (void *) jclient->j2o_buf_out, bytes);
+    }
+  else
+    {
+      error_print ("j2o: Audio ring buffer overflow. Discarding data...\n");
     }
 }
 
@@ -523,26 +524,22 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 
   //j2o
 
-  f = jclient->j2o_aux;
-  for (int i = 0; i < nframes; i++)
+  if (overbridge_is_j2o_audio_enable (&jclient->ob))
     {
-      for (int j = 0; j < jclient->ob.device_desc.inputs; j++)
+      f = jclient->j2o_aux;
+      for (int i = 0; i < nframes; i++)
 	{
-	  if (jack_port_connected (jclient->input_ports[j]))
+	  for (int j = 0; j < jclient->ob.device_desc.inputs; j++)
 	    {
 	      buffer[j] =
 		jack_port_get_buffer (jclient->input_ports[j], nframes);
 	      *f = buffer[j][i];
 	      f++;
 	    }
-	  else
-	    {
-	      continue;
-	    }
 	}
-    }
 
-  jclient_j2o (jclient);
+      jclient_j2o (jclient);
+    }
 
   jclient_o2j_midi (jclient, nframes);
 
@@ -615,6 +612,13 @@ jclient_run (struct jclient *jclient, char *device_name,
     {
       ret = EXIT_FAILURE;
       goto cleanup_jack;
+    }
+
+  if (jack_set_port_connect_callback (jclient->client,
+				      jclient_port_connect_cb, jclient))
+    {
+      error_print
+	("Cannot set port connect callbacc so j2o audio will not be possible\n");
     }
 
   jclient->samplerate = jack_get_sample_rate (jclient->client);
