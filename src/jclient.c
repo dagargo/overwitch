@@ -511,12 +511,14 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   //o2j
 
   f = jclient->o2j_buf_out;
+  for (int i = 0; i < jclient->ob.device_desc.outputs; i++)
+    {
+      buffer[i] = jack_port_get_buffer (jclient->output_ports[i], nframes);
+    }
   for (int i = 0; i < nframes; i++)
     {
       for (int j = 0; j < jclient->ob.device_desc.outputs; j++)
 	{
-	  buffer[j] =
-	    jack_port_get_buffer (jclient->output_ports[j], nframes);
 	  buffer[j][i] = *f;
 	  f++;
 	}
@@ -527,12 +529,14 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   if (overbridge_is_j2o_audio_enable (&jclient->ob))
     {
       f = jclient->j2o_aux;
+      for (int i = 0; i < jclient->ob.device_desc.inputs; i++)
+	{
+	  buffer[i] = jack_port_get_buffer (jclient->input_ports[i], nframes);
+	}
       for (int i = 0; i < nframes; i++)
 	{
 	  for (int j = 0; j < jclient->ob.device_desc.inputs; j++)
 	    {
-	      buffer[j] =
-		jack_port_get_buffer (jclient->input_ports[j], nframes);
 	      *f = buffer[j][i];
 	      f++;
 	    }
