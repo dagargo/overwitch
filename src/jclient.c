@@ -81,7 +81,9 @@ jclient_thread_xrun_cb (void *cb_data)
 {
   struct jclient *jclient = cb_data;
   error_print ("JACK xrun\n");
-  jclient->xrun = 1;
+  pthread_spin_lock (&jclient->lock);
+  jclient->xruns = 1;
+  pthread_spin_unlock (&jclient->lock);
   return 0;
 }
 
@@ -160,13 +162,6 @@ jclient_o2j_reader (void *cb_data, float **data)
 	  bytes = frames * jclient->ob.o2j_frame_bytes;
 	  jack_ringbuffer_read (jclient->ob.o2j_rb,
 				(void *) jclient->o2j_buf_in, bytes);
-	  if (jclient->xrun)
-	    {
-	      jack_ringbuffer_read (jclient->ob.o2j_rb,
-				    (void *) jclient->o2j_buf_in, bytes);
-	      jclient->o2j_dll.kj += frames;
-	      jclient->xrun = 0;
-	    }
 	}
       else
 	{
@@ -217,9 +212,6 @@ jclient_o2j (struct jclient *jclient)
     }
 }
 
-//In the j2o case, we do not need to take care of the xruns as the only thing
-//that could happen is that the Overbridge side at the other end of the
-//j2o ring buffer might need to resample to compensate for the missing frames.
 static inline void
 jclient_j2o (struct jclient *jclient)
 {
@@ -275,6 +267,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   jack_time_t current_usecs;
   jack_time_t next_usecs;
   float period_usecs;
+  int xruns;
   static int i = 0;
   static char latency_msg[LATENCY_MSG_LEN];
 
@@ -285,6 +278,14 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
       error_print ("Error while getting JACK time\n");
     }
 
+  pthread_spin_lock (&jclient->lock);
+  xruns = jclient->xruns;
+  if (jclient->xruns)
+    {
+      jclient->xruns--;
+    }
+  pthread_spin_unlock (&jclient->lock);
+
   pthread_spin_lock (&jclient->ob.lock);
   jclient->j2o_latency = jclient->ob.j2o_latency;
   dll->ko0 = jclient->ob.o2j_dll_counter.i0.frames;
@@ -293,6 +294,16 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   dll->to1 = jclient->ob.o2j_dll_counter.i1.time;
   jclient->status = jclient->ob.status;
   pthread_spin_unlock (&jclient->ob.lock);
+
+  if (xruns)
+    {
+      //This restarts the dll as if the first execution with status OB_STATUS_RUN would have happened in the previous iteration.
+      dll_init (&jclient->o2j_dll, jclient->samplerate,
+		OB_SAMPLE_RATE * jclient->o2j_dll.ratio, jclient->bufsize,
+		jclient->ob.frames_per_transfer);
+      dll_update_err (dll, current_usecs);
+      dll_first_time_run (dll);
+    }
 
   if (jclient->status == OB_STATUS_BOOT)
     {
@@ -304,15 +315,10 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
   if (jclient->status == OB_STATUS_SKIP)
     {
-      //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
-      int n = (int) (floor (dll->err + 0.5));
-      dll->kj += n;
-      dll->err -= n;
+      dll_first_time_run (dll);
 
       debug_print (2, "Starting up...\n");
-
       dll_set_loop_filter (dll, 1.0, jclient->bufsize, jclient->samplerate);
-
       overbridge_set_status (&jclient->ob, OB_STATUS_STARTUP);
     }
 
@@ -343,7 +349,6 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 	  debug_print (2, "Tunning...\n");
 	  dll_set_loop_filter (dll, 0.05, jclient->bufsize,
 			       jclient->samplerate);
-
 	  overbridge_set_status (&jclient->ob, OB_STATUS_TUNE);
 
 	  jclient->log_control_cycles =
@@ -356,7 +361,6 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 	  debug_print (2, "Running...\n");
 	  dll_set_loop_filter (dll, 0.02, jclient->bufsize,
 			       jclient->samplerate);
-
 	  overbridge_set_status (&jclient->ob, OB_STATUS_RUN);
 	}
     }
@@ -618,7 +622,8 @@ jclient_run (struct jclient *jclient, char *device_name,
       goto cleanup_jack;
     }
 
-  jclient->xrun = 0;
+  pthread_spin_init (&jclient->lock, PTHREAD_PROCESS_SHARED);
+  jclient->xruns = 0;
   if (jack_set_xrun_callback
       (jclient->client, jclient_thread_xrun_cb, jclient))
     {

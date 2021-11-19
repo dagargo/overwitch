@@ -23,6 +23,8 @@
 #include <string.h>
 #include "utils.h"
 
+#define RATIO_ERR 0.05
+
 int debug_level = 0;
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc.
@@ -73,14 +75,6 @@ dll_update (struct dll *dll)
   dll->_z2 += dll->_w0 * (dll->_z1 - dll->_z2);
   dll->_z3 += dll->_w2 * dll->_z2;
   dll->ratio = 1.0 - dll->_z2 - dll->_z3;
-  if (dll->ratio > dll->ratio_max)
-    {
-      dll->ratio = dll->ratio_max;
-    }
-  if (dll->ratio < dll->ratio_min)
-    {
-      dll->ratio = dll->ratio_min;
-    }
 }
 
 inline void
@@ -95,8 +89,6 @@ dll_init (struct dll *dll, double output_samplerate, double input_samplerate,
   dll->last_ratio_avg = 0.0;
 
   dll->ratio = output_samplerate / input_samplerate;
-  dll->ratio_max = 1.05 * dll->ratio;
-  dll->ratio_min = 0.95 * dll->ratio;
 
   dll->kj = -input_frames_per_transfer / dll->ratio;
 
@@ -104,6 +96,15 @@ dll_init (struct dll *dll, double output_samplerate, double input_samplerate,
 
   debug_print (2, "Target delay: %.1f ms (%d frames)\n",
 	       dll->kdel * 1000 / input_samplerate, dll->kdel);
+}
+
+inline void
+dll_first_time_run (struct dll *dll)
+{
+  //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
+  int n = (int) (floor (dll->err + 0.5));
+  dll->kj += n;
+  dll->err -= n;
 }
 
 inline void

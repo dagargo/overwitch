@@ -52,8 +52,6 @@ struct dll
   double _z1;
   double _z2;
   double _z3;
-  double ratio_max;
-  double ratio_min;
   double ratio_sum;
   double ratio_avg;
   double last_ratio_avg;
@@ -75,5 +73,7 @@ void dll_set_loop_filter (struct dll *, double, int, double);
 void dll_update_err (struct dll *, jack_time_t);
 
 void dll_update (struct dll *);
+
+void dll_first_time_run (struct dll *);
 
 void set_rt_priority (int);
