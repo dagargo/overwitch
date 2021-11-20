@@ -103,6 +103,14 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
   overbridge_set_j2o_audio_enable (&jclient->ob, j2o_enabled);
 }
 
+static void
+jclient_jack_shutdown_cb (jack_status_t code, const char *reason,
+			  void *cb_data)
+{
+  struct jclient *jclient = cb_data;
+  jclient_exit (jclient);
+}
+
 static long
 jclient_j2o_reader (void *cb_data, float **data)
 {
@@ -622,8 +630,10 @@ jclient_run (struct jclient *jclient, char *device_name,
 				      jclient_port_connect_cb, jclient))
     {
       error_print
-	("Cannot set port connect callbacc so j2o audio will not be possible\n");
+	("Cannot set port connect callback so j2o audio will not be possible\n");
     }
+
+  jack_on_info_shutdown (jclient->client, jclient_jack_shutdown_cb, jclient);
 
   jclient->samplerate = jack_get_sample_rate (jclient->client);
   printf ("JACK sample rate: %.0f\n", jclient->samplerate);
