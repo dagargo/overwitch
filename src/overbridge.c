@@ -292,10 +292,13 @@ set_usb_output_data_blks (struct overbridge *ob)
       goto set_blocks;
     }
 
-  if (ob->j2o_latency < rsj2o)
+  pthread_spin_lock (&ob->lock);
+  ob->j2o_latency = rsj2o;
+  if (ob->j2o_latency > ob->j2o_max_latency)
     {
-      ob->j2o_latency = rsj2o;
+      ob->j2o_max_latency = ob->j2o_latency;
     }
+  pthread_spin_unlock (&ob->lock);
 
   if (rsj2o >= ob->j2o_buf_size)
     {

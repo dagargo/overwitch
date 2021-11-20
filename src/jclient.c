@@ -42,11 +42,16 @@
 void
 jclient_print_latencies (struct jclient *jclient, const char *end)
 {
-  printf ("Max. o2j latency: %.1f ms, max. j2o latency: %.1f ms%s",
-	  jclient->o2j_latency * 1000.0 / (jclient->ob.o2j_frame_bytes *
-					   OB_SAMPLE_RATE),
-	  jclient->j2o_latency * 1000.0 / (jclient->ob.j2o_frame_bytes *
-					   OB_SAMPLE_RATE), end);
+  printf
+    ("o2j latency: %.1f ms, max. %.1f ms; j2o latency: %.1f ms, max. %.1f ms%s",
+     jclient->o2j_latency * 1000.0 / (jclient->ob.o2j_frame_bytes *
+				      OB_SAMPLE_RATE),
+     jclient->o2j_max_latency * 1000.0 / (jclient->ob.o2j_frame_bytes *
+					  OB_SAMPLE_RATE),
+     jclient->j2o_latency * 1000.0 / (jclient->ob.j2o_frame_bytes *
+				      OB_SAMPLE_RATE),
+     jclient->j2o_max_latency * 1000.0 / (jclient->ob.j2o_frame_bytes *
+					  OB_SAMPLE_RATE), end);
 }
 
 void
@@ -149,9 +154,10 @@ jclient_o2j_reader (void *cb_data, float **data)
   rso2j = jack_ringbuffer_read_space (jclient->ob.o2j_rb);
   if (running)
     {
-      if (jclient->o2j_latency < rso2j)
+      jclient->o2j_latency = rso2j;
+      if (jclient->o2j_latency > jclient->o2j_max_latency)
 	{
-	  jclient->o2j_latency = rso2j;
+	  jclient->o2j_max_latency = jclient->o2j_latency;
 	}
 
       if (rso2j >= jclient->ob.o2j_frame_bytes)
@@ -284,6 +290,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
   pthread_spin_lock (&jclient->ob.lock);
   jclient->j2o_latency = jclient->ob.j2o_latency;
+  jclient->j2o_max_latency = jclient->ob.j2o_max_latency;
   dll->ko0 = jclient->ob.o2j_dll_counter.i0.frames;
   dll->to0 = jclient->ob.o2j_dll_counter.i0.time;
   dll->ko1 = jclient->ob.o2j_dll_counter.i1.frames;
@@ -317,6 +324,8 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
       dll_first_time_run (dll);
       //With this, we try to recover from the unreaded frames that are in the o2j buffer.
       jclient->o2j_ratio = dll->ratio / (1 + xruns);
+      jclient->j2o_max_latency = 0;
+      jclient->o2j_max_latency = 0;
     }
   else
     {
@@ -336,8 +345,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
       if (debug_level)
 	{
 	  snprintf (latency_msg, LATENCY_MSG_LEN,
-		    "; o2j ratio avg.: %f; curr. o2j ratio: %f\n",
-		    dll->ratio_avg, dll->ratio);
+		    "; o2j ratio: %f, avg. %f\n", dll->ratio, dll->ratio_avg);
 	  jclient_print_latencies (jclient, latency_msg);
 	}
 
@@ -723,6 +731,8 @@ jclient_run (struct jclient *jclient, char *device_name,
       goto cleanup_jack;
     }
 
+  jclient->j2o_max_latency = 0;
+  jclient->o2j_max_latency = 0;
   overbridge_set_status (&jclient->ob, OB_STATUS_BOOT);
   dll_init (&jclient->o2j_dll, jclient->samplerate, OB_SAMPLE_RATE,
 	    jclient->bufsize, jclient->ob.frames_per_transfer);

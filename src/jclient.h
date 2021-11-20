@@ -48,6 +48,8 @@ struct jclient
   SRC_DATA o2j_data;
   size_t j2o_latency;
   size_t o2j_latency;
+  size_t j2o_max_latency;
+  size_t o2j_max_latency;
   int cycles_to_skip;
   double jsr;
   double obsr;
