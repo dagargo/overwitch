@@ -62,7 +62,6 @@ jclient_init (struct jclient *jclient)
   jclient->j2o_queue = malloc (j2o_bufsize * 8);
   jclient->j2o_queue_len = 0;
 
-
   jclient->o2j_buf_in = malloc (o2j_bufsize);
   jclient->o2j_buf_out = malloc (o2j_bufsize);
 
@@ -82,7 +81,7 @@ jclient_thread_xrun_cb (void *cb_data)
   struct jclient *jclient = cb_data;
   error_print ("JACK xrun\n");
   pthread_spin_lock (&jclient->lock);
-  jclient->xruns = 1;
+  jclient->xruns++;
   pthread_spin_unlock (&jclient->lock);
   return 0;
 }
@@ -202,13 +201,13 @@ jclient_o2j (struct jclient *jclient)
   long gen_frames;
 
   gen_frames =
-    src_callback_read (jclient->o2j_state, jclient->o2j_dll.ratio,
+    src_callback_read (jclient->o2j_state, jclient->o2j_ratio,
 		       jclient->bufsize, jclient->o2j_buf_out);
   if (gen_frames != jclient->bufsize)
     {
       error_print
 	("o2j: Unexpected frames with ratio %f (output %ld, expected %d)\n",
-	 jclient->o2j_dll.ratio, gen_frames, jclient->bufsize);
+	 jclient->o2j_ratio, gen_frames, jclient->bufsize);
     }
 }
 
@@ -280,10 +279,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
   pthread_spin_lock (&jclient->lock);
   xruns = jclient->xruns;
-  if (jclient->xruns)
-    {
-      jclient->xruns--;
-    }
+  jclient->xruns = 0;
   pthread_spin_unlock (&jclient->lock);
 
   pthread_spin_lock (&jclient->ob.lock);
@@ -294,16 +290,6 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   dll->to1 = jclient->ob.o2j_dll_counter.i1.time;
   jclient->status = jclient->ob.status;
   pthread_spin_unlock (&jclient->ob.lock);
-
-  if (xruns)
-    {
-      //This restarts the dll as if the first execution with status OB_STATUS_RUN would have happened in the previous iteration.
-      dll_init (&jclient->o2j_dll, jclient->samplerate,
-		OB_SAMPLE_RATE * jclient->o2j_dll.ratio, jclient->bufsize,
-		jclient->ob.frames_per_transfer);
-      dll_update_err (dll, current_usecs);
-      dll_first_time_run (dll);
-    }
 
   if (jclient->status == OB_STATUS_BOOT)
     {
@@ -322,8 +308,22 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
       overbridge_set_status (&jclient->ob, OB_STATUS_STARTUP);
     }
 
-  dll_update (dll);
-  jclient->j2o_ratio = 1.0 / dll->ratio;
+  if (xruns)
+    {
+      //This restarts the dll as if the first execution with status OB_STATUS_RUN would have happened in the previous iteration.
+      dll_init (dll, jclient->samplerate, OB_SAMPLE_RATE * dll->ratio,
+		jclient->bufsize, jclient->ob.frames_per_transfer);
+      dll_update_err (dll, current_usecs);
+      dll_first_time_run (dll);
+      //With this, we try to recover from the unreaded frames that are in the o2j buffer.
+      jclient->o2j_ratio = dll->ratio / (1 + xruns);
+    }
+  else
+    {
+      dll_update (dll);
+      jclient->o2j_ratio = dll->ratio;
+    }
+  jclient->j2o_ratio = 1.0 / jclient->o2j_ratio;
 
   i++;
   dll->ratio_sum += dll->ratio;
@@ -726,6 +726,7 @@ jclient_run (struct jclient *jclient, char *device_name,
   overbridge_set_status (&jclient->ob, OB_STATUS_BOOT);
   dll_init (&jclient->o2j_dll, jclient->samplerate, OB_SAMPLE_RATE,
 	    jclient->bufsize, jclient->ob.frames_per_transfer);
+  jclient->o2j_ratio = jclient->o2j_dll.ratio;
 
   if (jack_activate (jclient->client))
     {

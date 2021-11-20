@@ -24,6 +24,7 @@ struct jclient
 {
   struct overbridge ob;
   struct dll o2j_dll;
+  double o2j_ratio;
   double j2o_ratio;
   jack_client_t *client;
   jack_port_t **output_ports;
