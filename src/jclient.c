@@ -301,20 +301,16 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
   if (jclient->status == OB_STATUS_BOOT)
     {
-      overbridge_set_status (&jclient->ob, OB_STATUS_SKIP);
-      return;
-    }
-
-  dll_update_err (dll, current_usecs);
-
-  if (jclient->status == OB_STATUS_SKIP)
-    {
+      dll_update_err (dll, current_usecs);
       dll_first_time_run (dll);
 
       debug_print (2, "Starting up...\n");
       dll_set_loop_filter (dll, 1.0, jclient->bufsize, jclient->samplerate);
       overbridge_set_status (&jclient->ob, OB_STATUS_STARTUP);
+      return;
     }
+
+  dll_update_err (dll, current_usecs);
 
   if (xruns)
     {
