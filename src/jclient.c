@@ -269,6 +269,7 @@ jclient_j2o (struct jclient *jclient)
 static inline void
 jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 {
+  jack_nframes_t current_frames;
   jack_time_t current_usecs;
   jack_time_t next_usecs;
   float period_usecs;
@@ -277,7 +278,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   static char latency_msg[LATENCY_MSG_LEN];
 
   if (jack_get_cycle_times (jclient->client,
-			    &jclient->current_frames,
+			    &current_frames,
 			    &current_usecs, &next_usecs, &period_usecs))
     {
       error_print ("Error while getting JACK time\n");
@@ -317,22 +318,23 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
   if (xruns)
     {
+      //With this, we try to recover from the unreaded frames that are in the o2j buffer.
+      jclient->j2o_max_latency = 0;
+      jclient->o2j_max_latency = 0;
+      jclient->o2j_ratio = dll->ratio / (1.0 + xruns);
+      //j2o_ratio remains unchanged as changing it might increase the latency.
       //This restarts the dll as if the first execution with status OB_STATUS_RUN would have happened in the previous iteration.
-      dll_init (dll, jclient->samplerate, OB_SAMPLE_RATE * dll->ratio,
+      dll_init (dll, jclient->samplerate * dll->ratio, OB_SAMPLE_RATE,
 		jclient->bufsize, jclient->ob.frames_per_transfer);
       dll_update_err (dll, current_usecs);
       dll_first_time_run (dll);
-      //With this, we try to recover from the unreaded frames that are in the o2j buffer.
-      jclient->o2j_ratio = dll->ratio / (1 + xruns);
-      jclient->j2o_max_latency = 0;
-      jclient->o2j_max_latency = 0;
     }
   else
     {
       dll_update (dll);
       jclient->o2j_ratio = dll->ratio;
+      jclient->j2o_ratio = 1.0 / jclient->o2j_ratio;
     }
-  jclient->j2o_ratio = 1.0 / jclient->o2j_ratio;
 
   i++;
   dll->ratio_sum += dll->ratio;

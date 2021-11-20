@@ -37,7 +37,6 @@ dll_counter_init (struct dll_counter *dll_counter, double samplerate,
   dll_counter->b = 1.6 * w;
   dll_counter->c = w * w;
 
-  //TODO: add this to xrun handler and perhaps clear the buffers. See paper.
   dll_counter->e2 = dtime;
   dll_counter->i0.time = jack_get_time () * 1.0e-6;
   dll_counter->i1.time = dll_counter->i0.time + dll_counter->e2;
@@ -98,20 +97,20 @@ dll_init (struct dll *dll, double output_samplerate, double input_samplerate,
 	       dll->kdel * 1000 / input_samplerate, dll->kdel);
 }
 
+//Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
 dll_first_time_run (struct dll *dll)
 {
-  //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
   int n = (int) (floor (dll->err + 0.5));
   dll->kj += n;
   dll->err -= n;
 }
 
+//Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
 dll_set_loop_filter (struct dll *dll, double bw,
 		     int output_frames_per_transfer, double output_samplerate)
 {
-  //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
   double w =
     2.0 * M_PI * 20 * bw * output_frames_per_transfer / output_samplerate;
   dll->_w0 = 1.0 - exp (-w);

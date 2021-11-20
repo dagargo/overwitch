@@ -53,7 +53,6 @@ struct jclient
   int cycles_to_skip;
   double jsr;
   double obsr;
-  jack_nframes_t current_frames;
   int log_control_cycles;
   overbridge_status_t status;
   int xruns;
