@@ -642,11 +642,6 @@ run_j2o_midi (void *data)
 
   set_rt_priority (ob->priority);
 
-  while (overbridge_get_status (ob) < OB_STATUS_BOOT)
-    {
-      sleep (1);
-    }
-
   pos = 0;
   diff = 0;
   last_time = jack_get_time ();
