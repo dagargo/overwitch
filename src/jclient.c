@@ -310,27 +310,26 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
       return;
     }
 
-  dll_update_err (dll, current_usecs);
-
   if (xruns)
     {
-      //With this, we try to recover from the unreaded frames that are in the o2j buffer.
+      debug_print (2, "Fixing %d xruns...\n", xruns);
+
+      //With this, we try to recover from the unreaded frames that are in the o2j buffer and...
+      jclient->o2j_ratio = dll->ratio * (1 + xruns);
+      jclient->j2o_ratio = 1.0 / jclient->o2j_ratio;
+      jclient_o2j (jclient);
+
       jclient->j2o_max_latency = 0;
       jclient->o2j_max_latency = 0;
-      jclient->o2j_ratio = dll->ratio / (1.0 + xruns);
-      //j2o_ratio remains unchanged as changing it might increase the latency.
-      //This restarts the dll as if the first execution with status OB_STATUS_RUN would have happened in the previous iteration.
-      dll_init (dll, jclient->samplerate * dll->ratio, OB_SAMPLE_RATE,
-		jclient->bufsize, jclient->ob.frames_per_transfer);
-      dll_update_err (dll, current_usecs);
-      dll_first_time_run (dll);
+
+      //... we skip the current cycle dll update as time masurements are not precise enough and would lead to errors.
+      return;
     }
-  else
-    {
-      dll_update (dll);
-      jclient->o2j_ratio = dll->ratio;
-      jclient->j2o_ratio = 1.0 / jclient->o2j_ratio;
-    }
+
+  dll_update_err (dll, current_usecs);
+  dll_update (dll);
+  jclient->o2j_ratio = dll->ratio;
+  jclient->j2o_ratio = 1.0 / jclient->o2j_ratio;
 
   i++;
   dll->ratio_sum += dll->ratio;
