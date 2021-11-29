@@ -877,6 +877,7 @@ overbridge_destroy (struct overbridge *ob)
   free (ob->usb_data_out);
   free (ob->j2o_midi_data);
   free (ob->o2j_midi_data);
+  pthread_spin_destroy (&ob->lock);
 }
 
 inline overbridge_status_t

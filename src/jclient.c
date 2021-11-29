@@ -759,6 +759,7 @@ cleanup_jack:
   free (jclient->j2o_queue);
   free (jclient->o2j_buf_in);
   free (jclient->o2j_buf_out);
+  pthread_spin_destroy (&jclient->lock);
 cleanup_overbridge:
   overbridge_destroy (&jclient->ob);
 
