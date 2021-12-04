@@ -514,12 +514,11 @@ prepare_cycle_out_midi (struct overbridge *ob)
 static overbridge_err_t
 overbridge_init_priv (struct overbridge *ob, char *device_name)
 {
-  int i;
-  int ret;
+  int i, ret, err;
 
   // libusb setup
-  ret = libusb_init (&ob->context);
-  if (ret != LIBUSB_SUCCESS)
+  err = libusb_init (&ob->context);
+  if (err != LIBUSB_SUCCESS)
     {
       return OB_LIBUSB_INIT_FAILED;
     }
@@ -553,68 +552,87 @@ overbridge_init_priv (struct overbridge *ob, char *device_name)
       return OB_CANT_OPEN_DEV;
     }
 
-  ret = libusb_set_configuration (ob->device, 1);
-  if (LIBUSB_SUCCESS != ret)
+  ret = OB_OK;
+
+  err = libusb_set_configuration (ob->device, 1);
+  if (LIBUSB_SUCCESS != err)
     {
-      return OB_CANT_SET_USB_CONFIG;
+      ret = OB_CANT_SET_USB_CONFIG;
+      goto end;
     }
-  ret = libusb_claim_interface (ob->device, 1);
-  if (LIBUSB_SUCCESS != ret)
+  err = libusb_claim_interface (ob->device, 1);
+  if (LIBUSB_SUCCESS != err)
     {
-      return OB_CANT_CLAIM_IF;
+      ret = OB_CANT_CLAIM_IF;
+      goto end;
     }
-  ret = libusb_set_interface_alt_setting (ob->device, 1, 3);
-  if (LIBUSB_SUCCESS != ret)
+  err = libusb_set_interface_alt_setting (ob->device, 1, 3);
+  if (LIBUSB_SUCCESS != err)
     {
-      return OB_CANT_SET_ALT_SETTING;
+      ret = OB_CANT_SET_ALT_SETTING;
+      goto end;
     }
-  ret = libusb_claim_interface (ob->device, 2);
-  if (LIBUSB_SUCCESS != ret)
+  err = libusb_claim_interface (ob->device, 2);
+  if (LIBUSB_SUCCESS != err)
     {
-      return OB_CANT_CLAIM_IF;
+      ret = OB_CANT_CLAIM_IF;
+      goto end;
     }
-  ret = libusb_set_interface_alt_setting (ob->device, 2, 2);
-  if (LIBUSB_SUCCESS != ret)
+  err = libusb_set_interface_alt_setting (ob->device, 2, 2);
+  if (LIBUSB_SUCCESS != err)
     {
-      return OB_CANT_SET_ALT_SETTING;
+      ret = OB_CANT_SET_ALT_SETTING;
+      goto end;
     }
-  ret = libusb_claim_interface (ob->device, 3);
-  if (LIBUSB_SUCCESS != ret)
+  err = libusb_claim_interface (ob->device, 3);
+  if (LIBUSB_SUCCESS != err)
     {
-      return OB_CANT_CLAIM_IF;
+      ret = OB_CANT_CLAIM_IF;
+      goto end;
     }
-  ret = libusb_set_interface_alt_setting (ob->device, 3, 0);
-  if (LIBUSB_SUCCESS != ret)
+  err = libusb_set_interface_alt_setting (ob->device, 3, 0);
+  if (LIBUSB_SUCCESS != err)
     {
-      return OB_CANT_SET_ALT_SETTING;
+      ret = OB_CANT_SET_ALT_SETTING;
+      goto end;
     }
-  ret = libusb_clear_halt (ob->device, AUDIO_IN_EP);
-  if (LIBUSB_SUCCESS != ret)
+  err = libusb_clear_halt (ob->device, AUDIO_IN_EP);
+  if (LIBUSB_SUCCESS != err)
     {
-      return OB_CANT_CLEAR_EP;
+      ret = OB_CANT_CLEAR_EP;
+      goto end;
     }
-  ret = libusb_clear_halt (ob->device, AUDIO_OUT_EP);
-  if (LIBUSB_SUCCESS != ret)
+  err = libusb_clear_halt (ob->device, AUDIO_OUT_EP);
+  if (LIBUSB_SUCCESS != err)
     {
-      return OB_CANT_CLEAR_EP;
+      ret = OB_CANT_CLEAR_EP;
+      goto end;
     }
-  ret = libusb_clear_halt (ob->device, MIDI_IN_EP);
-  if (LIBUSB_SUCCESS != ret)
+  err = libusb_clear_halt (ob->device, MIDI_IN_EP);
+  if (LIBUSB_SUCCESS != err)
     {
-      return OB_CANT_CLEAR_EP;
+      ret = OB_CANT_CLEAR_EP;
+      goto end;
     }
-  ret = libusb_clear_halt (ob->device, MIDI_OUT_EP);
-  if (LIBUSB_SUCCESS != ret)
+  err = libusb_clear_halt (ob->device, MIDI_OUT_EP);
+  if (LIBUSB_SUCCESS != err)
     {
-      return OB_CANT_CLEAR_EP;
+      ret = OB_CANT_CLEAR_EP;
+      goto end;
     }
-  ret = prepare_transfers (ob);
-  if (LIBUSB_SUCCESS != ret)
+  err = prepare_transfers (ob);
+  if (LIBUSB_SUCCESS != err)
     {
-      return OB_CANT_PREPARE_TRANSFER;
+      ret = OB_CANT_PREPARE_TRANSFER;
     }
 
-  return OB_OK;
+end:
+  if (LIBUSB_SUCCESS != err)
+    {
+      error_print ("Error while initializing device: %s\n",
+		   libusb_error_name (err));
+    }
+  return ret;
 }
 
 static void
