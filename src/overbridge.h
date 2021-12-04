@@ -182,7 +182,8 @@ typedef enum
 
 typedef enum
 {
-  OB_STATUS_STOP = 0,
+  OB_STATUS_STOP,
+  OB_STATUS_READY,
   OB_STATUS_BOOT,
   OB_STATUS_STARTUP,
   OB_STATUS_TUNE,
@@ -241,9 +242,9 @@ struct overbridge
   unsigned char *o2j_midi_data;
   struct libusb_transfer *xfr_out_midi;
   struct libusb_transfer *xfr_in_midi;
-  jack_nframes_t jbufsize;
   jack_ringbuffer_t *j2o_rb_midi;
   jack_ringbuffer_t *o2j_rb_midi;
+  int reading_at_j2o_end;
 };
 
 struct ob_midi_event
@@ -258,7 +259,7 @@ void set_self_max_priority ();
 
 overbridge_err_t overbridge_init (struct overbridge *, char *, int);
 
-int overbridge_run (struct overbridge *, jack_client_t *, int);
+int overbridge_activate (struct overbridge *, jack_client_t *, int);
 
 void overbridge_destroy (struct overbridge *);
 

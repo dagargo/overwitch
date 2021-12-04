@@ -32,6 +32,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#define MAX_OW_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
+
 #define ELEKTRON_VID 0x1935
 
 #define AFMK1_PID 0x0004
@@ -267,11 +269,10 @@ set_usb_output_data_blks (struct overbridge *ob)
   jack_default_audio_sample_t *f;
   int res;
   int32_t *s;
-  static int running = 0;
   int enabled = overbridge_is_j2o_audio_enable (ob);
 
   rsj2o = jack_ringbuffer_read_space (ob->j2o_rb);
-  if (!running)
+  if (!ob->reading_at_j2o_end)
     {
       if (enabled && rsj2o >= ob->j2o_buf_size)
 	{
@@ -279,14 +280,14 @@ set_usb_output_data_blks (struct overbridge *ob)
 	  frames = rsj2o / ob->j2o_frame_bytes;
 	  bytes = frames * ob->j2o_frame_bytes;
 	  jack_ringbuffer_read_advance (ob->j2o_rb, bytes);
-	  running = 1;
+	  ob->reading_at_j2o_end = 1;
 	}
       goto set_blocks;
     }
 
   if (!enabled)
     {
-      running = 0;
+      ob->reading_at_j2o_end = 0;
       debug_print (2, "j2o: Clearing buffer and stopping...\n");
       memset (ob->j2o_buf, 0, ob->j2o_buf_size);
       goto set_blocks;
@@ -726,48 +727,65 @@ run_j2o_midi (void *data)
 void *
 run_audio_and_o2j_midi (void *data)
 {
+  size_t rsj2o, bytes, frames;
   struct overbridge *ob = data;
 
   set_rt_priority (ob->priority);
 
-  while (overbridge_get_status (ob) == OB_STATUS_STOP);
-
-  dll_counter_init (&ob->o2j_dll_counter, OB_SAMPLE_RATE,
-		    ob->frames_per_transfer);
+  while (overbridge_get_status (ob) == OB_STATUS_READY);
 
   prepare_cycle_in (ob);
   prepare_cycle_out (ob);
   prepare_cycle_in_midi (ob);
 
-  while (overbridge_get_status (ob) >= OB_STATUS_BOOT)
+  while (1)
     {
-      libusb_handle_events_completed (ob->context, NULL);
+      ob->j2o_latency = 0;
+      ob->j2o_max_latency = 0;
+      ob->reading_at_j2o_end = 0;
+
+      dll_counter_init (&ob->o2j_dll_counter, OB_SAMPLE_RATE,
+			ob->frames_per_transfer);
+
+      while (overbridge_get_status (ob) >= OB_STATUS_BOOT)
+	{
+	  libusb_handle_events_completed (ob->context, NULL);
+	}
+
+      if (overbridge_get_status (ob) == OB_STATUS_STOP)
+	{
+	  break;
+	}
+
+      overbridge_set_status (ob, OB_STATUS_BOOT);
+
+      rsj2o = jack_ringbuffer_read_space (ob->j2o_rb);
+      frames = rsj2o / ob->j2o_frame_bytes;
+      bytes = frames * ob->j2o_frame_bytes;
+      jack_ringbuffer_read_advance (ob->j2o_rb, bytes);
+      memset (ob->j2o_buf, 0, ob->j2o_buf_size);
     }
 
   return NULL;
 }
 
 int
-overbridge_run (struct overbridge *ob, jack_client_t * client, int priority)
+overbridge_activate (struct overbridge *ob, jack_client_t * jclient,
+		     int priority)
 {
   int ret;
-  size_t max_bufsize;
 
-  ob->jbufsize = jack_get_buffer_size (client);
   ob->priority = priority;
 
-  max_bufsize =
-    ob->frames_per_transfer >
-    ob->jbufsize ? ob->frames_per_transfer : ob->jbufsize;
-  ob->j2o_rb = jack_ringbuffer_create (max_bufsize * ob->j2o_frame_bytes * 8);
+  ob->j2o_rb = jack_ringbuffer_create (MAX_OW_LATENCY * ob->j2o_frame_bytes);
   jack_ringbuffer_mlock (ob->j2o_rb);
-  ob->o2j_rb = jack_ringbuffer_create (max_bufsize * ob->o2j_frame_bytes * 8);
+  ob->o2j_rb = jack_ringbuffer_create (MAX_OW_LATENCY * ob->o2j_frame_bytes);
   jack_ringbuffer_mlock (ob->o2j_rb);
 
-  ob->jclient = client;
+  ob->jclient = jclient;
   ob->s_counter = 0;
-  ob->status = OB_STATUS_STOP;
 
+  ob->status = OB_STATUS_READY;
   debug_print (1, "Starting j2o MIDI thread...\n");
   ret = pthread_create (&ob->midi_tinfo, NULL, run_j2o_midi, ob);
   if (ret)

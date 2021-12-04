@@ -55,10 +55,21 @@ jclient_print_latencies (struct jclient *jclient, const char *end)
 }
 
 void
-jclient_init (struct jclient *jclient)
+jclient_reset_buffers (struct jclient *jclient)
 {
+  size_t rso2j, bytes, frames;
   size_t j2o_bufsize = jclient->bufsize * jclient->ob.j2o_frame_bytes;
   size_t o2j_bufsize = jclient->bufsize * jclient->ob.o2j_frame_bytes;
+
+  if (jclient->j2o_buf_in)
+    {
+      free (jclient->j2o_buf_in);
+      free (jclient->j2o_buf_out);
+      free (jclient->j2o_aux);
+      free (jclient->j2o_queue);
+      free (jclient->o2j_buf_in);
+      free (jclient->o2j_buf_out);
+    }
 
   //The 8 times scale allow up to more than 192 kHz sample rate in JACK.
   jclient->j2o_buf_in = malloc (j2o_bufsize * 8);
@@ -73,11 +84,27 @@ jclient_init (struct jclient *jclient)
   memset (jclient->j2o_buf_in, 0, j2o_bufsize);
   memset (jclient->o2j_buf_in, 0, o2j_bufsize);
 
-  jclient->log_control_cycles =
-    STARTUP_TIME * jclient->samplerate / jclient->bufsize;
-
   jclient->o2j_buf_size = jclient->bufsize * jclient->ob.o2j_frame_bytes;
   jclient->j2o_buf_size = jclient->bufsize * jclient->ob.j2o_frame_bytes;
+
+  jclient->j2o_max_latency = 0;
+  jclient->o2j_max_latency = 0;
+  jclient->j2o_latency = 0;
+  jclient->o2j_latency = 0;
+  jclient->reading_at_o2j_end = 0;
+
+  rso2j = jack_ringbuffer_read_space (jclient->ob.o2j_rb);
+  frames = rso2j / jclient->ob.o2j_frame_bytes;
+  bytes = frames * jclient->ob.o2j_frame_bytes;
+  jack_ringbuffer_read_advance (jclient->ob.o2j_rb, bytes);
+}
+
+void
+jclient_reset_dll (struct jclient *jclient)
+{
+  dll_init (&jclient->o2j_dll, jclient->samplerate, OB_SAMPLE_RATE,
+	    jclient->bufsize, jclient->ob.frames_per_transfer);
+  jclient->o2j_ratio = jclient->o2j_dll.ratio;
 }
 
 static int
@@ -117,6 +144,29 @@ jclient_jack_shutdown_cb (jack_status_t code, const char *reason,
   jclient_exit (jclient);
 }
 
+static int
+jclient_set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
+{
+  struct jclient *jclient = cb_data;
+  jclient->bufsize = nframes;
+  jclient_reset_buffers (jclient);
+  jclient_reset_dll (jclient);
+  overbridge_set_status (&jclient->ob, OB_STATUS_READY);
+  printf ("JACK buffer size: %d\n", jclient->bufsize);
+  return 0;
+}
+
+static int
+jclient_set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
+{
+  struct jclient *jclient = cb_data;
+  jclient->samplerate = nframes;
+  jclient_reset_dll (jclient);
+  overbridge_set_status (&jclient->ob, OB_STATUS_READY);
+  printf ("JACK sample rate: %.0f\n", jclient->samplerate);
+  return 0;
+}
+
 static long
 jclient_j2o_reader (void *cb_data, float **data)
 {
@@ -146,13 +196,12 @@ jclient_o2j_reader (void *cb_data, float **data)
   size_t bytes;
   long frames;
   static int last_frames = 1;
-  static int running = 0;
   struct jclient *jclient = cb_data;
 
   *data = jclient->o2j_buf_in;
 
   rso2j = jack_ringbuffer_read_space (jclient->ob.o2j_rb);
-  if (running)
+  if (jclient->reading_at_o2j_end)
     {
       jclient->o2j_latency = rso2j;
       if (jclient->o2j_latency > jclient->o2j_max_latency)
@@ -191,7 +240,7 @@ jclient_o2j_reader (void *cb_data, float **data)
 	  frames = rso2j / jclient->ob.o2j_frame_bytes;
 	  bytes = frames * jclient->ob.o2j_frame_bytes;
 	  jack_ringbuffer_read_advance (jclient->ob.o2j_rb, bytes);
-	  running = 1;
+	  jclient->reading_at_o2j_end = 1;
 	}
       frames = MAX_READ_FRAMES;
     }
@@ -266,7 +315,7 @@ jclient_j2o (struct jclient *jclient)
     }
 }
 
-static inline void
+static inline int
 jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 {
   jack_nframes_t current_frames;
@@ -274,7 +323,6 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   jack_time_t next_usecs;
   float period_usecs;
   int xruns;
-  static int i = 0;
   static char latency_msg[LATENCY_MSG_LEN];
 
   if (jack_get_cycle_times (jclient->client,
@@ -299,6 +347,16 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   jclient->status = jclient->ob.status;
   pthread_spin_unlock (&jclient->ob.lock);
 
+  if (jclient->status <= OB_STATUS_READY)
+    {
+      if (jclient->status == OB_STATUS_READY)
+	{
+	  overbridge_set_status (&jclient->ob, OB_STATUS_BOOT);
+	  debug_print (2, "Booting...\n");
+	}
+      return 1;
+    }
+
   if (jclient->status == OB_STATUS_BOOT)
     {
       dll_update_err (dll, current_usecs);
@@ -307,7 +365,12 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
       debug_print (2, "Starting up...\n");
       dll_set_loop_filter (dll, 1.0, jclient->bufsize, jclient->samplerate);
       overbridge_set_status (&jclient->ob, OB_STATUS_STARTUP);
-      return;
+
+      jclient->log_cycles = 0;
+      jclient->log_control_cycles =
+	STARTUP_TIME * jclient->samplerate / jclient->bufsize;
+
+      return 0;
     }
 
   if (xruns)
@@ -323,7 +386,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
       jclient->o2j_max_latency = 0;
 
       //... we skip the current cycle dll update as time masurements are not precise enough and would lead to errors.
-      return;
+      return 0;
     }
 
   dll_update_err (dll, current_usecs);
@@ -331,9 +394,9 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   jclient->o2j_ratio = dll->ratio;
   jclient->j2o_ratio = 1.0 / jclient->o2j_ratio;
 
-  i++;
+  jclient->log_cycles++;
   dll->ratio_sum += dll->ratio;
-  if (i == jclient->log_control_cycles)
+  if (jclient->log_cycles == jclient->log_control_cycles)
     {
       dll->last_ratio_avg = dll->ratio_avg;
 
@@ -346,7 +409,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 	  jclient_print_latencies (jclient, latency_msg);
 	}
 
-      i = 0;
+      jclient->log_cycles = 0;
       dll->ratio_sum = 0.0;
 
       if (jclient->status == OB_STATUS_STARTUP)
@@ -355,7 +418,6 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 	  dll_set_loop_filter (dll, 0.05, jclient->bufsize,
 			       jclient->samplerate);
 	  overbridge_set_status (&jclient->ob, OB_STATUS_TUNE);
-
 	  jclient->log_control_cycles =
 	    LOG_TIME * jclient->samplerate / jclient->bufsize;
 	}
@@ -369,6 +431,8 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 	  overbridge_set_status (&jclient->ob, OB_STATUS_RUN);
 	}
     }
+
+  return 0;
 }
 
 static inline void
@@ -521,7 +585,10 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   jack_default_audio_sample_t *buffer[OB_MAX_TRACKS];
   struct jclient *jclient = arg;
 
-  jclient_compute_ratios (jclient, &jclient->o2j_dll);
+  if (jclient_compute_ratios (jclient, &jclient->o2j_dll))
+    {
+      return 0;
+    }
 
   jclient_o2j (jclient);
 
@@ -645,11 +712,19 @@ jclient_run (struct jclient *jclient, char *device_name,
 
   jack_on_info_shutdown (jclient->client, jclient_jack_shutdown_cb, jclient);
 
-  jclient->samplerate = jack_get_sample_rate (jclient->client);
-  printf ("JACK sample rate: %.0f\n", jclient->samplerate);
+  if (jack_set_sample_rate_callback
+      (jclient->client, jclient_set_sample_rate_cb, jclient))
+    {
+      ret = EXIT_FAILURE;
+      goto cleanup_jack;
+    }
 
-  jclient->bufsize = jack_get_buffer_size (jclient->client);
-  printf ("JACK buffer size: %d\n", jclient->bufsize);
+  if (jack_set_buffer_size_callback
+      (jclient->client, jclient_set_buffer_size_cb, jclient))
+    {
+      ret = EXIT_FAILURE;
+      goto cleanup_jack;
+    }
 
   if (priority < 0)
     {
@@ -720,20 +795,11 @@ jclient_run (struct jclient *jclient, char *device_name,
     src_callback_new (jclient_o2j_reader, quality,
 		      jclient->ob.device_desc.outputs, NULL, jclient);
 
-  jclient_init (jclient);
-
-  if (overbridge_run (&jclient->ob, jclient->client, priority))
+  if (overbridge_activate (&jclient->ob, jclient->client, priority))
     {
       ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
-
-  jclient->j2o_max_latency = 0;
-  jclient->o2j_max_latency = 0;
-  overbridge_set_status (&jclient->ob, OB_STATUS_BOOT);
-  dll_init (&jclient->o2j_dll, jclient->samplerate, OB_SAMPLE_RATE,
-	    jclient->bufsize, jclient->ob.frames_per_transfer);
-  jclient->o2j_ratio = jclient->o2j_dll.ratio;
 
   if (jack_activate (jclient->client))
     {

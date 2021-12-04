@@ -54,9 +54,11 @@ struct jclient
   double jsr;
   double obsr;
   int log_control_cycles;
+  int log_cycles;
   overbridge_status_t status;
   int xruns;
   pthread_spinlock_t lock;	//Used to synchronize access to xruns.
+  int reading_at_o2j_end;
 };
 
 int jclient_run (struct jclient *, char *, int, int, int);
