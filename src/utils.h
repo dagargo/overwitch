@@ -74,6 +74,8 @@ void dll_update_err (struct dll *, jack_time_t);
 
 void dll_update (struct dll *);
 
+void dll_calc_avg (struct dll *, int);
+
 void dll_first_time_run (struct dll *);
 
 void set_rt_priority (int);

@@ -395,12 +395,9 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   jclient->j2o_ratio = 1.0 / jclient->o2j_ratio;
 
   jclient->log_cycles++;
-  dll->ratio_sum += dll->ratio;
   if (jclient->log_cycles == jclient->log_control_cycles)
     {
-      dll->last_ratio_avg = dll->ratio_avg;
-
-      dll->ratio_avg = dll->ratio_sum / jclient->log_control_cycles;
+      dll_calc_avg (dll, jclient->log_control_cycles);
 
       if (debug_level)
 	{
@@ -410,7 +407,6 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 	}
 
       jclient->log_cycles = 0;
-      dll->ratio_sum = 0.0;
 
       if (jclient->status == OB_STATUS_STARTUP)
 	{

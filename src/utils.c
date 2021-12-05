@@ -74,6 +74,16 @@ dll_update (struct dll *dll)
   dll->_z2 += dll->_w0 * (dll->_z1 - dll->_z2);
   dll->_z3 += dll->_w2 * dll->_z2;
   dll->ratio = 1.0 - dll->_z2 - dll->_z3;
+
+  dll->ratio_sum += dll->ratio;
+}
+
+inline void
+dll_calc_avg (struct dll *dll, int cycles)
+{
+  dll->last_ratio_avg = dll->ratio_avg;
+  dll->ratio_avg = dll->ratio_sum / cycles;
+  dll->ratio_sum = 0.0;
 }
 
 inline void
