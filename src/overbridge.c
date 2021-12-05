@@ -929,11 +929,14 @@ overbridge_is_j2o_audio_enable (struct overbridge *ob)
 inline void
 overbridge_set_j2o_audio_enable (struct overbridge *ob, int enabled)
 {
-  enabled = enabled == 1;
-  pthread_spin_lock (&ob->lock);
-  ob->j2o_audio_enabled = enabled;
-  pthread_spin_unlock (&ob->lock);
-  debug_print (1, "Setting j2o audio to %d...\n", enabled);
+  int last = overbridge_is_j2o_audio_enable (ob);
+  if (last != enabled)
+    {
+      pthread_spin_lock (&ob->lock);
+      ob->j2o_audio_enabled = enabled;
+      pthread_spin_unlock (&ob->lock);
+      debug_print (1, "Setting j2o audio to %d...\n", enabled);
+    }
 }
 
 overbridge_err_t
