@@ -28,7 +28,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <arpa/inet.h>
+#include <endian.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -231,7 +231,7 @@ set_usb_input_data_blks (struct overbridge *ob)
 	{
 	  for (int k = 0; k < ob->device_desc.outputs; k++)
 	    {
-	      hv = ntohl (*s);
+	      hv = be32toh (*s);
 	      *f = hv / (float) INT_MAX;
 	      f++;
 	      s++;
@@ -338,13 +338,13 @@ set_blocks:
     {
       blk = get_nth_usb_out_blk (ob, i);
       ob->s_counter += OB_FRAMES_PER_BLOCK;
-      blk->s_counter = htons (ob->s_counter);
+      blk->s_counter = htobe16 (ob->s_counter);
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
 	  for (int k = 0; k < ob->device_desc.inputs; k++)
 	    {
-	      hv = htonl (*f * INT_MAX);
+	      hv = htobe32 ((int32_t) (*f * INT_MAX));
 	      *s = hv;
 	      f++;
 	      s++;
@@ -835,7 +835,7 @@ overbridge_init (struct overbridge *ob, char *device_name,
       for (int i = 0; i < ob->blocks_per_transfer; i++)
 	{
 	  blk = get_nth_usb_out_blk (ob, i);
-	  blk->header = htons (0x07ff);
+	  blk->header = htobe16 (0x07ff);
 	}
 
       ob->j2o_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc.inputs;
