@@ -101,7 +101,8 @@ dll_init (struct dll *dll, double output_samplerate, double input_samplerate,
 
   dll->kj = -input_frames_per_transfer / dll->ratio;
 
-  dll->kdel = input_frames_per_transfer + 1.5 * output_frames_per_transfer;
+  dll->kdel =
+    2.0 * input_frames_per_transfer + 1.5 * output_frames_per_transfer;
 
   debug_print (2, "Target delay: %.1f ms (%d frames)\n",
 	       dll->kdel * 1000 / input_samplerate, dll->kdel);
