@@ -744,8 +744,10 @@ run_audio_and_o2j_midi (void *data)
       ob->j2o_max_latency = 0;
       ob->reading_at_j2o_end = 0;
 
+      pthread_spin_lock (&ob->lock);
       dll_counter_init (&ob->o2j_dll_counter, OB_SAMPLE_RATE,
 			ob->frames_per_transfer);
+      pthread_spin_unlock (&ob->lock);
 
       while (overbridge_get_status (ob) >= OB_STATUS_BOOT)
 	{
