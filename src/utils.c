@@ -63,8 +63,9 @@ dll_update_err (struct dll *dll, jack_time_t current_usecs)
   double tj = current_usecs * 1.0e-6;
   jack_nframes_t frames = dll->ko1 - dll->ko0;
   double dob = frames * (tj - dll->to0) / (dll->to1 - dll->to0);
-  frames = dll->ko0 - dll->kj;
-  dll->err = frames + dob - dll->kdel;
+  int n =
+    dll->ko0 > dll->kj ? dll->ko0 - dll->kj : -(int) (dll->kj - dll->ko0);
+  dll->err = n + dob - dll->kdel;
 }
 
 inline void
