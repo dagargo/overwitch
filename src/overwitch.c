@@ -33,6 +33,7 @@
 #define DEFAULT_PRIORITY -1	//With this value the default priority will be used.
 
 static struct option options[] = {
+  {"use-device-number", 1, NULL, 'n'},
   {"use-device", 1, NULL, 'd'},
   {"resampling-quality", 1, NULL, 'q'},
   {"transfer-blocks", 1, NULL, 'b'},
@@ -85,12 +86,13 @@ int
 main (int argc, char *argv[])
 {
   int opt;
-  int vflg = 0, lflg = 0, dflg = 0, bflg = 0, pflg = 0, errflg = 0;
+  int vflg = 0, lflg = 0, dflg = 0, bflg = 0, pflg = 0, nflg = 0, errflg = 0;
   char *endstr;
-  char *device = NULL;
+  char *device_name = NULL;
   int long_index = 0;
   overbridge_err_t ob_status;
   struct sigaction action;
+  int device_num = -1;
   int blocks_per_transfer = DEFAULT_BLOCKS;
   int quality = DEFAULT_QUALITY;
   int priority = DEFAULT_PRIORITY;
@@ -104,13 +106,17 @@ main (int argc, char *argv[])
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGUSR1, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "d:q:b:p:lvh",
+  while ((opt = getopt_long (argc, argv, "n:d:q:b:p:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
 	{
+	case 'n':
+	  device_num = (int) strtol (optarg, &endstr, 10);
+	  nflg++;
+	  break;
 	case 'd':
-	  device = optarg;
+	  device_name = optarg;
 	  dflg++;
 	  break;
 	case 'q':
@@ -184,12 +190,6 @@ main (int argc, char *argv[])
       exit (EXIT_SUCCESS);
     }
 
-  if (dflg != 1)
-    {
-      fprintf (stderr, "No device provided\n");
-      exit (EXIT_FAILURE);
-    }
-
   if (bflg > 1)
     {
       fprintf (stderr, "Undetermined blocks\n");
@@ -202,7 +202,19 @@ main (int argc, char *argv[])
       exit (EXIT_FAILURE);
     }
 
-  if (overbridge_get_bus_address (-1, device, &bus, &address))
+  if (nflg + dflg != 1)
+    {
+      fprintf (stderr, "Device not provided properly\n");
+      exit (EXIT_FAILURE);
+    }
+
+  if (nflg + dflg == 0)
+    {
+      fprintf (stderr, "No device provided\n");
+      exit (EXIT_FAILURE);
+    }
+
+  if (overbridge_get_bus_address (device_num, device_name, &bus, &address))
     {
       return EXIT_FAILURE;
     }
