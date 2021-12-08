@@ -47,8 +47,6 @@
 #define AHMK2_PID 0x0016
 #define DKEYS_PID 0x001c
 
-#define MAX_USB_DEPTH 7
-
 #define AUDIO_IN_EP  0x83
 #define AUDIO_OUT_EP 0x03
 #define MIDI_IN_EP   0x81
@@ -60,6 +58,8 @@
 #define USB_BULK_MIDI_SIZE 512
 
 #define SAMPLE_TIME_NS (1000000000 / ((int)OB_SAMPLE_RATE))
+
+#define ERROR_ON_GET_DEV_DESC "Error while getting device description: %s\n"
 
 static const struct overbridge_device_desc DIGITAKT_DESC = {
   .pid = DTAKT_PID,
@@ -144,17 +144,35 @@ static const struct overbridge_device_desc AHMK2_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct overbridge_device_desc OB_DEVICE_DESCS[] = {
-  DIGITAKT_DESC, DIGITONE_DESC, AFMK2_DESC, ARMK2_DESC, DKEYS_DESC,
-  AHMK1_DESC, AHMK2_DESC
+static const struct overbridge_device_desc *OB_DEVICE_DESCS[] = {
+  &DIGITAKT_DESC, &DIGITONE_DESC, &AFMK2_DESC, &ARMK2_DESC, &DKEYS_DESC,
+  &AHMK1_DESC, &AHMK2_DESC
 };
 
 static const int OB_DEVICE_DESCS_N =
-  sizeof (OB_DEVICE_DESCS) / sizeof (struct overbridge_device_desc);
+  sizeof (OB_DEVICE_DESCS) / sizeof (struct overbridge_device_desc *);
 
 static void prepare_cycle_in ();
 static void prepare_cycle_out ();
 static void prepare_cycle_in_midi ();
+
+static int
+overbridge_is_valid_device (uint16_t vid, uint16_t pid, char **name)
+{
+  if (vid != ELEKTRON_VID)
+    {
+      return 0;
+    }
+  for (int i = 0; i < OB_DEVICE_DESCS_N; i++)
+    {
+      if (OB_DEVICE_DESCS[i]->pid == pid)
+	{
+	  *name = OB_DEVICE_DESCS[i]->name;
+	  return 1;
+	}
+    }
+  return 0;
+}
 
 static struct overbridge_usb_blk *
 get_nth_usb_in_blk (struct overbridge *ob, int n)
@@ -231,7 +249,7 @@ set_usb_input_data_blks (struct overbridge *ob)
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < ob->device_desc.outputs; k++)
+	  for (int k = 0; k < ob->device_desc->outputs; k++)
 	    {
 	      hv = be32toh (*s);
 	      *f = hv / (float) INT_MAX;
@@ -318,7 +336,7 @@ set_usb_output_data_blks (struct overbridge *ob)
       ob->j2o_data.src_ratio = (double) ob->frames_per_transfer / frames;
       //We should NOT use the simple API but since this only happens very occasionally and mostly at startup, this has very low impact on audio quality.
       res = src_simple (&ob->j2o_data, SRC_SINC_FASTEST,
-			ob->device_desc.inputs);
+			ob->device_desc->inputs);
       if (res)
 	{
 	  debug_print (2, "j2o: Error while resampling: %s\n",
@@ -343,7 +361,7 @@ set_blocks:
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < ob->device_desc.inputs; k++)
+	  for (int k = 0; k < ob->device_desc->inputs; k++)
 	    {
 	      hv = htobe32 ((int32_t) (*f * INT_MAX));
 	      *s = hv;
@@ -453,7 +471,7 @@ cb_xfr_out_midi (struct libusb_transfer *xfr)
 static void
 prepare_cycle_out (struct overbridge *ob)
 {
-  libusb_fill_interrupt_transfer (ob->xfr_out, ob->device,
+  libusb_fill_interrupt_transfer (ob->xfr_out, ob->device_handle,
 				  AUDIO_OUT_EP, (void *) ob->usb_data_out,
 				  ob->usb_data_out_len, cb_xfr_out, ob, 0);
 
@@ -468,7 +486,7 @@ prepare_cycle_out (struct overbridge *ob)
 static void
 prepare_cycle_in (struct overbridge *ob)
 {
-  libusb_fill_interrupt_transfer (ob->xfr_in, ob->device,
+  libusb_fill_interrupt_transfer (ob->xfr_in, ob->device_handle,
 				  AUDIO_IN_EP, (void *) ob->usb_data_in,
 				  ob->usb_data_in_len, cb_xfr_in, ob, 0);
 
@@ -483,7 +501,7 @@ prepare_cycle_in (struct overbridge *ob)
 static void
 prepare_cycle_in_midi (struct overbridge *ob)
 {
-  libusb_fill_bulk_transfer (ob->xfr_in_midi, ob->device,
+  libusb_fill_bulk_transfer (ob->xfr_in_midi, ob->device_handle,
 			     MIDI_IN_EP, (void *) ob->o2j_midi_data,
 			     USB_BULK_MIDI_SIZE, cb_xfr_in_midi, ob, 0);
 
@@ -498,7 +516,7 @@ prepare_cycle_in_midi (struct overbridge *ob)
 static void
 prepare_cycle_out_midi (struct overbridge *ob)
 {
-  libusb_fill_bulk_transfer (ob->xfr_out_midi, ob->device, MIDI_OUT_EP,
+  libusb_fill_bulk_transfer (ob->xfr_out_midi, ob->device_handle, MIDI_OUT_EP,
 			     (void *) ob->j2o_midi_data,
 			     USB_BULK_MIDI_SIZE, cb_xfr_out_midi, ob, 0);
 
@@ -510,112 +528,150 @@ prepare_cycle_out_midi (struct overbridge *ob)
     }
 }
 
+static void
+usb_shutdown (struct overbridge *ob)
+{
+  libusb_close (ob->device_handle);
+  libusb_exit (ob->context);
+}
+
 // initialization taken from sniffed session
 
-static overbridge_err_t
-overbridge_init_priv (struct overbridge *ob, char *device_name)
+overbridge_err_t
+overbridge_init (struct overbridge *ob, uint8_t bus, uint8_t address,
+		 int blocks_per_transfer)
 {
   int i, ret, err;
+  libusb_device **list = NULL;
+  ssize_t count = 0;
+  libusb_device *device;
+  char *name = NULL;
+  struct libusb_device_descriptor desc;
+  struct overbridge_usb_blk *blk;
 
   // libusb setup
-  err = libusb_init (&ob->context);
-  if (err != LIBUSB_SUCCESS)
+  if (libusb_init (&ob->context) != LIBUSB_SUCCESS)
     {
       return OB_LIBUSB_INIT_FAILED;
     }
 
-  for (i = 0; i < OB_DEVICE_DESCS_N; i++)
+  ob->device_handle = NULL;
+  count = libusb_get_device_list (ob->context, &list);
+  for (i = 0; i < count; i++)
     {
-      if (strcmp (OB_DEVICE_DESCS[i].name, device_name))
+      device = list[i];
+      err = libusb_get_device_descriptor (device, &desc);
+      if (err)
 	{
+	  error_print (ERROR_ON_GET_DEV_DESC, libusb_error_name (err));
 	  continue;
 	}
 
-      debug_print (2, "Checking for %s...\n", OB_DEVICE_DESCS[i].name);
-      ob->device =
-	libusb_open_device_with_vid_pid (ob->context, ELEKTRON_VID,
-					 OB_DEVICE_DESCS[i].pid);
+      if (overbridge_is_valid_device (desc.idVendor, desc.idProduct, &name))
+	{
+	  if (libusb_get_bus_number (device) == bus &&
+	      libusb_get_device_address (device) == address)
+	    {
+	      if (libusb_open (device, &ob->device_handle))
+		{
+		  error_print ("Error while opening device: %s\n",
+			       libusb_error_name (err));
+		}
+	    }
+	  break;
+	}
+    }
 
-      break;
-    }
-  if (i == OB_DEVICE_DESCS_N)
+  err = 0;
+  libusb_free_device_list (list, count);
+
+  if (!ob->device_handle)
     {
-      return OB_CANT_FIND_DEV;
+      ret = OB_CANT_FIND_DEV;
+      goto end;
     }
-  if (ob->device)
+
+  for (i = 0; i < OB_DEVICE_DESCS_N; i++)
     {
-      ob->device_desc = OB_DEVICE_DESCS[i];
-      printf ("Device: %s (outputs: %d, inputs: %d)\n", ob->device_desc.name,
-	      ob->device_desc.outputs, ob->device_desc.inputs);
+      debug_print (2, "Checking for %s...\n", OB_DEVICE_DESCS[i]->name);
+      if (strcmp (OB_DEVICE_DESCS[i]->name, name) == 0)
+	{
+	  ob->device_desc = OB_DEVICE_DESCS[i];
+	  break;
+	}
     }
-  else
+
+  if (!ob->device_desc)
     {
-      return OB_CANT_OPEN_DEV;
+      ret = OB_CANT_FIND_DEV;
+      goto end;
     }
+
+  printf ("Device: %s (outputs: %d, inputs: %d)\n", ob->device_desc->name,
+	  ob->device_desc->outputs, ob->device_desc->inputs);
 
   ret = OB_OK;
-
-  err = libusb_set_configuration (ob->device, 1);
+  err = libusb_set_configuration (ob->device_handle, 1);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_SET_USB_CONFIG;
       goto end;
     }
-  err = libusb_claim_interface (ob->device, 1);
+  err = libusb_claim_interface (ob->device_handle, 1);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLAIM_IF;
       goto end;
     }
-  err = libusb_set_interface_alt_setting (ob->device, 1, 3);
+  err = libusb_set_interface_alt_setting (ob->device_handle, 1, 3);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_SET_ALT_SETTING;
       goto end;
     }
-  err = libusb_claim_interface (ob->device, 2);
+  err = libusb_claim_interface (ob->device_handle, 2);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLAIM_IF;
       goto end;
     }
-  err = libusb_set_interface_alt_setting (ob->device, 2, 2);
+  err = libusb_set_interface_alt_setting (ob->device_handle, 2, 2);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_SET_ALT_SETTING;
       goto end;
     }
-  err = libusb_claim_interface (ob->device, 3);
+  err = libusb_claim_interface (ob->device_handle, 3);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLAIM_IF;
       goto end;
     }
-  err = libusb_set_interface_alt_setting (ob->device, 3, 0);
+  err = libusb_set_interface_alt_setting (ob->device_handle, 3, 0);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_SET_ALT_SETTING;
       goto end;
     }
-  err = libusb_clear_halt (ob->device, AUDIO_IN_EP);
+  err = libusb_clear_halt (ob->device_handle, AUDIO_IN_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLEAR_EP;
       goto end;
     }
-  err = libusb_clear_halt (ob->device, AUDIO_OUT_EP);
+  err = libusb_clear_halt (ob->device_handle, AUDIO_OUT_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLEAR_EP;
       goto end;
     }
-  err = libusb_clear_halt (ob->device, MIDI_IN_EP);
+  err = libusb_clear_halt (ob->device_handle, MIDI_IN_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLEAR_EP;
       goto end;
     }
-  err = libusb_clear_halt (ob->device, MIDI_OUT_EP);
+  err = libusb_clear_halt (ob->device_handle, MIDI_OUT_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLEAR_EP;
@@ -628,19 +684,75 @@ overbridge_init_priv (struct overbridge *ob, char *device_name)
     }
 
 end:
-  if (LIBUSB_SUCCESS != err)
+  if (ret == OB_OK)
     {
-      error_print ("Error while initializing device: %s\n",
-		   libusb_error_name (err));
+      pthread_spin_init (&ob->lock, PTHREAD_PROCESS_SHARED);
+
+      ob->blocks_per_transfer = blocks_per_transfer;
+      ob->frames_per_transfer = OB_FRAMES_PER_BLOCK * ob->blocks_per_transfer;
+
+      ob->j2o_audio_enabled = 0;
+
+      ob->usb_data_in_blk_len =
+	sizeof (struct overbridge_usb_blk) +
+	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ob->device_desc->outputs;
+      ob->usb_data_out_blk_len =
+	sizeof (struct overbridge_usb_blk) +
+	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ob->device_desc->inputs;
+
+      ob->usb_data_in_len = ob->usb_data_in_blk_len * ob->blocks_per_transfer;
+      ob->usb_data_out_len =
+	ob->usb_data_out_blk_len * ob->blocks_per_transfer;
+      ob->usb_data_in = malloc (ob->usb_data_in_len);
+      ob->usb_data_out = malloc (ob->usb_data_out_len);
+      memset (ob->usb_data_in, 0, ob->usb_data_in_len);
+      memset (ob->usb_data_out, 0, ob->usb_data_out_len);
+
+      for (int i = 0; i < ob->blocks_per_transfer; i++)
+	{
+	  blk = get_nth_usb_out_blk (ob, i);
+	  blk->header = htobe16 (0x07ff);
+	}
+
+      ob->j2o_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc->inputs;
+      ob->o2j_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc->outputs;
+
+      ob->j2o_buf_size = ob->frames_per_transfer * ob->j2o_frame_bytes;
+      ob->o2j_buf_size = ob->frames_per_transfer * ob->o2j_frame_bytes;
+      ob->j2o_buf = malloc (ob->j2o_buf_size);
+      ob->o2j_buf = malloc (ob->o2j_buf_size);
+      memset (ob->j2o_buf, 0, ob->j2o_buf_size);
+      memset (ob->o2j_buf, 0, ob->o2j_buf_size);
+
+      //o2j resampler
+      ob->j2o_buf_res = malloc (ob->j2o_buf_size);
+      memset (ob->j2o_buf_res, 0, ob->j2o_buf_size);
+      ob->j2o_data.data_in = ob->j2o_buf_res;
+      ob->j2o_data.data_out = ob->j2o_buf;
+      ob->j2o_data.end_of_input = 1;
+      ob->j2o_data.input_frames = ob->frames_per_transfer;
+      ob->j2o_data.output_frames = ob->frames_per_transfer;
+
+      //MIDI
+      ob->j2o_midi_data = malloc (USB_BULK_MIDI_SIZE);
+      ob->o2j_midi_data = malloc (USB_BULK_MIDI_SIZE);
+      memset (ob->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
+      memset (ob->o2j_midi_data, 0, USB_BULK_MIDI_SIZE);
+      ob->j2o_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
+      ob->o2j_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
+      jack_ringbuffer_mlock (ob->j2o_rb_midi);
+      jack_ringbuffer_mlock (ob->o2j_rb_midi);
+    }
+  else
+    {
+      usb_shutdown (ob);
+      if (err)
+	{
+	  error_print ("Error while initializing device: %s\n",
+		       libusb_error_name (err));
+	}
     }
   return ret;
-}
-
-static void
-usb_shutdown (struct overbridge *ob)
-{
-  libusb_close (ob->device);
-  libusb_exit (ob->context);
 }
 
 static const char *ob_err_strgs[] = { "ok", "libusb init failed",
@@ -826,79 +938,6 @@ overbrigde_get_err_str (overbridge_err_t errcode)
   return ob_err_strgs[errcode];
 }
 
-overbridge_err_t
-overbridge_init (struct overbridge *ob, char *device_name,
-		 int blocks_per_transfer)
-{
-  struct overbridge_usb_blk *blk;
-  overbridge_err_t r = overbridge_init_priv (ob, device_name);
-
-  if (r == OB_OK)
-    {
-      pthread_spin_init (&ob->lock, PTHREAD_PROCESS_SHARED);
-
-      ob->blocks_per_transfer = blocks_per_transfer;
-      ob->frames_per_transfer = OB_FRAMES_PER_BLOCK * ob->blocks_per_transfer;
-
-      ob->j2o_audio_enabled = 0;
-
-      ob->usb_data_in_blk_len =
-	sizeof (struct overbridge_usb_blk) +
-	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ob->device_desc.outputs;
-      ob->usb_data_out_blk_len =
-	sizeof (struct overbridge_usb_blk) +
-	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ob->device_desc.inputs;
-
-      ob->usb_data_in_len = ob->usb_data_in_blk_len * ob->blocks_per_transfer;
-      ob->usb_data_out_len =
-	ob->usb_data_out_blk_len * ob->blocks_per_transfer;
-      ob->usb_data_in = malloc (ob->usb_data_in_len);
-      ob->usb_data_out = malloc (ob->usb_data_out_len);
-      memset (ob->usb_data_in, 0, ob->usb_data_in_len);
-      memset (ob->usb_data_out, 0, ob->usb_data_out_len);
-
-      for (int i = 0; i < ob->blocks_per_transfer; i++)
-	{
-	  blk = get_nth_usb_out_blk (ob, i);
-	  blk->header = htobe16 (0x07ff);
-	}
-
-      ob->j2o_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc.inputs;
-      ob->o2j_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc.outputs;
-
-      ob->j2o_buf_size = ob->frames_per_transfer * ob->j2o_frame_bytes;
-      ob->o2j_buf_size = ob->frames_per_transfer * ob->o2j_frame_bytes;
-      ob->j2o_buf = malloc (ob->j2o_buf_size);
-      ob->o2j_buf = malloc (ob->o2j_buf_size);
-      memset (ob->j2o_buf, 0, ob->j2o_buf_size);
-      memset (ob->o2j_buf, 0, ob->o2j_buf_size);
-
-      //o2j resampler
-      ob->j2o_buf_res = malloc (ob->j2o_buf_size);
-      memset (ob->j2o_buf_res, 0, ob->j2o_buf_size);
-      ob->j2o_data.data_in = ob->j2o_buf_res;
-      ob->j2o_data.data_out = ob->j2o_buf;
-      ob->j2o_data.end_of_input = 1;
-      ob->j2o_data.input_frames = ob->frames_per_transfer;
-      ob->j2o_data.output_frames = ob->frames_per_transfer;
-
-      //MIDI
-      ob->j2o_midi_data = malloc (USB_BULK_MIDI_SIZE);
-      ob->o2j_midi_data = malloc (USB_BULK_MIDI_SIZE);
-      memset (ob->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
-      memset (ob->o2j_midi_data, 0, USB_BULK_MIDI_SIZE);
-      ob->j2o_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
-      ob->o2j_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
-      jack_ringbuffer_mlock (ob->j2o_rb_midi);
-      jack_ringbuffer_mlock (ob->o2j_rb_midi);
-    }
-  else
-    {
-      usb_shutdown (ob);
-    }
-  return r;
-}
-
 void
 overbridge_destroy (struct overbridge *ob)
 {
@@ -964,63 +1003,114 @@ overbridge_set_j2o_audio_enable (struct overbridge *ob, int enabled)
     }
 }
 
-overbridge_err_t
+int
 overbridge_list_devices ()
 {
   libusb_context *context = NULL;
   libusb_device **list = NULL;
-  int ret = 0;
   ssize_t count = 0;
   libusb_device *device;
   struct libusb_device_descriptor desc;
-  size_t i;
-  int j;
-  int k;
-  int ports;
-  uint8_t port_numbers[MAX_USB_DEPTH];
-  uint8_t bus;
-  uint8_t address;
+  int i, j, err;
+  char *name;
+  uint8_t bus, address;
 
-  ret = libusb_init (&context);
-  if (ret != LIBUSB_SUCCESS)
+  if (libusb_init (&context) != LIBUSB_SUCCESS)
     {
-      return OB_LIBUSB_INIT_FAILED;
+      return 1;
     }
 
   count = libusb_get_device_list (context, &list);
-
+  j = 0;
   for (i = 0; i < count; i++)
     {
       device = list[i];
-      ret = libusb_get_device_descriptor (device, &desc);
-
-      if (desc.idVendor == ELEKTRON_VID)
+      err = libusb_get_device_descriptor (device, &desc);
+      if (err)
 	{
-	  for (j = 0; j < OB_DEVICE_DESCS_N; j++)
-	    {
-	      if (OB_DEVICE_DESCS[j].pid == desc.idProduct)
-		{
-		  bus = libusb_get_bus_number (device);
-		  address = libusb_get_device_address (device);
-		  ports = libusb_get_port_numbers (device,
-						   port_numbers,
-						   MAX_USB_DEPTH);
-		  fprintf (stderr, "Bus %03d Port %03d", bus,
-			   port_numbers[0]);
-		  for (k = 1; k < ports; k++)
-		    {
-		      fprintf (stderr, ":%03d", port_numbers[k]);
-		    }
-		  fprintf (stderr, " Device %03d: ID %04x:%04x %s\n",
-			   address, desc.idVendor, desc.idProduct,
-			   OB_DEVICE_DESCS[j].name);
-		}
-	    }
+	  error_print (ERROR_ON_GET_DEV_DESC, libusb_error_name (err));
+	  continue;
+	}
+
+      if (overbridge_is_valid_device (desc.idVendor, desc.idProduct, &name))
+	{
+	  bus = libusb_get_bus_number (device);
+	  address = libusb_get_device_address (device);
+	  printf ("%d: Bus %03d Device %03d: ID %04x:%04x %s\n", j,
+		  bus, address, desc.idVendor, desc.idProduct, name);
+	  j++;
 	}
     }
 
   libusb_free_device_list (list, count);
   libusb_exit (context);
+  return 0;
+}
 
-  return OB_OK;
+int
+overbridge_get_bus_address (int index, char *name, uint8_t * bus,
+			    uint8_t * address)
+{
+  libusb_context *context = NULL;
+  libusb_device **list = NULL;
+  int err, i, j;
+  ssize_t count = 0;
+  libusb_device *device = NULL;
+  struct libusb_device_descriptor desc;
+  char *dev_name;
+  err = libusb_init (&context);
+  if (err != LIBUSB_SUCCESS)
+    {
+      return err;
+    }
+
+  j = 0;
+  count = libusb_get_device_list (context, &list);
+  for (i = 0; i < count; i++)
+    {
+      device = list[i];
+      err = libusb_get_device_descriptor (device, &desc);
+      if (err)
+	{
+	  error_print (ERROR_ON_GET_DEV_DESC, libusb_error_name (err));
+	  continue;
+	}
+
+      err = 1;
+      if (overbridge_is_valid_device
+	  (desc.idVendor, desc.idProduct, &dev_name))
+	{
+	  if (index >= 0)
+	    {
+	      if (j == index)
+		{
+		  err = 0;
+		  break;
+		}
+	    }
+	  else
+	    {
+	      if (strcmp (name, dev_name) == 0)
+		{
+		  err = 0;
+		  break;
+		}
+	    }
+	  j++;
+	}
+    }
+
+  if (err)
+    {
+      error_print ("No device found\n");
+    }
+  else
+    {
+      *bus = libusb_get_bus_number (device);
+      *address = libusb_get_device_address (device);
+    }
+
+  libusb_free_device_list (list, count);
+  libusb_exit (context);
+  return err;
 }

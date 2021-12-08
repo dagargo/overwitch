@@ -215,8 +215,8 @@ struct overbridge
   int priority;
   uint16_t s_counter;
   libusb_context *context;
-  libusb_device_handle *device;
-  struct overbridge_device_desc device_desc;
+  libusb_device_handle *device_handle;
+  const struct overbridge_device_desc *device_desc;
   struct dll_counter o2j_dll_counter;
   struct libusb_transfer *xfr_in;
   struct libusb_transfer *xfr_out;
@@ -258,7 +258,7 @@ const char *overbrigde_get_err_str (overbridge_err_t);
 
 void set_self_max_priority ();
 
-overbridge_err_t overbridge_init (struct overbridge *, char *, int);
+overbridge_err_t overbridge_init (struct overbridge *, uint8_t, uint8_t, int);
 
 int overbridge_activate (struct overbridge *, jack_client_t *, int);
 
@@ -270,8 +270,10 @@ overbridge_status_t overbridge_get_status (struct overbridge *);
 
 void overbridge_set_status (struct overbridge *, overbridge_status_t);
 
-overbridge_err_t overbridge_list_devices ();
+int overbridge_list_devices ();
 
 void overbridge_set_j2o_audio_enable (struct overbridge *, int);
 
 int overbridge_is_j2o_audio_enable (struct overbridge *);
+
+int overbridge_get_bus_address (int, char *, uint8_t *, uint8_t *);

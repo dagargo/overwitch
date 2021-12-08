@@ -61,7 +61,7 @@ struct jclient
   int reading_at_o2j_end;
 };
 
-int jclient_run (struct jclient *, char *, int, int, int);
+int jclient_run (struct jclient *, uint8_t, uint8_t, int, int, int);
 
 void jclient_exit (struct jclient *);
 

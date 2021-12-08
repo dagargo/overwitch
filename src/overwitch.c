@@ -24,6 +24,7 @@
 #include <libgen.h>
 #define _GNU_SOURCE
 #include <getopt.h>
+#include <string.h>
 #include "../config.h"
 #include "jclient.h"
 
@@ -93,6 +94,7 @@ main (int argc, char *argv[])
   int blocks_per_transfer = DEFAULT_BLOCKS;
   int quality = DEFAULT_QUALITY;
   int priority = DEFAULT_PRIORITY;
+  uint8_t bus, address;
 
   action.sa_handler = overwitch_signal_handler;
   sigemptyset (&action.sa_mask);
@@ -200,6 +202,11 @@ main (int argc, char *argv[])
       exit (EXIT_FAILURE);
     }
 
-  return jclient_run (&jclient, device, blocks_per_transfer, quality,
+  if (overbridge_get_bus_address (-1, device, &bus, &address))
+    {
+      return EXIT_FAILURE;
+    }
+
+  return jclient_run (&jclient, bus, address, blocks_per_transfer, quality,
 		      priority);
 }

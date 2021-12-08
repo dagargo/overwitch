@@ -125,7 +125,7 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
   struct jclient *jclient = cb_data;
   int j2o_enabled = 0;
   //We only check for j2o (imput) ports as o2j must always be running.
-  for (int i = 0; i < jclient->ob.device_desc.inputs; i++)
+  for (int i = 0; i < jclient->ob.device_desc->inputs; i++)
     {
       if (jack_port_connected (jclient->input_ports[i]))
 	{
@@ -226,7 +226,7 @@ jclient_o2j_reader (void *cb_data, float **data)
 	    {
 	      memcpy (jclient->o2j_buf_in,
 		      &jclient->o2j_buf_in[(last_frames - 1) *
-					   jclient->ob.device_desc.outputs],
+					   jclient->ob.device_desc->outputs],
 		      jclient->ob.o2j_frame_bytes);
 	    }
 	  frames = MAX_READ_FRAMES;
@@ -591,13 +591,13 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   //o2j
 
   f = jclient->o2j_buf_out;
-  for (int i = 0; i < jclient->ob.device_desc.outputs; i++)
+  for (int i = 0; i < jclient->ob.device_desc->outputs; i++)
     {
       buffer[i] = jack_port_get_buffer (jclient->output_ports[i], nframes);
     }
   for (int i = 0; i < nframes; i++)
     {
-      for (int j = 0; j < jclient->ob.device_desc.outputs; j++)
+      for (int j = 0; j < jclient->ob.device_desc->outputs; j++)
 	{
 	  buffer[j][i] = *f;
 	  f++;
@@ -609,13 +609,13 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   if (overbridge_is_j2o_audio_enable (&jclient->ob))
     {
       f = jclient->j2o_aux;
-      for (int i = 0; i < jclient->ob.device_desc.inputs; i++)
+      for (int i = 0; i < jclient->ob.device_desc->inputs; i++)
 	{
 	  buffer[i] = jack_port_get_buffer (jclient->input_ports[i], nframes);
 	}
       for (int i = 0; i < nframes; i++)
 	{
-	  for (int j = 0; j < jclient->ob.device_desc.inputs; j++)
+	  for (int j = 0; j < jclient->ob.device_desc->inputs; j++)
 	    {
 	      *f = buffer[j][i];
 	      f++;
@@ -640,7 +640,7 @@ jclient_exit (struct jclient *jclient)
 }
 
 int
-jclient_run (struct jclient *jclient, char *device_name,
+jclient_run (struct jclient *jclient, uint8_t bus, uint8_t address,
 	     int blocks_per_transfer, int quality, int priority)
 {
   jack_options_t options = JackNoStartServer;
@@ -650,7 +650,7 @@ jclient_run (struct jclient *jclient, char *device_name,
   int ret = 0;
 
   ob_status =
-    overbridge_init (&jclient->ob, device_name, blocks_per_transfer);
+    overbridge_init (&jclient->ob, bus, address, blocks_per_transfer);
   if (ob_status)
     {
       error_print ("USB error: %s\n", overbrigde_get_err_str (ob_status));
@@ -658,7 +658,7 @@ jclient_run (struct jclient *jclient, char *device_name,
     }
 
   jclient->client =
-    jack_client_open (jclient->ob.device_desc.name, options, &status, NULL);
+    jack_client_open (jclient->ob.device_desc->name, options, &status, NULL);
   if (jclient->client == NULL)
     {
       error_print ("jack_client_open() failed, status = 0x%2.0x\n", status);
@@ -729,12 +729,12 @@ jclient_run (struct jclient *jclient, char *device_name,
   debug_print (1, "Using RT priority %d...\n", priority);
 
   jclient->output_ports =
-    malloc (sizeof (jack_port_t *) * jclient->ob.device_desc.outputs);
-  for (int i = 0; i < jclient->ob.device_desc.outputs; i++)
+    malloc (sizeof (jack_port_t *) * jclient->ob.device_desc->outputs);
+  for (int i = 0; i < jclient->ob.device_desc->outputs; i++)
     {
       jclient->output_ports[i] =
 	jack_port_register (jclient->client,
-			    jclient->ob.device_desc.output_track_names[i],
+			    jclient->ob.device_desc->output_track_names[i],
 			    JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
 
       if (jclient->output_ports[i] == NULL)
@@ -746,12 +746,12 @@ jclient_run (struct jclient *jclient, char *device_name,
     }
 
   jclient->input_ports =
-    malloc (sizeof (jack_port_t *) * jclient->ob.device_desc.inputs);
-  for (int i = 0; i < jclient->ob.device_desc.inputs; i++)
+    malloc (sizeof (jack_port_t *) * jclient->ob.device_desc->inputs);
+  for (int i = 0; i < jclient->ob.device_desc->inputs; i++)
     {
       jclient->input_ports[i] =
 	jack_port_register (jclient->client,
-			    jclient->ob.device_desc.input_track_names[i],
+			    jclient->ob.device_desc->input_track_names[i],
 			    JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
 
       if (jclient->input_ports[i] == NULL)
@@ -786,10 +786,10 @@ jclient_run (struct jclient *jclient, char *device_name,
 
   jclient->j2o_state =
     src_callback_new (jclient_j2o_reader, quality,
-		      jclient->ob.device_desc.inputs, NULL, jclient);
+		      jclient->ob.device_desc->inputs, NULL, jclient);
   jclient->o2j_state =
     src_callback_new (jclient_o2j_reader, quality,
-		      jclient->ob.device_desc.outputs, NULL, jclient);
+		      jclient->ob.device_desc->outputs, NULL, jclient);
 
   if (overbridge_activate (&jclient->ob, jclient->client, priority))
     {
