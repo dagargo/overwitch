@@ -831,7 +831,7 @@ run_j2o_midi (void *data)
 	}
       nanosleep (&req, NULL);
 
-      if (!overbridge_get_status (ob))
+      if (overbridge_get_status (ob) <= OB_STATUS_STOP)
 	{
 	  break;
 	}
