@@ -734,7 +734,7 @@ run_audio_and_o2j_midi (void *data)
 
   while (overbridge_get_status (ob) == OB_STATUS_READY);
 
-  //status == OB_STATUS_INIT
+  //status == OB_STATUS_BOOT_OVERBRIDGE
 
   prepare_cycle_in (ob);
   prepare_cycle_out (ob);
@@ -746,15 +746,15 @@ run_audio_and_o2j_midi (void *data)
       ob->j2o_max_latency = 0;
       ob->reading_at_j2o_end = 0;
 
-      //status == OB_STATUS_INIT
+      //status == OB_STATUS_BOOT_OVERBRIDGE
 
       pthread_spin_lock (&ob->lock);
       dll_counter_init (&ob->o2j_dll_counter, OB_SAMPLE_RATE,
 			ob->frames_per_transfer);
-      ob->status = OB_STATUS_BOOT;
+      ob->status = OB_STATUS_BOOT_JACK;
       pthread_spin_unlock (&ob->lock);
 
-      while (overbridge_get_status (ob) >= OB_STATUS_BOOT)
+      while (overbridge_get_status (ob) >= OB_STATUS_BOOT_JACK)
 	{
 	  libusb_handle_events_completed (ob->context, NULL);
 	}
@@ -764,7 +764,7 @@ run_audio_and_o2j_midi (void *data)
 	  break;
 	}
 
-      overbridge_set_status (ob, OB_STATUS_INIT);
+      overbridge_set_status (ob, OB_STATUS_BOOT_OVERBRIDGE);
 
       rsj2o = jack_ringbuffer_read_space (ob->j2o_rb);
       frames = rsj2o / ob->j2o_frame_bytes;

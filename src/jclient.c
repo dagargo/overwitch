@@ -347,17 +347,17 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   jclient->status = jclient->ob.status;
   pthread_spin_unlock (&jclient->ob.lock);
 
-  if (jclient->status <= OB_STATUS_INIT)
+  if (jclient->status <= OB_STATUS_BOOT_OVERBRIDGE)
     {
       if (jclient->status == OB_STATUS_READY)
 	{
-	  overbridge_set_status (&jclient->ob, OB_STATUS_INIT);
-	  debug_print (2, "Initializing...\n");
+	  overbridge_set_status (&jclient->ob, OB_STATUS_BOOT_OVERBRIDGE);
+	  debug_print (2, "Booting Overbridge side...\n");
 	}
       return 1;
     }
 
-  if (jclient->status == OB_STATUS_BOOT)
+  if (jclient->status == OB_STATUS_BOOT_JACK)
     {
       dll_update_err (dll, current_usecs);
       dll_first_time_run (dll);
