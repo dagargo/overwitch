@@ -182,6 +182,7 @@ typedef enum
 
 typedef enum
 {
+  OB_STATUS_ERROR,
   OB_STATUS_STOP,
   OB_STATUS_READY,
   OB_STATUS_BOOT_OVERBRIDGE,

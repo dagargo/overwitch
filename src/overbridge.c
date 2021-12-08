@@ -480,6 +480,7 @@ prepare_cycle_out (struct overbridge *ob)
     {
       error_print ("j2o: Error when submitting USB audio transfer: %s\n",
 		   libusb_strerror (err));
+      overbridge_set_status (ob, OB_STATUS_ERROR);
     }
 }
 
@@ -495,6 +496,7 @@ prepare_cycle_in (struct overbridge *ob)
     {
       error_print ("o2j: Error when submitting USB audio in transfer: %s\n",
 		   libusb_strerror (err));
+      overbridge_set_status (ob, OB_STATUS_ERROR);
     }
 }
 
@@ -510,6 +512,7 @@ prepare_cycle_in_midi (struct overbridge *ob)
     {
       error_print ("o2j: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
+      overbridge_set_status (ob, OB_STATUS_ERROR);
     }
 }
 
@@ -525,6 +528,7 @@ prepare_cycle_out_midi (struct overbridge *ob)
     {
       error_print ("j2o: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
+      overbridge_set_status (ob, OB_STATUS_ERROR);
     }
 }
 
@@ -871,7 +875,7 @@ run_audio_and_o2j_midi (void *data)
 	  libusb_handle_events_completed (ob->context, NULL);
 	}
 
-      if (overbridge_get_status (ob) == OB_STATUS_STOP)
+      if (overbridge_get_status (ob) <= OB_STATUS_STOP)
 	{
 	  break;
 	}
