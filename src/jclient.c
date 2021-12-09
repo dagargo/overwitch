@@ -391,6 +391,14 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
   dll_update_err (dll, current_usecs);
   dll_update (dll);
+
+  if (dll->ratio < 0.0)
+    {
+      error_print ("Negative ratio detected. Stopping...\n");
+      overbridge_set_status (&jclient->ob, OB_STATUS_ERROR);
+      return 1;
+    }
+
   jclient->o2j_ratio = dll->ratio;
   jclient->j2o_ratio = 1.0 / jclient->o2j_ratio;
 
