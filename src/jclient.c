@@ -100,11 +100,30 @@ jclient_reset_buffers (struct jclient *jclient)
 }
 
 void
-jclient_reset_dll (struct jclient *jclient)
+jclient_reset_dll (struct jclient *jclient, jack_nframes_t new_samplerate)
 {
-  dll_init (&jclient->o2j_dll, jclient->samplerate, OB_SAMPLE_RATE,
-	    jclient->bufsize, jclient->ob.frames_per_transfer);
+  static int init = 0;
+  if (!init || overbridge_get_status (&jclient->ob) < OB_STATUS_RUN)
+    {
+      debug_print (2, "Initializing dll...\n");
+      dll_init (&jclient->o2j_dll, new_samplerate, OB_SAMPLE_RATE,
+		jclient->bufsize, jclient->ob.frames_per_transfer);
+      overbridge_set_status (&jclient->ob, OB_STATUS_READY);
+      init = 1;
+    }
+  else
+    {
+      debug_print (2, "Just adjusting dll ratio...\n");
+      jclient->o2j_dll.ratio =
+	jclient->o2j_dll.last_ratio_avg * new_samplerate /
+	jclient->samplerate;
+      overbridge_set_status (&jclient->ob, OB_STATUS_READY);
+      jclient->log_cycles = 0;
+      jclient->log_control_cycles =
+	STARTUP_TIME * new_samplerate / jclient->bufsize;
+    }
   jclient->o2j_ratio = jclient->o2j_dll.ratio;
+  jclient->samplerate = new_samplerate;
 }
 
 static int
@@ -150,8 +169,7 @@ jclient_set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
   struct jclient *jclient = cb_data;
   jclient->bufsize = nframes;
   jclient_reset_buffers (jclient);
-  jclient_reset_dll (jclient);
-  overbridge_set_status (&jclient->ob, OB_STATUS_READY);
+  jclient_reset_dll (jclient, jclient->samplerate);
   printf ("JACK buffer size: %d\n", jclient->bufsize);
   return 0;
 }
@@ -160,9 +178,7 @@ static int
 jclient_set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  jclient->samplerate = nframes;
-  jclient_reset_dll (jclient);
-  overbridge_set_status (&jclient->ob, OB_STATUS_READY);
+  jclient_reset_dll (jclient, nframes);
   printf ("JACK sample rate: %.0f\n", jclient->samplerate);
   return 0;
 }
