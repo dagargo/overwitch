@@ -32,6 +32,15 @@
 #define DEFAULT_BLOCKS 24
 #define DEFAULT_PRIORITY -1	//With this value the default priority will be used.
 
+struct jclient_thread
+{
+  pthread_t thread;
+  struct jclient jclient;
+};
+
+static int jclient_threads_count;
+static struct jclient_thread *jclient_threads;
+
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
   {"use-device", 1, NULL, 'd'},
@@ -44,18 +53,22 @@ static struct option options[] = {
   {NULL, 0, NULL, 0}
 };
 
-static struct jclient jclient;
-
 static void
 overwitch_signal_handler (int signo)
 {
   if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
     {
-      jclient_exit (&jclient);
+      for (int i = 0; i < jclient_threads_count; i++)
+	{
+	  jclient_exit (&jclient_threads[0].jclient);
+	}
     }
   else if (signo == SIGUSR1)
     {
-      jclient_print_latencies (&jclient, "\n");
+      for (int i = 0; i < jclient_threads_count; i++)
+	{
+	  jclient_print_latencies (&jclient_threads[0].jclient, "\n");
+	}
     }
 }
 
@@ -82,6 +95,109 @@ overwitch_print_help (char *executable_path)
     }
 }
 
+static int
+overwitch_run_single (int device_num, char *device_name,
+		      int blocks_per_transfer, int quality, int priority)
+{
+  uint8_t bus, address;
+  int status;
+
+  if (overbridge_get_bus_address (device_num, device_name, &bus, &address))
+    {
+      return EXIT_FAILURE;
+    }
+
+  jclient_threads = malloc (sizeof (struct jclient_thread));
+  jclient_threads_count = 1;
+
+  jclient_threads[0].jclient.bus = bus;
+  jclient_threads[0].jclient.address = address;
+  jclient_threads[0].jclient.blocks_per_transfer = blocks_per_transfer;
+  jclient_threads[0].jclient.quality = quality;
+  jclient_threads[0].jclient.priority = priority;
+
+  pthread_create (&jclient_threads[0].thread, NULL, jclient_run_thread,
+		  &jclient_threads[0].jclient);
+  pthread_join (jclient_threads[0].thread, NULL);
+  status = jclient_threads[0].jclient.status;
+  free (jclient_threads);
+
+  return status;
+}
+
+static int
+overwitch_run_all (int blocks_per_transfer, int quality, int priority)
+{
+  uint8_t bus, address;
+  libusb_context *context = NULL;
+  libusb_device **list = NULL;
+  int err, i;
+  ssize_t count = 0;
+  libusb_device *device = NULL;
+  struct libusb_device_descriptor desc;
+  char *dev_name;
+  int status;
+
+  err = libusb_init (&context);
+  if (err != LIBUSB_SUCCESS)
+    {
+      return err;
+    }
+
+  jclient_threads_count = 0;
+  count = libusb_get_device_list (context, &list);
+  jclient_threads = malloc (sizeof (struct jclient_thread) * count);
+  for (i = 0; i < count; i++)
+    {
+      device = list[i];
+      err = libusb_get_device_descriptor (device, &desc);
+      if (err)
+	{
+	  continue;
+	}
+
+      if (overbridge_is_valid_device
+	  (desc.idVendor, desc.idProduct, &dev_name))
+	{
+	  bus = libusb_get_bus_number (device);
+	  address = libusb_get_device_address (device);
+
+	  jclient_threads[jclient_threads_count].jclient.bus = bus;
+	  jclient_threads[jclient_threads_count].jclient.address = address;
+	  jclient_threads[jclient_threads_count].jclient.blocks_per_transfer =
+	    blocks_per_transfer;
+	  jclient_threads[jclient_threads_count].jclient.quality = quality;
+	  jclient_threads[jclient_threads_count].jclient.priority = priority;
+
+	  pthread_create (&jclient_threads[jclient_threads_count].thread,
+			  NULL, jclient_run_thread,
+			  &jclient_threads[jclient_threads_count].jclient);
+
+	  jclient_threads_count++;
+	}
+    }
+
+  libusb_free_device_list (list, count);
+  libusb_exit (context);
+
+  if (jclient_threads_count)
+    {
+      status = 0;
+      for (int i = 0; i < jclient_threads_count; i++)
+	{
+	  pthread_join (jclient_threads[0].thread, NULL);
+	  status |= jclient_threads[i].jclient.status;
+	}
+      free (jclient_threads);
+    }
+  else
+    {
+      error_print ("No device found\n");
+    }
+
+  return status;
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -96,7 +212,6 @@ main (int argc, char *argv[])
   int blocks_per_transfer = DEFAULT_BLOCKS;
   int quality = DEFAULT_QUALITY;
   int priority = DEFAULT_PRIORITY;
-  uint8_t bus, address;
 
   action.sa_handler = overwitch_signal_handler;
   sigemptyset (&action.sa_mask);
@@ -202,23 +317,20 @@ main (int argc, char *argv[])
       exit (EXIT_FAILURE);
     }
 
-  if (nflg + dflg != 1)
+  if (nflg + dflg == 0)
+    {
+      return overwitch_run_all (blocks_per_transfer, quality, priority);
+    }
+  else if (nflg + dflg == 1)
+    {
+      return overwitch_run_single (device_num, device_name,
+				   blocks_per_transfer, quality, priority);
+    }
+  else
     {
       fprintf (stderr, "Device not provided properly\n");
       exit (EXIT_FAILURE);
     }
 
-  if (nflg + dflg == 0)
-    {
-      fprintf (stderr, "No device provided\n");
-      exit (EXIT_FAILURE);
-    }
-
-  if (overbridge_get_bus_address (device_num, device_name, &bus, &address))
-    {
-      return EXIT_FAILURE;
-    }
-
-  return jclient_run (&jclient, bus, address, blocks_per_transfer, quality,
-		      priority);
+  return 0;
 }

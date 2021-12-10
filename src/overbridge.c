@@ -156,7 +156,7 @@ static void prepare_cycle_in ();
 static void prepare_cycle_out ();
 static void prepare_cycle_in_midi ();
 
-static int
+int
 overbridge_is_valid_device (uint16_t vid, uint16_t pid, char **name)
 {
   if (vid != ELEKTRON_VID)
@@ -1062,6 +1062,7 @@ overbridge_get_bus_address (int index, char *name, uint8_t * bus,
   libusb_device *device = NULL;
   struct libusb_device_descriptor desc;
   char *dev_name;
+
   err = libusb_init (&context);
   if (err != LIBUSB_SUCCESS)
     {

@@ -648,21 +648,21 @@ jclient_exit (struct jclient *jclient)
 }
 
 int
-jclient_run (struct jclient *jclient, uint8_t bus, uint8_t address,
-	     int blocks_per_transfer, int quality, int priority)
+jclient_run (struct jclient *jclient)
 {
   jack_options_t options = JackNoStartServer;
   jack_status_t status;
   overbridge_err_t ob_status;
   char *client_name;
-  int ret = 0;
 
+  jclient->status = OB_STATUS_ERROR;
   ob_status =
-    overbridge_init (&jclient->ob, bus, address, blocks_per_transfer);
+    overbridge_init (&jclient->ob, jclient->bus, jclient->address,
+		     jclient->blocks_per_transfer);
   if (ob_status)
     {
       error_print ("USB error: %s\n", overbrigde_get_err_str (ob_status));
-      exit (EXIT_FAILURE);
+      goto end;
     }
 
   jclient->client =
@@ -676,7 +676,6 @@ jclient_run (struct jclient *jclient, uint8_t bus, uint8_t address,
 	  error_print ("Unable to connect to JACK server\n");
 	}
 
-      ret = EXIT_FAILURE;
       goto cleanup_overbridge;
     }
 
@@ -694,7 +693,6 @@ jclient_run (struct jclient *jclient, uint8_t bus, uint8_t address,
   if (jack_set_process_callback
       (jclient->client, jclient_process_cb, jclient))
     {
-      ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
 
@@ -703,7 +701,6 @@ jclient_run (struct jclient *jclient, uint8_t bus, uint8_t address,
   if (jack_set_xrun_callback
       (jclient->client, jclient_thread_xrun_cb, jclient))
     {
-      ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
 
@@ -719,22 +716,20 @@ jclient_run (struct jclient *jclient, uint8_t bus, uint8_t address,
   if (jack_set_sample_rate_callback
       (jclient->client, jclient_set_sample_rate_cb, jclient))
     {
-      ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
 
   if (jack_set_buffer_size_callback
       (jclient->client, jclient_set_buffer_size_cb, jclient))
     {
-      ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
 
-  if (priority < 0)
+  if (jclient->priority < 0)
     {
-      priority = jack_client_real_time_priority (jclient->client);
+      jclient->priority = jack_client_real_time_priority (jclient->client);
     }
-  debug_print (1, "Using RT priority %d...\n", priority);
+  debug_print (1, "Using RT priority %d...\n", jclient->priority);
 
   jclient->output_ports =
     malloc (sizeof (jack_port_t *) * jclient->ob.device_desc->outputs);
@@ -748,7 +743,6 @@ jclient_run (struct jclient *jclient, uint8_t bus, uint8_t address,
       if (jclient->output_ports[i] == NULL)
 	{
 	  error_print (MSG_ERROR_PORT_REGISTER);
-	  ret = EXIT_FAILURE;
 	  goto cleanup_jack;
 	}
     }
@@ -765,7 +759,6 @@ jclient_run (struct jclient *jclient, uint8_t bus, uint8_t address,
       if (jclient->input_ports[i] == NULL)
 	{
 	  error_print (MSG_ERROR_PORT_REGISTER);
-	  ret = EXIT_FAILURE;
 	  goto cleanup_jack;
 	}
     }
@@ -777,7 +770,6 @@ jclient_run (struct jclient *jclient, uint8_t bus, uint8_t address,
   if (jclient->midi_output_port == NULL)
     {
       error_print (MSG_ERROR_PORT_REGISTER);
-      ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
 
@@ -788,27 +780,24 @@ jclient_run (struct jclient *jclient, uint8_t bus, uint8_t address,
   if (jclient->midi_input_port == NULL)
     {
       error_print (MSG_ERROR_PORT_REGISTER);
-      ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
 
   jclient->j2o_state =
-    src_callback_new (jclient_j2o_reader, quality,
+    src_callback_new (jclient_j2o_reader, jclient->quality,
 		      jclient->ob.device_desc->inputs, NULL, jclient);
   jclient->o2j_state =
-    src_callback_new (jclient_o2j_reader, quality,
+    src_callback_new (jclient_o2j_reader, jclient->quality,
 		      jclient->ob.device_desc->outputs, NULL, jclient);
 
-  if (overbridge_activate (&jclient->ob, jclient->client, priority))
+  if (overbridge_activate (&jclient->ob, jclient->client, jclient->priority))
     {
-      ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
 
   if (jack_activate (jclient->client))
     {
       error_print ("Cannot activate client\n");
-      ret = EXIT_FAILURE;
       goto cleanup_jack;
     }
 
@@ -833,5 +822,15 @@ cleanup_jack:
 cleanup_overbridge:
   overbridge_destroy (&jclient->ob);
 
-  return ret;
+  jclient->status = jclient->ob.status;
+end:
+  return jclient->status;
+}
+
+void *
+jclient_run_thread (void *data)
+{
+  struct jclient *jclient = data;
+  jclient_run (jclient);
+  return NULL;
 }

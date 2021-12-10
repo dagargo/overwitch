@@ -59,9 +59,17 @@ struct jclient
   int xruns;
   pthread_spinlock_t lock;	//Used to synchronize access to xruns.
   int reading_at_o2j_end;
+  //Parameters
+  uint8_t bus;
+  uint8_t address;
+  int blocks_per_transfer;
+  int quality;
+  int priority;
 };
 
-int jclient_run (struct jclient *, uint8_t, uint8_t, int, int, int);
+int jclient_run (struct jclient *);
+
+void *jclient_run_thread (void *);
 
 void jclient_exit (struct jclient *);
 

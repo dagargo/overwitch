@@ -182,7 +182,7 @@ typedef enum
 
 typedef enum
 {
-  OB_STATUS_ERROR,
+  OB_STATUS_ERROR = -1,
   OB_STATUS_STOP,
   OB_STATUS_READY,
   OB_STATUS_BOOT_OVERBRIDGE,
@@ -278,3 +278,5 @@ void overbridge_set_j2o_audio_enable (struct overbridge *, int);
 int overbridge_is_j2o_audio_enable (struct overbridge *);
 
 int overbridge_get_bus_address (int, char *, uint8_t *, uint8_t *);
+
+int overbridge_is_valid_device (uint16_t, uint16_t, char **);
