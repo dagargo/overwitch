@@ -167,10 +167,10 @@ static int
 jclient_set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
 {
   struct jclient *jclient = cb_data;
+  printf ("JACK buffer size: %d\n", nframes);
   jclient->bufsize = nframes;
   jclient_reset_buffers (jclient);
   jclient_reset_dll (jclient, jclient->samplerate);
-  printf ("JACK buffer size: %d\n", jclient->bufsize);
   return 0;
 }
 
@@ -178,8 +178,15 @@ static int
 jclient_set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  jclient_reset_dll (jclient, nframes);
-  printf ("JACK sample rate: %.0f\n", jclient->samplerate);
+  printf ("JACK sample rate: %d\n", nframes);
+  if (jclient->j2o_buf_in)	//This means that jclient_reset_buffers has been called and thus bufsize has been set.
+    {
+      jclient_reset_dll (jclient, nframes);
+    }
+  else
+    {
+      jclient->samplerate = nframes;
+    }
   return 0;
 }
 
