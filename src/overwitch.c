@@ -185,7 +185,7 @@ overwitch_run_all (int blocks_per_transfer, int quality, int priority)
       status = 0;
       for (int i = 0; i < jclient_threads_count; i++)
 	{
-	  pthread_join (jclient_threads[0].thread, NULL);
+	  pthread_join (jclient_threads[i].thread, NULL);
 	  status |= jclient_threads[i].jclient.status;
 	}
       free (jclient_threads);
