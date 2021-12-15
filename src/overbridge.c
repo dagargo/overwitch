@@ -571,16 +571,14 @@ overbridge_init (struct overbridge *ob, uint8_t bus, uint8_t address,
 	  continue;
 	}
 
-      if (overbridge_is_valid_device (desc.idVendor, desc.idProduct, &name))
+      if (overbridge_is_valid_device (desc.idVendor, desc.idProduct, &name) &&
+	  libusb_get_bus_number (device) == bus &&
+	  libusb_get_device_address (device) == address)
 	{
-	  if (libusb_get_bus_number (device) == bus &&
-	      libusb_get_device_address (device) == address)
+	  if (libusb_open (device, &ob->device_handle))
 	    {
-	      if (libusb_open (device, &ob->device_handle))
-		{
-		  error_print ("Error while opening device: %s\n",
-			       libusb_error_name (err));
-		}
+	      error_print ("Error while opening device: %s\n",
+			   libusb_error_name (err));
 	    }
 	  break;
 	}
