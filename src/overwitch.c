@@ -32,14 +32,14 @@
 #define DEFAULT_BLOCKS 24
 #define DEFAULT_PRIORITY -1	//With this value the default priority will be used.
 
-struct jclient_thread
+struct overwitch
 {
   pthread_t thread;
   struct jclient jclient;
 };
 
-static int jclient_threads_count;
-static struct jclient_thread *jclient_threads;
+static int overwitch_count;
+static struct overwitch **overwitch;
 
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
@@ -58,16 +58,16 @@ overwitch_signal_handler (int signo)
 {
   if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
     {
-      for (int i = 0; i < jclient_threads_count; i++)
+      for (int i = 0; i < overwitch_count; i++)
 	{
-	  jclient_exit (&jclient_threads[0].jclient);
+	  jclient_exit (&overwitch[i]->jclient);
 	}
     }
   else if (signo == SIGUSR1)
     {
-      for (int i = 0; i < jclient_threads_count; i++)
+      for (int i = 0; i < overwitch_count; i++)
 	{
-	  jclient_print_latencies (&jclient_threads[0].jclient, "\n");
+	  jclient_print_latencies (&overwitch[i]->jclient, "\n");
 	}
     }
 }
@@ -107,20 +107,22 @@ overwitch_run_single (int device_num, char *device_name,
       return EXIT_FAILURE;
     }
 
-  jclient_threads = malloc (sizeof (struct jclient_thread));
-  jclient_threads_count = 1;
+  overwitch_count = 1;
+  overwitch = malloc (sizeof (struct overwitch *));
+  overwitch[0] = malloc (sizeof (struct overwitch));
+  overwitch[0]->jclient.j2o_buf_in = NULL;
+  overwitch[0]->jclient.bus = bus;
+  overwitch[0]->jclient.address = address;
+  overwitch[0]->jclient.blocks_per_transfer = blocks_per_transfer;
+  overwitch[0]->jclient.quality = quality;
+  overwitch[0]->jclient.priority = priority;
 
-  jclient_threads[0].jclient.bus = bus;
-  jclient_threads[0].jclient.address = address;
-  jclient_threads[0].jclient.blocks_per_transfer = blocks_per_transfer;
-  jclient_threads[0].jclient.quality = quality;
-  jclient_threads[0].jclient.priority = priority;
-
-  pthread_create (&jclient_threads[0].thread, NULL, jclient_run_thread,
-		  &jclient_threads[0].jclient);
-  pthread_join (jclient_threads[0].thread, NULL);
-  status = jclient_threads[0].jclient.status;
-  free (jclient_threads);
+  pthread_create (&overwitch[0]->thread, NULL, jclient_run_thread,
+		  &overwitch[0]->jclient);
+  pthread_join (overwitch[0]->thread, NULL);
+  status = overwitch[0]->jclient.status;
+  free (overwitch[0]);
+  free (overwitch);
 
   return status;
 }
@@ -144,9 +146,9 @@ overwitch_run_all (int blocks_per_transfer, int quality, int priority)
       return err;
     }
 
-  jclient_threads_count = 0;
+  overwitch_count = 0;
   count = libusb_get_device_list (context, &list);
-  jclient_threads = malloc (sizeof (struct jclient_thread) * count);
+  overwitch = malloc (sizeof (struct overwitch *) * count);
   for (i = 0; i < count; i++)
     {
       device = list[i];
@@ -159,36 +161,39 @@ overwitch_run_all (int blocks_per_transfer, int quality, int priority)
       if (overbridge_is_valid_device
 	  (desc.idVendor, desc.idProduct, &dev_name))
 	{
+	  overwitch[overwitch_count] = malloc (sizeof (struct overwitch));
 	  bus = libusb_get_bus_number (device);
 	  address = libusb_get_device_address (device);
 
-	  jclient_threads[jclient_threads_count].jclient.bus = bus;
-	  jclient_threads[jclient_threads_count].jclient.address = address;
-	  jclient_threads[jclient_threads_count].jclient.blocks_per_transfer =
+	  overwitch[overwitch_count]->jclient.j2o_buf_in = NULL;
+	  overwitch[overwitch_count]->jclient.bus = bus;
+	  overwitch[overwitch_count]->jclient.address = address;
+	  overwitch[overwitch_count]->jclient.blocks_per_transfer =
 	    blocks_per_transfer;
-	  jclient_threads[jclient_threads_count].jclient.quality = quality;
-	  jclient_threads[jclient_threads_count].jclient.priority = priority;
+	  overwitch[overwitch_count]->jclient.quality = quality;
+	  overwitch[overwitch_count]->jclient.priority = priority;
 
-	  pthread_create (&jclient_threads[jclient_threads_count].thread,
-			  NULL, jclient_run_thread,
-			  &jclient_threads[jclient_threads_count].jclient);
+	  pthread_create (&overwitch[overwitch_count]->thread, NULL,
+			  jclient_run_thread,
+			  &overwitch[overwitch_count]->jclient);
 
-	  jclient_threads_count++;
+	  overwitch_count++;
 	}
     }
 
   libusb_free_device_list (list, count);
   libusb_exit (context);
 
-  if (jclient_threads_count)
+  if (overwitch_count)
     {
       status = 0;
-      for (int i = 0; i < jclient_threads_count; i++)
+      for (int i = 0; i < overwitch_count; i++)
 	{
-	  pthread_join (jclient_threads[i].thread, NULL);
-	  status |= jclient_threads[i].jclient.status;
+	  pthread_join (overwitch[i]->thread, NULL);
+	  status |= overwitch[i]->jclient.status;
+	  free (overwitch[i]);
 	}
-      free (jclient_threads);
+      free (overwitch);
     }
   else
     {

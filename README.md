@@ -48,20 +48,22 @@ $ overwitch -d Digitakt
 To stop, just press `Ctrl+C`. You'll see an oputput like the one below. Notice that we are using the verbose option here but it is **not recommended** to use it and it is showed here for illustrative purposes only.
 
 ```
-$ overwitch -d Digitakt -v
+$ overwitch -d Digitakt -v -b 4
 Device: Digitakt (outputs: 12, inputs: 2)
 JACK sample rate: 48000
-JACK buffer size: 64
-DEBUG:overbridge.c:480:(overbridge_run): Starting device thread...
-DEBUG:overwitch.c:379:(overwitch_compute_ratios): Max. latencies (ms): 0.0, 0.0; avg. ratios: 0.999791, 1.000209; curr. ratios: 0.999762, 1.000238
-DEBUG:overwitch.c:379:(overwitch_compute_ratios): Max. latencies (ms): 0.0, 0.0; avg. ratios: 0.999847, 1.000153; curr. ratios: 0.999918, 1.000082
-DEBUG:overwitch.c:379:(overwitch_compute_ratios): Max. latencies (ms): 0.0, 0.0; avg. ratios: 0.999899, 1.000101; curr. ratios: 0.999931, 1.000069
-DEBUG:overwitch.c:379:(overwitch_compute_ratios): Max. latencies (ms): 0.0, 0.0; avg. ratios: 0.999912, 1.000088; curr. ratios: 0.999888, 1.000112
-DEBUG:overwitch.c:379:(overwitch_compute_ratios): Max. latencies (ms): 0.0, 0.0; avg. ratios: 0.999911, 1.000089; curr. ratios: 0.999876, 1.000124
-DEBUG:overwitch.c:379:(overwitch_compute_ratios): Max. latencies (ms): 5.3, 5.1; avg. ratios: 0.999883, 1.000117; curr. ratios: 0.999892, 1.000108
+DEBUG:jclient.c:756:(jclient_run): Using RT priority 5...
+DEBUG:overbridge.c:910:(overbridge_activate): Starting j2o MIDI thread...
+DEBUG:overbridge.c:918:(overbridge_activate): Starting audio and o2j MIDI thread...
+JACK buffer size: 32
+Digitakt: o2j latency: 0.0 ms, max. 0.0 ms; j2o latency: 0.0 ms, max. 0.0 ms; o2j ratio: 1.000035, avg. 0.999897
+Digitakt: o2j latency: 0.0 ms, max. 0.0 ms; j2o latency: 0.0 ms, max. 0.0 ms; o2j ratio: 0.999910, avg. 0.999975
+Digitakt: o2j latency: 0.0 ms, max. 0.0 ms; j2o latency: 0.0 ms, max. 0.0 ms; o2j ratio: 0.999877, avg. 0.999884
+Digitakt: o2j latency: 0.0 ms, max. 0.0 ms; j2o latency: 0.0 ms, max. 0.0 ms; o2j ratio: 0.999858, avg. 0.999866
+Digitakt: o2j latency: 0.0 ms, max. 0.0 ms; j2o latency: 0.0 ms, max. 0.0 ms; o2j ratio: 0.999883, avg. 0.999872
+Digitakt: o2j latency: 0.4 ms, max. 1.6 ms; j2o latency: 0.0 ms, max. 0.0 ms; o2j ratio: 0.999893, avg. 0.999889
 ^C
-Max. latencies (ms): 5.6, 5.6
-DEBUG:overwitch.c:607:(overwitch_run): Exiting...
+Digitakt: o2j latency: 0.5 ms, max. 1.8 ms; j2o latency: 0.0 ms, max. 0.0 ms
+DEBUG:jclient.c:830:(jclient_run): Exiting...
 ```
 
 To limit latency to the lowest possible value, audio is not sent through during the first seconds.

@@ -43,7 +43,8 @@ void
 jclient_print_latencies (struct jclient *jclient, const char *end)
 {
   printf
-    ("o2j latency: %.1f ms, max. %.1f ms; j2o latency: %.1f ms, max. %.1f ms%s",
+    ("%s: o2j latency: %.1f ms, max. %.1f ms; j2o latency: %.1f ms, max. %.1f ms%s",
+     jclient->ob.device_desc->name,
      jclient->o2j_latency * 1000.0 / (jclient->ob.o2j_frame_bytes *
 				      OB_SAMPLE_RATE),
      jclient->o2j_max_latency * 1000.0 / (jclient->ob.o2j_frame_bytes *
