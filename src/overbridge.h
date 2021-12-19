@@ -247,6 +247,8 @@ struct overbridge
   jack_ringbuffer_t *j2o_rb_midi;
   jack_ringbuffer_t *o2j_rb_midi;
   int reading_at_j2o_end;
+  pthread_spinlock_t j2o_midi_lock;
+  int j2o_midi_ready;
 };
 
 struct ob_midi_event

@@ -461,6 +461,12 @@ end:
 static void LIBUSB_CALL
 cb_xfr_out_midi (struct libusb_transfer *xfr)
 {
+  struct overbridge *ob = xfr->user_data;
+
+  pthread_spin_lock (&ob->j2o_midi_lock);
+  ob->j2o_midi_ready = 1;
+  pthread_spin_unlock (&ob->j2o_midi_lock);
+
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
     {
       error_print ("Error on USB MIDI out transfer: %s\n",
@@ -744,6 +750,7 @@ end:
       ob->o2j_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
       jack_ringbuffer_mlock (ob->j2o_rb_midi);
       jack_ringbuffer_mlock (ob->o2j_rb_midi);
+      pthread_spin_init (&ob->j2o_midi_lock, PTHREAD_PROCESS_SHARED);
     }
   else
     {
@@ -767,22 +774,26 @@ static const char *ob_err_strgs[] = { "ok", "libusb init failed",
 void *
 run_j2o_midi (void *data)
 {
-  int pos;
+  int pos, j2o_midi_ready;
   jack_time_t last_time;
   jack_time_t event_time;
   jack_time_t diff;
-  struct timespec req;
+  struct timespec sleep_time, smallest_sleep_time;
   struct ob_midi_event event;
   struct overbridge *ob = data;
-  int sleep_time_ns = SAMPLE_TIME_NS * jack_get_buffer_size (ob->jclient) / 2;	//Average wait time
+
+  smallest_sleep_time.tv_sec = 0;
+  smallest_sleep_time.tv_nsec = SAMPLE_TIME_NS * jack_get_buffer_size (ob->jclient) / 2;	//Average wait time
 
   set_rt_priority (ob->priority);
 
   pos = 0;
   diff = 0;
   last_time = jack_get_time ();
+  ob->j2o_midi_ready = 1;
   while (1)
     {
+
       while (jack_ringbuffer_read_space (ob->j2o_rb_midi) >=
 	     sizeof (struct ob_midi_event) && pos < USB_BULK_MIDI_SIZE)
 	{
@@ -813,21 +824,32 @@ run_j2o_midi (void *data)
 	{
 	  debug_print (2, "Event frames: %u; diff: %lu\n", event.frames,
 		       diff);
+	  ob->j2o_midi_ready = 0;
 	  prepare_cycle_out_midi (ob);
 	  pos = 0;
 	}
 
       if (diff)
 	{
-	  req.tv_sec = diff / 1000000;
-	  req.tv_nsec = (diff % 1000000) * 1000;
+	  sleep_time.tv_sec = diff / 1000000;
+	  sleep_time.tv_nsec = (diff % 1000000) * 1000;
+	  nanosleep (&sleep_time, NULL);
 	}
       else
 	{
-	  req.tv_sec = 0;
-	  req.tv_nsec = sleep_time_ns;
+	  nanosleep (&smallest_sleep_time, NULL);
 	}
-      nanosleep (&req, NULL);
+
+      pthread_spin_lock (&ob->j2o_midi_lock);
+      j2o_midi_ready = ob->j2o_midi_ready;
+      pthread_spin_unlock (&ob->j2o_midi_lock);
+      while (!j2o_midi_ready)
+	{
+	  nanosleep (&smallest_sleep_time, NULL);
+	  pthread_spin_lock (&ob->j2o_midi_lock);
+	  j2o_midi_ready = ob->j2o_midi_ready;
+	  pthread_spin_unlock (&ob->j2o_midi_lock);
+	};
 
       if (overbridge_get_status (ob) <= OB_STATUS_STOP)
 	{
@@ -962,6 +984,7 @@ overbridge_destroy (struct overbridge *ob)
   free (ob->j2o_midi_data);
   free (ob->o2j_midi_data);
   pthread_spin_destroy (&ob->lock);
+  pthread_spin_destroy (&ob->j2o_midi_lock);
 }
 
 inline overbridge_status_t
