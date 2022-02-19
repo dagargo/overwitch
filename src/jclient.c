@@ -168,10 +168,13 @@ static int
 jclient_set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  printf ("JACK buffer size: %d\n", nframes);
-  jclient->bufsize = nframes;
-  jclient_reset_buffers (jclient);
-  jclient_reset_dll (jclient, jclient->samplerate);
+  if (jclient->bufsize != nframes)
+    {
+      printf ("JACK buffer size: %d\n", nframes);
+      jclient->bufsize = nframes;
+      jclient_reset_buffers (jclient);
+      jclient_reset_dll (jclient, jclient->samplerate);
+    }
   return 0;
 }
 
@@ -179,14 +182,17 @@ static int
 jclient_set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  printf ("JACK sample rate: %d\n", nframes);
-  if (jclient->j2o_buf_in)	//This means that jclient_reset_buffers has been called and thus bufsize has been set.
+  if (jclient->samplerate != nframes)
     {
-      jclient_reset_dll (jclient, nframes);
-    }
-  else
-    {
-      jclient->samplerate = nframes;
+      printf ("JACK sample rate: %d\n", nframes);
+      if (jclient->j2o_buf_in)	//This means that jclient_reset_buffers has been called and thus bufsize has been set.
+	{
+	  jclient_reset_dll (jclient, nframes);
+	}
+      else
+	{
+	  jclient->samplerate = nframes;
+	}
     }
   return 0;
 }
@@ -679,6 +685,10 @@ jclient_run (struct jclient *jclient)
   overbridge_err_t ob_status;
   char *client_name;
 
+  jclient->samplerate = 0;
+  jclient->bufsize = 0;
+  jclient->xruns = 0;
+
   jclient->status = OB_STATUS_ERROR;
   ob_status =
     overbridge_init (&jclient->ob, jclient->bus, jclient->address,
@@ -721,7 +731,6 @@ jclient_run (struct jclient *jclient)
     }
 
   pthread_spin_init (&jclient->lock, PTHREAD_PROCESS_SHARED);
-  jclient->xruns = 0;
   if (jack_set_xrun_callback
       (jclient->client, jclient_thread_xrun_cb, jclient))
     {
@@ -818,6 +827,11 @@ jclient_run (struct jclient *jclient)
     {
       goto cleanup_jack;
     }
+
+  jclient_set_sample_rate_cb (jack_get_sample_rate (jclient->client),
+			      jclient);
+  jclient_set_buffer_size_cb (jack_get_buffer_size (jclient->client),
+			      jclient);
 
   if (jack_activate (jclient->client))
     {
