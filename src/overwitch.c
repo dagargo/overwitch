@@ -175,42 +175,42 @@ overwitch_is_valid_device (uint16_t vid, uint16_t pid, char **name)
 }
 
 static struct overwitch_usb_blk *
-get_nth_usb_in_blk (struct overwitch *ob, int n)
+get_nth_usb_in_blk (struct overwitch *ow, int n)
 {
-  char *blk = &ob->usb_data_in[n * ob->usb_data_in_blk_len];
+  char *blk = &ow->usb_data_in[n * ow->usb_data_in_blk_len];
   return (struct overwitch_usb_blk *) blk;
 }
 
 static struct overwitch_usb_blk *
-get_nth_usb_out_blk (struct overwitch *ob, int n)
+get_nth_usb_out_blk (struct overwitch *ow, int n)
 {
-  char *blk = &ob->usb_data_out[n * ob->usb_data_out_blk_len];
+  char *blk = &ow->usb_data_out[n * ow->usb_data_out_blk_len];
   return (struct overwitch_usb_blk *) blk;
 }
 
 static int
-prepare_transfers (struct overwitch *ob)
+prepare_transfers (struct overwitch *ow)
 {
-  ob->xfr_in = libusb_alloc_transfer (0);
-  if (!ob->xfr_in)
+  ow->xfr_in = libusb_alloc_transfer (0);
+  if (!ow->xfr_in)
     {
       return -ENOMEM;
     }
 
-  ob->xfr_out = libusb_alloc_transfer (0);
-  if (!ob->xfr_out)
+  ow->xfr_out = libusb_alloc_transfer (0);
+  if (!ow->xfr_out)
     {
       return -ENOMEM;
     }
 
-  ob->xfr_in_midi = libusb_alloc_transfer (0);
-  if (!ob->xfr_in_midi)
+  ow->xfr_in_midi = libusb_alloc_transfer (0);
+  if (!ow->xfr_in_midi)
     {
       return -ENOMEM;
     }
 
-  ob->xfr_out_midi = libusb_alloc_transfer (0);
-  if (!ob->xfr_out_midi)
+  ow->xfr_out_midi = libusb_alloc_transfer (0);
+  if (!ow->xfr_out_midi)
     {
       return -ENOMEM;
     }
@@ -219,16 +219,16 @@ prepare_transfers (struct overwitch *ob)
 }
 
 static void
-free_transfers (struct overwitch *ob)
+free_transfers (struct overwitch *ow)
 {
-  libusb_free_transfer (ob->xfr_in);
-  libusb_free_transfer (ob->xfr_out);
-  libusb_free_transfer (ob->xfr_in_midi);
-  libusb_free_transfer (ob->xfr_out_midi);
+  libusb_free_transfer (ow->xfr_in);
+  libusb_free_transfer (ow->xfr_out);
+  libusb_free_transfer (ow->xfr_in_midi);
+  libusb_free_transfer (ow->xfr_out_midi);
 }
 
 static void
-set_usb_input_data_blks (struct overwitch *ob)
+set_usb_input_data_blks (struct overwitch *ow)
 {
   struct overwitch_usb_blk *blk;
   size_t wso2j;
@@ -237,23 +237,23 @@ set_usb_input_data_blks (struct overwitch *ob)
   int32_t *s;
   overwitch_status_t status;
 
-  pthread_spin_lock (&ob->lock);
-  if (ob->inc_sample_counter)
+  pthread_spin_lock (&ow->lock);
+  if (ow->inc_sample_counter)
     {
-      ob->inc_sample_counter (ob->sample_counter_data,
-			      ob->frames_per_transfer);
+      ow->inc_sample_counter (ow->sample_counter_data,
+			      ow->frames_per_transfer);
     }
-  status = ob->status;
-  pthread_spin_unlock (&ob->lock);
+  status = ow->status;
+  pthread_spin_unlock (&ow->lock);
 
-  f = ob->o2j_buf;
-  for (int i = 0; i < ob->blocks_per_transfer; i++)
+  f = ow->o2j_buf;
+  for (int i = 0; i < ow->blocks_per_transfer; i++)
     {
-      blk = get_nth_usb_in_blk (ob, i);
+      blk = get_nth_usb_in_blk (ow, i);
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < ob->device_desc->outputs; k++)
+	  for (int k = 0; k < ow->device_desc->outputs; k++)
 	    {
 	      hv = be32toh (*s);
 	      *f = hv / (float) INT_MAX;
@@ -268,11 +268,11 @@ set_usb_input_data_blks (struct overwitch *ob)
       return;
     }
 
-  wso2j = jack_ringbuffer_write_space (ob->o2j_rb);
-  if (ob->o2j_buf_size <= wso2j)
+  wso2j = jack_ringbuffer_write_space (ow->o2j_rb);
+  if (ow->o2j_buf_size <= wso2j)
     {
-      jack_ringbuffer_write (ob->o2j_rb, (void *) ob->o2j_buf,
-			     ob->o2j_buf_size);
+      jack_ringbuffer_write (ow->o2j_rb, (void *) ow->o2j_buf,
+			     ow->o2j_buf_size);
     }
   else
     {
@@ -281,7 +281,7 @@ set_usb_input_data_blks (struct overwitch *ob)
 }
 
 static void
-set_usb_output_data_blks (struct overwitch *ob)
+set_usb_output_data_blks (struct overwitch *ow)
 {
   struct overwitch_usb_blk *blk;
   size_t rsj2o;
@@ -291,81 +291,81 @@ set_usb_output_data_blks (struct overwitch *ob)
   float *f;
   int res;
   int32_t *s;
-  int enabled = overwitch_is_j2o_audio_enable (ob);
+  int enabled = overwitch_is_j2o_audio_enable (ow);
 
-  rsj2o = jack_ringbuffer_read_space (ob->j2o_rb);
-  if (!ob->reading_at_j2o_end)
+  rsj2o = jack_ringbuffer_read_space (ow->j2o_rb);
+  if (!ow->reading_at_j2o_end)
     {
-      if (enabled && rsj2o >= ob->j2o_buf_size)
+      if (enabled && rsj2o >= ow->j2o_buf_size)
 	{
 	  debug_print (2, "j2o: Emptying buffer and running...\n");
-	  frames = rsj2o / ob->j2o_frame_bytes;
-	  bytes = frames * ob->j2o_frame_bytes;
-	  jack_ringbuffer_read_advance (ob->j2o_rb, bytes);
-	  ob->reading_at_j2o_end = 1;
+	  frames = rsj2o / ow->j2o_frame_bytes;
+	  bytes = frames * ow->j2o_frame_bytes;
+	  jack_ringbuffer_read_advance (ow->j2o_rb, bytes);
+	  ow->reading_at_j2o_end = 1;
 	}
       goto set_blocks;
     }
 
   if (!enabled)
     {
-      ob->reading_at_j2o_end = 0;
+      ow->reading_at_j2o_end = 0;
       debug_print (2, "j2o: Clearing buffer and stopping...\n");
-      memset (ob->j2o_buf, 0, ob->j2o_buf_size);
+      memset (ow->j2o_buf, 0, ow->j2o_buf_size);
       goto set_blocks;
     }
 
-  pthread_spin_lock (&ob->lock);
-  ob->j2o_latency = rsj2o;
-  if (ob->j2o_latency > ob->j2o_max_latency)
+  pthread_spin_lock (&ow->lock);
+  ow->j2o_latency = rsj2o;
+  if (ow->j2o_latency > ow->j2o_max_latency)
     {
-      ob->j2o_max_latency = ob->j2o_latency;
+      ow->j2o_max_latency = ow->j2o_latency;
     }
-  pthread_spin_unlock (&ob->lock);
+  pthread_spin_unlock (&ow->lock);
 
-  if (rsj2o >= ob->j2o_buf_size)
+  if (rsj2o >= ow->j2o_buf_size)
     {
-      jack_ringbuffer_read (ob->j2o_rb, (void *) ob->j2o_buf,
-			    ob->j2o_buf_size);
+      jack_ringbuffer_read (ow->j2o_rb, (void *) ow->j2o_buf,
+			    ow->j2o_buf_size);
     }
   else
     {
       debug_print (2,
 		   "j2o: Audio ring buffer underflow (%zu < %zu). Resampling...\n",
-		   rsj2o, ob->j2o_buf_size);
-      frames = rsj2o / ob->j2o_frame_bytes;
-      bytes = frames * ob->j2o_frame_bytes;
-      jack_ringbuffer_read (ob->j2o_rb, (void *) ob->j2o_buf_res, bytes);
-      ob->j2o_data.input_frames = frames;
-      ob->j2o_data.src_ratio = (double) ob->frames_per_transfer / frames;
+		   rsj2o, ow->j2o_buf_size);
+      frames = rsj2o / ow->j2o_frame_bytes;
+      bytes = frames * ow->j2o_frame_bytes;
+      jack_ringbuffer_read (ow->j2o_rb, (void *) ow->j2o_buf_res, bytes);
+      ow->j2o_data.input_frames = frames;
+      ow->j2o_data.src_ratio = (double) ow->frames_per_transfer / frames;
       //We should NOT use the simple API but since this only happens very occasionally and mostly at startup, this has very low impact on audio quality.
-      res = src_simple (&ob->j2o_data, SRC_SINC_FASTEST,
-			ob->device_desc->inputs);
+      res = src_simple (&ow->j2o_data, SRC_SINC_FASTEST,
+			ow->device_desc->inputs);
       if (res)
 	{
 	  debug_print (2, "j2o: Error while resampling: %s\n",
 		       src_strerror (res));
 	}
-      else if (ob->j2o_data.output_frames_gen != ob->frames_per_transfer)
+      else if (ow->j2o_data.output_frames_gen != ow->frames_per_transfer)
 	{
 	  error_print
 	    ("j2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
-	     ob->j2o_data.src_ratio, ob->j2o_data.output_frames_gen,
-	     ob->frames_per_transfer);
+	     ow->j2o_data.src_ratio, ow->j2o_data.output_frames_gen,
+	     ow->frames_per_transfer);
 	}
     }
 
 set_blocks:
-  f = ob->j2o_buf;
-  for (int i = 0; i < ob->blocks_per_transfer; i++)
+  f = ow->j2o_buf;
+  for (int i = 0; i < ow->blocks_per_transfer; i++)
     {
-      blk = get_nth_usb_out_blk (ob, i);
-      ob->s_counter += OB_FRAMES_PER_BLOCK;
-      blk->s_counter = htobe16 (ob->s_counter);
+      blk = get_nth_usb_out_blk (ow, i);
+      ow->s_counter += OB_FRAMES_PER_BLOCK;
+      blk->s_counter = htobe16 (ow->s_counter);
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < ob->device_desc->inputs; k++)
+	  for (int k = 0; k < ow->device_desc->inputs; k++)
 	    {
 	      hv = htobe32 ((int32_t) (*f * INT_MAX));
 	      *s = hv;
@@ -411,9 +411,9 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 {
   struct ob_midi_event event;
   int length;
-  struct overwitch *ob = xfr->user_data;
+  struct overwitch *ow = xfr->user_data;
 
-  if (overwitch_get_status (ob) < OB_STATUS_RUN)
+  if (overwitch_get_status (ow) < OB_STATUS_RUN)
     {
       goto end;
     }
@@ -421,11 +421,11 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
       length = 0;
-      event.frames = jack_frame_time (ob->jclient);
+      event.frames = jack_frame_time (ow->jclient);
 
       while (length < xfr->actual_length)
 	{
-	  memcpy (event.bytes, &ob->o2j_midi_data[length],
+	  memcpy (event.bytes, &ow->o2j_midi_data[length],
 		  OB_MIDI_EVENT_SIZE);
 	  //Note-off, Note-on, Poly-KeyPress, Control Change, Program Change, Channel Pressure, PitchBend Change, Single Byte
 	  if (event.bytes[0] >= 0x08 && event.bytes[0] <= 0x0f)
@@ -434,10 +434,10 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 			   event.bytes[0], event.bytes[1], event.bytes[2],
 			   event.bytes[3], event.frames);
 
-	      if (jack_ringbuffer_write_space (ob->o2j_rb_midi) >=
+	      if (jack_ringbuffer_write_space (ow->o2j_rb_midi) >=
 		  sizeof (struct ob_midi_event))
 		{
-		  jack_ringbuffer_write (ob->o2j_rb_midi, (void *) &event,
+		  jack_ringbuffer_write (ow->o2j_rb_midi, (void *) &event,
 					 sizeof (struct ob_midi_event));
 		}
 	      else
@@ -459,17 +459,17 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
     }
 
 end:
-  prepare_cycle_in_midi (ob);
+  prepare_cycle_in_midi (ow);
 }
 
 static void LIBUSB_CALL
 cb_xfr_out_midi (struct libusb_transfer *xfr)
 {
-  struct overwitch *ob = xfr->user_data;
+  struct overwitch *ow = xfr->user_data;
 
-  pthread_spin_lock (&ob->j2o_midi_lock);
-  ob->j2o_midi_ready = 1;
-  pthread_spin_unlock (&ob->j2o_midi_lock);
+  pthread_spin_lock (&ow->j2o_midi_lock);
+  ow->j2o_midi_ready = 1;
+  pthread_spin_unlock (&ow->j2o_midi_lock);
 
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
     {
@@ -479,80 +479,80 @@ cb_xfr_out_midi (struct libusb_transfer *xfr)
 }
 
 static void
-prepare_cycle_out (struct overwitch *ob)
+prepare_cycle_out (struct overwitch *ow)
 {
-  libusb_fill_interrupt_transfer (ob->xfr_out, ob->device_handle,
-				  AUDIO_OUT_EP, (void *) ob->usb_data_out,
-				  ob->usb_data_out_len, cb_xfr_out, ob, 0);
+  libusb_fill_interrupt_transfer (ow->xfr_out, ow->device_handle,
+				  AUDIO_OUT_EP, (void *) ow->usb_data_out,
+				  ow->usb_data_out_len, cb_xfr_out, ow, 0);
 
-  int err = libusb_submit_transfer (ob->xfr_out);
+  int err = libusb_submit_transfer (ow->xfr_out);
   if (err)
     {
       error_print ("j2o: Error when submitting USB audio transfer: %s\n",
 		   libusb_strerror (err));
-      overwitch_set_status (ob, OB_STATUS_ERROR);
+      overwitch_set_status (ow, OB_STATUS_ERROR);
     }
 }
 
 static void
-prepare_cycle_in (struct overwitch *ob)
+prepare_cycle_in (struct overwitch *ow)
 {
-  libusb_fill_interrupt_transfer (ob->xfr_in, ob->device_handle,
-				  AUDIO_IN_EP, (void *) ob->usb_data_in,
-				  ob->usb_data_in_len, cb_xfr_in, ob, 0);
+  libusb_fill_interrupt_transfer (ow->xfr_in, ow->device_handle,
+				  AUDIO_IN_EP, (void *) ow->usb_data_in,
+				  ow->usb_data_in_len, cb_xfr_in, ow, 0);
 
-  int err = libusb_submit_transfer (ob->xfr_in);
+  int err = libusb_submit_transfer (ow->xfr_in);
   if (err)
     {
       error_print ("o2j: Error when submitting USB audio in transfer: %s\n",
 		   libusb_strerror (err));
-      overwitch_set_status (ob, OB_STATUS_ERROR);
+      overwitch_set_status (ow, OB_STATUS_ERROR);
     }
 }
 
 static void
-prepare_cycle_in_midi (struct overwitch *ob)
+prepare_cycle_in_midi (struct overwitch *ow)
 {
-  libusb_fill_bulk_transfer (ob->xfr_in_midi, ob->device_handle,
-			     MIDI_IN_EP, (void *) ob->o2j_midi_data,
-			     USB_BULK_MIDI_SIZE, cb_xfr_in_midi, ob, 0);
+  libusb_fill_bulk_transfer (ow->xfr_in_midi, ow->device_handle,
+			     MIDI_IN_EP, (void *) ow->o2j_midi_data,
+			     USB_BULK_MIDI_SIZE, cb_xfr_in_midi, ow, 0);
 
-  int err = libusb_submit_transfer (ob->xfr_in_midi);
+  int err = libusb_submit_transfer (ow->xfr_in_midi);
   if (err)
     {
       error_print ("o2j: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
-      overwitch_set_status (ob, OB_STATUS_ERROR);
+      overwitch_set_status (ow, OB_STATUS_ERROR);
     }
 }
 
 static void
-prepare_cycle_out_midi (struct overwitch *ob)
+prepare_cycle_out_midi (struct overwitch *ow)
 {
-  libusb_fill_bulk_transfer (ob->xfr_out_midi, ob->device_handle, MIDI_OUT_EP,
-			     (void *) ob->j2o_midi_data,
-			     USB_BULK_MIDI_SIZE, cb_xfr_out_midi, ob, 0);
+  libusb_fill_bulk_transfer (ow->xfr_out_midi, ow->device_handle, MIDI_OUT_EP,
+			     (void *) ow->j2o_midi_data,
+			     USB_BULK_MIDI_SIZE, cb_xfr_out_midi, ow, 0);
 
-  int err = libusb_submit_transfer (ob->xfr_out_midi);
+  int err = libusb_submit_transfer (ow->xfr_out_midi);
   if (err)
     {
       error_print ("j2o: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
-      overwitch_set_status (ob, OB_STATUS_ERROR);
+      overwitch_set_status (ow, OB_STATUS_ERROR);
     }
 }
 
 static void
-usb_shutdown (struct overwitch *ob)
+usb_shutdown (struct overwitch *ow)
 {
-  libusb_close (ob->device_handle);
-  libusb_exit (ob->context);
+  libusb_close (ow->device_handle);
+  libusb_exit (ow->context);
 }
 
 // initialization taken from sniffed session
 
 overwitch_err_t
-overwitch_init (struct overwitch *ob, uint8_t bus, uint8_t address,
+overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
 		int blocks_per_transfer)
 {
   int i, ret, err;
@@ -564,13 +564,13 @@ overwitch_init (struct overwitch *ob, uint8_t bus, uint8_t address,
   struct overwitch_usb_blk *blk;
 
   // libusb setup
-  if (libusb_init (&ob->context) != LIBUSB_SUCCESS)
+  if (libusb_init (&ow->context) != LIBUSB_SUCCESS)
     {
       return OB_LIBUSB_INIT_FAILED;
     }
 
-  ob->device_handle = NULL;
-  count = libusb_get_device_list (ob->context, &list);
+  ow->device_handle = NULL;
+  count = libusb_get_device_list (ow->context, &list);
   for (i = 0; i < count; i++)
     {
       device = list[i];
@@ -585,7 +585,7 @@ overwitch_init (struct overwitch *ob, uint8_t bus, uint8_t address,
 	  libusb_get_bus_number (device) == bus &&
 	  libusb_get_device_address (device) == address)
 	{
-	  if (libusb_open (device, &ob->device_handle))
+	  if (libusb_open (device, &ow->device_handle))
 	    {
 	      error_print ("Error while opening device: %s\n",
 			   libusb_error_name (err));
@@ -597,7 +597,7 @@ overwitch_init (struct overwitch *ob, uint8_t bus, uint8_t address,
   err = 0;
   libusb_free_device_list (list, count);
 
-  if (!ob->device_handle)
+  if (!ow->device_handle)
     {
       ret = OB_CANT_FIND_DEV;
       goto end;
@@ -608,88 +608,88 @@ overwitch_init (struct overwitch *ob, uint8_t bus, uint8_t address,
       debug_print (2, "Checking for %s...\n", OB_DEVICE_DESCS[i]->name);
       if (strcmp (OB_DEVICE_DESCS[i]->name, name) == 0)
 	{
-	  ob->device_desc = OB_DEVICE_DESCS[i];
+	  ow->device_desc = OB_DEVICE_DESCS[i];
 	  break;
 	}
     }
 
-  if (!ob->device_desc)
+  if (!ow->device_desc)
     {
       ret = OB_CANT_FIND_DEV;
       goto end;
     }
 
-  printf ("Device: %s (outputs: %d, inputs: %d)\n", ob->device_desc->name,
-	  ob->device_desc->outputs, ob->device_desc->inputs);
+  printf ("Device: %s (outputs: %d, inputs: %d)\n", ow->device_desc->name,
+	  ow->device_desc->outputs, ow->device_desc->inputs);
 
   ret = OB_OK;
-  err = libusb_set_configuration (ob->device_handle, 1);
+  err = libusb_set_configuration (ow->device_handle, 1);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_SET_USB_CONFIG;
       goto end;
     }
-  err = libusb_claim_interface (ob->device_handle, 1);
+  err = libusb_claim_interface (ow->device_handle, 1);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLAIM_IF;
       goto end;
     }
-  err = libusb_set_interface_alt_setting (ob->device_handle, 1, 3);
+  err = libusb_set_interface_alt_setting (ow->device_handle, 1, 3);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_SET_ALT_SETTING;
       goto end;
     }
-  err = libusb_claim_interface (ob->device_handle, 2);
+  err = libusb_claim_interface (ow->device_handle, 2);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLAIM_IF;
       goto end;
     }
-  err = libusb_set_interface_alt_setting (ob->device_handle, 2, 2);
+  err = libusb_set_interface_alt_setting (ow->device_handle, 2, 2);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_SET_ALT_SETTING;
       goto end;
     }
-  err = libusb_claim_interface (ob->device_handle, 3);
+  err = libusb_claim_interface (ow->device_handle, 3);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLAIM_IF;
       goto end;
     }
-  err = libusb_set_interface_alt_setting (ob->device_handle, 3, 0);
+  err = libusb_set_interface_alt_setting (ow->device_handle, 3, 0);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_SET_ALT_SETTING;
       goto end;
     }
-  err = libusb_clear_halt (ob->device_handle, AUDIO_IN_EP);
+  err = libusb_clear_halt (ow->device_handle, AUDIO_IN_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLEAR_EP;
       goto end;
     }
-  err = libusb_clear_halt (ob->device_handle, AUDIO_OUT_EP);
+  err = libusb_clear_halt (ow->device_handle, AUDIO_OUT_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLEAR_EP;
       goto end;
     }
-  err = libusb_clear_halt (ob->device_handle, MIDI_IN_EP);
+  err = libusb_clear_halt (ow->device_handle, MIDI_IN_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLEAR_EP;
       goto end;
     }
-  err = libusb_clear_halt (ob->device_handle, MIDI_OUT_EP);
+  err = libusb_clear_halt (ow->device_handle, MIDI_OUT_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_CLEAR_EP;
       goto end;
     }
-  err = prepare_transfers (ob);
+  err = prepare_transfers (ow);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OB_CANT_PREPARE_TRANSFER;
@@ -698,67 +698,67 @@ overwitch_init (struct overwitch *ob, uint8_t bus, uint8_t address,
 end:
   if (ret == OB_OK)
     {
-      pthread_spin_init (&ob->lock, PTHREAD_PROCESS_SHARED);
+      pthread_spin_init (&ow->lock, PTHREAD_PROCESS_SHARED);
 
-      ob->blocks_per_transfer = blocks_per_transfer;
-      ob->frames_per_transfer = OB_FRAMES_PER_BLOCK * ob->blocks_per_transfer;
+      ow->blocks_per_transfer = blocks_per_transfer;
+      ow->frames_per_transfer = OB_FRAMES_PER_BLOCK * ow->blocks_per_transfer;
 
-      ob->j2o_audio_enabled = 0;
+      ow->j2o_audio_enabled = 0;
 
-      ob->usb_data_in_blk_len =
+      ow->usb_data_in_blk_len =
 	sizeof (struct overwitch_usb_blk) +
-	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ob->device_desc->outputs;
-      ob->usb_data_out_blk_len =
+	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ow->device_desc->outputs;
+      ow->usb_data_out_blk_len =
 	sizeof (struct overwitch_usb_blk) +
-	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ob->device_desc->inputs;
+	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ow->device_desc->inputs;
 
-      ob->usb_data_in_len = ob->usb_data_in_blk_len * ob->blocks_per_transfer;
-      ob->usb_data_out_len =
-	ob->usb_data_out_blk_len * ob->blocks_per_transfer;
-      ob->usb_data_in = malloc (ob->usb_data_in_len);
-      ob->usb_data_out = malloc (ob->usb_data_out_len);
-      memset (ob->usb_data_in, 0, ob->usb_data_in_len);
-      memset (ob->usb_data_out, 0, ob->usb_data_out_len);
+      ow->usb_data_in_len = ow->usb_data_in_blk_len * ow->blocks_per_transfer;
+      ow->usb_data_out_len =
+	ow->usb_data_out_blk_len * ow->blocks_per_transfer;
+      ow->usb_data_in = malloc (ow->usb_data_in_len);
+      ow->usb_data_out = malloc (ow->usb_data_out_len);
+      memset (ow->usb_data_in, 0, ow->usb_data_in_len);
+      memset (ow->usb_data_out, 0, ow->usb_data_out_len);
 
-      for (int i = 0; i < ob->blocks_per_transfer; i++)
+      for (int i = 0; i < ow->blocks_per_transfer; i++)
 	{
-	  blk = get_nth_usb_out_blk (ob, i);
+	  blk = get_nth_usb_out_blk (ow, i);
 	  blk->header = htobe16 (0x07ff);
 	}
 
-      ob->j2o_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc->inputs;
-      ob->o2j_frame_bytes = OB_BYTES_PER_FRAME * ob->device_desc->outputs;
+      ow->j2o_frame_bytes = OB_BYTES_PER_FRAME * ow->device_desc->inputs;
+      ow->o2j_frame_bytes = OB_BYTES_PER_FRAME * ow->device_desc->outputs;
 
-      ob->j2o_buf_size = ob->frames_per_transfer * ob->j2o_frame_bytes;
-      ob->o2j_buf_size = ob->frames_per_transfer * ob->o2j_frame_bytes;
-      ob->j2o_buf = malloc (ob->j2o_buf_size);
-      ob->o2j_buf = malloc (ob->o2j_buf_size);
-      memset (ob->j2o_buf, 0, ob->j2o_buf_size);
-      memset (ob->o2j_buf, 0, ob->o2j_buf_size);
+      ow->j2o_buf_size = ow->frames_per_transfer * ow->j2o_frame_bytes;
+      ow->o2j_buf_size = ow->frames_per_transfer * ow->o2j_frame_bytes;
+      ow->j2o_buf = malloc (ow->j2o_buf_size);
+      ow->o2j_buf = malloc (ow->o2j_buf_size);
+      memset (ow->j2o_buf, 0, ow->j2o_buf_size);
+      memset (ow->o2j_buf, 0, ow->o2j_buf_size);
 
       //o2j resampler
-      ob->j2o_buf_res = malloc (ob->j2o_buf_size);
-      memset (ob->j2o_buf_res, 0, ob->j2o_buf_size);
-      ob->j2o_data.data_in = ob->j2o_buf_res;
-      ob->j2o_data.data_out = ob->j2o_buf;
-      ob->j2o_data.end_of_input = 1;
-      ob->j2o_data.input_frames = ob->frames_per_transfer;
-      ob->j2o_data.output_frames = ob->frames_per_transfer;
+      ow->j2o_buf_res = malloc (ow->j2o_buf_size);
+      memset (ow->j2o_buf_res, 0, ow->j2o_buf_size);
+      ow->j2o_data.data_in = ow->j2o_buf_res;
+      ow->j2o_data.data_out = ow->j2o_buf;
+      ow->j2o_data.end_of_input = 1;
+      ow->j2o_data.input_frames = ow->frames_per_transfer;
+      ow->j2o_data.output_frames = ow->frames_per_transfer;
 
       //MIDI
-      ob->j2o_midi_data = malloc (USB_BULK_MIDI_SIZE);
-      ob->o2j_midi_data = malloc (USB_BULK_MIDI_SIZE);
-      memset (ob->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
-      memset (ob->o2j_midi_data, 0, USB_BULK_MIDI_SIZE);
-      ob->j2o_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
-      ob->o2j_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
-      jack_ringbuffer_mlock (ob->j2o_rb_midi);
-      jack_ringbuffer_mlock (ob->o2j_rb_midi);
-      pthread_spin_init (&ob->j2o_midi_lock, PTHREAD_PROCESS_SHARED);
+      ow->j2o_midi_data = malloc (USB_BULK_MIDI_SIZE);
+      ow->o2j_midi_data = malloc (USB_BULK_MIDI_SIZE);
+      memset (ow->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
+      memset (ow->o2j_midi_data, 0, USB_BULK_MIDI_SIZE);
+      ow->j2o_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
+      ow->o2j_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
+      jack_ringbuffer_mlock (ow->j2o_rb_midi);
+      jack_ringbuffer_mlock (ow->o2j_rb_midi);
+      pthread_spin_init (&ow->j2o_midi_lock, PTHREAD_PROCESS_SHARED);
     }
   else
     {
-      usb_shutdown (ob);
+      usb_shutdown (ow);
       if (err)
 	{
 	  error_print ("Error while initializing device: %s\n",
@@ -784,30 +784,30 @@ run_j2o_midi (void *data)
   jack_time_t diff;
   struct timespec sleep_time, smallest_sleep_time;
   struct ob_midi_event event;
-  struct overwitch *ob = data;
+  struct overwitch *ow = data;
 
   smallest_sleep_time.tv_sec = 0;
-  smallest_sleep_time.tv_nsec = SAMPLE_TIME_NS * jack_get_buffer_size (ob->jclient) / 2;	//Average wait time
+  smallest_sleep_time.tv_nsec = SAMPLE_TIME_NS * jack_get_buffer_size (ow->jclient) / 2;	//Average wait time
 
   pos = 0;
   diff = 0;
   last_time = jack_get_time ();
-  ob->j2o_midi_ready = 1;
+  ow->j2o_midi_ready = 1;
   while (1)
     {
 
-      while (jack_ringbuffer_read_space (ob->j2o_rb_midi) >=
+      while (jack_ringbuffer_read_space (ow->j2o_rb_midi) >=
 	     sizeof (struct ob_midi_event) && pos < USB_BULK_MIDI_SIZE)
 	{
 	  if (!pos)
 	    {
-	      memset (ob->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
+	      memset (ow->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
 	      diff = 0;
 	    }
 
-	  jack_ringbuffer_peek (ob->j2o_rb_midi, (void *) &event,
+	  jack_ringbuffer_peek (ow->j2o_rb_midi, (void *) &event,
 				sizeof (struct ob_midi_event));
-	  event_time = jack_frames_to_time (ob->jclient, event.frames);
+	  event_time = jack_frames_to_time (ow->jclient, event.frames);
 
 	  if (event_time > last_time)
 	    {
@@ -816,9 +816,9 @@ run_j2o_midi (void *data)
 	      break;
 	    }
 
-	  memcpy (&ob->j2o_midi_data[pos], event.bytes, OB_MIDI_EVENT_SIZE);
+	  memcpy (&ow->j2o_midi_data[pos], event.bytes, OB_MIDI_EVENT_SIZE);
 	  pos += OB_MIDI_EVENT_SIZE;
-	  jack_ringbuffer_read_advance (ob->j2o_rb_midi,
+	  jack_ringbuffer_read_advance (ow->j2o_rb_midi,
 					sizeof (struct ob_midi_event));
 	}
 
@@ -826,8 +826,8 @@ run_j2o_midi (void *data)
 	{
 	  debug_print (2, "Event frames: %u; diff: %lu\n", event.frames,
 		       diff);
-	  ob->j2o_midi_ready = 0;
-	  prepare_cycle_out_midi (ob);
+	  ow->j2o_midi_ready = 0;
+	  prepare_cycle_out_midi (ow);
 	  pos = 0;
 	}
 
@@ -842,18 +842,18 @@ run_j2o_midi (void *data)
 	  nanosleep (&smallest_sleep_time, NULL);
 	}
 
-      pthread_spin_lock (&ob->j2o_midi_lock);
-      j2o_midi_ready = ob->j2o_midi_ready;
-      pthread_spin_unlock (&ob->j2o_midi_lock);
+      pthread_spin_lock (&ow->j2o_midi_lock);
+      j2o_midi_ready = ow->j2o_midi_ready;
+      pthread_spin_unlock (&ow->j2o_midi_lock);
       while (!j2o_midi_ready)
 	{
 	  nanosleep (&smallest_sleep_time, NULL);
-	  pthread_spin_lock (&ob->j2o_midi_lock);
-	  j2o_midi_ready = ob->j2o_midi_ready;
-	  pthread_spin_unlock (&ob->j2o_midi_lock);
+	  pthread_spin_lock (&ow->j2o_midi_lock);
+	  j2o_midi_ready = ow->j2o_midi_ready;
+	  pthread_spin_unlock (&ow->j2o_midi_lock);
 	};
 
-      if (overwitch_get_status (ob) <= OB_STATUS_STOP)
+      if (overwitch_get_status (ow) <= OB_STATUS_STOP)
 	{
 	  break;
 	}
@@ -866,71 +866,71 @@ void *
 run_audio_and_o2j_midi (void *data)
 {
   size_t rsj2o, bytes, frames;
-  struct overwitch *ob = data;
+  struct overwitch *ow = data;
 
-  while (overwitch_get_status (ob) == OB_STATUS_READY);
+  while (overwitch_get_status (ow) == OB_STATUS_READY);
 
   //status == OB_STATUS_BOOT_OVERBRIDGE
 
-  prepare_cycle_in (ob);
-  prepare_cycle_out (ob);
-  prepare_cycle_in_midi (ob);
+  prepare_cycle_in (ow);
+  prepare_cycle_out (ow);
+  prepare_cycle_in_midi (ow);
 
   while (1)
     {
-      ob->j2o_latency = 0;
-      ob->j2o_max_latency = 0;
-      ob->reading_at_j2o_end = 0;
+      ow->j2o_latency = 0;
+      ow->j2o_max_latency = 0;
+      ow->reading_at_j2o_end = 0;
 
       //status == OB_STATUS_BOOT_OVERBRIDGE
 
-      pthread_spin_lock (&ob->lock);
-      if (ob->init_sample_counter)
+      pthread_spin_lock (&ow->lock);
+      if (ow->init_sample_counter)
 	{
-	  ob->init_sample_counter (ob->sample_counter_data, OB_SAMPLE_RATE,
-				   ob->frames_per_transfer);
+	  ow->init_sample_counter (ow->sample_counter_data, OB_SAMPLE_RATE,
+				   ow->frames_per_transfer);
 	}
-      ob->status = OB_STATUS_BOOT_JACK;
-      pthread_spin_unlock (&ob->lock);
+      ow->status = OB_STATUS_BOOT_JACK;
+      pthread_spin_unlock (&ow->lock);
 
-      while (overwitch_get_status (ob) >= OB_STATUS_BOOT_JACK)
+      while (overwitch_get_status (ow) >= OB_STATUS_BOOT_JACK)
 	{
-	  libusb_handle_events_completed (ob->context, NULL);
+	  libusb_handle_events_completed (ow->context, NULL);
 	}
 
-      if (overwitch_get_status (ob) <= OB_STATUS_STOP)
+      if (overwitch_get_status (ow) <= OB_STATUS_STOP)
 	{
 	  break;
 	}
 
-      overwitch_set_status (ob, OB_STATUS_BOOT_OVERBRIDGE);
+      overwitch_set_status (ow, OB_STATUS_BOOT_OVERBRIDGE);
 
-      rsj2o = jack_ringbuffer_read_space (ob->j2o_rb);
-      frames = rsj2o / ob->j2o_frame_bytes;
-      bytes = frames * ob->j2o_frame_bytes;
-      jack_ringbuffer_read_advance (ob->j2o_rb, bytes);
-      memset (ob->j2o_buf, 0, ob->j2o_buf_size);
+      rsj2o = jack_ringbuffer_read_space (ow->j2o_rb);
+      frames = rsj2o / ow->j2o_frame_bytes;
+      bytes = frames * ow->j2o_frame_bytes;
+      jack_ringbuffer_read_advance (ow->j2o_rb, bytes);
+      memset (ow->j2o_buf, 0, ow->j2o_buf_size);
     }
 
   return NULL;
 }
 
 int
-overwitch_activate (struct overwitch *ob, jack_client_t * jclient)
+overwitch_activate (struct overwitch *ow, jack_client_t * jclient)
 {
   int ret;
 
-  ob->j2o_rb = jack_ringbuffer_create (MAX_OW_LATENCY * ob->j2o_frame_bytes);
-  jack_ringbuffer_mlock (ob->j2o_rb);
-  ob->o2j_rb = jack_ringbuffer_create (MAX_OW_LATENCY * ob->o2j_frame_bytes);
-  jack_ringbuffer_mlock (ob->o2j_rb);
+  ow->j2o_rb = jack_ringbuffer_create (MAX_OW_LATENCY * ow->j2o_frame_bytes);
+  jack_ringbuffer_mlock (ow->j2o_rb);
+  ow->o2j_rb = jack_ringbuffer_create (MAX_OW_LATENCY * ow->o2j_frame_bytes);
+  jack_ringbuffer_mlock (ow->o2j_rb);
 
-  ob->jclient = jclient;
-  ob->s_counter = 0;
+  ow->jclient = jclient;
+  ow->s_counter = 0;
 
-  ob->status = OB_STATUS_READY;
+  ow->status = OB_STATUS_READY;
   debug_print (1, "Starting j2o MIDI thread...\n");
-  ret = pthread_create (&ob->midi_tinfo, NULL, run_j2o_midi, ob);
+  ret = pthread_create (&ow->midi_tinfo, NULL, run_j2o_midi, ow);
   if (ret)
     {
       error_print ("Could not start MIDI thread\n");
@@ -939,8 +939,8 @@ overwitch_activate (struct overwitch *ob, jack_client_t * jclient)
 
   debug_print (1, "Starting audio and o2j MIDI thread...\n");
   ret =
-    pthread_create (&ob->audio_and_o2j_midi, NULL, run_audio_and_o2j_midi,
-		    ob);
+    pthread_create (&ow->audio_and_o2j_midi, NULL, run_audio_and_o2j_midi,
+		    ow);
   if (ret)
     {
       error_print ("Could not start device thread\n");
@@ -950,10 +950,10 @@ overwitch_activate (struct overwitch *ob, jack_client_t * jclient)
 }
 
 void
-overwitch_wait (struct overwitch *ob)
+overwitch_wait (struct overwitch *ow)
 {
-  pthread_join (ob->audio_and_o2j_midi, NULL);
-  pthread_join (ob->midi_tinfo, NULL);
+  pthread_join (ow->audio_and_o2j_midi, NULL);
+  pthread_join (ow->midi_tinfo, NULL);
 }
 
 const char *
@@ -963,67 +963,67 @@ overbrigde_get_err_str (overwitch_err_t errcode)
 }
 
 void
-overwitch_destroy (struct overwitch *ob)
+overwitch_destroy (struct overwitch *ow)
 {
-  usb_shutdown (ob);
-  free_transfers (ob);
-  if (ob->j2o_rb)
+  usb_shutdown (ow);
+  free_transfers (ow);
+  if (ow->j2o_rb)
     {
-      jack_ringbuffer_free (ob->j2o_rb);
+      jack_ringbuffer_free (ow->j2o_rb);
     }
-  if (ob->o2j_rb)
+  if (ow->o2j_rb)
     {
-      jack_ringbuffer_free (ob->o2j_rb);
+      jack_ringbuffer_free (ow->o2j_rb);
     }
-  jack_ringbuffer_free (ob->o2j_rb_midi);
-  free (ob->j2o_buf);
-  free (ob->j2o_buf_res);
-  free (ob->o2j_buf);
-  free (ob->usb_data_in);
-  free (ob->usb_data_out);
-  free (ob->j2o_midi_data);
-  free (ob->o2j_midi_data);
-  pthread_spin_destroy (&ob->lock);
-  pthread_spin_destroy (&ob->j2o_midi_lock);
+  jack_ringbuffer_free (ow->o2j_rb_midi);
+  free (ow->j2o_buf);
+  free (ow->j2o_buf_res);
+  free (ow->o2j_buf);
+  free (ow->usb_data_in);
+  free (ow->usb_data_out);
+  free (ow->j2o_midi_data);
+  free (ow->o2j_midi_data);
+  pthread_spin_destroy (&ow->lock);
+  pthread_spin_destroy (&ow->j2o_midi_lock);
 }
 
 inline overwitch_status_t
-overwitch_get_status (struct overwitch *ob)
+overwitch_get_status (struct overwitch *ow)
 {
   overwitch_status_t status;
-  pthread_spin_lock (&ob->lock);
-  status = ob->status;
-  pthread_spin_unlock (&ob->lock);
+  pthread_spin_lock (&ow->lock);
+  status = ow->status;
+  pthread_spin_unlock (&ow->lock);
   return status;
 }
 
 inline void
-overwitch_set_status (struct overwitch *ob, overwitch_status_t status)
+overwitch_set_status (struct overwitch *ow, overwitch_status_t status)
 {
-  pthread_spin_lock (&ob->lock);
-  ob->status = status;
-  pthread_spin_unlock (&ob->lock);
+  pthread_spin_lock (&ow->lock);
+  ow->status = status;
+  pthread_spin_unlock (&ow->lock);
 }
 
 inline int
-overwitch_is_j2o_audio_enable (struct overwitch *ob)
+overwitch_is_j2o_audio_enable (struct overwitch *ow)
 {
   int enabled;
-  pthread_spin_lock (&ob->lock);
-  enabled = ob->j2o_audio_enabled;
-  pthread_spin_unlock (&ob->lock);
+  pthread_spin_lock (&ow->lock);
+  enabled = ow->j2o_audio_enabled;
+  pthread_spin_unlock (&ow->lock);
   return enabled;
 }
 
 inline void
-overwitch_set_j2o_audio_enable (struct overwitch *ob, int enabled)
+overwitch_set_j2o_audio_enable (struct overwitch *ow, int enabled)
 {
-  int last = overwitch_is_j2o_audio_enable (ob);
+  int last = overwitch_is_j2o_audio_enable (ow);
   if (last != enabled)
     {
-      pthread_spin_lock (&ob->lock);
-      ob->j2o_audio_enabled = enabled;
-      pthread_spin_unlock (&ob->lock);
+      pthread_spin_lock (&ow->lock);
+      ow->j2o_audio_enabled = enabled;
+      pthread_spin_unlock (&ow->lock);
       debug_print (1, "Setting j2o audio to %d...\n", enabled);
     }
 }
