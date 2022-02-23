@@ -202,6 +202,9 @@ struct overwitch_device_desc
   char *output_track_names[OB_MAX_TRACKS];
 };
 
+typedef void (*overwitch_init_sample_counter) (void *, double, int);
+typedef void (*overwitch_inc_sample_counter) (void *, int);
+
 struct overwitch
 {
   int blocks_per_transfer;
@@ -213,12 +216,10 @@ struct overwitch
   size_t j2o_max_latency;
   pthread_t audio_and_o2j_midi;
   pthread_t midi_tinfo;
-  int priority;
   uint16_t s_counter;
   libusb_context *context;
   libusb_device_handle *device_handle;
   const struct overwitch_device_desc *device_desc;
-  struct dll_counter o2j_dll_counter;
   struct libusb_transfer *xfr_in;
   struct libusb_transfer *xfr_out;
   char *usb_data_in;
@@ -249,6 +250,10 @@ struct overwitch
   int reading_at_j2o_end;
   pthread_spinlock_t j2o_midi_lock;
   int j2o_midi_ready;
+  //sample counter
+  void *sample_counter_data;
+  overwitch_init_sample_counter init_sample_counter;
+  overwitch_inc_sample_counter inc_sample_counter;
 };
 
 struct ob_midi_event
@@ -263,7 +268,7 @@ void set_self_max_priority ();
 
 overwitch_err_t overwitch_init (struct overwitch *, uint8_t, uint8_t, int);
 
-int overwitch_activate (struct overwitch *, jack_client_t *, int);
+int overwitch_activate (struct overwitch *, jack_client_t *);
 
 void overwitch_destroy (struct overwitch *);
 

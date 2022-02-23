@@ -370,10 +370,10 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   pthread_spin_lock (&jclient->ow.lock);
   jclient->j2o_latency = jclient->ow.j2o_latency;
   jclient->j2o_max_latency = jclient->ow.j2o_max_latency;
-  dll->ko0 = jclient->ow.o2j_dll_counter.i0.frames;
-  dll->to0 = jclient->ow.o2j_dll_counter.i0.time;
-  dll->ko1 = jclient->ow.o2j_dll_counter.i1.frames;
-  dll->to1 = jclient->ow.o2j_dll_counter.i1.time;
+  dll->ko0 = jclient->o2j_dll.counter.i0.frames;
+  dll->to0 = jclient->o2j_dll.counter.i0.time;
+  dll->ko1 = jclient->o2j_dll.counter.i1.frames;
+  dll->to1 = jclient->o2j_dll.counter.i1.time;
   jclient->status = jclient->ow.status;
   pthread_spin_unlock (&jclient->ow.lock);
 
@@ -670,6 +670,16 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   return 0;
 }
 
+static void
+set_rt_priority (pthread_t *thread, int priority)
+{
+  int err = jack_acquire_real_time_scheduling (*thread, priority);
+  if (err)
+    {
+      error_print ("Could not set real time priority\n");
+    }
+}
+
 void
 jclient_exit (struct jclient *jclient)
 {
@@ -698,6 +708,10 @@ jclient_run (struct jclient *jclient)
       error_print ("USB error: %s\n", overbrigde_get_err_str (ob_status));
       goto end;
     }
+
+  jclient->ow.sample_counter_data = &jclient->o2j_dll.counter;
+  jclient->ow.init_sample_counter = dll_counter_init;
+  jclient->ow.inc_sample_counter = dll_counter_inc;
 
   jclient->client =
     jack_client_open (jclient->ow.device_desc->name, options, &status, NULL);
@@ -823,10 +837,13 @@ jclient_run (struct jclient *jclient)
     src_callback_new (jclient_o2j_reader, jclient->quality,
 		      jclient->ow.device_desc->outputs, NULL, jclient);
 
-  if (overwitch_activate (&jclient->ow, jclient->client, jclient->priority))
+  if (overwitch_activate (&jclient->ow, jclient->client))
     {
       goto cleanup_jack;
     }
+
+  set_rt_priority(&jclient->ow.midi_tinfo, jclient->priority);
+  set_rt_priority(&jclient->ow.audio_and_o2j_midi, jclient->priority);
 
   jclient_set_sample_rate_cb (jack_get_sample_rate (jclient->client),
 			      jclient);

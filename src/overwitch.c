@@ -238,7 +238,11 @@ set_usb_input_data_blks (struct overwitch *ob)
   overwitch_status_t status;
 
   pthread_spin_lock (&ob->lock);
-  dll_counter_inc (&ob->o2j_dll_counter, ob->frames_per_transfer);
+  if (ob->inc_sample_counter)
+    {
+      ob->inc_sample_counter (ob->sample_counter_data,
+			      ob->frames_per_transfer);
+    }
   status = ob->status;
   pthread_spin_unlock (&ob->lock);
 
@@ -785,8 +789,6 @@ run_j2o_midi (void *data)
   smallest_sleep_time.tv_sec = 0;
   smallest_sleep_time.tv_nsec = SAMPLE_TIME_NS * jack_get_buffer_size (ob->jclient) / 2;	//Average wait time
 
-  set_rt_priority (ob->priority);
-
   pos = 0;
   diff = 0;
   last_time = jack_get_time ();
@@ -866,8 +868,6 @@ run_audio_and_o2j_midi (void *data)
   size_t rsj2o, bytes, frames;
   struct overwitch *ob = data;
 
-  set_rt_priority (ob->priority);
-
   while (overwitch_get_status (ob) == OB_STATUS_READY);
 
   //status == OB_STATUS_BOOT_OVERBRIDGE
@@ -885,8 +885,11 @@ run_audio_and_o2j_midi (void *data)
       //status == OB_STATUS_BOOT_OVERBRIDGE
 
       pthread_spin_lock (&ob->lock);
-      dll_counter_init (&ob->o2j_dll_counter, OB_SAMPLE_RATE,
-			ob->frames_per_transfer);
+      if (ob->init_sample_counter)
+	{
+	  ob->init_sample_counter (ob->sample_counter_data, OB_SAMPLE_RATE,
+				   ob->frames_per_transfer);
+	}
       ob->status = OB_STATUS_BOOT_JACK;
       pthread_spin_unlock (&ob->lock);
 
@@ -913,12 +916,9 @@ run_audio_and_o2j_midi (void *data)
 }
 
 int
-overwitch_activate (struct overwitch *ob, jack_client_t * jclient,
-		    int priority)
+overwitch_activate (struct overwitch *ob, jack_client_t * jclient)
 {
   int ret;
-
-  ob->priority = priority;
 
   ob->j2o_rb = jack_ringbuffer_create (MAX_OW_LATENCY * ob->j2o_frame_bytes);
   jack_ringbuffer_mlock (ob->j2o_rb);

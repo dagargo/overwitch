@@ -19,6 +19,7 @@
  */
 
 #include "overwitch.h"
+#include "dll.h"
 
 struct jclient
 {
