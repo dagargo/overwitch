@@ -4,7 +4,7 @@ AM_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags jack libusb-1.0` -pthrea
 overwitch_LDFLAGS = `$(PKG_CONFIG) --libs jack libusb-1.0` $(SAMPLERATE_LIBS)
 
 bin_PROGRAMS = overwitch
-overwitch_SOURCES = overwitch.c jclient.c jclient.h overbridge.c overbridge.h utils.c utils.h
+overwitch_SOURCES = main.c jclient.c jclient.h overbridge.c overbridge.h utils.c utils.h
 
 AM_CPPFLAGS = -Wall -O3
 
