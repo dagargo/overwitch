@@ -153,7 +153,7 @@
 
 #define OB_SAMPLE_RATE 48000.0
 #define OB_FRAMES_PER_BLOCK 7
-#define OB_BYTES_PER_FRAME sizeof(jack_default_audio_sample_t)
+#define OB_BYTES_PER_FRAME sizeof(float)
 #define OB_PADDING_SIZE 28
 #define OB_MAX_TRACKS 12
 
@@ -231,12 +231,12 @@ struct overwitch
   size_t o2j_buf_size;
   int usb_data_in_len;
   int usb_data_out_len;
-  jack_default_audio_sample_t *j2o_buf;
-  jack_default_audio_sample_t *o2j_buf;
+  float *j2o_buf;
+  float *o2j_buf;
   size_t o2j_frame_bytes;
   size_t j2o_frame_bytes;
   //j2o resampler
-  jack_default_audio_sample_t *j2o_buf_res;
+  float *j2o_buf_res;
   SRC_DATA j2o_data;
   //MIDI
   jack_client_t *jclient;

@@ -233,7 +233,7 @@ set_usb_input_data_blks (struct overwitch *ob)
   struct overwitch_usb_blk *blk;
   size_t wso2j;
   int32_t hv;
-  jack_default_audio_sample_t *f;
+  float *f;
   int32_t *s;
   overwitch_status_t status;
 
@@ -284,7 +284,7 @@ set_usb_output_data_blks (struct overwitch *ob)
   int32_t hv;
   size_t bytes;
   long frames;
-  jack_default_audio_sample_t *f;
+  float *f;
   int res;
   int32_t *s;
   int enabled = overwitch_is_j2o_audio_enable (ob);
