@@ -32,21 +32,21 @@
 #define DEFAULT_BLOCKS 24
 #define DEFAULT_PRIORITY -1	//With this value the default priority will be used.
 
-struct overwitch
+struct jclient_thread
 {
   pthread_t thread;
   struct jclient jclient;
 };
 
 static int overwitch_count;
-static struct overwitch **overwitch;
+static struct jclient_thread **overwitch;
 
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
   {"use-device", 1, NULL, 'd'},
   {"resampling-quality", 1, NULL, 'q'},
   {"transfer-blocks", 1, NULL, 'b'},
-  {"rt-overbridge-priority", 1, NULL, 'p'},
+  {"rt-overwitch-priority", 1, NULL, 'p'},
   {"list-devices", 0, NULL, 'l'},
   {"verbose", 0, NULL, 'v'},
   {"help", 0, NULL, 'h'},
@@ -102,14 +102,14 @@ overwitch_run_single (int device_num, char *device_name,
   uint8_t bus, address;
   int status;
 
-  if (overbridge_get_bus_address (device_num, device_name, &bus, &address))
+  if (overwitch_get_bus_address (device_num, device_name, &bus, &address))
     {
       return EXIT_FAILURE;
     }
 
   overwitch_count = 1;
-  overwitch = malloc (sizeof (struct overwitch *));
-  overwitch[0] = malloc (sizeof (struct overwitch));
+  overwitch = malloc (sizeof (struct jclient_thread *));
+  overwitch[0] = malloc (sizeof (struct jclient_thread));
   overwitch[0]->jclient.j2o_buf_in = NULL;
   overwitch[0]->jclient.bus = bus;
   overwitch[0]->jclient.address = address;
@@ -148,7 +148,7 @@ overwitch_run_all (int blocks_per_transfer, int quality, int priority)
 
   overwitch_count = 0;
   count = libusb_get_device_list (context, &list);
-  overwitch = malloc (sizeof (struct overwitch *) * count);
+  overwitch = malloc (sizeof (struct jclient_thread *) * count);
   for (i = 0; i < count; i++)
     {
       device = list[i];
@@ -158,10 +158,11 @@ overwitch_run_all (int blocks_per_transfer, int quality, int priority)
 	  continue;
 	}
 
-      if (overbridge_is_valid_device
+      if (overwitch_is_valid_device
 	  (desc.idVendor, desc.idProduct, &dev_name))
 	{
-	  overwitch[overwitch_count] = malloc (sizeof (struct overwitch));
+	  overwitch[overwitch_count] =
+	    malloc (sizeof (struct jclient_thread));
 	  bus = libusb_get_bus_number (device);
 	  address = libusb_get_device_address (device);
 
@@ -211,7 +212,7 @@ main (int argc, char *argv[])
   char *endstr;
   char *device_name = NULL;
   int long_index = 0;
-  overbridge_err_t ob_status;
+  overwitch_err_t ob_status;
   struct sigaction action;
   int device_num = -1;
   int blocks_per_transfer = DEFAULT_BLOCKS;
@@ -300,7 +301,7 @@ main (int argc, char *argv[])
 
   if (lflg)
     {
-      ob_status = overbridge_list_devices ();
+      ob_status = overwitch_list_devices ();
       if (ob_status)
 	{
 	  fprintf (stderr, "USB error: %s\n",

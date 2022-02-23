@@ -1,5 +1,5 @@
 /*
- * overbridge.c
+ * overwitch.c
  * Copyright (C) 2019 Stefan Rehm <droelfdroelf@gmail.com>
  * Copyright (C) 2021 David García Goñi <dagargo@gmail.com>
  *
@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-#include "overbridge.h"
+#include "overwitch.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -61,7 +61,7 @@
 
 #define ERROR_ON_GET_DEV_DESC "Error while getting device description: %s\n"
 
-static const struct overbridge_device_desc DIGITAKT_DESC = {
+static const struct overwitch_device_desc DIGITAKT_DESC = {
   .pid = DTAKT_PID,
   .name = "Digitakt",
   .inputs = 2,
@@ -73,7 +73,7 @@ static const struct overbridge_device_desc DIGITAKT_DESC = {
      "Input R"}
 };
 
-static const struct overbridge_device_desc DIGITONE_DESC = {
+static const struct overwitch_device_desc DIGITONE_DESC = {
   .pid = DTONE_PID,
   .name = "Digitone",
   .inputs = 2,
@@ -85,7 +85,7 @@ static const struct overbridge_device_desc DIGITONE_DESC = {
      "Input L", "Input R"}
 };
 
-static const struct overbridge_device_desc AFMK2_DESC = {
+static const struct overwitch_device_desc AFMK2_DESC = {
   .pid = AFMK2_PID,
   .name = "Analog Four MKII",
   .inputs = 6,
@@ -98,7 +98,7 @@ static const struct overbridge_device_desc AFMK2_DESC = {
      "Synth Track 4", "Input L", "Input R"}
 };
 
-static const struct overbridge_device_desc ARMK2_DESC = {
+static const struct overwitch_device_desc ARMK2_DESC = {
   .pid = ARMK2_PID,
   .name = "Analog Rytm MKII",
   .inputs = 12,
@@ -112,7 +112,7 @@ static const struct overbridge_device_desc ARMK2_DESC = {
 			 "Input R"}
 };
 
-static const struct overbridge_device_desc DKEYS_DESC = {
+static const struct overwitch_device_desc DKEYS_DESC = {
   .pid = DKEYS_PID,
   .name = "Digitone Keys",
   .inputs = 2,
@@ -124,7 +124,7 @@ static const struct overbridge_device_desc DKEYS_DESC = {
      "Input L", "Input R"}
 };
 
-static const struct overbridge_device_desc AHMK1_DESC = {
+static const struct overwitch_device_desc AHMK1_DESC = {
   .pid = AHMK1_PID,
   .name = "Analog Heat",
   .inputs = 4,
@@ -134,7 +134,7 @@ static const struct overbridge_device_desc AHMK1_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct overbridge_device_desc AHMK2_DESC = {
+static const struct overwitch_device_desc AHMK2_DESC = {
   .pid = AHMK2_PID,
   .name = "Analog Heat MKII",
   .inputs = 4,
@@ -144,20 +144,20 @@ static const struct overbridge_device_desc AHMK2_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct overbridge_device_desc *OB_DEVICE_DESCS[] = {
+static const struct overwitch_device_desc *OB_DEVICE_DESCS[] = {
   &DIGITAKT_DESC, &DIGITONE_DESC, &AFMK2_DESC, &ARMK2_DESC, &DKEYS_DESC,
   &AHMK1_DESC, &AHMK2_DESC
 };
 
 static const int OB_DEVICE_DESCS_N =
-  sizeof (OB_DEVICE_DESCS) / sizeof (struct overbridge_device_desc *);
+  sizeof (OB_DEVICE_DESCS) / sizeof (struct overwitch_device_desc *);
 
 static void prepare_cycle_in ();
 static void prepare_cycle_out ();
 static void prepare_cycle_in_midi ();
 
 int
-overbridge_is_valid_device (uint16_t vid, uint16_t pid, char **name)
+overwitch_is_valid_device (uint16_t vid, uint16_t pid, char **name)
 {
   if (vid != ELEKTRON_VID)
     {
@@ -174,22 +174,22 @@ overbridge_is_valid_device (uint16_t vid, uint16_t pid, char **name)
   return 0;
 }
 
-static struct overbridge_usb_blk *
-get_nth_usb_in_blk (struct overbridge *ob, int n)
+static struct overwitch_usb_blk *
+get_nth_usb_in_blk (struct overwitch *ob, int n)
 {
   char *blk = &ob->usb_data_in[n * ob->usb_data_in_blk_len];
-  return (struct overbridge_usb_blk *) blk;
+  return (struct overwitch_usb_blk *) blk;
 }
 
-static struct overbridge_usb_blk *
-get_nth_usb_out_blk (struct overbridge *ob, int n)
+static struct overwitch_usb_blk *
+get_nth_usb_out_blk (struct overwitch *ob, int n)
 {
   char *blk = &ob->usb_data_out[n * ob->usb_data_out_blk_len];
-  return (struct overbridge_usb_blk *) blk;
+  return (struct overwitch_usb_blk *) blk;
 }
 
 static int
-prepare_transfers (struct overbridge *ob)
+prepare_transfers (struct overwitch *ob)
 {
   ob->xfr_in = libusb_alloc_transfer (0);
   if (!ob->xfr_in)
@@ -219,7 +219,7 @@ prepare_transfers (struct overbridge *ob)
 }
 
 static void
-free_transfers (struct overbridge *ob)
+free_transfers (struct overwitch *ob)
 {
   libusb_free_transfer (ob->xfr_in);
   libusb_free_transfer (ob->xfr_out);
@@ -228,14 +228,14 @@ free_transfers (struct overbridge *ob)
 }
 
 static void
-set_usb_input_data_blks (struct overbridge *ob)
+set_usb_input_data_blks (struct overwitch *ob)
 {
-  struct overbridge_usb_blk *blk;
+  struct overwitch_usb_blk *blk;
   size_t wso2j;
   int32_t hv;
   jack_default_audio_sample_t *f;
   int32_t *s;
-  overbridge_status_t status;
+  overwitch_status_t status;
 
   pthread_spin_lock (&ob->lock);
   dll_counter_inc (&ob->o2j_dll_counter, ob->frames_per_transfer);
@@ -277,9 +277,9 @@ set_usb_input_data_blks (struct overbridge *ob)
 }
 
 static void
-set_usb_output_data_blks (struct overbridge *ob)
+set_usb_output_data_blks (struct overwitch *ob)
 {
-  struct overbridge_usb_blk *blk;
+  struct overwitch_usb_blk *blk;
   size_t rsj2o;
   int32_t hv;
   size_t bytes;
@@ -287,7 +287,7 @@ set_usb_output_data_blks (struct overbridge *ob)
   jack_default_audio_sample_t *f;
   int res;
   int32_t *s;
-  int enabled = overbridge_is_j2o_audio_enable (ob);
+  int enabled = overwitch_is_j2o_audio_enable (ob);
 
   rsj2o = jack_ringbuffer_read_space (ob->j2o_rb);
   if (!ob->reading_at_j2o_end)
@@ -407,9 +407,9 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 {
   struct ob_midi_event event;
   int length;
-  struct overbridge *ob = xfr->user_data;
+  struct overwitch *ob = xfr->user_data;
 
-  if (overbridge_get_status (ob) < OB_STATUS_RUN)
+  if (overwitch_get_status (ob) < OB_STATUS_RUN)
     {
       goto end;
     }
@@ -461,7 +461,7 @@ end:
 static void LIBUSB_CALL
 cb_xfr_out_midi (struct libusb_transfer *xfr)
 {
-  struct overbridge *ob = xfr->user_data;
+  struct overwitch *ob = xfr->user_data;
 
   pthread_spin_lock (&ob->j2o_midi_lock);
   ob->j2o_midi_ready = 1;
@@ -475,7 +475,7 @@ cb_xfr_out_midi (struct libusb_transfer *xfr)
 }
 
 static void
-prepare_cycle_out (struct overbridge *ob)
+prepare_cycle_out (struct overwitch *ob)
 {
   libusb_fill_interrupt_transfer (ob->xfr_out, ob->device_handle,
 				  AUDIO_OUT_EP, (void *) ob->usb_data_out,
@@ -486,12 +486,12 @@ prepare_cycle_out (struct overbridge *ob)
     {
       error_print ("j2o: Error when submitting USB audio transfer: %s\n",
 		   libusb_strerror (err));
-      overbridge_set_status (ob, OB_STATUS_ERROR);
+      overwitch_set_status (ob, OB_STATUS_ERROR);
     }
 }
 
 static void
-prepare_cycle_in (struct overbridge *ob)
+prepare_cycle_in (struct overwitch *ob)
 {
   libusb_fill_interrupt_transfer (ob->xfr_in, ob->device_handle,
 				  AUDIO_IN_EP, (void *) ob->usb_data_in,
@@ -502,12 +502,12 @@ prepare_cycle_in (struct overbridge *ob)
     {
       error_print ("o2j: Error when submitting USB audio in transfer: %s\n",
 		   libusb_strerror (err));
-      overbridge_set_status (ob, OB_STATUS_ERROR);
+      overwitch_set_status (ob, OB_STATUS_ERROR);
     }
 }
 
 static void
-prepare_cycle_in_midi (struct overbridge *ob)
+prepare_cycle_in_midi (struct overwitch *ob)
 {
   libusb_fill_bulk_transfer (ob->xfr_in_midi, ob->device_handle,
 			     MIDI_IN_EP, (void *) ob->o2j_midi_data,
@@ -518,12 +518,12 @@ prepare_cycle_in_midi (struct overbridge *ob)
     {
       error_print ("o2j: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
-      overbridge_set_status (ob, OB_STATUS_ERROR);
+      overwitch_set_status (ob, OB_STATUS_ERROR);
     }
 }
 
 static void
-prepare_cycle_out_midi (struct overbridge *ob)
+prepare_cycle_out_midi (struct overwitch *ob)
 {
   libusb_fill_bulk_transfer (ob->xfr_out_midi, ob->device_handle, MIDI_OUT_EP,
 			     (void *) ob->j2o_midi_data,
@@ -534,12 +534,12 @@ prepare_cycle_out_midi (struct overbridge *ob)
     {
       error_print ("j2o: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
-      overbridge_set_status (ob, OB_STATUS_ERROR);
+      overwitch_set_status (ob, OB_STATUS_ERROR);
     }
 }
 
 static void
-usb_shutdown (struct overbridge *ob)
+usb_shutdown (struct overwitch *ob)
 {
   libusb_close (ob->device_handle);
   libusb_exit (ob->context);
@@ -547,9 +547,9 @@ usb_shutdown (struct overbridge *ob)
 
 // initialization taken from sniffed session
 
-overbridge_err_t
-overbridge_init (struct overbridge *ob, uint8_t bus, uint8_t address,
-		 int blocks_per_transfer)
+overwitch_err_t
+overwitch_init (struct overwitch *ob, uint8_t bus, uint8_t address,
+		int blocks_per_transfer)
 {
   int i, ret, err;
   libusb_device **list = NULL;
@@ -557,7 +557,7 @@ overbridge_init (struct overbridge *ob, uint8_t bus, uint8_t address,
   libusb_device *device;
   char *name = NULL;
   struct libusb_device_descriptor desc;
-  struct overbridge_usb_blk *blk;
+  struct overwitch_usb_blk *blk;
 
   // libusb setup
   if (libusb_init (&ob->context) != LIBUSB_SUCCESS)
@@ -577,7 +577,7 @@ overbridge_init (struct overbridge *ob, uint8_t bus, uint8_t address,
 	  continue;
 	}
 
-      if (overbridge_is_valid_device (desc.idVendor, desc.idProduct, &name) &&
+      if (overwitch_is_valid_device (desc.idVendor, desc.idProduct, &name) &&
 	  libusb_get_bus_number (device) == bus &&
 	  libusb_get_device_address (device) == address)
 	{
@@ -702,10 +702,10 @@ end:
       ob->j2o_audio_enabled = 0;
 
       ob->usb_data_in_blk_len =
-	sizeof (struct overbridge_usb_blk) +
+	sizeof (struct overwitch_usb_blk) +
 	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ob->device_desc->outputs;
       ob->usb_data_out_blk_len =
-	sizeof (struct overbridge_usb_blk) +
+	sizeof (struct overwitch_usb_blk) +
 	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ob->device_desc->inputs;
 
       ob->usb_data_in_len = ob->usb_data_in_blk_len * ob->blocks_per_transfer;
@@ -780,7 +780,7 @@ run_j2o_midi (void *data)
   jack_time_t diff;
   struct timespec sleep_time, smallest_sleep_time;
   struct ob_midi_event event;
-  struct overbridge *ob = data;
+  struct overwitch *ob = data;
 
   smallest_sleep_time.tv_sec = 0;
   smallest_sleep_time.tv_nsec = SAMPLE_TIME_NS * jack_get_buffer_size (ob->jclient) / 2;	//Average wait time
@@ -851,7 +851,7 @@ run_j2o_midi (void *data)
 	  pthread_spin_unlock (&ob->j2o_midi_lock);
 	};
 
-      if (overbridge_get_status (ob) <= OB_STATUS_STOP)
+      if (overwitch_get_status (ob) <= OB_STATUS_STOP)
 	{
 	  break;
 	}
@@ -864,11 +864,11 @@ void *
 run_audio_and_o2j_midi (void *data)
 {
   size_t rsj2o, bytes, frames;
-  struct overbridge *ob = data;
+  struct overwitch *ob = data;
 
   set_rt_priority (ob->priority);
 
-  while (overbridge_get_status (ob) == OB_STATUS_READY);
+  while (overwitch_get_status (ob) == OB_STATUS_READY);
 
   //status == OB_STATUS_BOOT_OVERBRIDGE
 
@@ -890,17 +890,17 @@ run_audio_and_o2j_midi (void *data)
       ob->status = OB_STATUS_BOOT_JACK;
       pthread_spin_unlock (&ob->lock);
 
-      while (overbridge_get_status (ob) >= OB_STATUS_BOOT_JACK)
+      while (overwitch_get_status (ob) >= OB_STATUS_BOOT_JACK)
 	{
 	  libusb_handle_events_completed (ob->context, NULL);
 	}
 
-      if (overbridge_get_status (ob) <= OB_STATUS_STOP)
+      if (overwitch_get_status (ob) <= OB_STATUS_STOP)
 	{
 	  break;
 	}
 
-      overbridge_set_status (ob, OB_STATUS_BOOT_OVERBRIDGE);
+      overwitch_set_status (ob, OB_STATUS_BOOT_OVERBRIDGE);
 
       rsj2o = jack_ringbuffer_read_space (ob->j2o_rb);
       frames = rsj2o / ob->j2o_frame_bytes;
@@ -913,8 +913,8 @@ run_audio_and_o2j_midi (void *data)
 }
 
 int
-overbridge_activate (struct overbridge *ob, jack_client_t * jclient,
-		     int priority)
+overwitch_activate (struct overwitch *ob, jack_client_t * jclient,
+		    int priority)
 {
   int ret;
 
@@ -950,20 +950,20 @@ overbridge_activate (struct overbridge *ob, jack_client_t * jclient,
 }
 
 void
-overbridge_wait (struct overbridge *ob)
+overwitch_wait (struct overwitch *ob)
 {
   pthread_join (ob->audio_and_o2j_midi, NULL);
   pthread_join (ob->midi_tinfo, NULL);
 }
 
 const char *
-overbrigde_get_err_str (overbridge_err_t errcode)
+overbrigde_get_err_str (overwitch_err_t errcode)
 {
   return ob_err_strgs[errcode];
 }
 
 void
-overbridge_destroy (struct overbridge *ob)
+overwitch_destroy (struct overwitch *ob)
 {
   usb_shutdown (ob);
   free_transfers (ob);
@@ -987,10 +987,10 @@ overbridge_destroy (struct overbridge *ob)
   pthread_spin_destroy (&ob->j2o_midi_lock);
 }
 
-inline overbridge_status_t
-overbridge_get_status (struct overbridge *ob)
+inline overwitch_status_t
+overwitch_get_status (struct overwitch *ob)
 {
-  overbridge_status_t status;
+  overwitch_status_t status;
   pthread_spin_lock (&ob->lock);
   status = ob->status;
   pthread_spin_unlock (&ob->lock);
@@ -998,7 +998,7 @@ overbridge_get_status (struct overbridge *ob)
 }
 
 inline void
-overbridge_set_status (struct overbridge *ob, overbridge_status_t status)
+overwitch_set_status (struct overwitch *ob, overwitch_status_t status)
 {
   pthread_spin_lock (&ob->lock);
   ob->status = status;
@@ -1006,7 +1006,7 @@ overbridge_set_status (struct overbridge *ob, overbridge_status_t status)
 }
 
 inline int
-overbridge_is_j2o_audio_enable (struct overbridge *ob)
+overwitch_is_j2o_audio_enable (struct overwitch *ob)
 {
   int enabled;
   pthread_spin_lock (&ob->lock);
@@ -1016,9 +1016,9 @@ overbridge_is_j2o_audio_enable (struct overbridge *ob)
 }
 
 inline void
-overbridge_set_j2o_audio_enable (struct overbridge *ob, int enabled)
+overwitch_set_j2o_audio_enable (struct overwitch *ob, int enabled)
 {
-  int last = overbridge_is_j2o_audio_enable (ob);
+  int last = overwitch_is_j2o_audio_enable (ob);
   if (last != enabled)
     {
       pthread_spin_lock (&ob->lock);
@@ -1029,7 +1029,7 @@ overbridge_set_j2o_audio_enable (struct overbridge *ob, int enabled)
 }
 
 int
-overbridge_list_devices ()
+overwitch_list_devices ()
 {
   libusb_context *context = NULL;
   libusb_device **list = NULL;
@@ -1057,7 +1057,7 @@ overbridge_list_devices ()
 	  continue;
 	}
 
-      if (overbridge_is_valid_device (desc.idVendor, desc.idProduct, &name))
+      if (overwitch_is_valid_device (desc.idVendor, desc.idProduct, &name))
 	{
 	  bus = libusb_get_bus_number (device);
 	  address = libusb_get_device_address (device);
@@ -1073,8 +1073,8 @@ overbridge_list_devices ()
 }
 
 int
-overbridge_get_bus_address (int index, char *name, uint8_t * bus,
-			    uint8_t * address)
+overwitch_get_bus_address (int index, char *name, uint8_t * bus,
+			   uint8_t * address)
 {
   libusb_context *context = NULL;
   libusb_device **list = NULL;
@@ -1103,7 +1103,7 @@ overbridge_get_bus_address (int index, char *name, uint8_t * bus,
 	}
 
       err = 1;
-      if (overbridge_is_valid_device
+      if (overwitch_is_valid_device
 	  (desc.idVendor, desc.idProduct, &dev_name))
 	{
 	  if (index >= 0)

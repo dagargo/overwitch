@@ -18,11 +18,11 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "overbridge.h"
+#include "overwitch.h"
 
 struct jclient
 {
-  struct overbridge ob;
+  struct overwitch ow;
   struct dll o2j_dll;
   double o2j_ratio;
   double j2o_ratio;
@@ -55,7 +55,7 @@ struct jclient
   double obsr;
   int log_control_cycles;
   int log_cycles;
-  overbridge_status_t status;
+  overwitch_status_t status;
   int xruns;
   pthread_spinlock_t lock;	//Used to synchronize access to xruns.
   int reading_at_o2j_end;

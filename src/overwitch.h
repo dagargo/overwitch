@@ -1,5 +1,5 @@
 /*
- * overbridge.h
+ * overwitch.h
  * Copyright (C) 2019 Stefan Rehm <droelfdroelf@gmail.com>
  * Copyright (C) 2021 David García Goñi <dagargo@gmail.com>
  *
@@ -159,7 +159,7 @@
 
 #define OB_MIDI_EVENT_SIZE 4
 
-struct overbridge_usb_blk
+struct overwitch_usb_blk
 {
   uint16_t header;
   uint16_t s_counter;
@@ -178,7 +178,7 @@ typedef enum
   OB_CANT_CLEAR_EP,
   OB_CANT_PREPARE_TRANSFER,
   OB_CANT_FIND_DEV
-} overbridge_err_t;
+} overwitch_err_t;
 
 typedef enum
 {
@@ -190,9 +190,9 @@ typedef enum
   OB_STATUS_STARTUP,
   OB_STATUS_TUNE,
   OB_STATUS_RUN
-} overbridge_status_t;
+} overwitch_status_t;
 
-struct overbridge_device_desc
+struct overwitch_device_desc
 {
   uint16_t pid;
   char *name;
@@ -202,13 +202,13 @@ struct overbridge_device_desc
   char *output_track_names[OB_MAX_TRACKS];
 };
 
-struct overbridge
+struct overwitch
 {
   int blocks_per_transfer;
   int frames_per_transfer;
   int j2o_audio_enabled;
   pthread_spinlock_t lock;
-  overbridge_status_t status;
+  overwitch_status_t status;
   size_t j2o_latency;
   size_t j2o_max_latency;
   pthread_t audio_and_o2j_midi;
@@ -217,7 +217,7 @@ struct overbridge
   uint16_t s_counter;
   libusb_context *context;
   libusb_device_handle *device_handle;
-  const struct overbridge_device_desc *device_desc;
+  const struct overwitch_device_desc *device_desc;
   struct dll_counter o2j_dll_counter;
   struct libusb_transfer *xfr_in;
   struct libusb_transfer *xfr_out;
@@ -257,28 +257,28 @@ struct ob_midi_event
   jack_midi_data_t bytes[OB_MIDI_EVENT_SIZE];
 };
 
-const char *overbrigde_get_err_str (overbridge_err_t);
+const char *overbrigde_get_err_str (overwitch_err_t);
 
 void set_self_max_priority ();
 
-overbridge_err_t overbridge_init (struct overbridge *, uint8_t, uint8_t, int);
+overwitch_err_t overwitch_init (struct overwitch *, uint8_t, uint8_t, int);
 
-int overbridge_activate (struct overbridge *, jack_client_t *, int);
+int overwitch_activate (struct overwitch *, jack_client_t *, int);
 
-void overbridge_destroy (struct overbridge *);
+void overwitch_destroy (struct overwitch *);
 
-void overbridge_wait (struct overbridge *);
+void overwitch_wait (struct overwitch *);
 
-overbridge_status_t overbridge_get_status (struct overbridge *);
+overwitch_status_t overwitch_get_status (struct overwitch *);
 
-void overbridge_set_status (struct overbridge *, overbridge_status_t);
+void overwitch_set_status (struct overwitch *, overwitch_status_t);
 
-int overbridge_list_devices ();
+int overwitch_list_devices ();
 
-void overbridge_set_j2o_audio_enable (struct overbridge *, int);
+void overwitch_set_j2o_audio_enable (struct overwitch *, int);
 
-int overbridge_is_j2o_audio_enable (struct overbridge *);
+int overwitch_is_j2o_audio_enable (struct overwitch *);
 
-int overbridge_get_bus_address (int, char *, uint8_t *, uint8_t *);
+int overwitch_get_bus_address (int, char *, uint8_t *, uint8_t *);
 
-int overbridge_is_valid_device (uint16_t, uint16_t, char **);
+int overwitch_is_valid_device (uint16_t, uint16_t, char **);

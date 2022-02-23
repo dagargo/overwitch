@@ -44,14 +44,14 @@ jclient_print_latencies (struct jclient *jclient, const char *end)
 {
   printf
     ("%s: o2j latency: %.1f ms, max. %.1f ms; j2o latency: %.1f ms, max. %.1f ms%s",
-     jclient->ob.device_desc->name,
-     jclient->o2j_latency * 1000.0 / (jclient->ob.o2j_frame_bytes *
+     jclient->ow.device_desc->name,
+     jclient->o2j_latency * 1000.0 / (jclient->ow.o2j_frame_bytes *
 				      OB_SAMPLE_RATE),
-     jclient->o2j_max_latency * 1000.0 / (jclient->ob.o2j_frame_bytes *
+     jclient->o2j_max_latency * 1000.0 / (jclient->ow.o2j_frame_bytes *
 					  OB_SAMPLE_RATE),
-     jclient->j2o_latency * 1000.0 / (jclient->ob.j2o_frame_bytes *
+     jclient->j2o_latency * 1000.0 / (jclient->ow.j2o_frame_bytes *
 				      OB_SAMPLE_RATE),
-     jclient->j2o_max_latency * 1000.0 / (jclient->ob.j2o_frame_bytes *
+     jclient->j2o_max_latency * 1000.0 / (jclient->ow.j2o_frame_bytes *
 					  OB_SAMPLE_RATE), end);
 }
 
@@ -59,8 +59,8 @@ void
 jclient_reset_buffers (struct jclient *jclient)
 {
   size_t rso2j, bytes, frames;
-  size_t j2o_bufsize = jclient->bufsize * jclient->ob.j2o_frame_bytes;
-  size_t o2j_bufsize = jclient->bufsize * jclient->ob.o2j_frame_bytes;
+  size_t j2o_bufsize = jclient->bufsize * jclient->ow.j2o_frame_bytes;
+  size_t o2j_bufsize = jclient->bufsize * jclient->ow.o2j_frame_bytes;
 
   if (jclient->j2o_buf_in)
     {
@@ -85,8 +85,8 @@ jclient_reset_buffers (struct jclient *jclient)
   memset (jclient->j2o_buf_in, 0, j2o_bufsize);
   memset (jclient->o2j_buf_in, 0, o2j_bufsize);
 
-  jclient->o2j_buf_size = jclient->bufsize * jclient->ob.o2j_frame_bytes;
-  jclient->j2o_buf_size = jclient->bufsize * jclient->ob.j2o_frame_bytes;
+  jclient->o2j_buf_size = jclient->bufsize * jclient->ow.o2j_frame_bytes;
+  jclient->j2o_buf_size = jclient->bufsize * jclient->ow.j2o_frame_bytes;
 
   jclient->j2o_max_latency = 0;
   jclient->o2j_max_latency = 0;
@@ -94,22 +94,22 @@ jclient_reset_buffers (struct jclient *jclient)
   jclient->o2j_latency = 0;
   jclient->reading_at_o2j_end = 0;
 
-  rso2j = jack_ringbuffer_read_space (jclient->ob.o2j_rb);
-  frames = rso2j / jclient->ob.o2j_frame_bytes;
-  bytes = frames * jclient->ob.o2j_frame_bytes;
-  jack_ringbuffer_read_advance (jclient->ob.o2j_rb, bytes);
+  rso2j = jack_ringbuffer_read_space (jclient->ow.o2j_rb);
+  frames = rso2j / jclient->ow.o2j_frame_bytes;
+  bytes = frames * jclient->ow.o2j_frame_bytes;
+  jack_ringbuffer_read_advance (jclient->ow.o2j_rb, bytes);
 }
 
 void
 jclient_reset_dll (struct jclient *jclient, jack_nframes_t new_samplerate)
 {
   static int init = 0;
-  if (!init || overbridge_get_status (&jclient->ob) < OB_STATUS_RUN)
+  if (!init || overwitch_get_status (&jclient->ow) < OB_STATUS_RUN)
     {
       debug_print (2, "Initializing dll...\n");
       dll_init (&jclient->o2j_dll, new_samplerate, OB_SAMPLE_RATE,
-		jclient->bufsize, jclient->ob.frames_per_transfer);
-      overbridge_set_status (&jclient->ob, OB_STATUS_READY);
+		jclient->bufsize, jclient->ow.frames_per_transfer);
+      overwitch_set_status (&jclient->ow, OB_STATUS_READY);
       init = 1;
     }
   else
@@ -118,7 +118,7 @@ jclient_reset_dll (struct jclient *jclient, jack_nframes_t new_samplerate)
       jclient->o2j_dll.ratio =
 	jclient->o2j_dll.last_ratio_avg * new_samplerate /
 	jclient->samplerate;
-      overbridge_set_status (&jclient->ob, OB_STATUS_READY);
+      overwitch_set_status (&jclient->ow, OB_STATUS_READY);
       jclient->log_cycles = 0;
       jclient->log_control_cycles =
 	STARTUP_TIME * new_samplerate / jclient->bufsize;
@@ -145,7 +145,7 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
   struct jclient *jclient = cb_data;
   int j2o_enabled = 0;
   //We only check for j2o (imput) ports as o2j must always be running.
-  for (int i = 0; i < jclient->ob.device_desc->inputs; i++)
+  for (int i = 0; i < jclient->ow.device_desc->inputs; i++)
     {
       if (jack_port_connected (jclient->input_ports[i]))
 	{
@@ -153,7 +153,7 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
 	  break;
 	}
     }
-  overbridge_set_j2o_audio_enable (&jclient->ob, j2o_enabled);
+  overwitch_set_j2o_audio_enable (&jclient->ow, j2o_enabled);
 }
 
 static void
@@ -213,7 +213,7 @@ jclient_j2o_reader (void *cb_data, float **data)
 
   ret = jclient->j2o_queue_len;
   memcpy (jclient->j2o_buf_in, jclient->j2o_queue,
-	  ret * jclient->ob.j2o_frame_bytes);
+	  ret * jclient->ow.j2o_frame_bytes);
   jclient->j2o_queue_len = 0;
 
   return ret;
@@ -230,7 +230,7 @@ jclient_o2j_reader (void *cb_data, float **data)
 
   *data = jclient->o2j_buf_in;
 
-  rso2j = jack_ringbuffer_read_space (jclient->ob.o2j_rb);
+  rso2j = jack_ringbuffer_read_space (jclient->ow.o2j_rb);
   if (jclient->reading_at_o2j_end)
     {
       jclient->o2j_latency = rso2j;
@@ -239,25 +239,25 @@ jclient_o2j_reader (void *cb_data, float **data)
 	  jclient->o2j_max_latency = jclient->o2j_latency;
 	}
 
-      if (rso2j >= jclient->ob.o2j_frame_bytes)
+      if (rso2j >= jclient->ow.o2j_frame_bytes)
 	{
-	  frames = rso2j / jclient->ob.o2j_frame_bytes;
+	  frames = rso2j / jclient->ow.o2j_frame_bytes;
 	  frames = frames > MAX_READ_FRAMES ? MAX_READ_FRAMES : frames;
-	  bytes = frames * jclient->ob.o2j_frame_bytes;
-	  jack_ringbuffer_read (jclient->ob.o2j_rb,
+	  bytes = frames * jclient->ow.o2j_frame_bytes;
+	  jack_ringbuffer_read (jclient->ow.o2j_rb,
 				(void *) jclient->o2j_buf_in, bytes);
 	}
       else
 	{
 	  debug_print (2,
 		       "o2j: Audio ring buffer underflow (%zu < %zu). Replicating last sample...\n",
-		       rso2j, jclient->ob.o2j_buf_size);
+		       rso2j, jclient->ow.o2j_buf_size);
 	  if (last_frames > 1)
 	    {
 	      memcpy (jclient->o2j_buf_in,
 		      &jclient->o2j_buf_in[(last_frames - 1) *
-					   jclient->ob.device_desc->outputs],
-		      jclient->ob.o2j_frame_bytes);
+					   jclient->ow.device_desc->outputs],
+		      jclient->ow.o2j_frame_bytes);
 	    }
 	  frames = MAX_READ_FRAMES;
 	}
@@ -267,9 +267,9 @@ jclient_o2j_reader (void *cb_data, float **data)
       if (rso2j >= jclient->o2j_buf_size)
 	{
 	  debug_print (2, "o2j: Emptying buffer and running...\n");
-	  frames = rso2j / jclient->ob.o2j_frame_bytes;
-	  bytes = frames * jclient->ob.o2j_frame_bytes;
-	  jack_ringbuffer_read_advance (jclient->ob.o2j_rb, bytes);
+	  frames = rso2j / jclient->ow.o2j_frame_bytes;
+	  bytes = frames * jclient->ow.o2j_frame_bytes;
+	  jack_ringbuffer_read_advance (jclient->ow.o2j_rb, bytes);
 	  jclient->reading_at_o2j_end = 1;
 	}
       frames = MAX_READ_FRAMES;
@@ -307,7 +307,7 @@ jclient_j2o (struct jclient *jclient)
   static double j2o_acc = .0;
 
   memcpy (&jclient->j2o_queue
-	  [jclient->j2o_queue_len * jclient->ob.j2o_frame_bytes],
+	  [jclient->j2o_queue_len * jclient->ow.j2o_frame_bytes],
 	  jclient->j2o_aux, jclient->j2o_buf_size);
   jclient->j2o_queue_len += jclient->bufsize;
 
@@ -331,12 +331,12 @@ jclient_j2o (struct jclient *jclient)
       return;
     }
 
-  bytes = gen_frames * jclient->ob.j2o_frame_bytes;
-  wsj2o = jack_ringbuffer_write_space (jclient->ob.j2o_rb);
+  bytes = gen_frames * jclient->ow.j2o_frame_bytes;
+  wsj2o = jack_ringbuffer_write_space (jclient->ow.j2o_rb);
 
   if (bytes <= wsj2o)
     {
-      jack_ringbuffer_write (jclient->ob.j2o_rb,
+      jack_ringbuffer_write (jclient->ow.j2o_rb,
 			     (void *) jclient->j2o_buf_out, bytes);
     }
   else
@@ -367,21 +367,21 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   jclient->xruns = 0;
   pthread_spin_unlock (&jclient->lock);
 
-  pthread_spin_lock (&jclient->ob.lock);
-  jclient->j2o_latency = jclient->ob.j2o_latency;
-  jclient->j2o_max_latency = jclient->ob.j2o_max_latency;
-  dll->ko0 = jclient->ob.o2j_dll_counter.i0.frames;
-  dll->to0 = jclient->ob.o2j_dll_counter.i0.time;
-  dll->ko1 = jclient->ob.o2j_dll_counter.i1.frames;
-  dll->to1 = jclient->ob.o2j_dll_counter.i1.time;
-  jclient->status = jclient->ob.status;
-  pthread_spin_unlock (&jclient->ob.lock);
+  pthread_spin_lock (&jclient->ow.lock);
+  jclient->j2o_latency = jclient->ow.j2o_latency;
+  jclient->j2o_max_latency = jclient->ow.j2o_max_latency;
+  dll->ko0 = jclient->ow.o2j_dll_counter.i0.frames;
+  dll->to0 = jclient->ow.o2j_dll_counter.i0.time;
+  dll->ko1 = jclient->ow.o2j_dll_counter.i1.frames;
+  dll->to1 = jclient->ow.o2j_dll_counter.i1.time;
+  jclient->status = jclient->ow.status;
+  pthread_spin_unlock (&jclient->ow.lock);
 
   if (jclient->status <= OB_STATUS_BOOT_OVERBRIDGE)
     {
       if (jclient->status == OB_STATUS_READY)
 	{
-	  overbridge_set_status (&jclient->ob, OB_STATUS_BOOT_OVERBRIDGE);
+	  overwitch_set_status (&jclient->ow, OB_STATUS_BOOT_OVERBRIDGE);
 	  debug_print (2, "Booting Overbridge side...\n");
 	}
       return 1;
@@ -394,7 +394,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
       debug_print (2, "Starting up...\n");
       dll_set_loop_filter (dll, 1.0, jclient->bufsize, jclient->samplerate);
-      overbridge_set_status (&jclient->ob, OB_STATUS_STARTUP);
+      overwitch_set_status (&jclient->ow, OB_STATUS_STARTUP);
 
       jclient->log_cycles = 0;
       jclient->log_control_cycles =
@@ -425,7 +425,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   if (dll->ratio < 0.0)
     {
       error_print ("Negative ratio detected. Stopping...\n");
-      overbridge_set_status (&jclient->ob, OB_STATUS_ERROR);
+      overwitch_set_status (&jclient->ow, OB_STATUS_ERROR);
       return 1;
     }
 
@@ -451,7 +451,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 	  debug_print (2, "Tunning...\n");
 	  dll_set_loop_filter (dll, 0.05, jclient->bufsize,
 			       jclient->samplerate);
-	  overbridge_set_status (&jclient->ob, OB_STATUS_TUNE);
+	  overwitch_set_status (&jclient->ow, OB_STATUS_TUNE);
 	  jclient->log_control_cycles =
 	    LOG_TIME * jclient->samplerate / jclient->bufsize;
 	}
@@ -462,7 +462,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 	  debug_print (2, "Running...\n");
 	  dll_set_loop_filter (dll, 0.02, jclient->bufsize,
 			       jclient->samplerate);
-	  overbridge_set_status (&jclient->ob, OB_STATUS_RUN);
+	  overwitch_set_status (&jclient->ow, OB_STATUS_RUN);
 	}
     }
 
@@ -483,10 +483,10 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   jack_midi_clear_buffer (midi_port_buf);
   last_frames = 0;
 
-  while (jack_ringbuffer_read_space (jclient->ob.o2j_rb_midi) >=
+  while (jack_ringbuffer_read_space (jclient->ow.o2j_rb_midi) >=
 	 sizeof (struct ob_midi_event))
     {
-      jack_ringbuffer_peek (jclient->ob.o2j_rb_midi, (void *) &event,
+      jack_ringbuffer_peek (jclient->ow.o2j_rb_midi, (void *) &event,
 			    sizeof (struct ob_midi_event));
 
       frames = event.frames % nframes;
@@ -501,7 +501,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	}
       last_frames = frames;
 
-      jack_ringbuffer_read_advance (jclient->ob.o2j_rb_midi,
+      jack_ringbuffer_read_advance (jclient->ow.o2j_rb_midi,
 				    sizeof (struct ob_midi_event));
 
       if (event.bytes[0] == 0x0f)
@@ -596,10 +596,10 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 
       if (oevent.bytes[0])
 	{
-	  if (jack_ringbuffer_write_space (jclient->ob.j2o_rb_midi) >=
+	  if (jack_ringbuffer_write_space (jclient->ow.j2o_rb_midi) >=
 	      sizeof (struct ob_midi_event))
 	    {
-	      jack_ringbuffer_write (jclient->ob.j2o_rb_midi,
+	      jack_ringbuffer_write (jclient->ow.j2o_rb_midi,
 				     (void *) &oevent,
 				     sizeof (struct ob_midi_event));
 	    }
@@ -629,13 +629,13 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   //o2j
 
   f = jclient->o2j_buf_out;
-  for (int i = 0; i < jclient->ob.device_desc->outputs; i++)
+  for (int i = 0; i < jclient->ow.device_desc->outputs; i++)
     {
       buffer[i] = jack_port_get_buffer (jclient->output_ports[i], nframes);
     }
   for (int i = 0; i < nframes; i++)
     {
-      for (int j = 0; j < jclient->ob.device_desc->outputs; j++)
+      for (int j = 0; j < jclient->ow.device_desc->outputs; j++)
 	{
 	  buffer[j][i] = *f;
 	  f++;
@@ -644,16 +644,16 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 
   //j2o
 
-  if (overbridge_is_j2o_audio_enable (&jclient->ob))
+  if (overwitch_is_j2o_audio_enable (&jclient->ow))
     {
       f = jclient->j2o_aux;
-      for (int i = 0; i < jclient->ob.device_desc->inputs; i++)
+      for (int i = 0; i < jclient->ow.device_desc->inputs; i++)
 	{
 	  buffer[i] = jack_port_get_buffer (jclient->input_ports[i], nframes);
 	}
       for (int i = 0; i < nframes; i++)
 	{
-	  for (int j = 0; j < jclient->ob.device_desc->inputs; j++)
+	  for (int j = 0; j < jclient->ow.device_desc->inputs; j++)
 	    {
 	      *f = buffer[j][i];
 	      f++;
@@ -674,7 +674,7 @@ void
 jclient_exit (struct jclient *jclient)
 {
   jclient_print_latencies (jclient, "\n");
-  overbridge_set_status (&jclient->ob, OB_STATUS_STOP);
+  overwitch_set_status (&jclient->ow, OB_STATUS_STOP);
 }
 
 int
@@ -682,7 +682,7 @@ jclient_run (struct jclient *jclient)
 {
   jack_options_t options = JackNoStartServer;
   jack_status_t status;
-  overbridge_err_t ob_status;
+  overwitch_err_t ob_status;
   char *client_name;
 
   jclient->samplerate = 0;
@@ -691,8 +691,8 @@ jclient_run (struct jclient *jclient)
 
   jclient->status = OB_STATUS_ERROR;
   ob_status =
-    overbridge_init (&jclient->ob, jclient->bus, jclient->address,
-		     jclient->blocks_per_transfer);
+    overwitch_init (&jclient->ow, jclient->bus, jclient->address,
+		    jclient->blocks_per_transfer);
   if (ob_status)
     {
       error_print ("USB error: %s\n", overbrigde_get_err_str (ob_status));
@@ -700,7 +700,7 @@ jclient_run (struct jclient *jclient)
     }
 
   jclient->client =
-    jack_client_open (jclient->ob.device_desc->name, options, &status, NULL);
+    jack_client_open (jclient->ow.device_desc->name, options, &status, NULL);
   if (jclient->client == NULL)
     {
       error_print ("jack_client_open() failed, status = 0x%2.0x\n", status);
@@ -710,7 +710,7 @@ jclient_run (struct jclient *jclient)
 	  error_print ("Unable to connect to JACK server\n");
 	}
 
-      goto cleanup_overbridge;
+      goto cleanup_overwitch;
     }
 
   if (status & JackServerStarted)
@@ -765,12 +765,12 @@ jclient_run (struct jclient *jclient)
   debug_print (1, "Using RT priority %d...\n", jclient->priority);
 
   jclient->output_ports =
-    malloc (sizeof (jack_port_t *) * jclient->ob.device_desc->outputs);
-  for (int i = 0; i < jclient->ob.device_desc->outputs; i++)
+    malloc (sizeof (jack_port_t *) * jclient->ow.device_desc->outputs);
+  for (int i = 0; i < jclient->ow.device_desc->outputs; i++)
     {
       jclient->output_ports[i] =
 	jack_port_register (jclient->client,
-			    jclient->ob.device_desc->output_track_names[i],
+			    jclient->ow.device_desc->output_track_names[i],
 			    JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
 
       if (jclient->output_ports[i] == NULL)
@@ -781,12 +781,12 @@ jclient_run (struct jclient *jclient)
     }
 
   jclient->input_ports =
-    malloc (sizeof (jack_port_t *) * jclient->ob.device_desc->inputs);
-  for (int i = 0; i < jclient->ob.device_desc->inputs; i++)
+    malloc (sizeof (jack_port_t *) * jclient->ow.device_desc->inputs);
+  for (int i = 0; i < jclient->ow.device_desc->inputs; i++)
     {
       jclient->input_ports[i] =
 	jack_port_register (jclient->client,
-			    jclient->ob.device_desc->input_track_names[i],
+			    jclient->ow.device_desc->input_track_names[i],
 			    JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
 
       if (jclient->input_ports[i] == NULL)
@@ -818,12 +818,12 @@ jclient_run (struct jclient *jclient)
 
   jclient->j2o_state =
     src_callback_new (jclient_j2o_reader, jclient->quality,
-		      jclient->ob.device_desc->inputs, NULL, jclient);
+		      jclient->ow.device_desc->inputs, NULL, jclient);
   jclient->o2j_state =
     src_callback_new (jclient_o2j_reader, jclient->quality,
-		      jclient->ob.device_desc->outputs, NULL, jclient);
+		      jclient->ow.device_desc->outputs, NULL, jclient);
 
-  if (overbridge_activate (&jclient->ob, jclient->client, jclient->priority))
+  if (overwitch_activate (&jclient->ow, jclient->client, jclient->priority))
     {
       goto cleanup_jack;
     }
@@ -839,7 +839,7 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
-  overbridge_wait (&jclient->ob);
+  overwitch_wait (&jclient->ow);
 
   debug_print (1, "Exiting...\n");
   jack_deactivate (jclient->client);
@@ -857,10 +857,10 @@ cleanup_jack:
   free (jclient->o2j_buf_in);
   free (jclient->o2j_buf_out);
   pthread_spin_destroy (&jclient->lock);
-cleanup_overbridge:
-  overbridge_destroy (&jclient->ob);
+cleanup_overwitch:
+  overwitch_destroy (&jclient->ow);
 
-  jclient->status = jclient->ob.status;
+  jclient->status = jclient->ow.status;
 end:
   return jclient->status;
 }
