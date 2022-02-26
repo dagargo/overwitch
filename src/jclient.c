@@ -842,8 +842,8 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
-  set_rt_priority(&jclient->ow.midi_tinfo, jclient->priority);
-  set_rt_priority(&jclient->ow.audio_and_o2j_midi, jclient->priority);
+  set_rt_priority(&jclient->ow.j2o_midi_t, jclient->priority);
+  set_rt_priority(&jclient->ow.audio_o2j_midi_t, jclient->priority);
 
   jclient_set_sample_rate_cb (jack_get_sample_rate (jclient->client),
 			      jclient);

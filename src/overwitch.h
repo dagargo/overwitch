@@ -214,8 +214,8 @@ struct overwitch
   overwitch_status_t status;
   size_t j2o_latency;
   size_t j2o_max_latency;
-  pthread_t audio_and_o2j_midi;
-  pthread_t midi_tinfo;
+  pthread_t audio_o2j_midi_t;
+  pthread_t j2o_midi_t;
   uint16_t s_counter;
   libusb_context *context;
   libusb_device_handle *device_handle;
