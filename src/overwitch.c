@@ -409,7 +409,7 @@ cb_xfr_out (struct libusb_transfer *xfr)
 static void LIBUSB_CALL
 cb_xfr_in_midi (struct libusb_transfer *xfr)
 {
-  struct ob_midi_event event;
+  struct overwitch_midi_event event;
   int length;
   struct overwitch *ow = xfr->user_data;
 
@@ -435,10 +435,11 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 			   event.bytes[3], event.frames);
 
 	      if (jack_ringbuffer_write_space (ow->o2j_rb_midi) >=
-		  sizeof (struct ob_midi_event))
+		  sizeof (struct overwitch_midi_event))
 		{
 		  jack_ringbuffer_write (ow->o2j_rb_midi, (void *) &event,
-					 sizeof (struct ob_midi_event));
+					 sizeof (struct
+						 overwitch_midi_event));
 		}
 	      else
 		{
@@ -783,7 +784,7 @@ run_j2o_midi (void *data)
   jack_time_t event_time;
   jack_time_t diff;
   struct timespec sleep_time, smallest_sleep_time;
-  struct ob_midi_event event;
+  struct overwitch_midi_event event;
   struct overwitch *ow = data;
 
   smallest_sleep_time.tv_sec = 0;
@@ -797,7 +798,7 @@ run_j2o_midi (void *data)
     {
 
       while (jack_ringbuffer_read_space (ow->j2o_rb_midi) >=
-	     sizeof (struct ob_midi_event) && pos < USB_BULK_MIDI_SIZE)
+	     sizeof (struct overwitch_midi_event) && pos < USB_BULK_MIDI_SIZE)
 	{
 	  if (!pos)
 	    {
@@ -806,7 +807,7 @@ run_j2o_midi (void *data)
 	    }
 
 	  jack_ringbuffer_peek (ow->j2o_rb_midi, (void *) &event,
-				sizeof (struct ob_midi_event));
+				sizeof (struct overwitch_midi_event));
 	  event_time = jack_frames_to_time (ow->jclient, event.frames);
 
 	  if (event_time > last_time)
@@ -819,7 +820,7 @@ run_j2o_midi (void *data)
 	  memcpy (&ow->j2o_midi_data[pos], event.bytes, OB_MIDI_EVENT_SIZE);
 	  pos += OB_MIDI_EVENT_SIZE;
 	  jack_ringbuffer_read_advance (ow->j2o_rb_midi,
-					sizeof (struct ob_midi_event));
+					sizeof (struct overwitch_midi_event));
 	}
 
       if (pos)
@@ -938,9 +939,7 @@ overwitch_activate (struct overwitch *ow, jack_client_t * jclient)
     }
 
   debug_print (1, "Starting audio and o2j MIDI thread...\n");
-  ret =
-    pthread_create (&ow->audio_o2j_midi_t, NULL, run_audio_o2j_midi,
-		    ow);
+  ret = pthread_create (&ow->audio_o2j_midi_t, NULL, run_audio_o2j_midi, ow);
   if (ret)
     {
       error_print ("Could not start device thread\n");

@@ -256,7 +256,7 @@ struct overwitch
   overwitch_inc_sample_counter inc_sample_counter;
 };
 
-struct ob_midi_event
+struct overwitch_midi_event
 {
   jack_nframes_t frames;
   jack_midi_data_t bytes[OB_MIDI_EVENT_SIZE];

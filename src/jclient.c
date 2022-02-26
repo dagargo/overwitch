@@ -475,7 +475,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   size_t data_size;
   void *midi_port_buf;
   jack_midi_data_t *jmidi;
-  struct ob_midi_event event;
+  struct overwitch_midi_event event;
   jack_nframes_t last_frames;
   jack_nframes_t frames;
 
@@ -484,10 +484,10 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   last_frames = 0;
 
   while (jack_ringbuffer_read_space (jclient->ow.o2j_rb_midi) >=
-	 sizeof (struct ob_midi_event))
+	 sizeof (struct overwitch_midi_event))
     {
       jack_ringbuffer_peek (jclient->ow.o2j_rb_midi, (void *) &event,
-			    sizeof (struct ob_midi_event));
+			    sizeof (struct overwitch_midi_event));
 
       frames = event.frames % nframes;
 
@@ -502,7 +502,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
       last_frames = frames;
 
       jack_ringbuffer_read_advance (jclient->ow.o2j_rb_midi,
-				    sizeof (struct ob_midi_event));
+				    sizeof (struct overwitch_midi_event));
 
       if (event.bytes[0] == 0x0f)
 	{
@@ -530,7 +530,7 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 {
   jack_midi_event_t jevent;
   void *midi_port_buf;
-  struct ob_midi_event oevent;
+  struct overwitch_midi_event oevent;
   jack_nframes_t event_count;
   jack_midi_data_t status_byte;
 
@@ -597,11 +597,11 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
       if (oevent.bytes[0])
 	{
 	  if (jack_ringbuffer_write_space (jclient->ow.j2o_rb_midi) >=
-	      sizeof (struct ob_midi_event))
+	      sizeof (struct overwitch_midi_event))
 	    {
 	      jack_ringbuffer_write (jclient->ow.j2o_rb_midi,
 				     (void *) &oevent,
-				     sizeof (struct ob_midi_event));
+				     sizeof (struct overwitch_midi_event));
 	    }
 	  else
 	    {
@@ -671,7 +671,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 }
 
 static void
-set_rt_priority (pthread_t *thread, int priority)
+set_rt_priority (pthread_t * thread, int priority)
 {
   int err = jack_acquire_real_time_scheduling (*thread, priority);
   if (err)
@@ -842,8 +842,8 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
-  set_rt_priority(&jclient->ow.j2o_midi_t, jclient->priority);
-  set_rt_priority(&jclient->ow.audio_o2j_midi_t, jclient->priority);
+  set_rt_priority (&jclient->ow.j2o_midi_t, jclient->priority);
+  set_rt_priority (&jclient->ow.audio_o2j_midi_t, jclient->priority);
 
   jclient_set_sample_rate_cb (jack_get_sample_rate (jclient->client),
 			      jclient);
