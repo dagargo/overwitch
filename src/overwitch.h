@@ -169,27 +169,25 @@ struct overwitch_usb_blk
 
 typedef enum
 {
-  OB_OK = 0,
-  OB_LIBUSB_INIT_FAILED,
-  OB_CANT_OPEN_DEV,
-  OB_CANT_SET_USB_CONFIG,
-  OB_CANT_CLAIM_IF,
-  OB_CANT_SET_ALT_SETTING,
-  OB_CANT_CLEAR_EP,
-  OB_CANT_PREPARE_TRANSFER,
-  OB_CANT_FIND_DEV
+  OW_OK = 0,
+  OW_LIBUSB_INIT_FAILED,
+  OW_CANT_OPEN_DEV,
+  OW_CANT_SET_USB_CONFIG,
+  OW_CANT_CLAIM_IF,
+  OW_CANT_SET_ALT_SETTING,
+  OW_CANT_CLEAR_EP,
+  OW_CANT_PREPARE_TRANSFER,
+  OW_CANT_FIND_DEV
 } overwitch_err_t;
 
 typedef enum
 {
-  OB_STATUS_ERROR = -1,
-  OB_STATUS_STOP,
-  OB_STATUS_READY,
-  OB_STATUS_BOOT_OVERBRIDGE,
-  OB_STATUS_BOOT_JACK,
-  OB_STATUS_STARTUP,
-  OB_STATUS_TUNE,
-  OB_STATUS_RUN
+  OW_STATUS_ERROR = -1,
+  OW_STATUS_STOP,
+  OW_STATUS_READY,
+  OW_STATUS_BOOT,
+  OW_STATUS_WAIT,
+  OW_STATUS_RUN
 } overwitch_status_t;
 
 struct overwitch_device_desc
@@ -207,11 +205,11 @@ typedef void (*overwitch_inc_sample_counter) (void *, int);
 
 struct overwitch
 {
+  overwitch_status_t status;
   int blocks_per_transfer;
   int frames_per_transfer;
   int j2o_audio_enabled;
   pthread_spinlock_t lock;
-  overwitch_status_t status;
   size_t j2o_latency;
   size_t j2o_max_latency;
   pthread_t audio_o2j_midi_t;

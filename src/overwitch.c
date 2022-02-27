@@ -263,7 +263,7 @@ set_usb_input_data_blks (struct overwitch *ow)
 	}
     }
 
-  if (status < OB_STATUS_RUN)
+  if (status < OW_STATUS_RUN)
     {
       return;
     }
@@ -413,7 +413,7 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
   int length;
   struct overwitch *ow = xfr->user_data;
 
-  if (overwitch_get_status (ow) < OB_STATUS_RUN)
+  if (overwitch_get_status (ow) < OW_STATUS_RUN)
     {
       goto end;
     }
@@ -491,7 +491,7 @@ prepare_cycle_out (struct overwitch *ow)
     {
       error_print ("j2o: Error when submitting USB audio transfer: %s\n",
 		   libusb_strerror (err));
-      overwitch_set_status (ow, OB_STATUS_ERROR);
+      overwitch_set_status (ow, OW_STATUS_ERROR);
     }
 }
 
@@ -507,7 +507,7 @@ prepare_cycle_in (struct overwitch *ow)
     {
       error_print ("o2j: Error when submitting USB audio in transfer: %s\n",
 		   libusb_strerror (err));
-      overwitch_set_status (ow, OB_STATUS_ERROR);
+      overwitch_set_status (ow, OW_STATUS_ERROR);
     }
 }
 
@@ -523,7 +523,7 @@ prepare_cycle_in_midi (struct overwitch *ow)
     {
       error_print ("o2j: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
-      overwitch_set_status (ow, OB_STATUS_ERROR);
+      overwitch_set_status (ow, OW_STATUS_ERROR);
     }
 }
 
@@ -539,7 +539,7 @@ prepare_cycle_out_midi (struct overwitch *ow)
     {
       error_print ("j2o: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
-      overwitch_set_status (ow, OB_STATUS_ERROR);
+      overwitch_set_status (ow, OW_STATUS_ERROR);
     }
 }
 
@@ -567,7 +567,7 @@ overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
   // libusb setup
   if (libusb_init (&ow->context) != LIBUSB_SUCCESS)
     {
-      return OB_LIBUSB_INIT_FAILED;
+      return OW_LIBUSB_INIT_FAILED;
     }
 
   ow->device_handle = NULL;
@@ -600,7 +600,7 @@ overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
 
   if (!ow->device_handle)
     {
-      ret = OB_CANT_FIND_DEV;
+      ret = OW_CANT_FIND_DEV;
       goto end;
     }
 
@@ -616,88 +616,88 @@ overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
 
   if (!ow->device_desc)
     {
-      ret = OB_CANT_FIND_DEV;
+      ret = OW_CANT_FIND_DEV;
       goto end;
     }
 
   printf ("Device: %s (outputs: %d, inputs: %d)\n", ow->device_desc->name,
 	  ow->device_desc->outputs, ow->device_desc->inputs);
 
-  ret = OB_OK;
+  ret = OW_OK;
   err = libusb_set_configuration (ow->device_handle, 1);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OB_CANT_SET_USB_CONFIG;
+      ret = OW_CANT_SET_USB_CONFIG;
       goto end;
     }
   err = libusb_claim_interface (ow->device_handle, 1);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OB_CANT_CLAIM_IF;
+      ret = OW_CANT_CLAIM_IF;
       goto end;
     }
   err = libusb_set_interface_alt_setting (ow->device_handle, 1, 3);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OB_CANT_SET_ALT_SETTING;
+      ret = OW_CANT_SET_ALT_SETTING;
       goto end;
     }
   err = libusb_claim_interface (ow->device_handle, 2);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OB_CANT_CLAIM_IF;
+      ret = OW_CANT_CLAIM_IF;
       goto end;
     }
   err = libusb_set_interface_alt_setting (ow->device_handle, 2, 2);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OB_CANT_SET_ALT_SETTING;
+      ret = OW_CANT_SET_ALT_SETTING;
       goto end;
     }
   err = libusb_claim_interface (ow->device_handle, 3);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OB_CANT_CLAIM_IF;
+      ret = OW_CANT_CLAIM_IF;
       goto end;
     }
   err = libusb_set_interface_alt_setting (ow->device_handle, 3, 0);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OB_CANT_SET_ALT_SETTING;
+      ret = OW_CANT_SET_ALT_SETTING;
       goto end;
     }
   err = libusb_clear_halt (ow->device_handle, AUDIO_IN_EP);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OB_CANT_CLEAR_EP;
+      ret = OW_CANT_CLEAR_EP;
       goto end;
     }
   err = libusb_clear_halt (ow->device_handle, AUDIO_OUT_EP);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OB_CANT_CLEAR_EP;
+      ret = OW_CANT_CLEAR_EP;
       goto end;
     }
   err = libusb_clear_halt (ow->device_handle, MIDI_IN_EP);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OB_CANT_CLEAR_EP;
+      ret = OW_CANT_CLEAR_EP;
       goto end;
     }
   err = libusb_clear_halt (ow->device_handle, MIDI_OUT_EP);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OB_CANT_CLEAR_EP;
+      ret = OW_CANT_CLEAR_EP;
       goto end;
     }
   err = prepare_transfers (ow);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OB_CANT_PREPARE_TRANSFER;
+      ret = OW_CANT_PREPARE_TRANSFER;
     }
 
 end:
-  if (ret == OB_OK)
+  if (ret == OW_OK)
     {
       pthread_spin_init (&ow->lock, PTHREAD_PROCESS_SHARED);
 
@@ -854,7 +854,7 @@ run_j2o_midi (void *data)
 	  pthread_spin_unlock (&ow->j2o_midi_lock);
 	};
 
-      if (overwitch_get_status (ow) <= OB_STATUS_STOP)
+      if (overwitch_get_status (ow) <= OW_STATUS_STOP)
 	{
 	  break;
 	}
@@ -869,9 +869,9 @@ run_audio_o2j_midi (void *data)
   size_t rsj2o, bytes, frames;
   struct overwitch *ow = data;
 
-  while (overwitch_get_status (ow) == OB_STATUS_READY);
+  while (overwitch_get_status (ow) == OW_STATUS_READY);
 
-  //status == OB_STATUS_BOOT_OVERBRIDGE
+  //status == OW_STATUS_BOOT
 
   prepare_cycle_in (ow);
   prepare_cycle_out (ow);
@@ -883,7 +883,7 @@ run_audio_o2j_midi (void *data)
       ow->j2o_max_latency = 0;
       ow->reading_at_j2o_end = 0;
 
-      //status == OB_STATUS_BOOT_OVERBRIDGE
+      //status == OW_STATUS_BOOT
 
       pthread_spin_lock (&ow->lock);
       if (ow->init_sample_counter)
@@ -891,20 +891,20 @@ run_audio_o2j_midi (void *data)
 	  ow->init_sample_counter (ow->sample_counter_data, OB_SAMPLE_RATE,
 				   ow->frames_per_transfer);
 	}
-      ow->status = OB_STATUS_BOOT_JACK;
+      ow->status = OW_STATUS_WAIT;
       pthread_spin_unlock (&ow->lock);
 
-      while (overwitch_get_status (ow) >= OB_STATUS_BOOT_JACK)
+      while (overwitch_get_status (ow) >= OW_STATUS_WAIT)
 	{
 	  libusb_handle_events_completed (ow->context, NULL);
 	}
 
-      if (overwitch_get_status (ow) <= OB_STATUS_STOP)
+      if (overwitch_get_status (ow) <= OW_STATUS_STOP)
 	{
 	  break;
 	}
 
-      overwitch_set_status (ow, OB_STATUS_BOOT_OVERBRIDGE);
+      overwitch_set_status (ow, OW_STATUS_BOOT);
 
       rsj2o = jack_ringbuffer_read_space (ow->j2o_rb);
       frames = rsj2o / ow->j2o_frame_bytes;
@@ -929,7 +929,7 @@ overwitch_activate (struct overwitch *ow, jack_client_t * jclient)
   ow->jclient = jclient;
   ow->s_counter = 0;
 
-  ow->status = OB_STATUS_READY;
+  ow->status = OW_STATUS_READY;
   debug_print (1, "Starting j2o MIDI thread...\n");
   ret = pthread_create (&ow->j2o_midi_t, NULL, run_j2o_midi, ow);
   if (ret)

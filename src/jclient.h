@@ -21,8 +21,19 @@
 #include "overwitch.h"
 #include "dll.h"
 
+typedef enum
+{
+  JC_STATUS_ERROR = -1,
+  JC_STATUS_STOP,
+  JC_STATUS_READY,
+  JC_STATUS_BOOT,
+  JC_STATUS_TUNE,
+  JC_STATUS_RUN
+} jclient_status_t;
+
 struct jclient
 {
+  jclient_status_t status;
   struct overwitch ow;
   struct dll o2j_dll;
   double o2j_ratio;
@@ -56,7 +67,6 @@ struct jclient
   double obsr;
   int log_control_cycles;
   int log_cycles;
-  overwitch_status_t status;
   int xruns;
   pthread_spinlock_t lock;	//Used to synchronize access to xruns.
   int reading_at_o2j_end;

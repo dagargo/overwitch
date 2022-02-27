@@ -104,12 +104,12 @@ void
 jclient_reset_dll (struct jclient *jclient, jack_nframes_t new_samplerate)
 {
   static int init = 0;
-  if (!init || overwitch_get_status (&jclient->ow) < OB_STATUS_RUN)
+  if (!init || overwitch_get_status (&jclient->ow) < OW_STATUS_RUN)
     {
       debug_print (2, "Initializing dll...\n");
       dll_init (&jclient->o2j_dll, new_samplerate, OB_SAMPLE_RATE,
 		jclient->bufsize, jclient->ow.frames_per_transfer);
-      overwitch_set_status (&jclient->ow, OB_STATUS_READY);
+      overwitch_set_status (&jclient->ow, OW_STATUS_READY);
       init = 1;
     }
   else
@@ -118,7 +118,7 @@ jclient_reset_dll (struct jclient *jclient, jack_nframes_t new_samplerate)
       jclient->o2j_dll.ratio =
 	jclient->o2j_dll.last_ratio_avg * new_samplerate /
 	jclient->samplerate;
-      overwitch_set_status (&jclient->ow, OB_STATUS_READY);
+      overwitch_set_status (&jclient->ow, OW_STATUS_READY);
       jclient->log_cycles = 0;
       jclient->log_control_cycles =
 	STARTUP_TIME * new_samplerate / jclient->bufsize;
@@ -326,7 +326,7 @@ jclient_j2o (struct jclient *jclient)
 	 jclient->j2o_ratio, gen_frames, frames);
     }
 
-  if (jclient->status < OB_STATUS_RUN)
+  if (jclient->status < JC_STATUS_RUN)
     {
       return;
     }
@@ -353,6 +353,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   jack_time_t next_usecs;
   float period_usecs;
   int xruns;
+  overwitch_status_t ow_status;
   static char latency_msg[LATENCY_MSG_LEN];
 
   if (jack_get_cycle_times (jclient->client,
@@ -374,27 +375,27 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   dll->to0 = jclient->o2j_dll.counter.i0.time;
   dll->ko1 = jclient->o2j_dll.counter.i1.frames;
   dll->to1 = jclient->o2j_dll.counter.i1.time;
-  jclient->status = jclient->ow.status;
   pthread_spin_unlock (&jclient->ow.lock);
 
-  if (jclient->status <= OB_STATUS_BOOT_OVERBRIDGE)
+  ow_status = overwitch_get_status (&jclient->ow);
+  if (jclient->status == JC_STATUS_READY && ow_status <= OW_STATUS_BOOT)
     {
-      if (jclient->status == OB_STATUS_READY)
+      if (ow_status == OW_STATUS_READY)
 	{
-	  overwitch_set_status (&jclient->ow, OB_STATUS_BOOT_OVERBRIDGE);
+	  overwitch_set_status (&jclient->ow, OW_STATUS_BOOT);
 	  debug_print (2, "Booting Overbridge side...\n");
 	}
       return 1;
     }
 
-  if (jclient->status == OB_STATUS_BOOT_JACK)
+  if (jclient->status == JC_STATUS_READY && ow_status == OW_STATUS_WAIT)
     {
       dll_update_err (dll, current_usecs);
       dll_first_time_run (dll);
 
       debug_print (2, "Starting up...\n");
       dll_set_loop_filter (dll, 1.0, jclient->bufsize, jclient->samplerate);
-      overwitch_set_status (&jclient->ow, OB_STATUS_STARTUP);
+      jclient->status = JC_STATUS_BOOT;
 
       jclient->log_cycles = 0;
       jclient->log_control_cycles =
@@ -425,7 +426,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   if (dll->ratio < 0.0)
     {
       error_print ("Negative ratio detected. Stopping...\n");
-      overwitch_set_status (&jclient->ow, OB_STATUS_ERROR);
+      overwitch_set_status (&jclient->ow, OW_STATUS_ERROR);
       return 1;
     }
 
@@ -446,23 +447,24 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
       jclient->log_cycles = 0;
 
-      if (jclient->status == OB_STATUS_STARTUP)
+      if (jclient->status == JC_STATUS_BOOT)
 	{
 	  debug_print (2, "Tunning...\n");
 	  dll_set_loop_filter (dll, 0.05, jclient->bufsize,
 			       jclient->samplerate);
-	  overwitch_set_status (&jclient->ow, OB_STATUS_TUNE);
+	  jclient->status = JC_STATUS_TUNE;
 	  jclient->log_control_cycles =
 	    LOG_TIME * jclient->samplerate / jclient->bufsize;
 	}
 
-      if (jclient->status == OB_STATUS_TUNE
+      if (jclient->status == JC_STATUS_TUNE
 	  && fabs (dll->ratio_avg - dll->last_ratio_avg) < RATIO_DIFF_THRES)
 	{
 	  debug_print (2, "Running...\n");
 	  dll_set_loop_filter (dll, 0.02, jclient->bufsize,
 			       jclient->samplerate);
-	  overwitch_set_status (&jclient->ow, OB_STATUS_RUN);
+	  jclient->status = JC_STATUS_RUN;
+	  overwitch_set_status (&jclient->ow, OW_STATUS_RUN);
 	}
     }
 
@@ -534,7 +536,7 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
   jack_nframes_t event_count;
   jack_midi_data_t status_byte;
 
-  if (jclient->status < OB_STATUS_RUN)
+  if (jclient->status < JC_STATUS_RUN)
     {
       return;
     }
@@ -684,7 +686,7 @@ void
 jclient_exit (struct jclient *jclient)
 {
   jclient_print_latencies (jclient, "\n");
-  overwitch_set_status (&jclient->ow, OB_STATUS_STOP);
+  overwitch_set_status (&jclient->ow, OW_STATUS_STOP);
 }
 
 int
@@ -699,7 +701,7 @@ jclient_run (struct jclient *jclient)
   jclient->bufsize = 0;
   jclient->xruns = 0;
 
-  jclient->status = OB_STATUS_ERROR;
+  jclient->status = JC_STATUS_READY;
   ob_status =
     overwitch_init (&jclient->ow, jclient->bus, jclient->address,
 		    jclient->blocks_per_transfer);
@@ -877,7 +879,6 @@ cleanup_jack:
 cleanup_overwitch:
   overwitch_destroy (&jclient->ow);
 
-  jclient->status = jclient->ow.status;
 end:
   return jclient->status;
 }
