@@ -155,6 +155,13 @@ static void prepare_cycle_out ();
 static void prepare_cycle_in_midi ();
 
 int
+overwitch_bytes_to_frame_bytes (int bytes, int bytes_per_frame)
+{
+  int frames = bytes / bytes_per_frame;
+  return frames * bytes_per_frame;
+}
+
+int
 overwitch_is_valid_device (uint16_t vid, uint16_t pid, char **name)
 {
   if (vid != ELEKTRON_VID)
@@ -297,8 +304,7 @@ set_usb_output_data_blks (struct overwitch *ow)
       if (enabled && rsj2o >= ow->j2o_buf_size)
 	{
 	  debug_print (2, "j2o: Emptying buffer and running...\n");
-	  frames = rsj2o / ow->j2o_frame_bytes;
-	  bytes = frames * ow->j2o_frame_bytes;
+	  bytes = overwitch_bytes_to_frame_bytes (rsj2o, ow->j2o_frame_bytes);
 	  ow->buffer_read (ow->j2o_audio_buffer, NULL, bytes);
 	  ow->reading_at_j2o_end = 1;
 	}
@@ -324,7 +330,7 @@ set_usb_output_data_blks (struct overwitch *ow)
   if (rsj2o >= ow->j2o_buf_size)
     {
       ow->buffer_read (ow->j2o_audio_buffer, (void *) ow->j2o_buf,
-			    ow->j2o_buf_size);
+		       ow->j2o_buf_size);
     }
   else
     {
@@ -333,8 +339,7 @@ set_usb_output_data_blks (struct overwitch *ow)
 		   rsj2o, ow->j2o_buf_size);
       frames = rsj2o / ow->j2o_frame_bytes;
       bytes = frames * ow->j2o_frame_bytes;
-      ow->buffer_read (ow->j2o_audio_buffer, (void *) ow->j2o_buf_res,
-			    bytes);
+      ow->buffer_read (ow->j2o_audio_buffer, (void *) ow->j2o_buf_res, bytes);
       ow->j2o_data.input_frames = frames;
       ow->j2o_data.src_ratio = (double) ow->frames_per_transfer / frames;
       //We should NOT use the simple API but since this only happens very occasionally and mostly at startup, this has very low impact on audio quality.
@@ -864,7 +869,7 @@ run_j2o_midi (void *data)
 void *
 run_audio_o2j_midi (void *data)
 {
-  size_t rsj2o, bytes, frames;
+  size_t rsj2o, bytes;
   struct overwitch *ow = data;
 
   while (overwitch_get_status (ow) == OW_STATUS_READY);
@@ -905,8 +910,7 @@ run_audio_o2j_midi (void *data)
       overwitch_set_status (ow, OW_STATUS_BOOT);
 
       rsj2o = ow->buffer_read_space (ow->j2o_audio_buffer);
-      frames = rsj2o / ow->j2o_frame_bytes;
-      bytes = frames * ow->j2o_frame_bytes;
+      bytes = overwitch_bytes_to_frame_bytes (rsj2o, ow->j2o_frame_bytes);
       ow->buffer_read (ow->j2o_audio_buffer, NULL, bytes);
       memset (ow->j2o_buf, 0, ow->j2o_buf_size);
     }

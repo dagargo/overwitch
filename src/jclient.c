@@ -101,7 +101,7 @@ jclient_print_latencies (struct jclient *jclient, const char *end)
 void
 jclient_reset_buffers (struct jclient *jclient)
 {
-  size_t rso2j, bytes, frames;
+  size_t rso2j, bytes;
   size_t j2o_bufsize = jclient->bufsize * jclient->ow.j2o_frame_bytes;
   size_t o2j_bufsize = jclient->bufsize * jclient->ow.o2j_frame_bytes;
 
@@ -138,8 +138,7 @@ jclient_reset_buffers (struct jclient *jclient)
   jclient->reading_at_o2j_end = 0;
 
   rso2j = jack_ringbuffer_read_space (jclient->o2j_audio_rb);
-  frames = rso2j / jclient->ow.o2j_frame_bytes;
-  bytes = frames * jclient->ow.o2j_frame_bytes;
+  bytes = overwitch_bytes_to_frame_bytes (rso2j, jclient->ow.o2j_frame_bytes);
   jack_ringbuffer_read_advance (jclient->o2j_audio_rb, bytes);
 }
 
@@ -310,8 +309,8 @@ jclient_o2j_reader (void *cb_data, float **data)
       if (rso2j >= jclient->o2j_buf_size)
 	{
 	  debug_print (2, "o2j: Emptying buffer and running...\n");
-	  frames = rso2j / jclient->ow.o2j_frame_bytes;
-	  bytes = frames * jclient->ow.o2j_frame_bytes;
+	  bytes =
+	    overwitch_bytes_to_frame_bytes (rso2j, jclient->o2j_buf_size);
 	  jack_ringbuffer_read_advance (jclient->o2j_audio_rb, bytes);
 	  jclient->reading_at_o2j_end = 1;
 	}
