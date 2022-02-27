@@ -36,6 +36,10 @@ struct jclient
   jclient_status_t status;
   struct overwitch ow;
   struct dll o2j_dll;
+  jack_ringbuffer_t *o2j_audio_rb;
+  jack_ringbuffer_t *j2o_audio_rb;
+  size_t o2j_buf_size;
+  size_t j2o_buf_size;
   double o2j_ratio;
   double j2o_ratio;
   jack_client_t *client;
@@ -45,8 +49,6 @@ struct jclient
   jack_port_t *midi_input_port;
   jack_nframes_t bufsize;
   double samplerate;
-  size_t o2j_buf_size;
-  size_t j2o_buf_size;
   jack_default_audio_sample_t *j2o_buf_in;
   jack_default_audio_sample_t *j2o_buf_out;
   jack_default_audio_sample_t *j2o_aux;

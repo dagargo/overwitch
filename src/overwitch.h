@@ -200,8 +200,11 @@ struct overwitch_device_desc
   char *output_track_names[OB_MAX_TRACKS];
 };
 
-typedef void (*overwitch_init_sample_counter) (void *, double, int);
-typedef void (*overwitch_inc_sample_counter) (void *, int);
+typedef void (*overwitch_sample_counter_init_t) (void *, double, int);
+typedef void (*overwitch_inc_sample_counter_t) (void *, int);
+
+typedef size_t (*overwitch_buffer_rw_space_t) (void *);
+typedef size_t (*overwitch_buffer_rw_t) (void *, char *, size_t);
 
 struct overwitch
 {
@@ -222,8 +225,8 @@ struct overwitch
   struct libusb_transfer *xfr_out;
   char *usb_data_in;
   char *usb_data_out;
-  jack_ringbuffer_t *j2o_rb;
-  jack_ringbuffer_t *o2j_rb;
+  void *j2o_audio_buffer;
+  void *o2j_audio_buffer;
   size_t usb_data_in_blk_len;
   size_t usb_data_out_blk_len;
   size_t j2o_buf_size;
@@ -250,8 +253,13 @@ struct overwitch
   int j2o_midi_ready;
   //sample counter
   void *sample_counter_data;
-  overwitch_init_sample_counter init_sample_counter;
-  overwitch_inc_sample_counter inc_sample_counter;
+  overwitch_sample_counter_init_t sample_counter_init;
+  overwitch_inc_sample_counter_t sample_counter_inc;
+  //buffer operations
+  overwitch_buffer_rw_space_t buffer_write_space;
+  overwitch_buffer_rw_t buffer_write;
+  overwitch_buffer_rw_space_t buffer_read_space;
+  overwitch_buffer_rw_t buffer_read;
 };
 
 struct overwitch_midi_event

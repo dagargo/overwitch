@@ -32,8 +32,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#define MAX_OW_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
-
 #define ELEKTRON_VID 0x1935
 
 #define AFMK1_PID 0x0004
@@ -238,9 +236,9 @@ set_usb_input_data_blks (struct overwitch *ow)
   overwitch_status_t status;
 
   pthread_spin_lock (&ow->lock);
-  if (ow->inc_sample_counter)
+  if (ow->sample_counter_inc)
     {
-      ow->inc_sample_counter (ow->sample_counter_data,
+      ow->sample_counter_inc (ow->sample_counter_data,
 			      ow->frames_per_transfer);
     }
   status = ow->status;
@@ -268,11 +266,11 @@ set_usb_input_data_blks (struct overwitch *ow)
       return;
     }
 
-  wso2j = jack_ringbuffer_write_space (ow->o2j_rb);
+  wso2j = ow->buffer_write_space (ow->o2j_audio_buffer);
   if (ow->o2j_buf_size <= wso2j)
     {
-      jack_ringbuffer_write (ow->o2j_rb, (void *) ow->o2j_buf,
-			     ow->o2j_buf_size);
+      ow->buffer_write (ow->o2j_audio_buffer, (void *) ow->o2j_buf,
+			ow->o2j_buf_size);
     }
   else
     {
@@ -293,7 +291,7 @@ set_usb_output_data_blks (struct overwitch *ow)
   int32_t *s;
   int enabled = overwitch_is_j2o_audio_enable (ow);
 
-  rsj2o = jack_ringbuffer_read_space (ow->j2o_rb);
+  rsj2o = ow->buffer_read_space (ow->j2o_audio_buffer);
   if (!ow->reading_at_j2o_end)
     {
       if (enabled && rsj2o >= ow->j2o_buf_size)
@@ -301,7 +299,7 @@ set_usb_output_data_blks (struct overwitch *ow)
 	  debug_print (2, "j2o: Emptying buffer and running...\n");
 	  frames = rsj2o / ow->j2o_frame_bytes;
 	  bytes = frames * ow->j2o_frame_bytes;
-	  jack_ringbuffer_read_advance (ow->j2o_rb, bytes);
+	  ow->buffer_read (ow->j2o_audio_buffer, NULL, bytes);
 	  ow->reading_at_j2o_end = 1;
 	}
       goto set_blocks;
@@ -325,7 +323,7 @@ set_usb_output_data_blks (struct overwitch *ow)
 
   if (rsj2o >= ow->j2o_buf_size)
     {
-      jack_ringbuffer_read (ow->j2o_rb, (void *) ow->j2o_buf,
+      ow->buffer_read (ow->j2o_audio_buffer, (void *) ow->j2o_buf,
 			    ow->j2o_buf_size);
     }
   else
@@ -335,7 +333,8 @@ set_usb_output_data_blks (struct overwitch *ow)
 		   rsj2o, ow->j2o_buf_size);
       frames = rsj2o / ow->j2o_frame_bytes;
       bytes = frames * ow->j2o_frame_bytes;
-      jack_ringbuffer_read (ow->j2o_rb, (void *) ow->j2o_buf_res, bytes);
+      ow->buffer_read (ow->j2o_audio_buffer, (void *) ow->j2o_buf_res,
+			    bytes);
       ow->j2o_data.input_frames = frames;
       ow->j2o_data.src_ratio = (double) ow->frames_per_transfer / frames;
       //We should NOT use the simple API but since this only happens very occasionally and mostly at startup, this has very low impact on audio quality.
@@ -434,12 +433,11 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 			   event.bytes[0], event.bytes[1], event.bytes[2],
 			   event.bytes[3], event.frames);
 
-	      if (jack_ringbuffer_write_space (ow->o2j_rb_midi) >=
+	      if (ow->buffer_write_space (ow->o2j_rb_midi) >=
 		  sizeof (struct overwitch_midi_event))
 		{
-		  jack_ringbuffer_write (ow->o2j_rb_midi, (void *) &event,
-					 sizeof (struct
-						 overwitch_midi_event));
+		  ow->buffer_write (ow->o2j_rb_midi, (void *) &event,
+				    sizeof (struct overwitch_midi_event));
 		}
 	      else
 		{
@@ -886,9 +884,9 @@ run_audio_o2j_midi (void *data)
       //status == OW_STATUS_BOOT
 
       pthread_spin_lock (&ow->lock);
-      if (ow->init_sample_counter)
+      if (ow->sample_counter_init)
 	{
-	  ow->init_sample_counter (ow->sample_counter_data, OB_SAMPLE_RATE,
+	  ow->sample_counter_init (ow->sample_counter_data, OB_SAMPLE_RATE,
 				   ow->frames_per_transfer);
 	}
       ow->status = OW_STATUS_WAIT;
@@ -906,10 +904,10 @@ run_audio_o2j_midi (void *data)
 
       overwitch_set_status (ow, OW_STATUS_BOOT);
 
-      rsj2o = jack_ringbuffer_read_space (ow->j2o_rb);
+      rsj2o = ow->buffer_read_space (ow->j2o_audio_buffer);
       frames = rsj2o / ow->j2o_frame_bytes;
       bytes = frames * ow->j2o_frame_bytes;
-      jack_ringbuffer_read_advance (ow->j2o_rb, bytes);
+      ow->buffer_read (ow->j2o_audio_buffer, NULL, bytes);
       memset (ow->j2o_buf, 0, ow->j2o_buf_size);
     }
 
@@ -920,11 +918,6 @@ int
 overwitch_activate (struct overwitch *ow, jack_client_t * jclient)
 {
   int ret;
-
-  ow->j2o_rb = jack_ringbuffer_create (MAX_OW_LATENCY * ow->j2o_frame_bytes);
-  jack_ringbuffer_mlock (ow->j2o_rb);
-  ow->o2j_rb = jack_ringbuffer_create (MAX_OW_LATENCY * ow->o2j_frame_bytes);
-  jack_ringbuffer_mlock (ow->o2j_rb);
 
   ow->jclient = jclient;
   ow->s_counter = 0;
@@ -967,14 +960,6 @@ overwitch_destroy (struct overwitch *ow)
 {
   usb_shutdown (ow);
   free_transfers (ow);
-  if (ow->j2o_rb)
-    {
-      jack_ringbuffer_free (ow->j2o_rb);
-    }
-  if (ow->o2j_rb)
-    {
-      jack_ringbuffer_free (ow->o2j_rb);
-    }
   jack_ringbuffer_free (ow->o2j_rb_midi);
   free (ow->j2o_buf);
   free (ow->j2o_buf_res);
