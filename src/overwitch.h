@@ -225,20 +225,20 @@ struct overwitch
   struct libusb_transfer *xfr_out;
   char *usb_data_in;
   char *usb_data_out;
-  void *j2o_audio_buffer;
-  void *o2j_audio_buffer;
+  void *j2o_audio_buf;
+  void *o2j_audio_buf;
   size_t usb_data_in_blk_len;
   size_t usb_data_out_blk_len;
-  size_t j2o_buf_size;
-  size_t o2j_buf_size;
+  size_t j2o_transfer_size;
+  size_t o2j_transfer_size;
   int usb_data_in_len;
   int usb_data_out_len;
-  float *j2o_buf;
-  float *o2j_buf;
-  size_t o2j_frame_bytes;
-  size_t j2o_frame_bytes;
+  float *j2o_transfer_buf;
+  float *o2j_transfer_buf;
+  size_t o2j_frame_size;
+  size_t j2o_frame_size;
   //j2o resampler
-  float *j2o_buf_res;
+  float *j2o_resampler_buf;
   SRC_DATA j2o_data;
   //MIDI
   jack_client_t *jclient;

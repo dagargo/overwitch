@@ -251,7 +251,7 @@ set_usb_input_data_blks (struct overwitch *ow)
   status = ow->status;
   pthread_spin_unlock (&ow->lock);
 
-  f = ow->o2j_buf;
+  f = ow->o2j_transfer_buf;
   for (int i = 0; i < ow->blocks_per_transfer; i++)
     {
       blk = get_nth_usb_in_blk (ow, i);
@@ -273,11 +273,11 @@ set_usb_input_data_blks (struct overwitch *ow)
       return;
     }
 
-  wso2j = ow->buffer_write_space (ow->o2j_audio_buffer);
-  if (ow->o2j_buf_size <= wso2j)
+  wso2j = ow->buffer_write_space (ow->o2j_audio_buf);
+  if (ow->o2j_transfer_size <= wso2j)
     {
-      ow->buffer_write (ow->o2j_audio_buffer, (void *) ow->o2j_buf,
-			ow->o2j_buf_size);
+      ow->buffer_write (ow->o2j_audio_buf, (void *) ow->o2j_transfer_buf,
+			ow->o2j_transfer_size);
     }
   else
     {
@@ -298,14 +298,14 @@ set_usb_output_data_blks (struct overwitch *ow)
   int32_t *s;
   int enabled = overwitch_is_j2o_audio_enable (ow);
 
-  rsj2o = ow->buffer_read_space (ow->j2o_audio_buffer);
+  rsj2o = ow->buffer_read_space (ow->j2o_audio_buf);
   if (!ow->reading_at_j2o_end)
     {
-      if (enabled && rsj2o >= ow->j2o_buf_size)
+      if (enabled && rsj2o >= ow->j2o_transfer_size)
 	{
 	  debug_print (2, "j2o: Emptying buffer and running...\n");
-	  bytes = overwitch_bytes_to_frame_bytes (rsj2o, ow->j2o_frame_bytes);
-	  ow->buffer_read (ow->j2o_audio_buffer, NULL, bytes);
+	  bytes = overwitch_bytes_to_frame_bytes (rsj2o, ow->j2o_frame_size);
+	  ow->buffer_read (ow->j2o_audio_buf, NULL, bytes);
 	  ow->reading_at_j2o_end = 1;
 	}
       goto set_blocks;
@@ -315,7 +315,7 @@ set_usb_output_data_blks (struct overwitch *ow)
     {
       ow->reading_at_j2o_end = 0;
       debug_print (2, "j2o: Clearing buffer and stopping...\n");
-      memset (ow->j2o_buf, 0, ow->j2o_buf_size);
+      memset (ow->j2o_transfer_buf, 0, ow->j2o_transfer_size);
       goto set_blocks;
     }
 
@@ -327,19 +327,20 @@ set_usb_output_data_blks (struct overwitch *ow)
     }
   pthread_spin_unlock (&ow->lock);
 
-  if (rsj2o >= ow->j2o_buf_size)
+  if (rsj2o >= ow->j2o_transfer_size)
     {
-      ow->buffer_read (ow->j2o_audio_buffer, (void *) ow->j2o_buf,
-		       ow->j2o_buf_size);
+      ow->buffer_read (ow->j2o_audio_buf, (void *) ow->j2o_transfer_buf,
+		       ow->j2o_transfer_size);
     }
   else
     {
       debug_print (2,
 		   "j2o: Audio ring buffer underflow (%zu < %zu). Resampling...\n",
-		   rsj2o, ow->j2o_buf_size);
-      frames = rsj2o / ow->j2o_frame_bytes;
-      bytes = frames * ow->j2o_frame_bytes;
-      ow->buffer_read (ow->j2o_audio_buffer, (void *) ow->j2o_buf_res, bytes);
+		   rsj2o, ow->j2o_transfer_size);
+      frames = rsj2o / ow->j2o_frame_size;
+      bytes = frames * ow->j2o_frame_size;
+      ow->buffer_read (ow->j2o_audio_buf, (void *) ow->j2o_resampler_buf,
+		       bytes);
       ow->j2o_data.input_frames = frames;
       ow->j2o_data.src_ratio = (double) ow->frames_per_transfer / frames;
       //We should NOT use the simple API but since this only happens very occasionally and mostly at startup, this has very low impact on audio quality.
@@ -360,7 +361,7 @@ set_usb_output_data_blks (struct overwitch *ow)
     }
 
 set_blocks:
-  f = ow->j2o_buf;
+  f = ow->j2o_transfer_buf;
   for (int i = 0; i < ow->blocks_per_transfer; i++)
     {
       blk = get_nth_usb_out_blk (ow, i);
@@ -730,21 +731,21 @@ end:
 	  blk->header = htobe16 (0x07ff);
 	}
 
-      ow->j2o_frame_bytes = OB_BYTES_PER_FRAME * ow->device_desc->inputs;
-      ow->o2j_frame_bytes = OB_BYTES_PER_FRAME * ow->device_desc->outputs;
+      ow->j2o_frame_size = OB_BYTES_PER_FRAME * ow->device_desc->inputs;
+      ow->o2j_frame_size = OB_BYTES_PER_FRAME * ow->device_desc->outputs;
 
-      ow->j2o_buf_size = ow->frames_per_transfer * ow->j2o_frame_bytes;
-      ow->o2j_buf_size = ow->frames_per_transfer * ow->o2j_frame_bytes;
-      ow->j2o_buf = malloc (ow->j2o_buf_size);
-      ow->o2j_buf = malloc (ow->o2j_buf_size);
-      memset (ow->j2o_buf, 0, ow->j2o_buf_size);
-      memset (ow->o2j_buf, 0, ow->o2j_buf_size);
+      ow->j2o_transfer_size = ow->frames_per_transfer * ow->j2o_frame_size;
+      ow->o2j_transfer_size = ow->frames_per_transfer * ow->o2j_frame_size;
+      ow->j2o_transfer_buf = malloc (ow->j2o_transfer_size);
+      ow->o2j_transfer_buf = malloc (ow->o2j_transfer_size);
+      memset (ow->j2o_transfer_buf, 0, ow->j2o_transfer_size);
+      memset (ow->o2j_transfer_buf, 0, ow->o2j_transfer_size);
 
       //o2j resampler
-      ow->j2o_buf_res = malloc (ow->j2o_buf_size);
-      memset (ow->j2o_buf_res, 0, ow->j2o_buf_size);
-      ow->j2o_data.data_in = ow->j2o_buf_res;
-      ow->j2o_data.data_out = ow->j2o_buf;
+      ow->j2o_resampler_buf = malloc (ow->j2o_transfer_size);
+      memset (ow->j2o_resampler_buf, 0, ow->j2o_transfer_size);
+      ow->j2o_data.data_in = ow->j2o_resampler_buf;
+      ow->j2o_data.data_out = ow->j2o_transfer_buf;
       ow->j2o_data.end_of_input = 1;
       ow->j2o_data.input_frames = ow->frames_per_transfer;
       ow->j2o_data.output_frames = ow->frames_per_transfer;
@@ -909,10 +910,10 @@ run_audio_o2j_midi (void *data)
 
       overwitch_set_status (ow, OW_STATUS_BOOT);
 
-      rsj2o = ow->buffer_read_space (ow->j2o_audio_buffer);
-      bytes = overwitch_bytes_to_frame_bytes (rsj2o, ow->j2o_frame_bytes);
-      ow->buffer_read (ow->j2o_audio_buffer, NULL, bytes);
-      memset (ow->j2o_buf, 0, ow->j2o_buf_size);
+      rsj2o = ow->buffer_read_space (ow->j2o_audio_buf);
+      bytes = overwitch_bytes_to_frame_bytes (rsj2o, ow->j2o_frame_size);
+      ow->buffer_read (ow->j2o_audio_buf, NULL, bytes);
+      memset (ow->j2o_transfer_buf, 0, ow->j2o_transfer_size);
     }
 
   return NULL;
@@ -965,9 +966,9 @@ overwitch_destroy (struct overwitch *ow)
   usb_shutdown (ow);
   free_transfers (ow);
   jack_ringbuffer_free (ow->o2j_rb_midi);
-  free (ow->j2o_buf);
-  free (ow->j2o_buf_res);
-  free (ow->o2j_buf);
+  free (ow->j2o_transfer_buf);
+  free (ow->j2o_resampler_buf);
+  free (ow->o2j_transfer_buf);
   free (ow->usb_data_in);
   free (ow->usb_data_out);
   free (ow->j2o_midi_data);
