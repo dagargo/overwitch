@@ -931,7 +931,7 @@ overwitch_activate (struct overwitch *ow, jack_client_t * jclient)
 
   ow->status = OW_STATUS_READY;
   debug_print (1, "Starting j2o MIDI thread...\n");
-  ret = pthread_create (&ow->j2o_midi_t, NULL, run_j2o_midi, ow);
+  ret = pthread_create (&ow->j2o_midi_thread, NULL, run_j2o_midi, ow);
   if (ret)
     {
       error_print ("Could not start MIDI thread\n");
@@ -939,7 +939,8 @@ overwitch_activate (struct overwitch *ow, jack_client_t * jclient)
     }
 
   debug_print (1, "Starting audio and o2j MIDI thread...\n");
-  ret = pthread_create (&ow->audio_o2j_midi_t, NULL, run_audio_o2j_midi, ow);
+  ret =
+    pthread_create (&ow->audio_o2j_midi_thread, NULL, run_audio_o2j_midi, ow);
   if (ret)
     {
       error_print ("Could not start device thread\n");
@@ -951,8 +952,8 @@ overwitch_activate (struct overwitch *ow, jack_client_t * jclient)
 void
 overwitch_wait (struct overwitch *ow)
 {
-  pthread_join (ow->audio_o2j_midi_t, NULL);
-  pthread_join (ow->j2o_midi_t, NULL);
+  pthread_join (ow->audio_o2j_midi_thread, NULL);
+  pthread_join (ow->j2o_midi_thread, NULL);
 }
 
 const char *

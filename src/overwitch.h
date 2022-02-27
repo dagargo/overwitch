@@ -212,8 +212,8 @@ struct overwitch
   pthread_spinlock_t lock;
   size_t j2o_latency;
   size_t j2o_max_latency;
-  pthread_t audio_o2j_midi_t;
-  pthread_t j2o_midi_t;
+  pthread_t audio_o2j_midi_thread;
+  pthread_t j2o_midi_thread;
   uint16_t s_counter;
   libusb_context *context;
   libusb_device_handle *device_handle;
