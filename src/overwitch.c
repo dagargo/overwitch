@@ -781,14 +781,15 @@ run_j2o_midi (void *data)
 {
   int pos, j2o_midi_ready;
   jack_time_t last_time;
-  jack_time_t event_time;
   jack_time_t diff;
   struct timespec sleep_time, smallest_sleep_time;
   struct overwitch_midi_event event;
+  jack_time_t event_time = 0;
+  int event_read = 0;
   struct overwitch *ow = data;
 
   smallest_sleep_time.tv_sec = 0;
-  smallest_sleep_time.tv_nsec = SAMPLE_TIME_NS * jack_get_buffer_size (ow->jclient) / 2;	//Average wait time
+  smallest_sleep_time.tv_nsec = SAMPLE_TIME_NS * 32 / 2; //Average wait time for a 32 buffer sample
 
   pos = 0;
   diff = 0;
@@ -797,7 +798,7 @@ run_j2o_midi (void *data)
   while (1)
     {
 
-      while (jack_ringbuffer_read_space (ow->j2o_midi_buf) >=
+      while (ow->buffer_read_space (ow->j2o_midi_buf) >=
 	     sizeof (struct overwitch_midi_event) && pos < USB_BULK_MIDI_SIZE)
 	{
 	  if (!pos)
@@ -806,9 +807,13 @@ run_j2o_midi (void *data)
 	      diff = 0;
 	    }
 
-	  jack_ringbuffer_peek (ow->j2o_midi_buf, (void *) &event,
-				sizeof (struct overwitch_midi_event));
-	  event_time = jack_frames_to_time (ow->jclient, event.frames);
+	  if (!event_read)
+	    {
+	      ow->buffer_read (ow->j2o_midi_buf, (void *) &event,
+				    sizeof (struct overwitch_midi_event));
+	      event_time = jack_frames_to_time (ow->jclient, event.frames);
+	      event_read = 1;
+	    }
 
 	  if (event_time > last_time)
 	    {
@@ -819,8 +824,7 @@ run_j2o_midi (void *data)
 
 	  memcpy (&ow->j2o_midi_data[pos], event.bytes, OB_MIDI_EVENT_SIZE);
 	  pos += OB_MIDI_EVENT_SIZE;
-	  jack_ringbuffer_read_advance (ow->j2o_midi_buf,
-					sizeof (struct overwitch_midi_event));
+	  event_read = 0;
 	}
 
       if (pos)
