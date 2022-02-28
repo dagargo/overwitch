@@ -145,8 +145,6 @@
  */
 
 #include <libusb.h>
-#include <jack/ringbuffer.h>
-#include <jack/midiport.h>
 #include <samplerate.h>
 #include <pthread.h>
 #include "utils.h"
@@ -206,6 +204,8 @@ typedef void (*overwitch_inc_sample_counter_t) (void *, int);
 typedef size_t (*overwitch_buffer_rw_space_t) (void *);
 typedef size_t (*overwitch_buffer_rw_t) (void *, char *, size_t);
 
+typedef uint64_t (*overwitch_get_time) ();
+
 struct overwitch
 {
   overwitch_status_t status;
@@ -241,7 +241,6 @@ struct overwitch
   float *j2o_resampler_buf;
   SRC_DATA j2o_data;
   //MIDI
-  jack_client_t *jclient;
   unsigned char *j2o_midi_data;
   unsigned char *o2j_midi_data;
   struct libusb_transfer *xfr_out_midi;
@@ -260,12 +259,14 @@ struct overwitch
   overwitch_buffer_rw_t buffer_write;
   overwitch_buffer_rw_space_t buffer_read_space;
   overwitch_buffer_rw_t buffer_read;
+  //time operations
+  overwitch_get_time get_time;
 };
 
 struct overwitch_midi_event
 {
-  jack_nframes_t frames;
-  jack_midi_data_t bytes[OB_MIDI_EVENT_SIZE];
+  uint64_t time;
+  uint8_t bytes[OB_MIDI_EVENT_SIZE];
 };
 
 const char *overbrigde_get_err_str (overwitch_err_t);
@@ -274,7 +275,7 @@ void set_self_max_priority ();
 
 overwitch_err_t overwitch_init (struct overwitch *, uint8_t, uint8_t, int);
 
-int overwitch_activate (struct overwitch *, jack_client_t *);
+int overwitch_activate (struct overwitch *);
 
 void overwitch_destroy (struct overwitch *);
 

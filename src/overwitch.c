@@ -426,7 +426,7 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
       length = 0;
-      event.frames = jack_frame_time (ow->jclient);
+      event.time = ow->get_time ();
 
       while (length < xfr->actual_length)
 	{
@@ -435,9 +435,9 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 	  //Note-off, Note-on, Poly-KeyPress, Control Change, Program Change, Channel Pressure, PitchBend Change, Single Byte
 	  if (event.bytes[0] >= 0x08 && event.bytes[0] <= 0x0f)
 	    {
-	      debug_print (2, "o2j MIDI: %02x, %02x, %02x, %02x (%u)\n",
+	      debug_print (2, "o2j MIDI: %02x, %02x, %02x, %02x (%lu)\n",
 			   event.bytes[0], event.bytes[1], event.bytes[2],
-			   event.bytes[3], event.frames);
+			   event.bytes[3], event.time);
 
 	      if (ow->buffer_write_space (ow->o2j_midi_buf) >=
 		  sizeof (struct overwitch_midi_event))
@@ -779,13 +779,10 @@ static const char *ob_err_strgs[] = { "ok", "libusb init failed",
 void *
 run_j2o_midi (void *data)
 {
-  int pos, j2o_midi_ready;
-  jack_time_t last_time;
-  jack_time_t diff;
+  int pos, j2o_midi_ready, event_read = 0;
+  uint64_t last_time, diff;
   struct timespec sleep_time, smallest_sleep_time;
   struct overwitch_midi_event event;
-  jack_time_t event_time = 0;
-  int event_read = 0;
   struct overwitch *ow = data;
 
   smallest_sleep_time.tv_sec = 0;
@@ -793,7 +790,7 @@ run_j2o_midi (void *data)
 
   pos = 0;
   diff = 0;
-  last_time = jack_get_time ();
+  last_time = ow->get_time ();
   ow->j2o_midi_ready = 1;
   while (1)
     {
@@ -811,14 +808,13 @@ run_j2o_midi (void *data)
 	    {
 	      ow->buffer_read (ow->j2o_midi_buf, (void *) &event,
 				    sizeof (struct overwitch_midi_event));
-	      event_time = jack_frames_to_time (ow->jclient, event.frames);
 	      event_read = 1;
 	    }
 
-	  if (event_time > last_time)
+	  if (event.time > last_time)
 	    {
-	      diff = event_time - last_time;
-	      last_time = event_time;
+	      diff = event.time - last_time;
+	      last_time = event.time;
 	      break;
 	    }
 
@@ -829,7 +825,7 @@ run_j2o_midi (void *data)
 
       if (pos)
 	{
-	  debug_print (2, "Event frames: %u; diff: %lu\n", event.frames,
+	  debug_print (2, "Event frames: %lu; diff: %lu\n", event.time,
 		       diff);
 	  ow->j2o_midi_ready = 0;
 	  prepare_cycle_out_midi (ow);
@@ -920,11 +916,10 @@ run_audio_o2j_midi (void *data)
 }
 
 int
-overwitch_activate (struct overwitch *ow, jack_client_t * jclient)
+overwitch_activate (struct overwitch *ow)
 {
   int ret;
 
-  ow->jclient = jclient;
   ow->s_counter = 0;
 
   ow->status = OW_STATUS_READY;

@@ -18,6 +18,8 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <jack/ringbuffer.h>
+#include <jack/midiport.h>
 #include "overwitch.h"
 #include "dll.h"
 

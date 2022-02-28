@@ -535,7 +535,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
       jack_ringbuffer_peek (jclient->o2j_midi_rb, (void *) &event,
 			    sizeof (struct overwitch_midi_event));
 
-      frames = event.frames % nframes;
+      frames = jack_time_to_frames(jclient->client, event.time);
 
       debug_print (2, "Event frames: %u\n", frames);
 
@@ -638,7 +638,7 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 	  oevent.bytes[3] = jevent.buffer[2];
 	}
 
-      oevent.frames = jevent.time;
+      oevent.time = jack_frames_to_time (jclient->client, jevent.time);
 
       if (oevent.bytes[0])
 	{
@@ -763,6 +763,8 @@ jclient_run (struct jclient *jclient)
   jclient->ow.buffer_write = jclient_buffer_write;
   jclient->ow.buffer_read_space = jclient_buffer_read_space;
   jclient->ow.buffer_read = jclient_buffer_read;
+
+  jclient->ow.get_time = jack_get_time;
 
   jclient->client =
     jack_client_open (jclient->ow.device_desc->name, options, &status, NULL);
@@ -910,7 +912,7 @@ jclient_run (struct jclient *jclient)
   jack_ringbuffer_mlock (jclient->o2j_midi_rb);
   jclient->ow.o2j_midi_buf = jclient->o2j_midi_rb;
 
-  if (overwitch_activate (&jclient->ow, jclient->client))
+  if (overwitch_activate (&jclient->ow))
     {
       goto cleanup_jack;
     }
