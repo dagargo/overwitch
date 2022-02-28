@@ -39,6 +39,9 @@
 
 #define LATENCY_MSG_LEN 1024
 
+#define MIDI_BUF_EVENTS 64
+#define MIDI_BUF_SIZE (MIDI_BUF_EVENTS * OB_MIDI_EVENT_SIZE)
+
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
 size_t
@@ -526,10 +529,10 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   jack_midi_clear_buffer (midi_port_buf);
   last_frames = 0;
 
-  while (jack_ringbuffer_read_space (jclient->ow.o2j_rb_midi) >=
+  while (jack_ringbuffer_read_space (jclient->o2j_midi_rb) >=
 	 sizeof (struct overwitch_midi_event))
     {
-      jack_ringbuffer_peek (jclient->ow.o2j_rb_midi, (void *) &event,
+      jack_ringbuffer_peek (jclient->o2j_midi_rb, (void *) &event,
 			    sizeof (struct overwitch_midi_event));
 
       frames = event.frames % nframes;
@@ -544,7 +547,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	}
       last_frames = frames;
 
-      jack_ringbuffer_read_advance (jclient->ow.o2j_rb_midi,
+      jack_ringbuffer_read_advance (jclient->o2j_midi_rb,
 				    sizeof (struct overwitch_midi_event));
 
       if (event.bytes[0] == 0x0f)
@@ -639,10 +642,10 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 
       if (oevent.bytes[0])
 	{
-	  if (jack_ringbuffer_write_space (jclient->ow.j2o_rb_midi) >=
+	  if (jack_ringbuffer_write_space (jclient->j2o_midi_rb) >=
 	      sizeof (struct overwitch_midi_event))
 	    {
-	      jack_ringbuffer_write (jclient->ow.j2o_rb_midi,
+	      jack_ringbuffer_write (jclient->j2o_midi_rb,
 				     (void *) &oevent,
 				     sizeof (struct overwitch_midi_event));
 	    }
@@ -878,12 +881,16 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
+  //Resamplers
+
   jclient->j2o_state =
     src_callback_new (jclient_j2o_reader, jclient->quality,
 		      jclient->ow.device_desc->inputs, NULL, jclient);
   jclient->o2j_state =
     src_callback_new (jclient_o2j_reader, jclient->quality,
 		      jclient->ow.device_desc->outputs, NULL, jclient);
+
+  //Ring buffers
 
   jclient->o2j_audio_rb =
     jack_ringbuffer_create (MAX_LATENCY * jclient->ow.o2j_frame_size);
@@ -894,6 +901,14 @@ jclient_run (struct jclient *jclient)
     jack_ringbuffer_create (MAX_LATENCY * jclient->ow.j2o_frame_size);
   jack_ringbuffer_mlock (jclient->j2o_audio_rb);
   jclient->ow.j2o_audio_buf = jclient->j2o_audio_rb;
+
+  jclient->j2o_midi_rb = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
+  jack_ringbuffer_mlock (jclient->j2o_midi_rb);
+  jclient->ow.j2o_midi_buf = jclient->j2o_midi_rb;
+
+  jclient->o2j_midi_rb = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
+  jack_ringbuffer_mlock (jclient->o2j_midi_rb);
+  jclient->ow.o2j_midi_buf = jclient->o2j_midi_rb;
 
   if (overwitch_activate (&jclient->ow, jclient->client))
     {
@@ -922,6 +937,8 @@ jclient_run (struct jclient *jclient)
 cleanup_jack:
   jack_ringbuffer_free (jclient->j2o_audio_rb);
   jack_ringbuffer_free (jclient->o2j_audio_rb);
+  jack_ringbuffer_free (jclient->j2o_midi_rb);
+  jack_ringbuffer_free (jclient->o2j_midi_rb);
   jack_client_close (jclient->client);
   src_delete (jclient->j2o_state);
   src_delete (jclient->o2j_state);

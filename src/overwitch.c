@@ -439,10 +439,10 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 			   event.bytes[0], event.bytes[1], event.bytes[2],
 			   event.bytes[3], event.frames);
 
-	      if (ow->buffer_write_space (ow->o2j_rb_midi) >=
+	      if (ow->buffer_write_space (ow->o2j_midi_buf) >=
 		  sizeof (struct overwitch_midi_event))
 		{
-		  ow->buffer_write (ow->o2j_rb_midi, (void *) &event,
+		  ow->buffer_write (ow->o2j_midi_buf, (void *) &event,
 				    sizeof (struct overwitch_midi_event));
 		}
 	      else
@@ -755,10 +755,6 @@ end:
       ow->o2j_midi_data = malloc (USB_BULK_MIDI_SIZE);
       memset (ow->j2o_midi_data, 0, USB_BULK_MIDI_SIZE);
       memset (ow->o2j_midi_data, 0, USB_BULK_MIDI_SIZE);
-      ow->j2o_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
-      ow->o2j_rb_midi = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
-      jack_ringbuffer_mlock (ow->j2o_rb_midi);
-      jack_ringbuffer_mlock (ow->o2j_rb_midi);
       pthread_spin_init (&ow->j2o_midi_lock, PTHREAD_PROCESS_SHARED);
     }
   else
@@ -801,7 +797,7 @@ run_j2o_midi (void *data)
   while (1)
     {
 
-      while (jack_ringbuffer_read_space (ow->j2o_rb_midi) >=
+      while (jack_ringbuffer_read_space (ow->j2o_midi_buf) >=
 	     sizeof (struct overwitch_midi_event) && pos < USB_BULK_MIDI_SIZE)
 	{
 	  if (!pos)
@@ -810,7 +806,7 @@ run_j2o_midi (void *data)
 	      diff = 0;
 	    }
 
-	  jack_ringbuffer_peek (ow->j2o_rb_midi, (void *) &event,
+	  jack_ringbuffer_peek (ow->j2o_midi_buf, (void *) &event,
 				sizeof (struct overwitch_midi_event));
 	  event_time = jack_frames_to_time (ow->jclient, event.frames);
 
@@ -823,7 +819,7 @@ run_j2o_midi (void *data)
 
 	  memcpy (&ow->j2o_midi_data[pos], event.bytes, OB_MIDI_EVENT_SIZE);
 	  pos += OB_MIDI_EVENT_SIZE;
-	  jack_ringbuffer_read_advance (ow->j2o_rb_midi,
+	  jack_ringbuffer_read_advance (ow->j2o_midi_buf,
 					sizeof (struct overwitch_midi_event));
 	}
 
@@ -965,7 +961,6 @@ overwitch_destroy (struct overwitch *ow)
 {
   usb_shutdown (ow);
   free_transfers (ow);
-  jack_ringbuffer_free (ow->o2j_rb_midi);
   free (ow->j2o_transfer_buf);
   free (ow->j2o_resampler_buf);
   free (ow->o2j_transfer_buf);

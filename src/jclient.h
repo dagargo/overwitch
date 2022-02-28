@@ -38,6 +38,8 @@ struct jclient
   struct dll o2j_dll;
   jack_ringbuffer_t *o2j_audio_rb;
   jack_ringbuffer_t *j2o_audio_rb;
+  jack_ringbuffer_t *o2j_midi_rb;
+  jack_ringbuffer_t *j2o_midi_rb;
   size_t o2j_buf_size;
   size_t j2o_buf_size;
   double o2j_ratio;

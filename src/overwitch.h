@@ -246,8 +246,8 @@ struct overwitch
   unsigned char *o2j_midi_data;
   struct libusb_transfer *xfr_out_midi;
   struct libusb_transfer *xfr_in_midi;
-  jack_ringbuffer_t *j2o_rb_midi;
-  jack_ringbuffer_t *o2j_rb_midi;
+  void *j2o_midi_buf;
+  void *o2j_midi_buf;
   int reading_at_j2o_end;
   pthread_spinlock_t j2o_midi_lock;
   int j2o_midi_ready;
