@@ -211,12 +211,12 @@ struct overwitch
   overwitch_status_t status;
   int blocks_per_transfer;
   int frames_per_transfer;
-  int j2o_audio_enabled;
+  int c2o_audio_enabled;
   pthread_spinlock_t lock;
-  size_t j2o_latency;
-  size_t j2o_max_latency;
-  pthread_t audio_o2j_midi_thread;
-  pthread_t j2o_midi_thread;
+  size_t c2o_latency;
+  size_t c2o_max_latency;
+  pthread_t audio_o2c_midi_thread;
+  pthread_t c2o_midi_thread;
   uint16_t s_counter;
   libusb_context *context;
   libusb_device_handle *device_handle;
@@ -225,31 +225,31 @@ struct overwitch
   struct libusb_transfer *xfr_out;
   char *usb_data_in;
   char *usb_data_out;
-  void *j2o_audio_buf;
-  void *o2j_audio_buf;
+  void *c2o_audio_buf;
+  void *o2c_audio_buf;
   size_t usb_data_in_blk_len;
   size_t usb_data_out_blk_len;
-  size_t j2o_transfer_size;
-  size_t o2j_transfer_size;
+  size_t c2o_transfer_size;
+  size_t o2c_transfer_size;
   int usb_data_in_len;
   int usb_data_out_len;
-  float *j2o_transfer_buf;
-  float *o2j_transfer_buf;
-  size_t o2j_frame_size;
-  size_t j2o_frame_size;
+  float *c2o_transfer_buf;
+  float *o2c_transfer_buf;
+  size_t o2c_frame_size;
+  size_t c2o_frame_size;
   //j2o resampler
-  float *j2o_resampler_buf;
-  SRC_DATA j2o_data;
+  float *c2o_resampler_buf;
+  SRC_DATA c2o_data;
   //MIDI
-  unsigned char *j2o_midi_data;
-  unsigned char *o2j_midi_data;
+  unsigned char *c2o_midi_data;
+  unsigned char *o2c_midi_data;
   struct libusb_transfer *xfr_out_midi;
   struct libusb_transfer *xfr_in_midi;
-  void *j2o_midi_buf;
-  void *o2j_midi_buf;
-  int reading_at_j2o_end;
-  pthread_spinlock_t j2o_midi_lock;
-  int j2o_midi_ready;
+  void *c2o_midi_buf;
+  void *o2c_midi_buf;
+  int reading_at_c2o_end;
+  pthread_spinlock_t c2o_midi_lock;
+  int c2o_midi_ready;
   //sample counter
   void *sample_counter_data;
   overwitch_sample_counter_init_t sample_counter_init;
@@ -287,9 +287,9 @@ void overwitch_set_status (struct overwitch *, overwitch_status_t);
 
 int overwitch_list_devices ();
 
-void overwitch_set_j2o_audio_enable (struct overwitch *, int);
+void overwitch_set_c2o_audio_enable (struct overwitch *, int);
 
-int overwitch_is_j2o_audio_enable (struct overwitch *);
+int overwitch_is_c2o_audio_enable (struct overwitch *);
 
 int overwitch_get_bus_address (int, char *, uint8_t *, uint8_t *);
 
