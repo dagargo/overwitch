@@ -24,6 +24,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <math.h>
+#include <jack/jack.h>
 #include <jack/intclient.h>
 #include <jack/thread.h>
 #include <jack/midiport.h>
@@ -755,16 +756,17 @@ jclient_run (struct jclient *jclient)
       goto end;
     }
 
+  jclient->ow.get_time = jack_get_time;
   jclient->ow.sample_counter_data = &jclient->o2c_dll.counter;
-  jclient->ow.sample_counter_init = dll_counter_init;
-  jclient->ow.sample_counter_inc = dll_counter_inc;
+  jclient->ow.sample_counter_init =
+    (overwitch_sample_counter_init_t) dll_counter_init;
+  jclient->ow.sample_counter_inc =
+    (overwitch_sample_counter_inc_t) dll_counter_inc;
 
   jclient->ow.buffer_write_space = jclient_buffer_write_space;
   jclient->ow.buffer_write = jclient_buffer_write;
   jclient->ow.buffer_read_space = jclient_buffer_read_space;
   jclient->ow.buffer_read = jclient_buffer_read;
-
-  jclient->ow.get_time = jack_get_time;
 
   jclient->client =
     jack_client_open (jclient->ow.device_desc->name, options, &status, NULL);

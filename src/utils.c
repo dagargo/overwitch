@@ -18,11 +18,6 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-#include <math.h>
-#include <string.h>
 #include "utils.h"
-
-#define RATIO_ERR 0.05
 
 int debug_level = 0;

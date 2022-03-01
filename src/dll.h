@@ -18,18 +18,12 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <jack/jack.h>
-#include <jack/thread.h>
-
-#define debug_print(level, format, ...) if (level <= debug_level) fprintf(stderr, "DEBUG:" __FILE__ ":%d:(%s): " format, __LINE__, __FUNCTION__, ## __VA_ARGS__)
-#define error_print(format, ...) fprintf(stderr, "\x1b[31mERROR:" __FILE__ ":%d:(%s): " format "\x1b[m", __LINE__, __FUNCTION__, ## __VA_ARGS__)
-
-extern int debug_level;
+#include <stdint.h>
 
 struct instant
 {
   double time;
-  jack_nframes_t frames;
+  uint32_t frames;
 };
 
 struct dll_counter
@@ -44,7 +38,7 @@ struct dll_counter
 struct dll
 {
   double ratio;
-  jack_nframes_t kj;
+  uint32_t kj;
   double _w0;
   double _w1;
   double _w2;
@@ -56,22 +50,22 @@ struct dll
   double ratio_avg;
   double last_ratio_avg;
   double err;
-  jack_nframes_t ko0;
-  jack_nframes_t ko1;
+  uint32_t ko0;
+  uint32_t ko1;
   double to0;
   double to1;
   struct dll_counter counter;
 };
 
-void dll_counter_init (void *, double, int);
+void dll_counter_init (struct dll_counter *, double, int, uint64_t);
 
-void dll_counter_inc (void *, int);
+void dll_counter_inc (struct dll_counter *, int, uint64_t);
 
 void dll_init (struct dll *, double, double, int, int);
 
 void dll_set_loop_filter (struct dll *, double, int, double);
 
-void dll_update_err (struct dll *, jack_time_t);
+void dll_update_err (struct dll *, uint64_t);
 
 void dll_update (struct dll *);
 

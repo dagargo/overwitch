@@ -198,8 +198,9 @@ struct overwitch_device_desc
   char *output_track_names[OB_MAX_TRACKS];
 };
 
-typedef void (*overwitch_sample_counter_init_t) (void *, double, int);
-typedef void (*overwitch_inc_sample_counter_t) (void *, int);
+typedef void (*overwitch_sample_counter_init_t) (void *, double, int,
+						 uint64_t);
+typedef void (*overwitch_sample_counter_inc_t) (void *, int, uint64_t);
 
 typedef size_t (*overwitch_buffer_rw_space_t) (void *);
 typedef size_t (*overwitch_buffer_rw_t) (void *, char *, size_t);
@@ -253,7 +254,7 @@ struct overwitch
   //sample counter
   void *sample_counter_data;
   overwitch_sample_counter_init_t sample_counter_init;
-  overwitch_inc_sample_counter_t sample_counter_inc;
+  overwitch_sample_counter_inc_t sample_counter_inc;
   //buffer operations
   overwitch_buffer_rw_space_t buffer_write_space;
   overwitch_buffer_rw_t buffer_write;

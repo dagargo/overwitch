@@ -246,7 +246,7 @@ set_usb_input_data_blks (struct overwitch *ow)
   if (ow->sample_counter_inc)
     {
       ow->sample_counter_inc (ow->sample_counter_data,
-			      ow->frames_per_transfer);
+			      ow->frames_per_transfer, ow->get_time ());
     }
   status = ow->status;
   pthread_spin_unlock (&ow->lock);
@@ -888,7 +888,7 @@ run_audio_o2c_midi (void *data)
       if (ow->sample_counter_init)
 	{
 	  ow->sample_counter_init (ow->sample_counter_data, OB_SAMPLE_RATE,
-				   ow->frames_per_transfer);
+				   ow->frames_per_transfer, ow->get_time ());
 	}
       ow->status = OW_STATUS_WAIT;
       pthread_spin_unlock (&ow->lock);
