@@ -170,6 +170,13 @@ struct overwitch_usb_blk
 
 typedef enum
 {
+  OW_OPTION_AUDIO = 1,
+  OW_OPTION_MIDI = 2,
+  OW_OPTION_TIME_TRACKING = 4
+} overwitch_option_t;
+
+typedef enum
+{
   OW_OK = 0,
   OW_LIBUSB_INIT_FAILED,
   OW_CANT_OPEN_DEV,
@@ -212,6 +219,7 @@ typedef double (*overwitch_get_time) (); //Time in seconds
 
 struct overwitch
 {
+  int64_t features;
   overwitch_status_t status;
   int blocks_per_transfer;
   int frames_per_transfer;
@@ -279,7 +287,7 @@ void set_self_max_priority ();
 
 overwitch_err_t overwitch_init (struct overwitch *, uint8_t, uint8_t, int);
 
-int overwitch_activate (struct overwitch *);
+int overwitch_activate (struct overwitch *, uint64_t);
 
 void overwitch_destroy (struct overwitch *);
 

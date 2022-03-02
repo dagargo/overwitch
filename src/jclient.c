@@ -898,7 +898,9 @@ jclient_run (struct jclient *jclient)
   jack_ringbuffer_mlock (jclient->o2c_midi_rb);
   jclient->ow.o2c_midi_buf = jclient->o2c_midi_rb;
 
-  if (overwitch_activate (&jclient->ow))
+  if (overwitch_activate (&jclient->ow,
+			  OW_OPTION_AUDIO | OW_OPTION_MIDI |
+			  OW_OPTION_TIME_TRACKING))
     {
       goto cleanup_jack;
     }

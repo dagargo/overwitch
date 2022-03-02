@@ -243,7 +243,7 @@ set_usb_input_data_blks (struct overwitch *ow)
   overwitch_status_t status;
 
   pthread_spin_lock (&ow->lock);
-  if (ow->sample_counter_inc)
+  if (ow->features & OW_OPTION_TIME_TRACKING)
     {
       ow->sample_counter_inc (ow->sample_counter_data,
 			      ow->frames_per_transfer, ow->get_time ());
@@ -874,7 +874,10 @@ run_audio_o2c_midi (void *data)
 
   prepare_cycle_in (ow);
   prepare_cycle_out (ow);
-  prepare_cycle_in_midi (ow);
+  if (ow->features & OW_OPTION_MIDI)
+    {
+      prepare_cycle_in_midi (ow);
+    }
 
   while (1)
     {
@@ -885,11 +888,13 @@ run_audio_o2c_midi (void *data)
       //status == OW_STATUS_BOOT
 
       pthread_spin_lock (&ow->lock);
-      if (ow->sample_counter_init)
+
+      if (ow->features & OW_OPTION_TIME_TRACKING)
 	{
 	  ow->sample_counter_init (ow->sample_counter_data, OB_SAMPLE_RATE,
 				   ow->frames_per_transfer, ow->get_time ());
 	}
+
       ow->status = OW_STATUS_WAIT;
       pthread_spin_unlock (&ow->lock);
 
@@ -915,11 +920,71 @@ run_audio_o2c_midi (void *data)
 }
 
 int
-overwitch_activate (struct overwitch *ow)
+overwitch_activate (struct overwitch *ow, uint64_t features)
 {
   int ret;
 
   ow->s_counter = 0;
+
+  if (!features)
+    {
+      error_print ("Nothing to do\n");
+      return -1;
+    }
+
+  if (features & OW_OPTION_AUDIO)
+    {
+      if (!ow->buffer_write_space)
+	{
+	  error_print ("'buffer_write_space' not set\n");
+	  return -1;
+	}
+      if (!ow->buffer_read_space)
+	{
+	  error_print ("'buffer_read_space' not set\n");
+	  return -1;
+	}
+      if (!ow->buffer_write)
+	{
+	  error_print ("'buffer_write' not set\n");
+	  return -1;
+	}
+      if (!ow->buffer_read)
+	{
+	  error_print ("'buffer_read' not set\n");
+	  return -1;
+	}
+    }
+
+  if (features & OW_OPTION_MIDI)
+    {
+      if (!ow->get_time)
+	{
+	  error_print ("'get_time' not set\n");
+	  return -1;
+	}
+    }
+
+  if (features & OW_OPTION_TIME_TRACKING)
+    {
+      if (!ow->get_time)
+	{
+	  error_print ("'get_time' not set\n");
+	  return -1;
+	}
+      if (!ow->sample_counter_init)
+	{
+	  error_print ("'sample_counter_init' not set\n");
+	  return -1;
+	}
+      if (!ow->sample_counter_inc)
+	{
+	  error_print ("'sample_counter_inc' not set\n");
+	  return -1;
+	}
+    }
+
+  ow->features = features;
 
   ow->status = OW_STATUS_READY;
   debug_print (1, "Starting j2o MIDI thread...\n");
@@ -945,7 +1010,10 @@ void
 overwitch_wait (struct overwitch *ow)
 {
   pthread_join (ow->audio_o2c_midi_thread, NULL);
-  pthread_join (ow->c2o_midi_thread, NULL);
+  if (ow->features & OW_OPTION_MIDI)
+    {
+      pthread_join (ow->c2o_midi_thread, NULL);
+    }
 }
 
 const char *
