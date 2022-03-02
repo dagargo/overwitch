@@ -46,32 +46,6 @@
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
 size_t
-jclient_buffer_write_space (void *buffer)
-{
-  return jack_ringbuffer_write_space (buffer);
-}
-
-size_t
-jclient_buffer_write (void *buffer, char *src, size_t size)
-{
-  if (src)
-    {
-      return jack_ringbuffer_write (buffer, src, size);
-    }
-  else
-    {
-      jack_ringbuffer_write_advance (buffer, size);
-      return 0;
-    }
-}
-
-size_t
-jclient_buffer_read_space (void *buffer)
-{
-  return jack_ringbuffer_read_space (buffer);
-}
-
-size_t
 jclient_buffer_read (void *buffer, char *src, size_t size)
 {
   if (src)
@@ -84,7 +58,6 @@ jclient_buffer_read (void *buffer, char *src, size_t size)
       return 0;
     }
 }
-
 
 void
 jclient_print_latencies (struct jclient *jclient, const char *end)
@@ -763,9 +736,11 @@ jclient_run (struct jclient *jclient)
   jclient->ow.sample_counter_inc =
     (overwitch_sample_counter_inc_t) dll_counter_inc;
 
-  jclient->ow.buffer_write_space = jclient_buffer_write_space;
-  jclient->ow.buffer_write = jclient_buffer_write;
-  jclient->ow.buffer_read_space = jclient_buffer_read_space;
+  jclient->ow.buffer_write_space =
+    (overwitch_buffer_rw_space_t) jack_ringbuffer_write_space;
+  jclient->ow.buffer_write = (overwitch_buffer_write_t) jack_ringbuffer_write;
+  jclient->ow.buffer_read_space =
+    (overwitch_buffer_rw_space_t) jack_ringbuffer_read_space;
   jclient->ow.buffer_read = jclient_buffer_read;
 
   jclient->client =

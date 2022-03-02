@@ -206,7 +206,8 @@ typedef void (*overwitch_sample_counter_init_t) (void *, double, int,
 typedef void (*overwitch_sample_counter_inc_t) (void *, int, uint64_t);
 
 typedef size_t (*overwitch_buffer_rw_space_t) (void *);
-typedef size_t (*overwitch_buffer_rw_t) (void *, char *, size_t);
+typedef size_t (*overwitch_buffer_read_t) (void *, char *, size_t);
+typedef size_t (*overwitch_buffer_write_t) (void *, const char *, size_t);
 
 typedef uint64_t (*overwitch_get_time) ();
 
@@ -260,9 +261,9 @@ struct overwitch
   overwitch_sample_counter_inc_t sample_counter_inc;
   //buffer operations
   overwitch_buffer_rw_space_t buffer_write_space;
-  overwitch_buffer_rw_t buffer_write;
+  overwitch_buffer_write_t buffer_write;
   overwitch_buffer_rw_space_t buffer_read_space;
-  overwitch_buffer_rw_t buffer_read;
+  overwitch_buffer_read_t buffer_read;
   //time operations
   overwitch_get_time get_time;
 };
