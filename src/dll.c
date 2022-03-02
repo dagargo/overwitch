@@ -25,7 +25,7 @@
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc.
 inline void
 dll_counter_init (struct dll_counter *dll_counter, double samplerate,
-		  int frames_per_transfer, uint64_t current_usecs)
+		  int frames_per_transfer, double time)
 {
   double dtime = frames_per_transfer / samplerate;
   double w = 2 * M_PI * 0.1 * dtime;
@@ -33,7 +33,7 @@ dll_counter_init (struct dll_counter *dll_counter, double samplerate,
   dll_counter->c = w * w;
 
   dll_counter->e2 = dtime;
-  dll_counter->i0.time = current_usecs * 1.0e-6;
+  dll_counter->i0.time = time;
   dll_counter->i1.time = dll_counter->i0.time + dll_counter->e2;
 
   dll_counter->i0.frames = 0;
@@ -42,9 +42,9 @@ dll_counter_init (struct dll_counter *dll_counter, double samplerate,
 
 inline void
 dll_counter_inc (struct dll_counter *dll_counter, int frames_per_transfer,
-		 uint64_t current_usecs)
+		 double time)
 {
-  double e = current_usecs * 1.0e-6 - dll_counter->i1.time;
+  double e = time - dll_counter->i1.time;
   dll_counter->i0.time = dll_counter->i1.time;
   dll_counter->i1.time += dll_counter->b * e + dll_counter->e2;
   dll_counter->e2 += dll_counter->c * e;
@@ -54,9 +54,9 @@ dll_counter_inc (struct dll_counter *dll_counter, int frames_per_transfer,
 
 //The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
-dll_update_err (struct dll *dll, uint64_t current_usecs)
+dll_update_err (struct dll *dll, double time)
 {
-  double tj = current_usecs * 1.0e-6;
+  double tj = time;
   uint32_t frames = dll->ko1 - dll->ko0;
   double dob = frames * (tj - dll->to0) / (dll->to1 - dll->to0);
   int n =

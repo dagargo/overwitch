@@ -435,7 +435,7 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 	  //Note-off, Note-on, Poly-KeyPress, Control Change, Program Change, Channel Pressure, PitchBend Change, Single Byte
 	  if (event.bytes[0] >= 0x08 && event.bytes[0] <= 0x0f)
 	    {
-	      debug_print (2, "o2j MIDI: %02x, %02x, %02x, %02x (%lu)\n",
+	      debug_print (2, "o2j MIDI: %02x, %02x, %02x, %02x (%f)\n",
 			   event.bytes[0], event.bytes[1], event.bytes[2],
 			   event.bytes[3], event.time);
 
@@ -780,7 +780,7 @@ void *
 run_c2o_midi (void *data)
 {
   int pos, c2o_midi_ready, event_read = 0;
-  uint64_t last_time, diff;
+  double last_time, diff;
   struct timespec sleep_time, smallest_sleep_time;
   struct overwitch_midi_event event;
   struct overwitch *ow = data;
@@ -789,7 +789,7 @@ run_c2o_midi (void *data)
   smallest_sleep_time.tv_nsec = SAMPLE_TIME_NS * 32 / 2;	//Average wait time for a 32 buffer sample
 
   pos = 0;
-  diff = 0;
+  diff = 0.0;
   last_time = ow->get_time ();
   ow->c2o_midi_ready = 1;
   while (1)
@@ -825,7 +825,7 @@ run_c2o_midi (void *data)
 
       if (pos)
 	{
-	  debug_print (2, "Event frames: %lu; diff: %lu\n", event.time, diff);
+	  debug_print (2, "Event frames: %f; diff: %f\n", event.time, diff);
 	  ow->c2o_midi_ready = 0;
 	  prepare_cycle_out_midi (ow);
 	  pos = 0;
@@ -833,8 +833,8 @@ run_c2o_midi (void *data)
 
       if (diff)
 	{
-	  sleep_time.tv_sec = diff / 1000000;
-	  sleep_time.tv_nsec = (diff % 1000000) * 1000;
+	  sleep_time.tv_sec = diff;
+	  sleep_time.tv_nsec = (diff - sleep_time.tv_sec) * 1.0e9;
 	  nanosleep (&sleep_time, NULL);
 	}
       else

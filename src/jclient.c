@@ -45,6 +45,12 @@
 
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
+double
+jclient_get_time ()
+{
+  return jack_get_time () * 1.0e-6;
+}
+
 size_t
 jclient_buffer_read (void *buffer, char *src, size_t size)
 {
@@ -372,6 +378,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   float period_usecs;
   int xruns;
   overwitch_status_t ow_status;
+  double time;
   static char latency_msg[LATENCY_MSG_LEN];
 
   if (jack_get_cycle_times (jclient->client,
@@ -380,6 +387,8 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
     {
       error_print ("Error while getting JACK time\n");
     }
+
+  time = current_usecs * 1.0e-6;
 
   pthread_spin_lock (&jclient->lock);
   xruns = jclient->xruns;
@@ -408,7 +417,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
 
   if (jclient->status == JC_STATUS_READY && ow_status == OW_STATUS_WAIT)
     {
-      dll_update_err (dll, current_usecs);
+      dll_update_err (dll, time);
       dll_first_time_run (dll);
 
       debug_print (2, "Starting up...\n");
@@ -438,7 +447,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
       return 0;
     }
 
-  dll_update_err (dll, current_usecs);
+  dll_update_err (dll, time);
   dll_update (dll);
 
   if (dll->ratio < 0.0)
@@ -729,7 +738,7 @@ jclient_run (struct jclient *jclient)
       goto end;
     }
 
-  jclient->ow.get_time = jack_get_time;
+  jclient->ow.get_time = jclient_get_time;
   jclient->ow.sample_counter_data = &jclient->o2c_dll.counter;
   jclient->ow.sample_counter_init =
     (overwitch_sample_counter_init_t) dll_counter_init;

@@ -201,15 +201,14 @@ struct overwitch_device_desc
   char *output_track_names[OB_MAX_TRACKS];
 };
 
-typedef void (*overwitch_sample_counter_init_t) (void *, double, int,
-						 uint64_t);
-typedef void (*overwitch_sample_counter_inc_t) (void *, int, uint64_t);
+typedef void (*overwitch_sample_counter_init_t) (void *, double, int, double);
+typedef void (*overwitch_sample_counter_inc_t) (void *, int, double);
 
 typedef size_t (*overwitch_buffer_rw_space_t) (void *);
 typedef size_t (*overwitch_buffer_read_t) (void *, char *, size_t);
 typedef size_t (*overwitch_buffer_write_t) (void *, const char *, size_t);
 
-typedef uint64_t (*overwitch_get_time) ();
+typedef double (*overwitch_get_time) (); //Time in seconds
 
 struct overwitch
 {
@@ -270,7 +269,7 @@ struct overwitch
 
 struct overwitch_midi_event
 {
-  uint64_t time;
+  double time;
   uint8_t bytes[OB_MIDI_EVENT_SIZE];
 };
 

@@ -60,15 +60,15 @@ struct dll
   struct dll_counter counter;
 };
 
-void dll_counter_init (struct dll_counter *, double, int, uint64_t);
+void dll_counter_init (struct dll_counter *, double, int, double);
 
-void dll_counter_inc (struct dll_counter *, int, uint64_t);
+void dll_counter_inc (struct dll_counter *, int, double);
 
 void dll_init (struct dll *, double, double, int, int);
 
 void dll_set_loop_filter (struct dll *, double, int, double);
 
-void dll_update_err (struct dll *, uint64_t);
+void dll_update_err (struct dll *, double);
 
 void dll_update (struct dll *);
 
