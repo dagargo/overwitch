@@ -18,9 +18,7 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
 #include <math.h>
-#include <string.h>
 #include "utils.h"
 #include "dll.h"
 

@@ -18,6 +18,9 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef DLL_H
+#define DLL_H
+
 #include <stdint.h>
 
 struct instant
@@ -72,3 +75,5 @@ void dll_update (struct dll *);
 void dll_calc_avg (struct dll *, int);
 
 void dll_first_time_run (struct dll *);
+
+#endif

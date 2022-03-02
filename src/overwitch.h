@@ -144,6 +144,9 @@
 
  */
 
+#ifndef OVERWITCH_H
+#define OVERWITCH_H
+
 #include <libusb.h>
 #include <samplerate.h>
 #include <pthread.h>
@@ -297,3 +300,5 @@ int overwitch_get_bus_address (int, char *, uint8_t *, uint8_t *);
 int overwitch_is_valid_device (uint16_t, uint16_t, char **);
 
 int overwitch_bytes_to_frame_bytes (int, int);
+
+#endif
