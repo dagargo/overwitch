@@ -726,23 +726,24 @@ jclient_run (struct jclient *jclient)
 
   jclient->status = JC_STATUS_READY;
 
-  //The so called Overwitch API
+  //The so-called Overwitch API
+  jclient->ow.buffer_read_space =
+    (overwitch_buffer_rw_space_t) jack_ringbuffer_read_space;
+  jclient->ow.buffer_write_space =
+    (overwitch_buffer_rw_space_t) jack_ringbuffer_write_space;
+  jclient->ow.buffer_read = jclient_buffer_read;
+  jclient->ow.buffer_write = (overwitch_buffer_write_t) jack_ringbuffer_write;
   jclient->ow.get_time = jclient_get_time;
   jclient->ow.dll_secondary = &jclient->dll.secondary;
 
-  jclient->ow.buffer_write_space =
-    (overwitch_buffer_rw_space_t) jack_ringbuffer_write_space;
-  jclient->ow.buffer_write = (overwitch_buffer_write_t) jack_ringbuffer_write;
-  jclient->ow.buffer_read_space =
-    (overwitch_buffer_rw_space_t) jack_ringbuffer_read_space;
-  jclient->ow.buffer_read = jclient_buffer_read;
-
   ob_status =
     overwitch_init (&jclient->ow, jclient->bus, jclient->address,
-		    jclient->blocks_per_transfer);
+		    jclient->blocks_per_transfer,
+		    OW_OPTION_MIDI | OW_OPTION_SECONDARY_DLL);
   if (ob_status)
     {
-      error_print ("USB error: %s\n", overbrigde_get_err_str (ob_status));
+      error_print ("Overwitch error: %s\n",
+		   overbrigde_get_err_str (ob_status));
       goto end;
     }
 
@@ -892,8 +893,7 @@ jclient_run (struct jclient *jclient)
   jack_ringbuffer_mlock (jclient->o2c_midi_rb);
   jclient->ow.o2c_midi_buf = jclient->o2c_midi_rb;
 
-  if (overwitch_activate
-      (&jclient->ow, OW_OPTION_MIDI | OW_OPTION_TIME_TRACKING))
+  if (overwitch_activate (&jclient->ow))
     {
       goto cleanup_jack;
     }

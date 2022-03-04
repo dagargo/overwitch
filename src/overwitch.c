@@ -243,10 +243,10 @@ set_usb_input_data_blks (struct overwitch *ow)
   overwitch_status_t status;
 
   pthread_spin_lock (&ow->lock);
-  if (ow->features & OW_OPTION_TIME_TRACKING)
+  if (ow->dll_secondary)
     {
-      dll_secondary_inc (ow->dll_secondary,
-			 ow->frames_per_transfer, ow->get_time ());
+      dll_secondary_inc (ow->dll_secondary, ow->frames_per_transfer,
+			 ow->get_time ());
     }
   status = ow->status;
   pthread_spin_unlock (&ow->lock);
@@ -558,7 +558,7 @@ usb_shutdown (struct overwitch *ow)
 
 overwitch_err_t
 overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
-		int blocks_per_transfer)
+		int blocks_per_transfer, uint64_t features)
 {
   int i, ret, err;
   libusb_device **list = NULL;
@@ -568,10 +568,52 @@ overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
   struct libusb_device_descriptor desc;
   struct overwitch_usb_blk *blk;
 
+  if (!ow->buffer_read_space)
+    {
+      return OW_INIT_ERROR_NO_READ_SPACE;
+    }
+  if (!ow->buffer_write_space)
+    {
+      return OW_INIT_ERROR_NO_WRITE_SPACE;
+    }
+  if (!ow->buffer_read)
+    {
+      return OW_INIT_ERROR_NO_READ;
+    }
+  if (!ow->buffer_write)
+    {
+      return OW_INIT_ERROR_NO_WRITE;
+    }
+
+  if (features & OW_OPTION_MIDI)
+    {
+      if (!ow->get_time)
+	{
+	  return OW_INIT_ERROR_NO_GET_TIME;
+	}
+      ow->midi = 1;
+    }
+  else
+    {
+      ow->midi = 0;
+    }
+
+  if (features & OW_OPTION_SECONDARY_DLL)
+    {
+      if (!ow->dll_secondary)
+	{
+	  return OW_INIT_ERROR_NO_SECONDARY_DLL;
+	}
+      if (!ow->get_time)
+	{
+	  return OW_INIT_ERROR_NO_GET_TIME;
+	}
+    }
+
   // libusb setup
   if (libusb_init (&ow->context) != LIBUSB_SUCCESS)
     {
-      return OW_LIBUSB_INIT_FAILED;
+      return OW_USB_ERROR_LIBUSB_INIT_FAILED;
     }
 
   ow->device_handle = NULL;
@@ -604,7 +646,7 @@ overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
 
   if (!ow->device_handle)
     {
-      ret = OW_CANT_FIND_DEV;
+      ret = OW_USB_ERROR_CANT_FIND_DEV;
       goto end;
     }
 
@@ -620,7 +662,7 @@ overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
 
   if (!ow->device_desc)
     {
-      ret = OW_CANT_FIND_DEV;
+      ret = OW_USB_ERROR_CANT_FIND_DEV;
       goto end;
     }
 
@@ -631,73 +673,73 @@ overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
   err = libusb_set_configuration (ow->device_handle, 1);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OW_CANT_SET_USB_CONFIG;
+      ret = OW_USB_ERROR_CANT_SET_USB_CONFIG;
       goto end;
     }
   err = libusb_claim_interface (ow->device_handle, 1);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OW_CANT_CLAIM_IF;
+      ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
   err = libusb_set_interface_alt_setting (ow->device_handle, 1, 3);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OW_CANT_SET_ALT_SETTING;
+      ret = OW_USB_ERROR_CANT_SET_ALT_SETTING;
       goto end;
     }
   err = libusb_claim_interface (ow->device_handle, 2);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OW_CANT_CLAIM_IF;
+      ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
   err = libusb_set_interface_alt_setting (ow->device_handle, 2, 2);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OW_CANT_SET_ALT_SETTING;
+      ret = OW_USB_ERROR_CANT_SET_ALT_SETTING;
       goto end;
     }
   err = libusb_claim_interface (ow->device_handle, 3);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OW_CANT_CLAIM_IF;
+      ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
   err = libusb_set_interface_alt_setting (ow->device_handle, 3, 0);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OW_CANT_SET_ALT_SETTING;
+      ret = OW_USB_ERROR_CANT_SET_ALT_SETTING;
       goto end;
     }
   err = libusb_clear_halt (ow->device_handle, AUDIO_IN_EP);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OW_CANT_CLEAR_EP;
+      ret = OW_USB_ERROR_CANT_CLEAR_EP;
       goto end;
     }
   err = libusb_clear_halt (ow->device_handle, AUDIO_OUT_EP);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OW_CANT_CLEAR_EP;
+      ret = OW_USB_ERROR_CANT_CLEAR_EP;
       goto end;
     }
   err = libusb_clear_halt (ow->device_handle, MIDI_IN_EP);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OW_CANT_CLEAR_EP;
+      ret = OW_USB_ERROR_CANT_CLEAR_EP;
       goto end;
     }
   err = libusb_clear_halt (ow->device_handle, MIDI_OUT_EP);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OW_CANT_CLEAR_EP;
+      ret = OW_USB_ERROR_CANT_CLEAR_EP;
       goto end;
     }
   err = prepare_transfers (ow);
   if (LIBUSB_SUCCESS != err)
     {
-      ret = OW_CANT_PREPARE_TRANSFER;
+      ret = OW_USB_ERROR_CANT_PREPARE_TRANSFER;
     }
 
 end:
@@ -769,10 +811,21 @@ end:
   return ret;
 }
 
-static const char *ob_err_strgs[] = { "ok", "libusb init failed",
-  "can't open device", "can't set usb config",
-  "can't claim usb interface", "can't set usb alt setting",
-  "can't cleat endpoint", "can't prepare transfer",
+static const char *ob_err_strgs[] = {
+  "ok",
+  "'buffer_read_space' not set",
+  "'buffer_write_space' not set",
+  "'buffer_read' not set",
+  "'buffer_write' not set",
+  "'get_time' not set",
+  "'secondary_dll' not set",
+  "libusb init failed",
+  "can't open device",
+  "can't set usb config",
+  "can't claim usb interface",
+  "can't set usb alt setting",
+  "can't cleat endpoint",
+  "can't prepare transfer",
   "can't find a matching device"
 };
 
@@ -874,7 +927,7 @@ run_audio_o2c_midi (void *data)
 
   prepare_cycle_in (ow);
   prepare_cycle_out (ow);
-  if (ow->features & OW_OPTION_MIDI)
+  if (ow->midi)
     {
       prepare_cycle_in_midi (ow);
     }
@@ -889,7 +942,7 @@ run_audio_o2c_midi (void *data)
 
       pthread_spin_lock (&ow->lock);
 
-      if (ow->features & OW_OPTION_TIME_TRACKING)
+      if (ow->dll_secondary)
 	{
 	  dll_secondary_init (ow->dll_secondary, OB_SAMPLE_RATE,
 			      ow->frames_per_transfer, ow->get_time ());
@@ -920,60 +973,22 @@ run_audio_o2c_midi (void *data)
 }
 
 int
-overwitch_activate (struct overwitch *ow, uint64_t features)
+overwitch_activate (struct overwitch *ow)
 {
   int ret;
 
   ow->frames = 0;
 
-  if (!ow->buffer_write_space)
-    {
-      error_print ("'buffer_write_space' not set\n");
-      return -1;
-    }
-  if (!ow->buffer_read_space)
-    {
-      error_print ("'buffer_read_space' not set\n");
-      return -1;
-    }
-  if (!ow->buffer_write)
-    {
-      error_print ("'buffer_write' not set\n");
-      return -1;
-    }
-  if (!ow->buffer_read)
-    {
-      error_print ("'buffer_read' not set\n");
-      return -1;
-    }
-
-  if (features & OW_OPTION_MIDI)
-    {
-      if (!ow->get_time)
-	{
-	  error_print ("'get_time' not set\n");
-	  return -1;
-	}
-    }
-
-  if (features & OW_OPTION_TIME_TRACKING)
-    {
-      if (!ow->get_time)
-	{
-	  error_print ("'get_time' not set\n");
-	  return -1;
-	}
-    }
-
-  ow->features = features;
-
   ow->status = OW_STATUS_READY;
-  debug_print (1, "Starting j2o MIDI thread...\n");
-  ret = pthread_create (&ow->c2o_midi_thread, NULL, run_c2o_midi, ow);
-  if (ret)
+  if (ow->midi)
     {
-      error_print ("Could not start MIDI thread\n");
-      return ret;
+      debug_print (1, "Starting j2o MIDI thread...\n");
+      ret = pthread_create (&ow->c2o_midi_thread, NULL, run_c2o_midi, ow);
+      if (ret)
+	{
+	  error_print ("Could not start MIDI thread\n");
+	  return ret;
+	}
     }
 
   debug_print (1, "Starting audio and o2j MIDI thread...\n");
@@ -991,7 +1006,7 @@ void
 overwitch_wait (struct overwitch *ow)
 {
   pthread_join (ow->audio_o2c_midi_thread, NULL);
-  if (ow->features & OW_OPTION_MIDI)
+  if (ow->midi)
     {
       pthread_join (ow->c2o_midi_thread, NULL);
     }

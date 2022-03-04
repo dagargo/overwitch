@@ -172,20 +172,26 @@ struct overwitch_usb_blk
 typedef enum
 {
   OW_OPTION_MIDI = 1,
-  OW_OPTION_TIME_TRACKING = 2
+  OW_OPTION_SECONDARY_DLL = 2
 } overwitch_option_t;
 
 typedef enum
 {
   OW_OK = 0,
-  OW_LIBUSB_INIT_FAILED,
-  OW_CANT_OPEN_DEV,
-  OW_CANT_SET_USB_CONFIG,
-  OW_CANT_CLAIM_IF,
-  OW_CANT_SET_ALT_SETTING,
-  OW_CANT_CLEAR_EP,
-  OW_CANT_PREPARE_TRANSFER,
-  OW_CANT_FIND_DEV
+  OW_INIT_ERROR_NO_READ_SPACE,
+  OW_INIT_ERROR_NO_WRITE_SPACE,
+  OW_INIT_ERROR_NO_READ,
+  OW_INIT_ERROR_NO_WRITE,
+  OW_INIT_ERROR_NO_GET_TIME,
+  OW_INIT_ERROR_NO_SECONDARY_DLL,
+  OW_USB_ERROR_LIBUSB_INIT_FAILED,
+  OW_USB_ERROR_CANT_OPEN_DEV,
+  OW_USB_ERROR_CANT_SET_USB_CONFIG,
+  OW_USB_ERROR_CANT_CLAIM_IF,
+  OW_USB_ERROR_CANT_SET_ALT_SETTING,
+  OW_USB_ERROR_CANT_CLEAR_EP,
+  OW_USB_ERROR_CANT_PREPARE_TRANSFER,
+  OW_USB_ERROR_CANT_FIND_DEV
 } overwitch_err_t;
 
 typedef enum
@@ -216,7 +222,7 @@ typedef double (*overwitch_get_time) ();	//Time in seconds
 
 struct overwitch
 {
-  int64_t features;
+  int midi;
   overwitch_status_t status;
   int blocks_per_transfer;
   int frames_per_transfer;
@@ -280,9 +286,10 @@ const char *overbrigde_get_err_str (overwitch_err_t);
 
 void set_self_max_priority ();
 
-overwitch_err_t overwitch_init (struct overwitch *, uint8_t, uint8_t, int);
+overwitch_err_t overwitch_init (struct overwitch *, uint8_t, uint8_t, int,
+				uint64_t);
 
-int overwitch_activate (struct overwitch *, uint64_t);
+int overwitch_activate (struct overwitch *);
 
 void overwitch_destroy (struct overwitch *);
 
