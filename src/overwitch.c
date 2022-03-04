@@ -245,8 +245,8 @@ set_usb_input_data_blks (struct overwitch *ow)
   pthread_spin_lock (&ow->lock);
   if (ow->features & OW_OPTION_TIME_TRACKING)
     {
-      ow->sample_counter_inc (ow->sample_counter_data,
-			      ow->frames_per_transfer, ow->get_time ());
+      dll_secondary_inc (ow->dll_secondary,
+			 ow->frames_per_transfer, ow->get_time ());
     }
   status = ow->status;
   pthread_spin_unlock (&ow->lock);
@@ -365,8 +365,8 @@ set_blocks:
   for (int i = 0; i < ow->blocks_per_transfer; i++)
     {
       blk = get_nth_usb_out_blk (ow, i);
-      ow->s_counter += OB_FRAMES_PER_BLOCK;
-      blk->s_counter = htobe16 (ow->s_counter);
+      ow->frames += OB_FRAMES_PER_BLOCK;
+      blk->frames = htobe16 (ow->frames);
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
@@ -891,8 +891,8 @@ run_audio_o2c_midi (void *data)
 
       if (ow->features & OW_OPTION_TIME_TRACKING)
 	{
-	  ow->sample_counter_init (ow->sample_counter_data, OB_SAMPLE_RATE,
-				   ow->frames_per_transfer, ow->get_time ());
+	  dll_secondary_init (ow->dll_secondary, OB_SAMPLE_RATE,
+			      ow->frames_per_transfer, ow->get_time ());
 	}
 
       ow->status = OW_STATUS_WAIT;
@@ -924,7 +924,7 @@ overwitch_activate (struct overwitch *ow, uint64_t features)
 {
   int ret;
 
-  ow->s_counter = 0;
+  ow->frames = 0;
 
   if (!ow->buffer_write_space)
     {
@@ -961,16 +961,6 @@ overwitch_activate (struct overwitch *ow, uint64_t features)
       if (!ow->get_time)
 	{
 	  error_print ("'get_time' not set\n");
-	  return -1;
-	}
-      if (!ow->sample_counter_init)
-	{
-	  error_print ("'sample_counter_init' not set\n");
-	  return -1;
-	}
-      if (!ow->sample_counter_inc)
-	{
-	  error_print ("'sample_counter_inc' not set\n");
 	  return -1;
 	}
     }

@@ -131,7 +131,7 @@ jclient_reset_dll (struct jclient *jclient, jack_nframes_t new_samplerate)
   if (!init || overwitch_get_status (&jclient->ow) < OW_STATUS_RUN)
     {
       debug_print (2, "Initializing dll...\n");
-      dll_init (&jclient->o2c_dll, new_samplerate, OB_SAMPLE_RATE,
+      dll_init (&jclient->dll, new_samplerate, OB_SAMPLE_RATE,
 		jclient->bufsize, jclient->ow.frames_per_transfer);
       overwitch_set_status (&jclient->ow, OW_STATUS_READY);
       init = 1;
@@ -139,15 +139,14 @@ jclient_reset_dll (struct jclient *jclient, jack_nframes_t new_samplerate)
   else
     {
       debug_print (2, "Just adjusting dll ratio...\n");
-      jclient->o2c_dll.ratio =
-	jclient->o2c_dll.last_ratio_avg * new_samplerate /
-	jclient->samplerate;
+      jclient->dll.ratio =
+	jclient->dll.last_ratio_avg * new_samplerate / jclient->samplerate;
       overwitch_set_status (&jclient->ow, OW_STATUS_READY);
       jclient->log_cycles = 0;
       jclient->log_control_cycles =
 	STARTUP_TIME * new_samplerate / jclient->bufsize;
     }
-  jclient->o2c_ratio = jclient->o2c_dll.ratio;
+  jclient->o2c_ratio = jclient->dll.ratio;
   jclient->samplerate = new_samplerate;
 }
 
@@ -299,7 +298,7 @@ jclient_o2c_reader (void *cb_data, float **data)
       frames = MAX_READ_FRAMES;
     }
 
-  jclient->o2c_dll.kj += frames;
+  jclient->dll.kj += frames;
   last_frames = frames;
   return frames;
 }
@@ -398,10 +397,7 @@ jclient_compute_ratios (struct jclient *jclient, struct dll *dll)
   pthread_spin_lock (&jclient->ow.lock);
   jclient->c2o_latency = jclient->ow.c2o_latency;
   jclient->c2o_max_latency = jclient->ow.c2o_max_latency;
-  dll->ko0 = jclient->o2c_dll.counter.i0.frames;
-  dll->to0 = jclient->o2c_dll.counter.i0.time;
-  dll->ko1 = jclient->o2c_dll.counter.i1.frames;
-  dll->to1 = jclient->o2c_dll.counter.i1.time;
+  dll_load_secondary (dll);
   pthread_spin_unlock (&jclient->ow.lock);
 
   ow_status = overwitch_get_status (&jclient->ow);
@@ -648,7 +644,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   jack_default_audio_sample_t *buffer[OB_MAX_TRACKS];
   struct jclient *jclient = arg;
 
-  if (jclient_compute_ratios (jclient, &jclient->o2c_dll))
+  if (jclient_compute_ratios (jclient, &jclient->dll))
     {
       return 0;
     }
@@ -729,6 +725,18 @@ jclient_run (struct jclient *jclient)
   jclient->xruns = 0;
 
   jclient->status = JC_STATUS_READY;
+
+  //The so called Overwitch API
+  jclient->ow.get_time = jclient_get_time;
+  jclient->ow.dll_secondary = &jclient->dll.secondary;
+
+  jclient->ow.buffer_write_space =
+    (overwitch_buffer_rw_space_t) jack_ringbuffer_write_space;
+  jclient->ow.buffer_write = (overwitch_buffer_write_t) jack_ringbuffer_write;
+  jclient->ow.buffer_read_space =
+    (overwitch_buffer_rw_space_t) jack_ringbuffer_read_space;
+  jclient->ow.buffer_read = jclient_buffer_read;
+
   ob_status =
     overwitch_init (&jclient->ow, jclient->bus, jclient->address,
 		    jclient->blocks_per_transfer);
@@ -737,20 +745,6 @@ jclient_run (struct jclient *jclient)
       error_print ("USB error: %s\n", overbrigde_get_err_str (ob_status));
       goto end;
     }
-
-  jclient->ow.get_time = jclient_get_time;
-  jclient->ow.sample_counter_data = &jclient->o2c_dll.counter;
-  jclient->ow.sample_counter_init =
-    (overwitch_sample_counter_init_t) dll_counter_init;
-  jclient->ow.sample_counter_inc =
-    (overwitch_sample_counter_inc_t) dll_counter_inc;
-
-  jclient->ow.buffer_write_space =
-    (overwitch_buffer_rw_space_t) jack_ringbuffer_write_space;
-  jclient->ow.buffer_write = (overwitch_buffer_write_t) jack_ringbuffer_write;
-  jclient->ow.buffer_read_space =
-    (overwitch_buffer_rw_space_t) jack_ringbuffer_read_space;
-  jclient->ow.buffer_read = jclient_buffer_read;
 
   jclient->client =
     jack_client_open (jclient->ow.device_desc->name, options, &status, NULL);

@@ -29,7 +29,7 @@ struct instant
   uint32_t frames;
 };
 
-struct dll_counter
+struct dll_secondary
 {
   struct instant i0;
   struct instant i1;
@@ -57,12 +57,12 @@ struct dll
   uint32_t ko1;
   double to0;
   double to1;
-  struct dll_counter counter;
+  struct dll_secondary secondary;
 };
 
-void dll_counter_init (struct dll_counter *, double, int, double);
+void dll_secondary_init (struct dll_secondary *, double, int, double);
 
-void dll_counter_inc (struct dll_counter *, int, double);
+void dll_secondary_inc (struct dll_secondary *, int, double);
 
 void dll_init (struct dll *, double, double, int, int);
 
@@ -75,5 +75,7 @@ void dll_update (struct dll *);
 void dll_calc_avg (struct dll *, int);
 
 void dll_first_time_run (struct dll *);
+
+void dll_load_secondary (struct dll *);
 
 #endif

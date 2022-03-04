@@ -151,6 +151,7 @@
 #include <samplerate.h>
 #include <pthread.h>
 #include "utils.h"
+#include "dll.h"
 
 #define OB_SAMPLE_RATE 48000.0
 #define OB_FRAMES_PER_BLOCK 7
@@ -163,7 +164,7 @@
 struct overwitch_usb_blk
 {
   uint16_t header;
-  uint16_t s_counter;
+  uint16_t frames;
   uint8_t padding[OB_PADDING_SIZE];
   int32_t data[];
 };
@@ -207,9 +208,6 @@ struct overwitch_device_desc
   char *output_track_names[OB_MAX_TRACKS];
 };
 
-typedef void (*overwitch_sample_counter_init_t) (void *, double, int, double);
-typedef void (*overwitch_sample_counter_inc_t) (void *, int, double);
-
 typedef size_t (*overwitch_buffer_rw_space_t) (void *);
 typedef size_t (*overwitch_buffer_read_t) (void *, char *, size_t);
 typedef size_t (*overwitch_buffer_write_t) (void *, const char *, size_t);
@@ -228,7 +226,7 @@ struct overwitch
   size_t c2o_max_latency;
   pthread_t audio_o2c_midi_thread;
   pthread_t c2o_midi_thread;
-  uint16_t s_counter;
+  uint16_t frames;
   libusb_context *context;
   libusb_device_handle *device_handle;
   const struct overwitch_device_desc *device_desc;
@@ -261,10 +259,8 @@ struct overwitch
   int reading_at_c2o_end;
   pthread_spinlock_t c2o_midi_lock;
   int c2o_midi_ready;
-  //sample counter
-  void *sample_counter_data;
-  overwitch_sample_counter_init_t sample_counter_init;
-  overwitch_sample_counter_inc_t sample_counter_inc;
+  //Secondary DLL
+  struct dll_secondary *dll_secondary;
   //buffer operations
   overwitch_buffer_rw_space_t buffer_write_space;
   overwitch_buffer_write_t buffer_write;

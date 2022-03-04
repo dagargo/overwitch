@@ -24,32 +24,32 @@
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc.
 inline void
-dll_counter_init (struct dll_counter *dll_counter, double samplerate,
-		  int frames_per_transfer, double time)
+dll_secondary_init (struct dll_secondary *dll_secondary, double samplerate,
+		    int frames_per_transfer, double time)
 {
   double dtime = frames_per_transfer / samplerate;
   double w = 2 * M_PI * 0.1 * dtime;
-  dll_counter->b = 1.6 * w;
-  dll_counter->c = w * w;
+  dll_secondary->b = 1.6 * w;
+  dll_secondary->c = w * w;
 
-  dll_counter->e2 = dtime;
-  dll_counter->i0.time = time;
-  dll_counter->i1.time = dll_counter->i0.time + dll_counter->e2;
+  dll_secondary->e2 = dtime;
+  dll_secondary->i0.time = time;
+  dll_secondary->i1.time = dll_secondary->i0.time + dll_secondary->e2;
 
-  dll_counter->i0.frames = 0;
-  dll_counter->i1.frames = frames_per_transfer;
+  dll_secondary->i0.frames = 0;
+  dll_secondary->i1.frames = frames_per_transfer;
 }
 
 inline void
-dll_counter_inc (struct dll_counter *dll_counter, int frames_per_transfer,
-		 double time)
+dll_secondary_inc (struct dll_secondary *dll_secondary,
+		   int frames_per_transfer, double time)
 {
-  double e = time - dll_counter->i1.time;
-  dll_counter->i0.time = dll_counter->i1.time;
-  dll_counter->i1.time += dll_counter->b * e + dll_counter->e2;
-  dll_counter->e2 += dll_counter->c * e;
-  dll_counter->i0.frames = dll_counter->i1.frames;
-  dll_counter->i1.frames += frames_per_transfer;
+  double e = time - dll_secondary->i1.time;
+  dll_secondary->i0.time = dll_secondary->i1.time;
+  dll_secondary->i1.time += dll_secondary->b * e + dll_secondary->e2;
+  dll_secondary->e2 += dll_secondary->c * e;
+  dll_secondary->i0.frames = dll_secondary->i1.frames;
+  dll_secondary->i1.frames += frames_per_transfer;
 }
 
 //The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
@@ -125,4 +125,13 @@ dll_set_loop_filter (struct dll *dll, double bw,
   w = 2.0 * M_PI * bw * dll->ratio / output_samplerate;
   dll->_w1 = w * 1.6;
   dll->_w2 = w * output_frames_per_transfer / 1.6;
+}
+
+inline void
+dll_load_secondary (struct dll *dll)
+{
+  dll->ko0 = dll->secondary.i0.frames;
+  dll->to0 = dll->secondary.i0.time;
+  dll->ko1 = dll->secondary.i1.frames;
+  dll->to1 = dll->secondary.i1.time;
 }

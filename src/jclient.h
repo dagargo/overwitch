@@ -37,7 +37,7 @@ struct jclient
 {
   jclient_status_t status;
   struct overwitch ow;
-  struct dll o2c_dll;
+  struct dll dll;		//The DLL is based on o2j data
   jack_ringbuffer_t *o2c_audio_rb;
   jack_ringbuffer_t *c2o_audio_rb;
   jack_ringbuffer_t *o2c_midi_rb;
