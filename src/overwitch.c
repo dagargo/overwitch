@@ -926,34 +926,25 @@ overwitch_activate (struct overwitch *ow, uint64_t features)
 
   ow->s_counter = 0;
 
-  if (!features)
+  if (!ow->buffer_write_space)
     {
-      error_print ("Nothing to do\n");
+      error_print ("'buffer_write_space' not set\n");
       return -1;
     }
-
-  if (features & OW_OPTION_AUDIO)
+  if (!ow->buffer_read_space)
     {
-      if (!ow->buffer_write_space)
-	{
-	  error_print ("'buffer_write_space' not set\n");
-	  return -1;
-	}
-      if (!ow->buffer_read_space)
-	{
-	  error_print ("'buffer_read_space' not set\n");
-	  return -1;
-	}
-      if (!ow->buffer_write)
-	{
-	  error_print ("'buffer_write' not set\n");
-	  return -1;
-	}
-      if (!ow->buffer_read)
-	{
-	  error_print ("'buffer_read' not set\n");
-	  return -1;
-	}
+      error_print ("'buffer_read_space' not set\n");
+      return -1;
+    }
+  if (!ow->buffer_write)
+    {
+      error_print ("'buffer_write' not set\n");
+      return -1;
+    }
+  if (!ow->buffer_read)
+    {
+      error_print ("'buffer_read' not set\n");
+      return -1;
     }
 
   if (features & OW_OPTION_MIDI)

@@ -170,9 +170,8 @@ struct overwitch_usb_blk
 
 typedef enum
 {
-  OW_OPTION_AUDIO = 1,
-  OW_OPTION_MIDI = 2,
-  OW_OPTION_TIME_TRACKING = 4
+  OW_OPTION_MIDI = 1,
+  OW_OPTION_TIME_TRACKING = 2
 } overwitch_option_t;
 
 typedef enum
@@ -215,7 +214,7 @@ typedef size_t (*overwitch_buffer_rw_space_t) (void *);
 typedef size_t (*overwitch_buffer_read_t) (void *, char *, size_t);
 typedef size_t (*overwitch_buffer_write_t) (void *, const char *, size_t);
 
-typedef double (*overwitch_get_time) (); //Time in seconds
+typedef double (*overwitch_get_time) ();	//Time in seconds
 
 struct overwitch
 {
