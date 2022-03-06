@@ -110,7 +110,7 @@ overwitch_run_single (int device_num, char *device_name,
   overwitch_count = 1;
   overwitch = malloc (sizeof (struct jclient_thread *));
   overwitch[0] = malloc (sizeof (struct jclient_thread));
-  overwitch[0]->jclient.c2o_buf_in = NULL;
+  overwitch[0]->jclient.p2o_buf_in = NULL;
   overwitch[0]->jclient.bus = bus;
   overwitch[0]->jclient.address = address;
   overwitch[0]->jclient.blocks_per_transfer = blocks_per_transfer;
@@ -166,7 +166,7 @@ overwitch_run_all (int blocks_per_transfer, int quality, int priority)
 	  bus = libusb_get_bus_number (device);
 	  address = libusb_get_device_address (device);
 
-	  overwitch[overwitch_count]->jclient.c2o_buf_in = NULL;
+	  overwitch[overwitch_count]->jclient.p2o_buf_in = NULL;
 	  overwitch[overwitch_count]->jclient.bus = bus;
 	  overwitch[overwitch_count]->jclient.address = address;
 	  overwitch[overwitch_count]->jclient.blocks_per_transfer =

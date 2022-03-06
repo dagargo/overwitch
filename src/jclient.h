@@ -38,14 +38,14 @@ struct jclient
   jclient_status_t status;
   struct overwitch ow;
   struct dll dll;		//The DLL is based on o2j data
-  jack_ringbuffer_t *o2c_audio_rb;
-  jack_ringbuffer_t *c2o_audio_rb;
-  jack_ringbuffer_t *o2c_midi_rb;
-  jack_ringbuffer_t *c2o_midi_rb;
-  size_t o2c_buf_size;
-  size_t c2o_buf_size;
-  double o2c_ratio;
-  double c2o_ratio;
+  jack_ringbuffer_t *o2p_audio_rb;
+  jack_ringbuffer_t *p2o_audio_rb;
+  jack_ringbuffer_t *o2p_midi_rb;
+  jack_ringbuffer_t *p2o_midi_rb;
+  size_t o2p_buf_size;
+  size_t p2o_buf_size;
+  double o2p_ratio;
+  double p2o_ratio;
   jack_client_t *client;
   jack_port_t **output_ports;
   jack_port_t **input_ports;
@@ -53,21 +53,21 @@ struct jclient
   jack_port_t *midi_input_port;
   jack_nframes_t bufsize;
   double samplerate;
-  jack_default_audio_sample_t *c2o_buf_in;
-  jack_default_audio_sample_t *c2o_buf_out;
-  jack_default_audio_sample_t *c2o_aux;
-  jack_default_audio_sample_t *c2o_queue;
-  size_t c2o_queue_len;
-  jack_default_audio_sample_t *o2c_buf_in;
-  jack_default_audio_sample_t *o2c_buf_out;
-  SRC_STATE *c2o_state;
-  SRC_DATA c2o_data;
-  SRC_STATE *o2c_state;
-  SRC_DATA o2c_data;
-  size_t c2o_latency;
-  size_t o2c_latency;
-  size_t c2o_max_latency;
-  size_t o2c_max_latency;
+  jack_default_audio_sample_t *p2o_buf_in;
+  jack_default_audio_sample_t *p2o_buf_out;
+  jack_default_audio_sample_t *p2o_aux;
+  jack_default_audio_sample_t *p2o_queue;
+  size_t p2o_queue_len;
+  jack_default_audio_sample_t *o2p_buf_in;
+  jack_default_audio_sample_t *o2p_buf_out;
+  SRC_STATE *p2o_state;
+  SRC_DATA p2o_data;
+  SRC_STATE *o2p_state;
+  SRC_DATA o2p_data;
+  size_t p2o_latency;
+  size_t o2p_latency;
+  size_t p2o_max_latency;
+  size_t o2p_max_latency;
   int cycles_to_skip;
   double jsr;
   double obsr;
@@ -75,7 +75,7 @@ struct jclient
   int log_cycles;
   int xruns;
   pthread_spinlock_t lock;	//Used to synchronize access to xruns.
-  int reading_at_o2c_end;
+  int reading_at_o2p_end;
   //Parameters
   uint8_t bus;
   uint8_t address;

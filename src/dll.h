@@ -29,7 +29,7 @@ struct instant
   uint32_t frames;
 };
 
-struct dll_secondary
+struct dll_overwitch
 {
   struct instant i0;
   struct instant i1;
@@ -57,12 +57,12 @@ struct dll
   uint32_t ko1;
   double to0;
   double to1;
-  struct dll_secondary secondary;
+  struct dll_overwitch dll_ow;
 };
 
-void dll_secondary_init (struct dll_secondary *, double, int, double);
+void dll_overwitch_init (struct dll_overwitch *, double, int, double);
 
-void dll_secondary_inc (struct dll_secondary *, int, double);
+void dll_overwitch_inc (struct dll_overwitch *, int, double);
 
 void dll_init (struct dll *, double, double, int, int);
 
@@ -76,6 +76,6 @@ void dll_calc_avg (struct dll *, int);
 
 void dll_first_time_run (struct dll *);
 
-void dll_load_secondary (struct dll *);
+void dll_load_dll_overwitch (struct dll *);
 
 #endif
