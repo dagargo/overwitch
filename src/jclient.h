@@ -60,6 +60,8 @@ struct resampler
   int reading_at_o2p_end;
   size_t o2p_buf_size;
   size_t p2o_buf_size;
+  uint32_t bufsize;
+  double samplerate;
 };
 
 struct jclient
@@ -73,8 +75,6 @@ struct jclient
   jack_port_t **input_ports;
   jack_port_t *midi_output_port;
   jack_port_t *midi_input_port;
-  jack_nframes_t bufsize;
-  double samplerate;
   //Parameters
   uint8_t bus;
   uint8_t address;
@@ -90,4 +90,4 @@ void *jclient_run_thread (void *);
 
 void jclient_exit (struct jclient *);
 
-void jclient_print_latencies (struct jclient *, const char *);
+void jclient_print_latencies (struct resampler *, const char *);
