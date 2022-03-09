@@ -110,7 +110,6 @@ overwitch_run_single (int device_num, char *device_name,
   overwitch_count = 1;
   overwitch = malloc (sizeof (struct jclient_thread *));
   overwitch[0] = malloc (sizeof (struct jclient_thread));
-  overwitch[0]->jclient.p2o_buf_in = NULL;
   overwitch[0]->jclient.bus = bus;
   overwitch[0]->jclient.address = address;
   overwitch[0]->jclient.blocks_per_transfer = blocks_per_transfer;
@@ -120,7 +119,7 @@ overwitch_run_single (int device_num, char *device_name,
   pthread_create (&overwitch[0]->thread, NULL, jclient_run_thread,
 		  &overwitch[0]->jclient);
   pthread_join (overwitch[0]->thread, NULL);
-  status = overwitch[0]->jclient.status;
+  status = overwitch[0]->jclient.resampler.status;
   free (overwitch[0]);
   free (overwitch);
 
@@ -166,7 +165,6 @@ overwitch_run_all (int blocks_per_transfer, int quality, int priority)
 	  bus = libusb_get_bus_number (device);
 	  address = libusb_get_device_address (device);
 
-	  overwitch[overwitch_count]->jclient.p2o_buf_in = NULL;
 	  overwitch[overwitch_count]->jclient.bus = bus;
 	  overwitch[overwitch_count]->jclient.address = address;
 	  overwitch[overwitch_count]->jclient.blocks_per_transfer =
@@ -191,7 +189,7 @@ overwitch_run_all (int blocks_per_transfer, int quality, int priority)
       for (int i = 0; i < overwitch_count; i++)
 	{
 	  pthread_join (overwitch[i]->thread, NULL);
-	  status |= overwitch[i]->jclient.status;
+	  status |= overwitch[i]->jclient.resampler.status;
 	  free (overwitch[i]);
 	}
       free (overwitch);

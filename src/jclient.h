@@ -25,63 +25,63 @@
 
 typedef enum
 {
-  JC_STATUS_ERROR = -1,
-  JC_STATUS_STOP,
-  JC_STATUS_READY,
-  JC_STATUS_BOOT,
-  JC_STATUS_TUNE,
-  JC_STATUS_RUN
-} jclient_status_t;
+  RES_STATUS_ERROR = -1,
+  RES_STATUS_STOP,
+  RES_STATUS_READY,
+  RES_STATUS_BOOT,
+  RES_STATUS_TUNE,
+  RES_STATUS_RUN
+} resampler_status_t;
+
+struct resampler
+{
+  resampler_status_t status;
+  struct overwitch ow;
+  struct dll dll;		//The DLL is based on o2j data
+  double o2p_ratio;
+  double p2o_ratio;
+  SRC_STATE *p2o_state;
+  SRC_STATE *o2p_state;
+  size_t p2o_latency;
+  size_t o2p_latency;
+  size_t p2o_max_latency;
+  size_t o2p_max_latency;
+  float *p2o_buf_in;
+  float *p2o_buf_out;
+  float *p2o_aux;
+  float *p2o_queue;
+  float *o2p_buf_in;
+  float *o2p_buf_out;
+  size_t p2o_queue_len;
+  int log_control_cycles;
+  int log_cycles;
+  int xruns;
+  pthread_spinlock_t lock;	//Used to synchronize access to xruns.
+  int reading_at_o2p_end;
+  size_t o2p_buf_size;
+  size_t p2o_buf_size;
+};
 
 struct jclient
 {
-  jclient_status_t status;
-  struct overwitch ow;
-  struct dll dll;		//The DLL is based on o2j data
+  jack_client_t *client;
   jack_ringbuffer_t *o2p_audio_rb;
   jack_ringbuffer_t *p2o_audio_rb;
   jack_ringbuffer_t *o2p_midi_rb;
   jack_ringbuffer_t *p2o_midi_rb;
-  size_t o2p_buf_size;
-  size_t p2o_buf_size;
-  double o2p_ratio;
-  double p2o_ratio;
-  jack_client_t *client;
   jack_port_t **output_ports;
   jack_port_t **input_ports;
   jack_port_t *midi_output_port;
   jack_port_t *midi_input_port;
   jack_nframes_t bufsize;
   double samplerate;
-  jack_default_audio_sample_t *p2o_buf_in;
-  jack_default_audio_sample_t *p2o_buf_out;
-  jack_default_audio_sample_t *p2o_aux;
-  jack_default_audio_sample_t *p2o_queue;
-  size_t p2o_queue_len;
-  jack_default_audio_sample_t *o2p_buf_in;
-  jack_default_audio_sample_t *o2p_buf_out;
-  SRC_STATE *p2o_state;
-  SRC_DATA p2o_data;
-  SRC_STATE *o2p_state;
-  SRC_DATA o2p_data;
-  size_t p2o_latency;
-  size_t o2p_latency;
-  size_t p2o_max_latency;
-  size_t o2p_max_latency;
-  int cycles_to_skip;
-  double jsr;
-  double obsr;
-  int log_control_cycles;
-  int log_cycles;
-  int xruns;
-  pthread_spinlock_t lock;	//Used to synchronize access to xruns.
-  int reading_at_o2p_end;
   //Parameters
   uint8_t bus;
   uint8_t address;
   int blocks_per_transfer;
   int quality;
   int priority;
+  struct resampler resampler;
 };
 
 int jclient_run (struct jclient *);
