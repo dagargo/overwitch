@@ -82,47 +82,48 @@ jclient_print_latencies (struct resampler *resampler, const char *end)
 }
 
 void
-jclient_reset_buffers (struct jclient *jclient)
+resampler_reset_buffers (struct resampler *resampler)
 {
-  size_t rso2j, bytes;
-  size_t p2o_bufsize =
-    jclient->resampler.bufsize * jclient->resampler.ow.p2o_frame_size;
-  size_t o2p_bufsize =
-    jclient->resampler.bufsize * jclient->resampler.ow.o2p_frame_size;
-  if (jclient->resampler.p2o_buf_in)
+  size_t p2o_bufsize = resampler->bufsize * resampler->ow.p2o_frame_size;
+  size_t o2p_bufsize = resampler->bufsize * resampler->ow.o2p_frame_size;
+  if (resampler->p2o_buf_in)
     {
-      free (jclient->resampler.p2o_buf_in);
-      free (jclient->resampler.p2o_buf_out);
-      free (jclient->resampler.p2o_aux);
-      free (jclient->resampler.p2o_queue);
-      free (jclient->resampler.o2p_buf_in);
-      free (jclient->resampler.o2p_buf_out);
+      free (resampler->p2o_buf_in);
+      free (resampler->p2o_buf_out);
+      free (resampler->p2o_aux);
+      free (resampler->p2o_queue);
+      free (resampler->o2p_buf_in);
+      free (resampler->o2p_buf_out);
     }
 
   //The 8 times scale allow up to more than 192 kHz sample rate in JACK.
-  jclient->resampler.p2o_buf_in = malloc (p2o_bufsize * 8);
-  jclient->resampler.p2o_buf_out = malloc (p2o_bufsize * 8);
-  jclient->resampler.p2o_aux = malloc (p2o_bufsize);
-  jclient->resampler.p2o_queue = malloc (p2o_bufsize * 8);
-  jclient->resampler.p2o_queue_len = 0;
+  resampler->p2o_buf_in = malloc (p2o_bufsize * 8);
+  resampler->p2o_buf_out = malloc (p2o_bufsize * 8);
+  resampler->p2o_aux = malloc (p2o_bufsize);
+  resampler->p2o_queue = malloc (p2o_bufsize * 8);
+  resampler->p2o_queue_len = 0;
 
-  jclient->resampler.o2p_buf_in = malloc (o2p_bufsize);
-  jclient->resampler.o2p_buf_out = malloc (o2p_bufsize);
+  resampler->o2p_buf_in = malloc (o2p_bufsize);
+  resampler->o2p_buf_out = malloc (o2p_bufsize);
 
-  memset (jclient->resampler.p2o_buf_in, 0, p2o_bufsize);
-  memset (jclient->resampler.o2p_buf_in, 0, o2p_bufsize);
+  memset (resampler->p2o_buf_in, 0, p2o_bufsize);
+  memset (resampler->o2p_buf_in, 0, o2p_bufsize);
 
-  jclient->resampler.o2p_buf_size =
-    jclient->resampler.bufsize * jclient->resampler.ow.o2p_frame_size;
-  jclient->resampler.p2o_buf_size =
-    jclient->resampler.bufsize * jclient->resampler.ow.p2o_frame_size;
+  resampler->o2p_buf_size = resampler->bufsize * resampler->ow.o2p_frame_size;
+  resampler->p2o_buf_size = resampler->bufsize * resampler->ow.p2o_frame_size;
 
-  jclient->resampler.p2o_max_latency = 0;
-  jclient->resampler.o2p_max_latency = 0;
-  jclient->resampler.p2o_latency = 0;
-  jclient->resampler.o2p_latency = 0;
-  jclient->resampler.reading_at_o2p_end = 0;
+  resampler->p2o_max_latency = 0;
+  resampler->o2p_max_latency = 0;
+  resampler->p2o_latency = 0;
+  resampler->o2p_latency = 0;
+  resampler->reading_at_o2p_end = 0;
+}
 
+void
+jclient_reset_buffers (struct jclient *jclient)
+{
+  size_t rso2j, bytes;
+  resampler_reset_buffers (&jclient->resampler);
   rso2j = jack_ringbuffer_read_space (jclient->o2p_audio_rb);
   bytes =
     overwitch_bytes_to_frame_bytes (rso2j,
@@ -131,31 +132,31 @@ jclient_reset_buffers (struct jclient *jclient)
 }
 
 void
-jclient_reset_dll (struct jclient *jclient, jack_nframes_t new_samplerate)
+resampler_reset_dll (struct resampler *resampler,
+		     jack_nframes_t new_samplerate)
 {
   static int init = 0;
-  if (!init || overwitch_get_status (&jclient->resampler.ow) < OW_STATUS_RUN)
+  if (!init || overwitch_get_status (&resampler->ow) < OW_STATUS_RUN)
     {
       debug_print (2, "Initializing dll...\n");
-      dll_init (&jclient->resampler.dll, new_samplerate, OB_SAMPLE_RATE,
-		jclient->resampler.bufsize,
-		jclient->resampler.ow.frames_per_transfer);
-      overwitch_set_status (&jclient->resampler.ow, OW_STATUS_READY);
+      dll_init (&resampler->dll, new_samplerate, OB_SAMPLE_RATE,
+		resampler->bufsize, resampler->ow.frames_per_transfer);
+      overwitch_set_status (&resampler->ow, OW_STATUS_READY);
       init = 1;
     }
   else
     {
       debug_print (2, "Just adjusting dll ratio...\n");
-      jclient->resampler.dll.ratio =
-	jclient->resampler.dll.last_ratio_avg * new_samplerate /
-	jclient->resampler.samplerate;
-      overwitch_set_status (&jclient->resampler.ow, OW_STATUS_READY);
-      jclient->resampler.log_cycles = 0;
-      jclient->resampler.log_control_cycles =
-	STARTUP_TIME * new_samplerate / jclient->resampler.bufsize;
+      resampler->dll.ratio =
+	resampler->dll.last_ratio_avg * new_samplerate /
+	resampler->samplerate;
+      overwitch_set_status (&resampler->ow, OW_STATUS_READY);
+      resampler->log_cycles = 0;
+      resampler->log_control_cycles =
+	STARTUP_TIME * new_samplerate / resampler->bufsize;
     }
-  jclient->resampler.o2p_ratio = jclient->resampler.dll.ratio;
-  jclient->resampler.samplerate = new_samplerate;
+  resampler->o2p_ratio = resampler->dll.ratio;
+  resampler->samplerate = new_samplerate;
 }
 
 static int
@@ -204,7 +205,8 @@ jclient_set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
       printf ("JACK buffer size: %d\n", nframes);
       jclient->resampler.bufsize = nframes;
       jclient_reset_buffers (jclient);
-      jclient_reset_dll (jclient, jclient->resampler.samplerate);
+      resampler_reset_dll (&jclient->resampler,
+			   jclient->resampler.samplerate);
     }
   return 0;
 }
@@ -218,7 +220,7 @@ jclient_set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
       printf ("JACK sample rate: %d\n", nframes);
       if (jclient->resampler.p2o_buf_in)	//This means that jclient_reset_buffers has been called and thus bufsize has been set.
 	{
-	  jclient_reset_dll (jclient, nframes);
+	  resampler_reset_dll (&jclient->resampler, nframes);
 	}
       else
 	{
@@ -232,84 +234,82 @@ static long
 jclient_p2o_reader (void *cb_data, float **data)
 {
   long ret;
-  struct jclient *jclient = cb_data;
+  struct resampler *resampler = cb_data;
 
-  *data = jclient->resampler.p2o_buf_in;
+  *data = resampler->p2o_buf_in;
 
-  if (jclient->resampler.p2o_queue_len == 0)
+  if (resampler->p2o_queue_len == 0)
     {
       debug_print (2, "j2o: Can not read data from queue\n");
-      return jclient->resampler.bufsize;
+      return resampler->bufsize;
     }
 
-  ret = jclient->resampler.p2o_queue_len;
-  memcpy (jclient->resampler.p2o_buf_in, jclient->resampler.p2o_queue,
-	  ret * jclient->resampler.ow.p2o_frame_size);
-  jclient->resampler.p2o_queue_len = 0;
+  ret = resampler->p2o_queue_len;
+  memcpy (resampler->p2o_buf_in, resampler->p2o_queue,
+	  ret * resampler->ow.p2o_frame_size);
+  resampler->p2o_queue_len = 0;
 
   return ret;
 }
 
 static long
-jclient_o2p_reader (void *cb_data, float **data)
+resampler_o2p_reader (void *cb_data, float **data)
 {
   size_t rso2j;
   size_t bytes;
   long frames;
   static int last_frames = 1;
-  struct jclient *jclient = cb_data;
+  struct resampler *resampler = cb_data;
 
-  *data = jclient->resampler.o2p_buf_in;
+  *data = resampler->o2p_buf_in;
 
-  rso2j = jack_ringbuffer_read_space (jclient->o2p_audio_rb);
-  if (jclient->resampler.reading_at_o2p_end)
+  rso2j = resampler->ow.buffer_read_space (resampler->ow.o2p_audio_buf);
+  if (resampler->reading_at_o2p_end)
     {
-      jclient->resampler.o2p_latency = rso2j;
-      if (jclient->resampler.o2p_latency > jclient->resampler.o2p_max_latency)
+      resampler->o2p_latency = rso2j;
+      if (resampler->o2p_latency > resampler->o2p_max_latency)
 	{
-	  jclient->resampler.o2p_max_latency = jclient->resampler.o2p_latency;
+	  resampler->o2p_max_latency = resampler->o2p_latency;
 	}
 
-      if (rso2j >= jclient->resampler.ow.o2p_frame_size)
+      if (rso2j >= resampler->ow.o2p_frame_size)
 	{
-	  frames = rso2j / jclient->resampler.ow.o2p_frame_size;
+	  frames = rso2j / resampler->ow.o2p_frame_size;
 	  frames = frames > MAX_READ_FRAMES ? MAX_READ_FRAMES : frames;
-	  bytes = frames * jclient->resampler.ow.o2p_frame_size;
-	  jack_ringbuffer_read (jclient->o2p_audio_rb,
-				(void *) jclient->resampler.o2p_buf_in,
-				bytes);
+	  bytes = frames * resampler->ow.o2p_frame_size;
+	  resampler->ow.buffer_read (resampler->ow.o2p_audio_buf,
+				     (void *) resampler->o2p_buf_in, bytes);
 	}
       else
 	{
 	  debug_print (2,
 		       "o2j: Audio ring buffer underflow (%zu < %zu). Replicating last sample...\n",
-		       rso2j, jclient->resampler.ow.o2p_transfer_size);
+		       rso2j, resampler->ow.o2p_transfer_size);
 	  if (last_frames > 1)
 	    {
-	      memcpy (jclient->resampler.o2p_buf_in,
-		      &jclient->resampler.o2p_buf_in[(last_frames - 1) *
-						     jclient->resampler.ow.
-						     device_desc->outputs],
-		      jclient->resampler.ow.o2p_frame_size);
+	      uint64_t pos =
+		(last_frames - 1) * resampler->ow.device_desc->outputs;
+	      memcpy (resampler->o2p_buf_in, &resampler->o2p_buf_in[pos],
+		      resampler->ow.o2p_frame_size);
 	    }
 	  frames = MAX_READ_FRAMES;
 	}
     }
   else
     {
-      if (rso2j >= jclient->resampler.o2p_buf_size)
+      if (rso2j >= resampler->o2p_buf_size)
 	{
 	  debug_print (2, "o2j: Emptying buffer and running...\n");
 	  bytes =
-	    overwitch_bytes_to_frame_bytes (rso2j,
-					    jclient->resampler.o2p_buf_size);
-	  jack_ringbuffer_read_advance (jclient->o2p_audio_rb, bytes);
-	  jclient->resampler.reading_at_o2p_end = 1;
+	    overwitch_bytes_to_frame_bytes (rso2j, resampler->o2p_buf_size);
+	  resampler->ow.buffer_read (resampler->ow.o2p_audio_buf, NULL,
+				     bytes);
+	  resampler->reading_at_o2p_end = 1;
 	}
       frames = MAX_READ_FRAMES;
     }
 
-  jclient->resampler.dll.kj += frames;
+  resampler->dll.kj += frames;
   last_frames = frames;
   return frames;
 }
@@ -370,8 +370,8 @@ resampler_j2o (struct resampler *resampler)
 
   if (bytes <= wsj2o)
     {
-            resampler->ow.buffer_write (resampler->ow.p2o_audio_buf,
-			     (void *) resampler->p2o_buf_out, bytes);
+      resampler->ow.buffer_write (resampler->ow.p2o_audio_buf,
+				  (void *) resampler->p2o_buf_out, bytes);
     }
   else
     {
@@ -901,11 +901,11 @@ jclient_run (struct jclient *jclient)
   jclient->resampler.p2o_state =
     src_callback_new (jclient_p2o_reader, jclient->quality,
 		      jclient->resampler.ow.device_desc->inputs, NULL,
-		      jclient);
+		      &jclient->resampler);
   jclient->resampler.o2p_state =
-    src_callback_new (jclient_o2p_reader, jclient->quality,
+    src_callback_new (resampler_o2p_reader, jclient->quality,
 		      jclient->resampler.ow.device_desc->outputs, NULL,
-		      jclient);
+		      &jclient->resampler);
 
   //Ring buffers
 
