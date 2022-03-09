@@ -501,8 +501,7 @@ jclient_o2p_midi (struct jclient *jclient, jack_nframes_t nframes)
   void *midi_port_buf;
   jack_midi_data_t *jmidi;
   struct overwitch_midi_event event;
-  jack_nframes_t last_frames;
-  jack_nframes_t frames;
+  jack_nframes_t last_frames, frames, last_frame_time, event_frames;
 
   midi_port_buf = jack_port_get_buffer (jclient->midi_output_port, nframes);
   jack_midi_clear_buffer (midi_port_buf);
@@ -514,7 +513,19 @@ jclient_o2p_midi (struct jclient *jclient, jack_nframes_t nframes)
       jack_ringbuffer_peek (jclient->o2p_midi_rb, (void *) &event,
 			    sizeof (struct overwitch_midi_event));
 
-      frames = jack_time_to_frames (jclient->client, event.time);
+      event_frames = jack_time_to_frames (jclient->client, event.time);
+      last_frame_time = jack_time_to_frames (jclient->client, event.time);
+
+      if (last_frame_time < event_frames)
+	{
+	  debug_print (2, "Event delayed: %u frames\n",
+		       event_frames - last_frame_time);
+	  frames = 0;
+	}
+      else
+	{
+	  frames = (last_frame_time - event_frames) % jclient->bufsize;
+	}
 
       debug_print (2, "Event frames: %u\n", frames);
 
