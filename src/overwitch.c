@@ -558,7 +558,7 @@ usb_shutdown (struct overwitch *ow)
 
 overwitch_err_t
 overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
-		int blocks_per_transfer, uint64_t features)
+		int blocks_per_transfer)
 {
   int i, ret, err;
   libusb_device **list = NULL;
@@ -567,48 +567,6 @@ overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
   char *name = NULL;
   struct libusb_device_descriptor desc;
   struct overwitch_usb_blk *blk;
-
-  if (!ow->buffer_read_space)
-    {
-      return OW_INIT_ERROR_NO_READ_SPACE;
-    }
-  if (!ow->buffer_write_space)
-    {
-      return OW_INIT_ERROR_NO_WRITE_SPACE;
-    }
-  if (!ow->buffer_read)
-    {
-      return OW_INIT_ERROR_NO_READ;
-    }
-  if (!ow->buffer_write)
-    {
-      return OW_INIT_ERROR_NO_WRITE;
-    }
-
-  if (features & OW_OPTION_MIDI)
-    {
-      if (!ow->get_time)
-	{
-	  return OW_INIT_ERROR_NO_GET_TIME;
-	}
-      ow->midi = 1;
-    }
-  else
-    {
-      ow->midi = 0;
-    }
-
-  if (features & OW_OPTION_SECONDARY_DLL)
-    {
-      if (!ow->dll_ow)
-	{
-	  return OW_INIT_ERROR_NO_SECONDARY_DLL;
-	}
-      if (!ow->get_time)
-	{
-	  return OW_INIT_ERROR_NO_GET_TIME;
-	}
-    }
 
   // libusb setup
   if (libusb_init (&ow->context) != LIBUSB_SUCCESS)
@@ -973,9 +931,51 @@ run_audio_o2p_midi (void *data)
 }
 
 int
-overwitch_activate (struct overwitch *ow)
+overwitch_activate (struct overwitch *ow, uint64_t features)
 {
   int ret;
+
+  if (!ow->buffer_read_space)
+    {
+      return OW_INIT_ERROR_NO_READ_SPACE;
+    }
+  if (!ow->buffer_write_space)
+    {
+      return OW_INIT_ERROR_NO_WRITE_SPACE;
+    }
+  if (!ow->buffer_read)
+    {
+      return OW_INIT_ERROR_NO_READ;
+    }
+  if (!ow->buffer_write)
+    {
+      return OW_INIT_ERROR_NO_WRITE;
+    }
+
+  if (features & OW_OPTION_MIDI)
+    {
+      if (!ow->get_time)
+	{
+	  return OW_INIT_ERROR_NO_GET_TIME;
+	}
+      ow->midi = 1;
+    }
+  else
+    {
+      ow->midi = 0;
+    }
+
+  if (features & OW_OPTION_SECONDARY_DLL)
+    {
+      if (!ow->dll_ow)
+	{
+	  return OW_INIT_ERROR_NO_SECONDARY_DLL;
+	}
+      if (!ow->get_time)
+	{
+	  return OW_INIT_ERROR_NO_GET_TIME;
+	}
+    }
 
   ow->frames = 0;
 

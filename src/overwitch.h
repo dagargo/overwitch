@@ -286,10 +286,9 @@ const char *overbrigde_get_err_str (overwitch_err_t);
 
 void set_self_max_priority ();
 
-overwitch_err_t overwitch_init (struct overwitch *, uint8_t, uint8_t, int,
-				uint64_t);
+overwitch_err_t overwitch_init (struct overwitch *, uint8_t, uint8_t, int);
 
-int overwitch_activate (struct overwitch *);
+int overwitch_activate (struct overwitch *, uint64_t);
 
 void overwitch_destroy (struct overwitch *);
 

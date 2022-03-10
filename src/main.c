@@ -67,7 +67,7 @@ overwitch_signal_handler (int signo)
     {
       for (int i = 0; i < overwitch_count; i++)
 	{
-	  jclient_print_latencies (&overwitch[i]->jclient.resampler, "\n");
+	  resampler_print_latencies (&overwitch[i]->jclient.resampler);
 	}
     }
 }

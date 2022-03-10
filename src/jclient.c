@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <math.h>
 #include <jack/jack.h>
 #include <jack/intclient.h>
 #include <jack/thread.h>
@@ -31,17 +30,10 @@
 
 #include "jclient.h"
 
-#define MAX_READ_FRAMES 5
-#define STARTUP_TIME 5
-#define LOG_TIME 2
-#define RATIO_DIFF_THRES 0.00001
-
 #define MSG_ERROR_PORT_REGISTER "Error while registering JACK port\n"
 
-#define LATENCY_MSG_LEN 1024
-
 #define MIDI_BUF_EVENTS 64
-#define MIDI_BUF_SIZE (MIDI_BUF_EVENTS * OB_MIDI_EVENT_SIZE)
+#define MIDI_BUF_SIZE (MIDI_BUF_EVENTS * OB_MIDI_EVENT_SIZE * 8)
 
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
@@ -66,97 +58,14 @@ jclient_buffer_read (void *buffer, char *src, size_t size)
 }
 
 void
-jclient_print_latencies (struct resampler *resampler, const char *end)
-{
-  printf
-    ("%s: o2j latency: %.1f ms, max. %.1f ms; j2o latency: %.1f ms, max. %.1f ms%s",
-     resampler->ow.device_desc->name,
-     resampler->o2p_latency * 1000.0 / (resampler->ow.o2p_frame_size *
-					OB_SAMPLE_RATE),
-     resampler->o2p_max_latency * 1000.0 / (resampler->ow.o2p_frame_size *
-					    OB_SAMPLE_RATE),
-     resampler->p2o_latency * 1000.0 / (resampler->ow.p2o_frame_size *
-					OB_SAMPLE_RATE),
-     resampler->p2o_max_latency * 1000.0 / (resampler->ow.p2o_frame_size *
-					    OB_SAMPLE_RATE), end);
-}
-
-void
-resampler_reset_buffers (struct resampler *resampler)
-{
-  size_t p2o_bufsize = resampler->bufsize * resampler->ow.p2o_frame_size;
-  size_t o2p_bufsize = resampler->bufsize * resampler->ow.o2p_frame_size;
-  if (resampler->p2o_buf_in)
-    {
-      free (resampler->p2o_buf_in);
-      free (resampler->p2o_buf_out);
-      free (resampler->p2o_aux);
-      free (resampler->p2o_queue);
-      free (resampler->o2p_buf_in);
-      free (resampler->o2p_buf_out);
-    }
-
-  //The 8 times scale allow up to more than 192 kHz sample rate in JACK.
-  resampler->p2o_buf_in = malloc (p2o_bufsize * 8);
-  resampler->p2o_buf_out = malloc (p2o_bufsize * 8);
-  resampler->p2o_aux = malloc (p2o_bufsize);
-  resampler->p2o_queue = malloc (p2o_bufsize * 8);
-  resampler->p2o_queue_len = 0;
-
-  resampler->o2p_buf_in = malloc (o2p_bufsize);
-  resampler->o2p_buf_out = malloc (o2p_bufsize);
-
-  memset (resampler->p2o_buf_in, 0, p2o_bufsize);
-  memset (resampler->o2p_buf_in, 0, o2p_bufsize);
-
-  resampler->o2p_buf_size = resampler->bufsize * resampler->ow.o2p_frame_size;
-  resampler->p2o_buf_size = resampler->bufsize * resampler->ow.p2o_frame_size;
-
-  resampler->p2o_max_latency = 0;
-  resampler->o2p_max_latency = 0;
-  resampler->p2o_latency = 0;
-  resampler->o2p_latency = 0;
-  resampler->reading_at_o2p_end = 0;
-}
-
-void
 jclient_reset_buffers (struct jclient *jclient)
 {
   size_t rso2j, bytes;
-  resampler_reset_buffers (&jclient->resampler);
   rso2j = jack_ringbuffer_read_space (jclient->o2p_audio_rb);
   bytes =
     overwitch_bytes_to_frame_bytes (rso2j,
 				    jclient->resampler.ow.o2p_frame_size);
   jack_ringbuffer_read_advance (jclient->o2p_audio_rb, bytes);
-}
-
-void
-resampler_reset_dll (struct resampler *resampler,
-		     jack_nframes_t new_samplerate)
-{
-  static int init = 0;
-  if (!init || overwitch_get_status (&resampler->ow) < OW_STATUS_RUN)
-    {
-      debug_print (2, "Initializing dll...\n");
-      dll_init (&resampler->dll, new_samplerate, OB_SAMPLE_RATE,
-		resampler->bufsize, resampler->ow.frames_per_transfer);
-      overwitch_set_status (&resampler->ow, OW_STATUS_READY);
-      init = 1;
-    }
-  else
-    {
-      debug_print (2, "Just adjusting dll ratio...\n");
-      resampler->dll.ratio =
-	resampler->dll.last_ratio_avg * new_samplerate /
-	resampler->samplerate;
-      overwitch_set_status (&resampler->ow, OW_STATUS_READY);
-      resampler->log_cycles = 0;
-      resampler->log_control_cycles =
-	STARTUP_TIME * new_samplerate / resampler->bufsize;
-    }
-  resampler->o2p_ratio = resampler->dll.ratio;
-  resampler->samplerate = new_samplerate;
 }
 
 static int
@@ -204,6 +113,8 @@ jclient_set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
     {
       printf ("JACK buffer size: %d\n", nframes);
       jclient->resampler.bufsize = nframes;
+
+      resampler_reset_buffers (&jclient->resampler);
       jclient_reset_buffers (jclient);
       resampler_reset_dll (&jclient->resampler,
 			   jclient->resampler.samplerate);
@@ -230,270 +141,8 @@ jclient_set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
   return 0;
 }
 
-static long
-jclient_p2o_reader (void *cb_data, float **data)
-{
-  long ret;
-  struct resampler *resampler = cb_data;
-
-  *data = resampler->p2o_buf_in;
-
-  if (resampler->p2o_queue_len == 0)
-    {
-      debug_print (2, "j2o: Can not read data from queue\n");
-      return resampler->bufsize;
-    }
-
-  ret = resampler->p2o_queue_len;
-  memcpy (resampler->p2o_buf_in, resampler->p2o_queue,
-	  ret * resampler->ow.p2o_frame_size);
-  resampler->p2o_queue_len = 0;
-
-  return ret;
-}
-
-static long
-resampler_o2p_reader (void *cb_data, float **data)
-{
-  size_t rso2j;
-  size_t bytes;
-  long frames;
-  static int last_frames = 1;
-  struct resampler *resampler = cb_data;
-
-  *data = resampler->o2p_buf_in;
-
-  rso2j = resampler->ow.buffer_read_space (resampler->ow.o2p_audio_buf);
-  if (resampler->reading_at_o2p_end)
-    {
-      resampler->o2p_latency = rso2j;
-      if (resampler->o2p_latency > resampler->o2p_max_latency)
-	{
-	  resampler->o2p_max_latency = resampler->o2p_latency;
-	}
-
-      if (rso2j >= resampler->ow.o2p_frame_size)
-	{
-	  frames = rso2j / resampler->ow.o2p_frame_size;
-	  frames = frames > MAX_READ_FRAMES ? MAX_READ_FRAMES : frames;
-	  bytes = frames * resampler->ow.o2p_frame_size;
-	  resampler->ow.buffer_read (resampler->ow.o2p_audio_buf,
-				     (void *) resampler->o2p_buf_in, bytes);
-	}
-      else
-	{
-	  debug_print (2,
-		       "o2j: Audio ring buffer underflow (%zu < %zu). Replicating last sample...\n",
-		       rso2j, resampler->ow.o2p_transfer_size);
-	  if (last_frames > 1)
-	    {
-	      uint64_t pos =
-		(last_frames - 1) * resampler->ow.device_desc->outputs;
-	      memcpy (resampler->o2p_buf_in, &resampler->o2p_buf_in[pos],
-		      resampler->ow.o2p_frame_size);
-	    }
-	  frames = MAX_READ_FRAMES;
-	}
-    }
-  else
-    {
-      if (rso2j >= resampler->o2p_buf_size)
-	{
-	  debug_print (2, "o2j: Emptying buffer and running...\n");
-	  bytes =
-	    overwitch_bytes_to_frame_bytes (rso2j, resampler->o2p_buf_size);
-	  resampler->ow.buffer_read (resampler->ow.o2p_audio_buf, NULL,
-				     bytes);
-	  resampler->reading_at_o2p_end = 1;
-	}
-      frames = MAX_READ_FRAMES;
-    }
-
-  resampler->dll.kj += frames;
-  last_frames = frames;
-  return frames;
-}
-
 static inline void
-resampler_o2j (struct resampler *resampler)
-{
-  long gen_frames;
-
-  gen_frames = src_callback_read (resampler->o2p_state, resampler->o2p_ratio,
-				  resampler->bufsize, resampler->o2p_buf_out);
-  if (gen_frames != resampler->bufsize)
-    {
-      error_print
-	("o2j: Unexpected frames with ratio %f (output %ld, expected %d)\n",
-	 resampler->o2p_ratio, gen_frames, resampler->bufsize);
-    }
-}
-
-static inline void
-resampler_j2o (struct resampler *resampler)
-{
-  long gen_frames;
-  int inc;
-  int frames;
-  size_t bytes;
-  size_t wsj2o;
-  static double p2o_acc = .0;
-
-  memcpy (&resampler->p2o_queue
-	  [resampler->p2o_queue_len *
-	   resampler->ow.p2o_frame_size], resampler->p2o_aux,
-	  resampler->p2o_buf_size);
-  resampler->p2o_queue_len += resampler->bufsize;
-
-  p2o_acc += resampler->bufsize * (resampler->p2o_ratio - 1.0);
-  inc = trunc (p2o_acc);
-  p2o_acc -= inc;
-  frames = resampler->bufsize + inc;
-
-  gen_frames =
-    src_callback_read (resampler->p2o_state,
-		       resampler->p2o_ratio, frames, resampler->p2o_buf_out);
-  if (gen_frames != frames)
-    {
-      error_print
-	("j2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
-	 resampler->p2o_ratio, gen_frames, frames);
-    }
-
-  if (resampler->status < RES_STATUS_RUN)
-    {
-      return;
-    }
-
-  bytes = gen_frames * resampler->ow.p2o_frame_size;
-  wsj2o = resampler->ow.buffer_write_space (resampler->ow.p2o_audio_buf);
-
-  if (bytes <= wsj2o)
-    {
-      resampler->ow.buffer_write (resampler->ow.p2o_audio_buf,
-				  (void *) resampler->p2o_buf_out, bytes);
-    }
-  else
-    {
-      error_print ("j2o: Audio ring buffer overflow. Discarding data...\n");
-    }
-}
-
-static inline int
-resampler_compute_ratios (struct resampler *resampler, double time)
-{
-  int xruns;
-  overwitch_status_t ow_status;
-  static char latency_msg[LATENCY_MSG_LEN];
-  struct dll *dll = &resampler->dll;
-
-  pthread_spin_lock (&resampler->lock);
-  xruns = resampler->xruns;
-  resampler->xruns = 0;
-  pthread_spin_unlock (&resampler->lock);
-
-  pthread_spin_lock (&resampler->ow.lock);
-  resampler->p2o_latency = resampler->ow.p2o_latency;
-  resampler->p2o_max_latency = resampler->ow.p2o_max_latency;
-  dll_load_dll_overwitch (dll);
-  pthread_spin_unlock (&resampler->ow.lock);
-
-  ow_status = overwitch_get_status (&resampler->ow);
-  if (resampler->status == RES_STATUS_READY && ow_status <= OW_STATUS_BOOT)
-    {
-      if (ow_status == OW_STATUS_READY)
-	{
-	  overwitch_set_status (&resampler->ow, OW_STATUS_BOOT);
-	  debug_print (2, "Booting Overbridge side...\n");
-	}
-      return 1;
-    }
-
-  if (resampler->status == RES_STATUS_READY && ow_status == OW_STATUS_WAIT)
-    {
-      dll_update_err (dll, time);
-      dll_first_time_run (dll);
-
-      debug_print (2, "Starting up...\n");
-      dll_set_loop_filter (dll, 1.0, resampler->bufsize,
-			   resampler->samplerate);
-      resampler->status = RES_STATUS_BOOT;
-
-      resampler->log_cycles = 0;
-      resampler->log_control_cycles =
-	STARTUP_TIME * resampler->samplerate / resampler->bufsize;
-      return 0;
-    }
-
-  if (xruns)
-    {
-      debug_print (2, "Fixing %d xruns...\n", xruns);
-
-      //With this, we try to recover from the unreaded frames that are in the o2j buffer and...
-      resampler->o2p_ratio = dll->ratio * (1 + xruns);
-      resampler->p2o_ratio = 1.0 / resampler->o2p_ratio;
-      resampler_o2j (resampler);
-
-      resampler->p2o_max_latency = 0;
-      resampler->o2p_max_latency = 0;
-
-      //... we skip the current cycle dll update as time masurements are not precise enough and would lead to errors.
-      return 0;
-    }
-
-  dll_update_err (dll, time);
-  dll_update (dll);
-
-  if (dll->ratio < 0.0)
-    {
-      error_print ("Negative ratio detected. Stopping...\n");
-      overwitch_set_status (&resampler->ow, OW_STATUS_ERROR);
-      return 1;
-    }
-
-  resampler->o2p_ratio = dll->ratio;
-  resampler->p2o_ratio = 1.0 / resampler->o2p_ratio;
-
-  resampler->log_cycles++;
-  if (resampler->log_cycles == resampler->log_control_cycles)
-    {
-      dll_calc_avg (dll, resampler->log_control_cycles);
-
-      if (debug_level)
-	{
-	  snprintf (latency_msg, LATENCY_MSG_LEN,
-		    "; o2j ratio: %f, avg. %f\n", dll->ratio, dll->ratio_avg);
-	  jclient_print_latencies (resampler, latency_msg);
-	}
-
-      resampler->log_cycles = 0;
-
-      if (resampler->status == RES_STATUS_BOOT)
-	{
-	  debug_print (2, "Tunning...\n");
-	  dll_set_loop_filter (dll, 0.05, resampler->bufsize,
-			       resampler->samplerate);
-	  resampler->status = RES_STATUS_TUNE;
-	  resampler->log_control_cycles =
-	    LOG_TIME * resampler->samplerate / resampler->bufsize;
-	}
-
-      if (resampler->status == RES_STATUS_TUNE
-	  && fabs (dll->ratio_avg - dll->last_ratio_avg) < RATIO_DIFF_THRES)
-	{
-	  debug_print (2, "Running...\n");
-	  dll_set_loop_filter (dll, 0.02, resampler->bufsize,
-			       resampler->samplerate);
-	  resampler->status = RES_STATUS_RUN;
-	  overwitch_set_status (&resampler->ow, OW_STATUS_RUN);
-	}
-    }
-
-  return 0;
-}
-
-static inline void
-jclient_o2p_midi (struct jclient *jclient, jack_nframes_t nframes)
+jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 {
   size_t data_size;
   void *midi_port_buf;
@@ -561,7 +210,7 @@ jclient_o2p_midi (struct jclient *jclient, jack_nframes_t nframes)
 }
 
 static inline void
-jclient_p2o_midi (struct jclient *jclient, jack_nframes_t nframes)
+jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 {
   jack_midi_event_t jevent;
   void *midi_port_buf;
@@ -674,7 +323,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
       return 0;
     }
 
-  resampler_o2j (&jclient->resampler);
+  resampler_read_audio (&jclient->resampler);
 
   //o2j
 
@@ -696,7 +345,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 
   if (overwitch_is_p2o_audio_enable (&jclient->resampler.ow))
     {
-      f = jclient->resampler.p2o_aux;
+      f = jclient->resampler.p2o_buf_in;
       for (int i = 0; i < jclient->resampler.ow.device_desc->inputs; i++)
 	{
 	  buffer[i] = jack_port_get_buffer (jclient->input_ports[i], nframes);
@@ -710,12 +359,12 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 	    }
 	}
 
-      resampler_j2o (&jclient->resampler);
+      resampler_write_audio (&jclient->resampler);
     }
 
-  jclient_o2p_midi (jclient, nframes);
+  jclient_o2j_midi (jclient, nframes);
 
-  jclient_p2o_midi (jclient, nframes);
+  jclient_j2o_midi (jclient, nframes);
 
   return 0;
 }
@@ -733,7 +382,7 @@ set_rt_priority (pthread_t * thread, int priority)
 void
 jclient_exit (struct jclient *jclient)
 {
-  jclient_print_latencies (&jclient->resampler, "\n");
+  resampler_print_latencies (&jclient->resampler);
   overwitch_set_status (&jclient->resampler.ow, OW_STATUS_STOP);
 }
 
@@ -745,28 +394,9 @@ jclient_run (struct jclient *jclient)
   overwitch_err_t ob_status;
   char *client_name;
 
-  jclient->resampler.samplerate = 0;
-  jclient->resampler.bufsize = 0;
-  jclient->resampler.xruns = 0;
-  jclient->resampler.p2o_buf_in = NULL;
-
-  jclient->resampler.status = RES_STATUS_READY;
-
-  //The so-called Overwitch API
-  jclient->resampler.ow.buffer_read_space =
-    (overwitch_buffer_rw_space_t) jack_ringbuffer_read_space;
-  jclient->resampler.ow.buffer_write_space =
-    (overwitch_buffer_rw_space_t) jack_ringbuffer_write_space;
-  jclient->resampler.ow.buffer_read = jclient_buffer_read;
-  jclient->resampler.ow.buffer_write =
-    (overwitch_buffer_write_t) jack_ringbuffer_write;
-  jclient->resampler.ow.get_time = jclient_get_time;
-  jclient->resampler.ow.dll_ow = &jclient->resampler.dll.dll_ow;
-
   ob_status =
     overwitch_init (&jclient->resampler.ow, jclient->bus, jclient->address,
-		    jclient->blocks_per_transfer,
-		    OW_OPTION_MIDI | OW_OPTION_SECONDARY_DLL);
+		    jclient->blocks_per_transfer);
   if (ob_status)
     {
       error_print ("Overwitch error: %s\n",
@@ -806,7 +436,6 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
-  pthread_spin_init (&jclient->resampler.lock, PTHREAD_PROCESS_SHARED);
   if (jack_set_xrun_callback
       (jclient->client, jclient_thread_xrun_cb, jclient))
     {
@@ -896,40 +525,43 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
-  //Resamplers
-
-  jclient->resampler.p2o_state =
-    src_callback_new (jclient_p2o_reader, jclient->quality,
-		      jclient->resampler.ow.device_desc->inputs, NULL,
-		      &jclient->resampler);
-  jclient->resampler.o2p_state =
-    src_callback_new (resampler_o2p_reader, jclient->quality,
-		      jclient->resampler.ow.device_desc->outputs, NULL,
-		      &jclient->resampler);
-
-  //Ring buffers
-
   jclient->o2p_audio_rb =
     jack_ringbuffer_create (MAX_LATENCY *
 			    jclient->resampler.ow.o2p_frame_size);
   jack_ringbuffer_mlock (jclient->o2p_audio_rb);
-  jclient->resampler.ow.o2p_audio_buf = jclient->o2p_audio_rb;
 
   jclient->p2o_audio_rb =
     jack_ringbuffer_create (MAX_LATENCY *
 			    jclient->resampler.ow.p2o_frame_size);
   jack_ringbuffer_mlock (jclient->p2o_audio_rb);
-  jclient->resampler.ow.p2o_audio_buf = jclient->p2o_audio_rb;
 
-  jclient->p2o_midi_rb = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
+  jclient->p2o_midi_rb = jack_ringbuffer_create (MIDI_BUF_SIZE);
   jack_ringbuffer_mlock (jclient->p2o_midi_rb);
-  jclient->resampler.ow.p2o_midi_buf = jclient->p2o_midi_rb;
 
-  jclient->o2p_midi_rb = jack_ringbuffer_create (MIDI_BUF_SIZE * 8);
+  jclient->o2p_midi_rb = jack_ringbuffer_create (MIDI_BUF_SIZE);
   jack_ringbuffer_mlock (jclient->o2p_midi_rb);
+
+  //The so-called Overwitch API
+  resampler_init (&jclient->resampler, jclient->quality);
+
+  jclient->resampler.ow.o2p_audio_buf = jclient->o2p_audio_rb;
+  jclient->resampler.ow.p2o_audio_buf = jclient->p2o_audio_rb;
+  jclient->resampler.ow.p2o_midi_buf = jclient->p2o_midi_rb;
   jclient->resampler.ow.o2p_midi_buf = jclient->o2p_midi_rb;
 
-  if (overwitch_activate (&jclient->resampler.ow))
+  jclient->resampler.ow.buffer_read_space =
+    (overwitch_buffer_rw_space_t) jack_ringbuffer_read_space;
+  jclient->resampler.ow.buffer_write_space =
+    (overwitch_buffer_rw_space_t) jack_ringbuffer_write_space;
+  jclient->resampler.ow.buffer_read = jclient_buffer_read;
+  jclient->resampler.ow.buffer_write =
+    (overwitch_buffer_write_t) jack_ringbuffer_write;
+  jclient->resampler.ow.get_time = jclient_get_time;
+  jclient->resampler.ow.dll_ow = &jclient->resampler.dll.dll_ow;
+  //end
+
+  if (overwitch_activate
+      (&jclient->resampler.ow, OW_OPTION_MIDI | OW_OPTION_SECONDARY_DLL))
     {
       goto cleanup_jack;
     }
@@ -960,17 +592,9 @@ cleanup_jack:
   jack_ringbuffer_free (jclient->p2o_midi_rb);
   jack_ringbuffer_free (jclient->o2p_midi_rb);
   jack_client_close (jclient->client);
-  src_delete (jclient->resampler.p2o_state);
-  src_delete (jclient->resampler.o2p_state);
   free (jclient->output_ports);
   free (jclient->input_ports);
-  free (jclient->resampler.p2o_buf_in);
-  free (jclient->resampler.p2o_buf_out);
-  free (jclient->resampler.p2o_aux);
-  free (jclient->resampler.p2o_queue);
-  free (jclient->resampler.o2p_buf_in);
-  free (jclient->resampler.o2p_buf_out);
-  pthread_spin_destroy (&jclient->resampler.lock);
+  resampler_destroy (&jclient->resampler);
 cleanup_overwitch:
   overwitch_destroy (&jclient->resampler.ow);
 

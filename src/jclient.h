@@ -20,49 +20,7 @@
 
 #include <jack/ringbuffer.h>
 #include <jack/midiport.h>
-#include "overwitch.h"
-#include "dll.h"
-
-typedef enum
-{
-  RES_STATUS_ERROR = -1,
-  RES_STATUS_STOP,
-  RES_STATUS_READY,
-  RES_STATUS_BOOT,
-  RES_STATUS_TUNE,
-  RES_STATUS_RUN
-} resampler_status_t;
-
-struct resampler
-{
-  resampler_status_t status;
-  struct overwitch ow;
-  struct dll dll;		//The DLL is based on o2j data
-  double o2p_ratio;
-  double p2o_ratio;
-  SRC_STATE *p2o_state;
-  SRC_STATE *o2p_state;
-  size_t p2o_latency;
-  size_t o2p_latency;
-  size_t p2o_max_latency;
-  size_t o2p_max_latency;
-  float *p2o_buf_in;
-  float *p2o_buf_out;
-  float *p2o_aux;
-  float *p2o_queue;
-  float *o2p_buf_in;
-  float *o2p_buf_out;
-  size_t p2o_queue_len;
-  int log_control_cycles;
-  int log_cycles;
-  int xruns;
-  pthread_spinlock_t lock;	//Used to synchronize access to xruns.
-  int reading_at_o2p_end;
-  size_t o2p_buf_size;
-  size_t p2o_buf_size;
-  uint32_t bufsize;
-  double samplerate;
-};
+#include "resampler.h"
 
 struct jclient
 {
