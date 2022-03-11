@@ -54,7 +54,7 @@ static struct option options[] = {
 };
 
 static void
-overwitch_signal_handler (int signo)
+signal_handler (int signo)
 {
   if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
     {
@@ -73,7 +73,7 @@ overwitch_signal_handler (int signo)
 }
 
 void
-overwitch_print_help (char *executable_path)
+print_help (char *executable_path)
 {
   char *exec_name;
   struct option *option;
@@ -96,8 +96,8 @@ overwitch_print_help (char *executable_path)
 }
 
 static int
-overwitch_run_single (int device_num, char *device_name,
-		      int blocks_per_transfer, int quality, int priority)
+run_single (int device_num, char *device_name,
+	    int blocks_per_transfer, int quality, int priority)
 {
   uint8_t bus, address;
   int status;
@@ -127,7 +127,7 @@ overwitch_run_single (int device_num, char *device_name,
 }
 
 static int
-overwitch_run_all (int blocks_per_transfer, int quality, int priority)
+run_all (int blocks_per_transfer, int quality, int priority)
 {
   uint8_t bus, address;
   libusb_context *context = NULL;
@@ -217,7 +217,7 @@ main (int argc, char *argv[])
   int quality = DEFAULT_QUALITY;
   int priority = DEFAULT_PRIORITY;
 
-  action.sa_handler = overwitch_signal_handler;
+  action.sa_handler = signal_handler;
   sigemptyset (&action.sa_mask);
   action.sa_flags = 0;
   sigaction (SIGHUP, &action, NULL);
@@ -279,7 +279,7 @@ main (int argc, char *argv[])
 	  vflg++;
 	  break;
 	case 'h':
-	  overwitch_print_help (argv[0]);
+	  print_help (argv[0]);
 	  exit (EXIT_SUCCESS);
 	case '?':
 	  errflg++;
@@ -288,7 +288,7 @@ main (int argc, char *argv[])
 
   if (errflg > 0)
     {
-      overwitch_print_help (argv[0]);
+      print_help (argv[0]);
       exit (EXIT_FAILURE);
     }
 
@@ -323,12 +323,12 @@ main (int argc, char *argv[])
 
   if (nflg + dflg == 0)
     {
-      return overwitch_run_all (blocks_per_transfer, quality, priority);
+      return run_all (blocks_per_transfer, quality, priority);
     }
   else if (nflg + dflg == 1)
     {
-      return overwitch_run_single (device_num, device_name,
-				   blocks_per_transfer, quality, priority);
+      return run_single (device_num, device_name,
+			 blocks_per_transfer, quality, priority);
     }
   else
     {
