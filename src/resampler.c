@@ -29,7 +29,7 @@
 #define RATIO_DIFF_THRES 0.00001
 
 void
-resampler_print_latencies (struct resampler *resampler)
+ow_resampler_print_status (struct ow_resampler *resampler)
 {
   printf
     ("%s: o2j latency: %.1f ms, max. %.1f ms; j2o latency: %.1f ms, max. %.1f ms, o2j ratio: %f, avg. %f\n",
@@ -46,7 +46,7 @@ resampler_print_latencies (struct resampler *resampler)
 }
 
 void
-resampler_reset_buffers (struct resampler *resampler)
+ow_resampler_reset_buffers (struct ow_resampler *resampler)
 {
   size_t p2o_bufsize = resampler->bufsize * resampler->ow.p2o_frame_size;
   size_t o2p_bufsize = resampler->bufsize * resampler->ow.o2p_frame_size;
@@ -84,15 +84,16 @@ resampler_reset_buffers (struct resampler *resampler)
 }
 
 void
-resampler_reset_dll (struct resampler *resampler, uint32_t new_samplerate)
+ow_resampler_reset_dll (struct ow_resampler *resampler,
+			uint32_t new_samplerate)
 {
   static int init = 0;
-  if (!init || overwitch_get_status (&resampler->ow) < OW_STATUS_RUN)
+  if (!init || ow_engine_get_status (&resampler->ow) < OW_STATUS_RUN)
     {
       debug_print (2, "Initializing dll...\n");
       dll_init (&resampler->dll, new_samplerate, OB_SAMPLE_RATE,
 		resampler->bufsize, resampler->ow.frames_per_transfer);
-      overwitch_set_status (&resampler->ow, OW_STATUS_READY);
+      ow_engine_set_status (&resampler->ow, OW_STATUS_READY);
       init = 1;
     }
   else
@@ -101,7 +102,7 @@ resampler_reset_dll (struct resampler *resampler, uint32_t new_samplerate)
       resampler->dll.ratio =
 	resampler->dll.last_ratio_avg * new_samplerate /
 	resampler->samplerate;
-      overwitch_set_status (&resampler->ow, OW_STATUS_READY);
+      ow_engine_set_status (&resampler->ow, OW_STATUS_READY);
       resampler->log_cycles = 0;
       resampler->log_control_cycles =
 	STARTUP_TIME * new_samplerate / resampler->bufsize;
@@ -110,11 +111,11 @@ resampler_reset_dll (struct resampler *resampler, uint32_t new_samplerate)
   resampler->samplerate = new_samplerate;
 }
 
-long
+static long
 resampler_p2o_reader (void *cb_data, float **data)
 {
   long ret;
-  struct resampler *resampler = cb_data;
+  struct ow_resampler *resampler = cb_data;
 
   *data = resampler->p2o_aux;
 
@@ -132,14 +133,14 @@ resampler_p2o_reader (void *cb_data, float **data)
   return ret;
 }
 
-long
+static long
 resampler_o2p_reader (void *cb_data, float **data)
 {
   size_t rso2j;
   size_t bytes;
   long frames;
   static int last_frames = 1;
-  struct resampler *resampler = cb_data;
+  struct ow_resampler *resampler = cb_data;
 
   *data = resampler->o2p_buf_in;
 
@@ -180,8 +181,7 @@ resampler_o2p_reader (void *cb_data, float **data)
       if (rso2j >= resampler->o2p_buf_size)
 	{
 	  debug_print (2, "o2j: Emptying buffer and running...\n");
-	  bytes =
-	    overwitch_bytes_to_frame_bytes (rso2j, resampler->o2p_buf_size);
+	  bytes = ow_bytes_to_frame_bytes (rso2j, resampler->o2p_buf_size);
 	  resampler->ow.buffer_read (resampler->ow.o2p_audio_buf, NULL,
 				     bytes);
 	  resampler->reading_at_o2p_end = 1;
@@ -195,7 +195,7 @@ resampler_o2p_reader (void *cb_data, float **data)
 }
 
 void
-resampler_read_audio (struct resampler *resampler)
+ow_resampler_read_audio (struct ow_resampler *resampler)
 {
   long gen_frames;
 
@@ -210,7 +210,7 @@ resampler_read_audio (struct resampler *resampler)
 }
 
 void
-resampler_write_audio (struct resampler *resampler)
+ow_resampler_write_audio (struct ow_resampler *resampler)
 {
   long gen_frames;
   int inc;
@@ -260,10 +260,10 @@ resampler_write_audio (struct resampler *resampler)
 }
 
 int
-resampler_compute_ratios (struct resampler *resampler, double time)
+ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
 {
   int xruns;
-  overwitch_status_t ow_status;
+  ow_engine_status_t ow_status;
   struct dll *dll = &resampler->dll;
 
   pthread_spin_lock (&resampler->lock);
@@ -277,12 +277,12 @@ resampler_compute_ratios (struct resampler *resampler, double time)
   dll_load_dll_overwitch (dll);
   pthread_spin_unlock (&resampler->ow.lock);
 
-  ow_status = overwitch_get_status (&resampler->ow);
+  ow_status = ow_engine_get_status (&resampler->ow);
   if (resampler->status == RES_STATUS_READY && ow_status <= OW_STATUS_BOOT)
     {
       if (ow_status == OW_STATUS_READY)
 	{
-	  overwitch_set_status (&resampler->ow, OW_STATUS_BOOT);
+	  ow_engine_set_status (&resampler->ow, OW_STATUS_BOOT);
 	  debug_print (2, "Booting Overbridge side...\n");
 	}
       return 1;
@@ -311,7 +311,7 @@ resampler_compute_ratios (struct resampler *resampler, double time)
       //With this, we try to recover from the unreaded frames that are in the o2j buffer and...
       resampler->o2p_ratio = dll->ratio * (1 + xruns);
       resampler->p2o_ratio = 1.0 / resampler->o2p_ratio;
-      resampler_read_audio (resampler);
+      ow_resampler_read_audio (resampler);
 
       resampler->p2o_max_latency = 0;
       resampler->o2p_max_latency = 0;
@@ -326,7 +326,7 @@ resampler_compute_ratios (struct resampler *resampler, double time)
   if (dll->ratio < 0.0)
     {
       error_print ("Negative ratio detected. Stopping...\n");
-      overwitch_set_status (&resampler->ow, OW_STATUS_ERROR);
+      ow_engine_set_status (&resampler->ow, OW_STATUS_ERROR);
       return 1;
     }
 
@@ -340,7 +340,7 @@ resampler_compute_ratios (struct resampler *resampler, double time)
 
       if (debug_level)
 	{
-	  resampler_print_latencies (resampler);
+	  ow_resampler_print_status (resampler);
 	}
 
       resampler->log_cycles = 0;
@@ -362,19 +362,19 @@ resampler_compute_ratios (struct resampler *resampler, double time)
 	  dll_set_loop_filter (dll, 0.02, resampler->bufsize,
 			       resampler->samplerate);
 	  resampler->status = RES_STATUS_RUN;
-	  overwitch_set_status (&resampler->ow, OW_STATUS_RUN);
+	  ow_engine_set_status (&resampler->ow, OW_STATUS_RUN);
 	}
     }
 
   return 0;
 }
 
-overwitch_err_t
-resampler_init (struct resampler *resampler, int bus, int address,
-		int blocks_per_transfer, int quality)
+ow_engine_err_t
+ow_resampler_init (struct ow_resampler *resampler, int bus, int address,
+		   int blocks_per_transfer, int quality)
 {
-  overwitch_err_t err =
-    overwitch_init (&resampler->ow, bus, address, blocks_per_transfer);
+  ow_engine_err_t err =
+    ow_engine_init (&resampler->ow, bus, address, blocks_per_transfer);
   if (err)
     {
       return err;
@@ -399,7 +399,7 @@ resampler_init (struct resampler *resampler, int bus, int address,
 }
 
 void
-resampler_destroy (struct resampler *resampler)
+ow_resampler_destroy (struct ow_resampler *resampler)
 {
   src_delete (resampler->p2o_state);
   src_delete (resampler->o2p_state);
@@ -410,15 +410,16 @@ resampler_destroy (struct resampler *resampler)
   free (resampler->o2p_buf_in);
   free (resampler->o2p_buf_out);
   pthread_spin_destroy (&resampler->lock);
-  overwitch_destroy (&resampler->ow);
+  ow_engine_destroy (&resampler->ow);
 }
 
 int
-resampler_activate (struct resampler *resampler, uint64_t features,
-		    int priority, overwitch_set_rt_priority_t set_rt_priority)
+ow_resampler_activate (struct ow_resampler *resampler, uint64_t features,
+		       int priority,
+		       ow_engine_set_rt_priority_t set_rt_priority)
 {
   features |= OW_OPTION_SECONDARY_DLL;
-  int ret = overwitch_activate (&resampler->ow, features);
+  int ret = ow_engine_activate (&resampler->ow, features);
   if (!ret)
     {
       set_rt_priority (&resampler->ow.p2o_midi_thread, priority);
@@ -428,7 +429,15 @@ resampler_activate (struct resampler *resampler, uint64_t features,
 }
 
 void
-resampler_wait (struct resampler *resampler)
+ow_resampler_wait (struct ow_resampler *resampler)
 {
-  overwitch_wait (&resampler->ow);
+  ow_engine_wait (&resampler->ow);
+}
+
+void
+ow_resampler_inc_xruns (struct ow_resampler *resampler)
+{
+  pthread_spin_lock (&resampler->lock);
+  resampler->xruns++;
+  pthread_spin_unlock (&resampler->lock);
 }

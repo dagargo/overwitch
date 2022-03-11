@@ -39,7 +39,7 @@ struct jclient
   int blocks_per_transfer;
   int quality;
   int priority;
-  struct resampler resampler;
+  struct ow_resampler resampler;
 };
 
 int jclient_run (struct jclient *);
@@ -48,4 +48,4 @@ void *jclient_run_thread (void *);
 
 void jclient_exit (struct jclient *);
 
-void jclient_print_latencies (struct resampler *, const char *);
+void jclient_print_latencies (struct ow_resampler *, const char *);

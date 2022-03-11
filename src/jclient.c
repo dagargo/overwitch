@@ -63,19 +63,16 @@ jclient_reset_buffers (struct jclient *jclient)
   size_t rso2j, bytes;
   rso2j = jack_ringbuffer_read_space (jclient->o2p_audio_rb);
   bytes =
-    overwitch_bytes_to_frame_bytes (rso2j,
-				    jclient->resampler.ow.o2p_frame_size);
+    ow_bytes_to_frame_bytes (rso2j, jclient->resampler.ow.o2p_frame_size);
   jack_ringbuffer_read_advance (jclient->o2p_audio_rb, bytes);
 }
 
 static int
 jclient_thread_xrun_cb (void *cb_data)
 {
-  struct jclient *jclient = cb_data;
+  struct ow_resampler *resampler = cb_data;
   error_print ("JACK xrun\n");
-  pthread_spin_lock (&jclient->resampler.lock);
-  jclient->resampler.xruns++;
-  pthread_spin_unlock (&jclient->resampler.lock);
+  ow_resampler_inc_xruns (resampler);
   return 0;
 }
 
@@ -94,7 +91,7 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
 	  break;
 	}
     }
-  overwitch_set_p2o_audio_enable (&jclient->resampler.ow, p2o_enabled);
+  ow_engine_set_p2o_audio_enable (&jclient->resampler.ow, p2o_enabled);
 }
 
 static void
@@ -114,10 +111,10 @@ jclient_set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
       printf ("JACK buffer size: %d\n", nframes);
       jclient->resampler.bufsize = nframes;
 
-      resampler_reset_buffers (&jclient->resampler);
+      ow_resampler_reset_buffers (&jclient->resampler);
       jclient_reset_buffers (jclient);
-      resampler_reset_dll (&jclient->resampler,
-			   jclient->resampler.samplerate);
+      ow_resampler_reset_dll (&jclient->resampler,
+			      jclient->resampler.samplerate);
     }
   return 0;
 }
@@ -131,7 +128,7 @@ jclient_set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
       printf ("JACK sample rate: %d\n", nframes);
       if (jclient->resampler.p2o_buf_in)	//This means that jclient_reset_buffers has been called and thus bufsize has been set.
 	{
-	  resampler_reset_dll (&jclient->resampler, nframes);
+	  ow_resampler_reset_dll (&jclient->resampler, nframes);
 	}
       else
 	{
@@ -147,7 +144,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   size_t data_size;
   void *midi_port_buf;
   jack_midi_data_t *jmidi;
-  struct overwitch_midi_event event;
+  struct ow_midi_event event;
   jack_nframes_t last_frames, frames, last_frame_time, event_frames;
 
   midi_port_buf = jack_port_get_buffer (jclient->midi_output_port, nframes);
@@ -155,10 +152,10 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   last_frames = 0;
 
   while (jack_ringbuffer_read_space (jclient->o2p_midi_rb) >=
-	 sizeof (struct overwitch_midi_event))
+	 sizeof (struct ow_midi_event))
     {
       jack_ringbuffer_peek (jclient->o2p_midi_rb, (void *) &event,
-			    sizeof (struct overwitch_midi_event));
+			    sizeof (struct ow_midi_event));
 
       event_frames = jack_time_to_frames (jclient->client, event.time);
       last_frame_time = jack_time_to_frames (jclient->client, event.time);
@@ -186,7 +183,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
       last_frames = frames;
 
       jack_ringbuffer_read_advance (jclient->o2p_midi_rb,
-				    sizeof (struct overwitch_midi_event));
+				    sizeof (struct ow_midi_event));
 
       if (event.bytes[0] == 0x0f)
 	{
@@ -214,7 +211,7 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 {
   jack_midi_event_t jevent;
   void *midi_port_buf;
-  struct overwitch_midi_event oevent;
+  struct ow_midi_event oevent;
   jack_nframes_t event_count;
   jack_midi_data_t status_byte;
 
@@ -281,11 +278,11 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
       if (oevent.bytes[0])
 	{
 	  if (jack_ringbuffer_write_space (jclient->p2o_midi_rb) >=
-	      sizeof (struct overwitch_midi_event))
+	      sizeof (struct ow_midi_event))
 	    {
 	      jack_ringbuffer_write (jclient->p2o_midi_rb,
 				     (void *) &oevent,
-				     sizeof (struct overwitch_midi_event));
+				     sizeof (struct ow_midi_event));
 	    }
 	  else
 	    {
@@ -318,12 +315,12 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 
   time = current_usecs * 1.0e-6;
 
-  if (resampler_compute_ratios (&jclient->resampler, time))
+  if (ow_resampler_compute_ratios (&jclient->resampler, time))
     {
       return 0;
     }
 
-  resampler_read_audio (&jclient->resampler);
+  ow_resampler_read_audio (&jclient->resampler);
 
   //o2j
 
@@ -343,7 +340,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 
   //j2o
 
-  if (overwitch_is_p2o_audio_enable (&jclient->resampler.ow))
+  if (ow_engine_is_p2o_audio_enable (&jclient->resampler.ow))
     {
       f = jclient->resampler.p2o_buf_in;
       for (int i = 0; i < jclient->resampler.ow.device_desc->inputs; i++)
@@ -359,7 +356,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 	    }
 	}
 
-      resampler_write_audio (&jclient->resampler);
+      ow_resampler_write_audio (&jclient->resampler);
     }
 
   jclient_o2j_midi (jclient, nframes);
@@ -382,8 +379,8 @@ set_rt_priority (pthread_t * thread, int priority)
 void
 jclient_exit (struct jclient *jclient)
 {
-  resampler_print_latencies (&jclient->resampler);
-  overwitch_set_status (&jclient->resampler.ow, OW_STATUS_STOP);
+  ow_resampler_print_status (&jclient->resampler);
+  ow_engine_set_status (&jclient->resampler.ow, OW_STATUS_STOP);
 }
 
 int
@@ -391,7 +388,7 @@ jclient_run (struct jclient *jclient)
 {
   jack_options_t options = JackNoStartServer;
   jack_status_t status;
-  overwitch_err_t err;
+  ow_engine_err_t err;
   char *client_name;
 
   err =
@@ -437,7 +434,7 @@ jclient_run (struct jclient *jclient)
     }
 
   if (jack_set_xrun_callback
-      (jclient->client, jclient_thread_xrun_cb, jclient))
+      (jclient->client, jclient_thread_xrun_cb, &jclient->resampler))
     {
       goto cleanup_jack;
     }
@@ -548,17 +545,17 @@ jclient_run (struct jclient *jclient)
   jclient->resampler.ow.o2p_midi_buf = jclient->o2p_midi_rb;
 
   jclient->resampler.ow.buffer_read_space =
-    (overwitch_buffer_rw_space_t) jack_ringbuffer_read_space;
+    (ow_engine_buffer_rw_space_t) jack_ringbuffer_read_space;
   jclient->resampler.ow.buffer_write_space =
-    (overwitch_buffer_rw_space_t) jack_ringbuffer_write_space;
+    (ow_engine_buffer_rw_space_t) jack_ringbuffer_write_space;
   jclient->resampler.ow.buffer_read = jclient_buffer_read;
   jclient->resampler.ow.buffer_write =
-    (overwitch_buffer_write_t) jack_ringbuffer_write;
+    (ow_engine_buffer_write_t) jack_ringbuffer_write;
   jclient->resampler.ow.get_time = jclient_get_time;
   jclient->resampler.ow.dll_ow = &jclient->resampler.dll.dll_ow;
   //end
 
-  if (resampler_activate
+  if (ow_resampler_activate
       (&jclient->resampler, OW_OPTION_MIDI, jclient->priority,
        set_rt_priority))
     {
@@ -576,7 +573,7 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
-  resampler_wait (&jclient->resampler);
+  ow_resampler_wait (&jclient->resampler);
 
   debug_print (1, "Exiting...\n");
   jack_deactivate (jclient->client);
@@ -589,7 +586,7 @@ cleanup_jack:
   jack_client_close (jclient->client);
   free (jclient->output_ports);
   free (jclient->input_ports);
-  resampler_destroy (&jclient->resampler);
+  ow_resampler_destroy (&jclient->resampler);
 
 end:
   return jclient->resampler.status;

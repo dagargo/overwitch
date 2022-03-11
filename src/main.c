@@ -67,7 +67,7 @@ signal_handler (int signo)
     {
       for (int i = 0; i < overwitch_count; i++)
 	{
-	  resampler_print_latencies (&overwitch[i]->jclient.resampler);
+	  ow_resampler_print_status (&overwitch[i]->jclient.resampler);
 	}
     }
 }
@@ -102,7 +102,7 @@ run_single (int device_num, char *device_name,
   uint8_t bus, address;
   int status;
 
-  if (overwitch_get_bus_address (device_num, device_name, &bus, &address))
+  if (ow_get_bus_address (device_num, device_name, &bus, &address))
     {
       return EXIT_FAILURE;
     }
@@ -157,8 +157,7 @@ run_all (int blocks_per_transfer, int quality, int priority)
 	  continue;
 	}
 
-      if (overwitch_is_valid_device
-	  (desc.idVendor, desc.idProduct, &dev_name))
+      if (ow_is_valid_device (desc.idVendor, desc.idProduct, &dev_name))
 	{
 	  overwitch[overwitch_count] =
 	    malloc (sizeof (struct jclient_thread));
@@ -210,7 +209,7 @@ main (int argc, char *argv[])
   char *endstr;
   char *device_name = NULL;
   int long_index = 0;
-  overwitch_err_t ob_status;
+  ow_engine_err_t ow_err;
   struct sigaction action;
   int device_num = -1;
   int blocks_per_transfer = DEFAULT_BLOCKS;
@@ -299,11 +298,11 @@ main (int argc, char *argv[])
 
   if (lflg)
     {
-      ob_status = overwitch_list_devices ();
-      if (ob_status)
+      ow_err = ow_list_devices ();
+      if (ow_err)
 	{
 	  fprintf (stderr, "USB error: %s\n",
-		   overbrigde_get_err_str (ob_status));
+		   overbrigde_get_err_str (ow_err));
 	  exit (EXIT_FAILURE);
 	}
       exit (EXIT_SUCCESS);

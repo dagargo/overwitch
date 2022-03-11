@@ -1,5 +1,5 @@
 /*
- * overwitch.h
+ * engine.h
  * Copyright (C) 2019 Stefan Rehm <droelfdroelf@gmail.com>
  * Copyright (C) 2021 David García Goñi <dagargo@gmail.com>
  *
@@ -161,7 +161,7 @@
 
 #define OB_MIDI_EVENT_SIZE 4
 
-struct overwitch_usb_blk
+struct ow_engine_usb_blk
 {
   uint16_t header;
   uint16_t frames;
@@ -173,7 +173,7 @@ typedef enum
 {
   OW_OPTION_MIDI = 1,
   OW_OPTION_SECONDARY_DLL = 2
-} overwitch_option_t;
+} ow_engine_option_t;
 
 typedef enum
 {
@@ -192,7 +192,7 @@ typedef enum
   OW_USB_ERROR_CANT_CLEAR_EP,
   OW_USB_ERROR_CANT_PREPARE_TRANSFER,
   OW_USB_ERROR_CANT_FIND_DEV
-} overwitch_err_t;
+} ow_engine_err_t;
 
 typedef enum
 {
@@ -202,9 +202,9 @@ typedef enum
   OW_STATUS_BOOT,
   OW_STATUS_WAIT,
   OW_STATUS_RUN
-} overwitch_status_t;
+} ow_engine_status_t;
 
-struct overwitch_device_desc
+struct ow_device_desc
 {
   uint16_t pid;
   char *name;
@@ -214,18 +214,18 @@ struct overwitch_device_desc
   char *output_track_names[OB_MAX_TRACKS];
 };
 
-typedef size_t (*overwitch_buffer_rw_space_t) (void *);
-typedef size_t (*overwitch_buffer_read_t) (void *, char *, size_t);
-typedef size_t (*overwitch_buffer_write_t) (void *, const char *, size_t);
+typedef size_t (*ow_engine_buffer_rw_space_t) (void *);
+typedef size_t (*ow_engine_buffer_read_t) (void *, char *, size_t);
+typedef size_t (*ow_engine_buffer_write_t) (void *, const char *, size_t);
 
-typedef double (*overwitch_get_time) ();	//Time in seconds
+typedef double (*ow_engine_get_time) ();	//Time in seconds
 
-typedef void (*overwitch_set_rt_priority_t) (pthread_t *, int);
+typedef void (*ow_engine_set_rt_priority_t) (pthread_t *, int);
 
-struct overwitch
+struct ow_engine
 {
   int midi;
-  overwitch_status_t status;
+  ow_engine_status_t status;
   int blocks_per_transfer;
   int frames_per_transfer;
   int p2o_audio_enabled;
@@ -237,7 +237,7 @@ struct overwitch
   uint16_t frames;
   libusb_context *context;
   libusb_device_handle *device_handle;
-  const struct overwitch_device_desc *device_desc;
+  const struct ow_device_desc *device_desc;
   struct libusb_transfer *xfr_in;
   struct libusb_transfer *xfr_out;
   char *usb_data_in;
@@ -270,46 +270,44 @@ struct overwitch
   //Overwitch side DLL
   struct dll_overwitch *dll_ow;
   //buffer operations
-  overwitch_buffer_rw_space_t buffer_write_space;
-  overwitch_buffer_write_t buffer_write;
-  overwitch_buffer_rw_space_t buffer_read_space;
-  overwitch_buffer_read_t buffer_read;
+  ow_engine_buffer_rw_space_t buffer_write_space;
+  ow_engine_buffer_write_t buffer_write;
+  ow_engine_buffer_rw_space_t buffer_read_space;
+  ow_engine_buffer_read_t buffer_read;
   //time operations
-  overwitch_get_time get_time;
+  ow_engine_get_time get_time;
 };
 
-struct overwitch_midi_event
+struct ow_midi_event
 {
   double time;
   uint8_t bytes[OB_MIDI_EVENT_SIZE];
 };
 
-const char *overbrigde_get_err_str (overwitch_err_t);
+const char *overbrigde_get_err_str (ow_engine_err_t);
 
-void set_self_max_priority ();
+ow_engine_err_t ow_engine_init (struct ow_engine *, uint8_t, uint8_t, int);
 
-overwitch_err_t overwitch_init (struct overwitch *, uint8_t, uint8_t, int);
+int ow_engine_activate (struct ow_engine *, uint64_t);
 
-int overwitch_activate (struct overwitch *, uint64_t);
+void ow_engine_destroy (struct ow_engine *);
 
-void overwitch_destroy (struct overwitch *);
+void ow_engine_wait (struct ow_engine *);
 
-void overwitch_wait (struct overwitch *);
+ow_engine_status_t ow_engine_get_status (struct ow_engine *);
 
-overwitch_status_t overwitch_get_status (struct overwitch *);
+void ow_engine_set_status (struct ow_engine *, ow_engine_status_t);
 
-void overwitch_set_status (struct overwitch *, overwitch_status_t);
+void ow_engine_set_p2o_audio_enable (struct ow_engine *, int);
 
-int overwitch_list_devices ();
+int ow_engine_is_p2o_audio_enable (struct ow_engine *);
 
-void overwitch_set_p2o_audio_enable (struct overwitch *, int);
+int ow_list_devices ();
 
-int overwitch_is_p2o_audio_enable (struct overwitch *);
+int ow_get_bus_address (int, char *, uint8_t *, uint8_t *);
 
-int overwitch_get_bus_address (int, char *, uint8_t *, uint8_t *);
+int ow_is_valid_device (uint16_t, uint16_t, char **);
 
-int overwitch_is_valid_device (uint16_t, uint16_t, char **);
-
-int overwitch_bytes_to_frame_bytes (int, int);
+int ow_bytes_to_frame_bytes (int, int);
 
 #endif

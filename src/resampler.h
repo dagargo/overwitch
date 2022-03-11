@@ -19,7 +19,7 @@
  */
 
 #include "dll.h"
-#include "overwitch.h"
+#include "engine.h"
 
 typedef enum
 {
@@ -31,10 +31,10 @@ typedef enum
   RES_STATUS_RUN
 } resampler_status_t;
 
-struct resampler
+struct ow_resampler
 {
   resampler_status_t status;
-  struct overwitch ow;
+  struct ow_engine ow;
   struct dll dll;		//The DLL is based on o2j data
   double o2p_ratio;
   double p2o_ratio;
@@ -62,23 +62,25 @@ struct resampler
   double samplerate;
 };
 
-overwitch_err_t resampler_init (struct resampler *, int, int, int, int);
+ow_engine_err_t ow_resampler_init (struct ow_resampler *, int, int, int, int);
 
-int resampler_activate (struct resampler *, uint64_t, int,
-			overwitch_set_rt_priority_t);
+int ow_resampler_activate (struct ow_resampler *, uint64_t, int,
+			   ow_engine_set_rt_priority_t);
 
-void resampler_wait (struct resampler *);
+void ow_resampler_wait (struct ow_resampler *);
 
-void resampler_destroy (struct resampler *);
+void ow_resampler_destroy (struct ow_resampler *);
 
-void resampler_print_latencies (struct resampler *);
+void ow_resampler_print_status (struct ow_resampler *);
 
-void resampler_reset_buffers (struct resampler *);
+void ow_resampler_reset_buffers (struct ow_resampler *);
 
-void resampler_reset_dll (struct resampler *, uint32_t);
+void ow_resampler_reset_dll (struct ow_resampler *, uint32_t);
 
-void resampler_read_audio (struct resampler *);
+void ow_resampler_read_audio (struct ow_resampler *);
 
-void resampler_write_audio (struct resampler *);
+void ow_resampler_write_audio (struct ow_resampler *);
 
-int resampler_compute_ratios (struct resampler *, double);
+int ow_resampler_compute_ratios (struct ow_resampler *, double);
+
+void ow_resampler_inc_xruns (struct ow_resampler *);

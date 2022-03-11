@@ -1,5 +1,5 @@
 /*
- * overwitch.c
+ * engine.c
  * Copyright (C) 2019 Stefan Rehm <droelfdroelf@gmail.com>
  * Copyright (C) 2021 David García Goñi <dagargo@gmail.com>
  *
@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-#include "overwitch.h"
+#include "engine.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -59,7 +59,7 @@
 
 #define ERROR_ON_GET_DEV_DESC "Error while getting device description: %s\n"
 
-static const struct overwitch_device_desc DIGITAKT_DESC = {
+static const struct ow_device_desc DIGITAKT_DESC = {
   .pid = DTAKT_PID,
   .name = "Digitakt",
   .inputs = 2,
@@ -71,7 +71,7 @@ static const struct overwitch_device_desc DIGITAKT_DESC = {
      "Input R"}
 };
 
-static const struct overwitch_device_desc DIGITONE_DESC = {
+static const struct ow_device_desc DIGITONE_DESC = {
   .pid = DTONE_PID,
   .name = "Digitone",
   .inputs = 2,
@@ -83,7 +83,7 @@ static const struct overwitch_device_desc DIGITONE_DESC = {
      "Input L", "Input R"}
 };
 
-static const struct overwitch_device_desc AFMK2_DESC = {
+static const struct ow_device_desc AFMK2_DESC = {
   .pid = AFMK2_PID,
   .name = "Analog Four MKII",
   .inputs = 6,
@@ -96,7 +96,7 @@ static const struct overwitch_device_desc AFMK2_DESC = {
      "Synth Track 4", "Input L", "Input R"}
 };
 
-static const struct overwitch_device_desc ARMK2_DESC = {
+static const struct ow_device_desc ARMK2_DESC = {
   .pid = ARMK2_PID,
   .name = "Analog Rytm MKII",
   .inputs = 12,
@@ -110,7 +110,7 @@ static const struct overwitch_device_desc ARMK2_DESC = {
 			 "Input R"}
 };
 
-static const struct overwitch_device_desc DKEYS_DESC = {
+static const struct ow_device_desc DKEYS_DESC = {
   .pid = DKEYS_PID,
   .name = "Digitone Keys",
   .inputs = 2,
@@ -122,7 +122,7 @@ static const struct overwitch_device_desc DKEYS_DESC = {
      "Input L", "Input R"}
 };
 
-static const struct overwitch_device_desc AHMK1_DESC = {
+static const struct ow_device_desc AHMK1_DESC = {
   .pid = AHMK1_PID,
   .name = "Analog Heat",
   .inputs = 4,
@@ -132,7 +132,7 @@ static const struct overwitch_device_desc AHMK1_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct overwitch_device_desc AHMK2_DESC = {
+static const struct ow_device_desc AHMK2_DESC = {
   .pid = AHMK2_PID,
   .name = "Analog Heat MKII",
   .inputs = 4,
@@ -142,27 +142,27 @@ static const struct overwitch_device_desc AHMK2_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct overwitch_device_desc *OB_DEVICE_DESCS[] = {
+static const struct ow_device_desc *OB_DEVICE_DESCS[] = {
   &DIGITAKT_DESC, &DIGITONE_DESC, &AFMK2_DESC, &ARMK2_DESC, &DKEYS_DESC,
   &AHMK1_DESC, &AHMK2_DESC
 };
 
 static const int OB_DEVICE_DESCS_N =
-  sizeof (OB_DEVICE_DESCS) / sizeof (struct overwitch_device_desc *);
+  sizeof (OB_DEVICE_DESCS) / sizeof (struct ow_device_desc *);
 
 static void prepare_cycle_in ();
 static void prepare_cycle_out ();
 static void prepare_cycle_in_midi ();
 
 int
-overwitch_bytes_to_frame_bytes (int bytes, int bytes_per_frame)
+ow_bytes_to_frame_bytes (int bytes, int bytes_per_frame)
 {
   int frames = bytes / bytes_per_frame;
   return frames * bytes_per_frame;
 }
 
 int
-overwitch_is_valid_device (uint16_t vid, uint16_t pid, char **name)
+ow_is_valid_device (uint16_t vid, uint16_t pid, char **name)
 {
   if (vid != ELEKTRON_VID)
     {
@@ -179,22 +179,22 @@ overwitch_is_valid_device (uint16_t vid, uint16_t pid, char **name)
   return 0;
 }
 
-static struct overwitch_usb_blk *
-get_nth_usb_in_blk (struct overwitch *ow, int n)
+static struct ow_engine_usb_blk *
+get_nth_usb_in_blk (struct ow_engine *ow, int n)
 {
   char *blk = &ow->usb_data_in[n * ow->usb_data_in_blk_len];
-  return (struct overwitch_usb_blk *) blk;
+  return (struct ow_engine_usb_blk *) blk;
 }
 
-static struct overwitch_usb_blk *
-get_nth_usb_out_blk (struct overwitch *ow, int n)
+static struct ow_engine_usb_blk *
+get_nth_usb_out_blk (struct ow_engine *ow, int n)
 {
   char *blk = &ow->usb_data_out[n * ow->usb_data_out_blk_len];
-  return (struct overwitch_usb_blk *) blk;
+  return (struct ow_engine_usb_blk *) blk;
 }
 
 static int
-prepare_transfers (struct overwitch *ow)
+prepare_transfers (struct ow_engine *ow)
 {
   ow->xfr_in = libusb_alloc_transfer (0);
   if (!ow->xfr_in)
@@ -224,7 +224,7 @@ prepare_transfers (struct overwitch *ow)
 }
 
 static void
-free_transfers (struct overwitch *ow)
+free_transfers (struct ow_engine *ow)
 {
   libusb_free_transfer (ow->xfr_in);
   libusb_free_transfer (ow->xfr_out);
@@ -233,14 +233,14 @@ free_transfers (struct overwitch *ow)
 }
 
 static void
-set_usb_input_data_blks (struct overwitch *ow)
+set_usb_input_data_blks (struct ow_engine *ow)
 {
-  struct overwitch_usb_blk *blk;
+  struct ow_engine_usb_blk *blk;
   size_t wso2j;
   int32_t hv;
   float *f;
   int32_t *s;
-  overwitch_status_t status;
+  ow_engine_status_t status;
 
   pthread_spin_lock (&ow->lock);
   if (ow->dll_ow)
@@ -286,9 +286,9 @@ set_usb_input_data_blks (struct overwitch *ow)
 }
 
 static void
-set_usb_output_data_blks (struct overwitch *ow)
+set_usb_output_data_blks (struct ow_engine *ow)
 {
-  struct overwitch_usb_blk *blk;
+  struct ow_engine_usb_blk *blk;
   size_t rsj2o;
   int32_t hv;
   size_t bytes;
@@ -296,7 +296,7 @@ set_usb_output_data_blks (struct overwitch *ow)
   float *f;
   int res;
   int32_t *s;
-  int enabled = overwitch_is_p2o_audio_enable (ow);
+  int enabled = ow_engine_is_p2o_audio_enable (ow);
 
   rsj2o = ow->buffer_read_space (ow->p2o_audio_buf);
   if (!ow->reading_at_p2o_end)
@@ -304,7 +304,7 @@ set_usb_output_data_blks (struct overwitch *ow)
       if (enabled && rsj2o >= ow->p2o_transfer_size)
 	{
 	  debug_print (2, "j2o: Emptying buffer and running...\n");
-	  bytes = overwitch_bytes_to_frame_bytes (rsj2o, ow->p2o_frame_size);
+	  bytes = ow_bytes_to_frame_bytes (rsj2o, ow->p2o_frame_size);
 	  ow->buffer_read (ow->p2o_audio_buf, NULL, bytes);
 	  ow->reading_at_p2o_end = 1;
 	}
@@ -414,11 +414,11 @@ cb_xfr_out (struct libusb_transfer *xfr)
 static void LIBUSB_CALL
 cb_xfr_in_midi (struct libusb_transfer *xfr)
 {
-  struct overwitch_midi_event event;
+  struct ow_midi_event event;
   int length;
-  struct overwitch *ow = xfr->user_data;
+  struct ow_engine *ow = xfr->user_data;
 
-  if (overwitch_get_status (ow) < OW_STATUS_RUN)
+  if (ow_engine_get_status (ow) < OW_STATUS_RUN)
     {
       goto end;
     }
@@ -440,10 +440,10 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 			   event.bytes[3], event.time);
 
 	      if (ow->buffer_write_space (ow->o2p_midi_buf) >=
-		  sizeof (struct overwitch_midi_event))
+		  sizeof (struct ow_midi_event))
 		{
 		  ow->buffer_write (ow->o2p_midi_buf, (void *) &event,
-				    sizeof (struct overwitch_midi_event));
+				    sizeof (struct ow_midi_event));
 		}
 	      else
 		{
@@ -470,7 +470,7 @@ end:
 static void LIBUSB_CALL
 cb_xfr_out_midi (struct libusb_transfer *xfr)
 {
-  struct overwitch *ow = xfr->user_data;
+  struct ow_engine *ow = xfr->user_data;
 
   pthread_spin_lock (&ow->p2o_midi_lock);
   ow->p2o_midi_ready = 1;
@@ -484,7 +484,7 @@ cb_xfr_out_midi (struct libusb_transfer *xfr)
 }
 
 static void
-prepare_cycle_out (struct overwitch *ow)
+prepare_cycle_out (struct ow_engine *ow)
 {
   libusb_fill_interrupt_transfer (ow->xfr_out, ow->device_handle,
 				  AUDIO_OUT_EP, (void *) ow->usb_data_out,
@@ -495,12 +495,12 @@ prepare_cycle_out (struct overwitch *ow)
     {
       error_print ("j2o: Error when submitting USB audio transfer: %s\n",
 		   libusb_strerror (err));
-      overwitch_set_status (ow, OW_STATUS_ERROR);
+      ow_engine_set_status (ow, OW_STATUS_ERROR);
     }
 }
 
 static void
-prepare_cycle_in (struct overwitch *ow)
+prepare_cycle_in (struct ow_engine *ow)
 {
   libusb_fill_interrupt_transfer (ow->xfr_in, ow->device_handle,
 				  AUDIO_IN_EP, (void *) ow->usb_data_in,
@@ -511,12 +511,12 @@ prepare_cycle_in (struct overwitch *ow)
     {
       error_print ("o2j: Error when submitting USB audio in transfer: %s\n",
 		   libusb_strerror (err));
-      overwitch_set_status (ow, OW_STATUS_ERROR);
+      ow_engine_set_status (ow, OW_STATUS_ERROR);
     }
 }
 
 static void
-prepare_cycle_in_midi (struct overwitch *ow)
+prepare_cycle_in_midi (struct ow_engine *ow)
 {
   libusb_fill_bulk_transfer (ow->xfr_in_midi, ow->device_handle,
 			     MIDI_IN_EP, (void *) ow->o2p_midi_data,
@@ -527,12 +527,12 @@ prepare_cycle_in_midi (struct overwitch *ow)
     {
       error_print ("o2j: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
-      overwitch_set_status (ow, OW_STATUS_ERROR);
+      ow_engine_set_status (ow, OW_STATUS_ERROR);
     }
 }
 
 static void
-prepare_cycle_out_midi (struct overwitch *ow)
+prepare_cycle_out_midi (struct ow_engine *ow)
 {
   libusb_fill_bulk_transfer (ow->xfr_out_midi, ow->device_handle, MIDI_OUT_EP,
 			     (void *) ow->p2o_midi_data,
@@ -543,12 +543,12 @@ prepare_cycle_out_midi (struct overwitch *ow)
     {
       error_print ("j2o: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
-      overwitch_set_status (ow, OW_STATUS_ERROR);
+      ow_engine_set_status (ow, OW_STATUS_ERROR);
     }
 }
 
 static void
-usb_shutdown (struct overwitch *ow)
+usb_shutdown (struct ow_engine *ow)
 {
   libusb_close (ow->device_handle);
   libusb_exit (ow->context);
@@ -556,8 +556,8 @@ usb_shutdown (struct overwitch *ow)
 
 // initialization taken from sniffed session
 
-overwitch_err_t
-overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
+ow_engine_err_t
+ow_engine_init (struct ow_engine *ow, uint8_t bus, uint8_t address,
 		int blocks_per_transfer)
 {
   int i, ret, err;
@@ -566,7 +566,7 @@ overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
   libusb_device *device;
   char *name = NULL;
   struct libusb_device_descriptor desc;
-  struct overwitch_usb_blk *blk;
+  struct ow_engine_usb_blk *blk;
 
   // libusb setup
   if (libusb_init (&ow->context) != LIBUSB_SUCCESS)
@@ -586,7 +586,7 @@ overwitch_init (struct overwitch *ow, uint8_t bus, uint8_t address,
 	  continue;
 	}
 
-      if (overwitch_is_valid_device (desc.idVendor, desc.idProduct, &name) &&
+      if (ow_is_valid_device (desc.idVendor, desc.idProduct, &name) &&
 	  libusb_get_bus_number (device) == bus &&
 	  libusb_get_device_address (device) == address)
 	{
@@ -711,10 +711,10 @@ end:
       ow->p2o_audio_enabled = 0;
 
       ow->usb_data_in_blk_len =
-	sizeof (struct overwitch_usb_blk) +
+	sizeof (struct ow_engine_usb_blk) +
 	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ow->device_desc->outputs;
       ow->usb_data_out_blk_len =
-	sizeof (struct overwitch_usb_blk) +
+	sizeof (struct ow_engine_usb_blk) +
 	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * ow->device_desc->inputs;
 
       ow->usb_data_in_len = ow->usb_data_in_blk_len * ow->blocks_per_transfer;
@@ -793,8 +793,8 @@ run_p2o_midi (void *data)
   int pos, p2o_midi_ready, event_read = 0;
   double last_time, diff;
   struct timespec sleep_time, smallest_sleep_time;
-  struct overwitch_midi_event event;
-  struct overwitch *ow = data;
+  struct ow_midi_event event;
+  struct ow_engine *ow = data;
 
   smallest_sleep_time.tv_sec = 0;
   smallest_sleep_time.tv_nsec = SAMPLE_TIME_NS * 32 / 2;	//Average wait time for a 32 buffer sample
@@ -807,7 +807,7 @@ run_p2o_midi (void *data)
     {
 
       while (ow->buffer_read_space (ow->p2o_midi_buf) >=
-	     sizeof (struct overwitch_midi_event) && pos < USB_BULK_MIDI_SIZE)
+	     sizeof (struct ow_midi_event) && pos < USB_BULK_MIDI_SIZE)
 	{
 	  if (!pos)
 	    {
@@ -818,7 +818,7 @@ run_p2o_midi (void *data)
 	  if (!event_read)
 	    {
 	      ow->buffer_read (ow->p2o_midi_buf, (void *) &event,
-			       sizeof (struct overwitch_midi_event));
+			       sizeof (struct ow_midi_event));
 	      event_read = 1;
 	    }
 
@@ -864,7 +864,7 @@ run_p2o_midi (void *data)
 	  pthread_spin_unlock (&ow->p2o_midi_lock);
 	};
 
-      if (overwitch_get_status (ow) <= OW_STATUS_STOP)
+      if (ow_engine_get_status (ow) <= OW_STATUS_STOP)
 	{
 	  break;
 	}
@@ -877,9 +877,9 @@ void *
 run_audio_o2p_midi (void *data)
 {
   size_t rsj2o, bytes;
-  struct overwitch *ow = data;
+  struct ow_engine *ow = data;
 
-  while (overwitch_get_status (ow) == OW_STATUS_READY);
+  while (ow_engine_get_status (ow) == OW_STATUS_READY);
 
   //status == OW_STATUS_BOOT
 
@@ -909,20 +909,20 @@ run_audio_o2p_midi (void *data)
       ow->status = OW_STATUS_WAIT;
       pthread_spin_unlock (&ow->lock);
 
-      while (overwitch_get_status (ow) >= OW_STATUS_WAIT)
+      while (ow_engine_get_status (ow) >= OW_STATUS_WAIT)
 	{
 	  libusb_handle_events_completed (ow->context, NULL);
 	}
 
-      if (overwitch_get_status (ow) <= OW_STATUS_STOP)
+      if (ow_engine_get_status (ow) <= OW_STATUS_STOP)
 	{
 	  break;
 	}
 
-      overwitch_set_status (ow, OW_STATUS_BOOT);
+      ow_engine_set_status (ow, OW_STATUS_BOOT);
 
       rsj2o = ow->buffer_read_space (ow->p2o_audio_buf);
-      bytes = overwitch_bytes_to_frame_bytes (rsj2o, ow->p2o_frame_size);
+      bytes = ow_bytes_to_frame_bytes (rsj2o, ow->p2o_frame_size);
       ow->buffer_read (ow->p2o_audio_buf, NULL, bytes);
       memset (ow->p2o_transfer_buf, 0, ow->p2o_transfer_size);
     }
@@ -931,7 +931,7 @@ run_audio_o2p_midi (void *data)
 }
 
 int
-overwitch_activate (struct overwitch *ow, uint64_t features)
+ow_engine_activate (struct ow_engine *ow, uint64_t features)
 {
   int ret;
 
@@ -1003,7 +1003,7 @@ overwitch_activate (struct overwitch *ow, uint64_t features)
 }
 
 void
-overwitch_wait (struct overwitch *ow)
+ow_engine_wait (struct ow_engine *ow)
 {
   pthread_join (ow->audio_o2p_midi_thread, NULL);
   if (ow->midi)
@@ -1013,13 +1013,13 @@ overwitch_wait (struct overwitch *ow)
 }
 
 const char *
-overbrigde_get_err_str (overwitch_err_t errcode)
+overbrigde_get_err_str (ow_engine_err_t errcode)
 {
   return ob_err_strgs[errcode];
 }
 
 void
-overwitch_destroy (struct overwitch *ow)
+ow_engine_destroy (struct ow_engine *ow)
 {
   usb_shutdown (ow);
   free_transfers (ow);
@@ -1034,10 +1034,10 @@ overwitch_destroy (struct overwitch *ow)
   pthread_spin_destroy (&ow->p2o_midi_lock);
 }
 
-inline overwitch_status_t
-overwitch_get_status (struct overwitch *ow)
+inline ow_engine_status_t
+ow_engine_get_status (struct ow_engine *ow)
 {
-  overwitch_status_t status;
+  ow_engine_status_t status;
   pthread_spin_lock (&ow->lock);
   status = ow->status;
   pthread_spin_unlock (&ow->lock);
@@ -1045,7 +1045,7 @@ overwitch_get_status (struct overwitch *ow)
 }
 
 inline void
-overwitch_set_status (struct overwitch *ow, overwitch_status_t status)
+ow_engine_set_status (struct ow_engine *ow, ow_engine_status_t status)
 {
   pthread_spin_lock (&ow->lock);
   ow->status = status;
@@ -1053,7 +1053,7 @@ overwitch_set_status (struct overwitch *ow, overwitch_status_t status)
 }
 
 inline int
-overwitch_is_p2o_audio_enable (struct overwitch *ow)
+ow_engine_is_p2o_audio_enable (struct ow_engine *ow)
 {
   int enabled;
   pthread_spin_lock (&ow->lock);
@@ -1063,9 +1063,9 @@ overwitch_is_p2o_audio_enable (struct overwitch *ow)
 }
 
 inline void
-overwitch_set_p2o_audio_enable (struct overwitch *ow, int enabled)
+ow_engine_set_p2o_audio_enable (struct ow_engine *ow, int enabled)
 {
-  int last = overwitch_is_p2o_audio_enable (ow);
+  int last = ow_engine_is_p2o_audio_enable (ow);
   if (last != enabled)
     {
       pthread_spin_lock (&ow->lock);
@@ -1076,7 +1076,7 @@ overwitch_set_p2o_audio_enable (struct overwitch *ow, int enabled)
 }
 
 int
-overwitch_list_devices ()
+ow_list_devices ()
 {
   libusb_context *context = NULL;
   libusb_device **list = NULL;
@@ -1104,7 +1104,7 @@ overwitch_list_devices ()
 	  continue;
 	}
 
-      if (overwitch_is_valid_device (desc.idVendor, desc.idProduct, &name))
+      if (ow_is_valid_device (desc.idVendor, desc.idProduct, &name))
 	{
 	  bus = libusb_get_bus_number (device);
 	  address = libusb_get_device_address (device);
@@ -1120,8 +1120,7 @@ overwitch_list_devices ()
 }
 
 int
-overwitch_get_bus_address (int index, char *name, uint8_t * bus,
-			   uint8_t * address)
+ow_get_bus_address (int index, char *name, uint8_t * bus, uint8_t * address)
 {
   libusb_context *context = NULL;
   libusb_device **list = NULL;
@@ -1150,8 +1149,7 @@ overwitch_get_bus_address (int index, char *name, uint8_t * bus,
 	}
 
       err = 1;
-      if (overwitch_is_valid_device
-	  (desc.idVendor, desc.idProduct, &dev_name))
+      if (ow_is_valid_device (desc.idVendor, desc.idProduct, &dev_name))
 	{
 	  if (index >= 0)
 	    {
