@@ -220,6 +220,8 @@ typedef size_t (*overwitch_buffer_write_t) (void *, const char *, size_t);
 
 typedef double (*overwitch_get_time) ();	//Time in seconds
 
+typedef void (*overwitch_set_rt_priority_t) (pthread_t *, int);
+
 struct overwitch
 {
   int midi;

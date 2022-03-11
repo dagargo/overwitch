@@ -369,9 +369,17 @@ resampler_compute_ratios (struct resampler *resampler, double time)
   return 0;
 }
 
-void
-resampler_init (struct resampler *resampler, int quality)
+overwitch_err_t
+resampler_init (struct resampler *resampler, int bus, int address,
+		int blocks_per_transfer, int quality)
 {
+  overwitch_err_t err =
+    overwitch_init (&resampler->ow, bus, address, blocks_per_transfer);
+  if (err)
+    {
+      return err;
+    }
+
   resampler->samplerate = 0;
   resampler->bufsize = 0;
   resampler->xruns = 0;
@@ -386,6 +394,8 @@ resampler_init (struct resampler *resampler, int quality)
 		      resampler->ow.device_desc->outputs, NULL, resampler);
 
   pthread_spin_init (&resampler->lock, PTHREAD_PROCESS_SHARED);
+
+  return OW_OK;
 }
 
 void
@@ -400,4 +410,25 @@ resampler_destroy (struct resampler *resampler)
   free (resampler->o2p_buf_in);
   free (resampler->o2p_buf_out);
   pthread_spin_destroy (&resampler->lock);
+  overwitch_destroy (&resampler->ow);
+}
+
+int
+resampler_activate (struct resampler *resampler, uint64_t features,
+		    int priority, overwitch_set_rt_priority_t set_rt_priority)
+{
+  features |= OW_OPTION_SECONDARY_DLL;
+  int ret = overwitch_activate (&resampler->ow, features);
+  if (!ret)
+    {
+      set_rt_priority (&resampler->ow.p2o_midi_thread, priority);
+      set_rt_priority (&resampler->ow.audio_o2p_midi_thread, priority);
+    }
+  return ret;
+}
+
+void
+resampler_wait (struct resampler *resampler)
+{
+  overwitch_wait (&resampler->ow);
 }

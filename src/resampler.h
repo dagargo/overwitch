@@ -62,7 +62,12 @@ struct resampler
   double samplerate;
 };
 
-void resampler_init (struct resampler *, int);
+overwitch_err_t resampler_init (struct resampler *, int, int, int, int);
+
+int resampler_activate (struct resampler *, uint64_t, int,
+			overwitch_set_rt_priority_t);
+
+void resampler_wait (struct resampler *);
 
 void resampler_destroy (struct resampler *);
 

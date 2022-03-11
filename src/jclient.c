@@ -391,16 +391,16 @@ jclient_run (struct jclient *jclient)
 {
   jack_options_t options = JackNoStartServer;
   jack_status_t status;
-  overwitch_err_t ob_status;
+  overwitch_err_t err;
   char *client_name;
 
-  ob_status =
-    overwitch_init (&jclient->resampler.ow, jclient->bus, jclient->address,
-		    jclient->blocks_per_transfer);
-  if (ob_status)
+  err =
+    ow_resampler_init (&jclient->resampler, jclient->bus,
+		       jclient->address, jclient->blocks_per_transfer,
+		       jclient->quality);
+  if (err)
     {
-      error_print ("Overwitch error: %s\n",
-		   overbrigde_get_err_str (ob_status));
+      error_print ("Overwitch error: %s\n", overbrigde_get_err_str (err));
       goto end;
     }
 
@@ -416,7 +416,7 @@ jclient_run (struct jclient *jclient)
 	  error_print ("Unable to connect to JACK server\n");
 	}
 
-      goto cleanup_overwitch;
+      goto cleanup_jack;
     }
 
   if (status & JackServerStarted)
@@ -476,9 +476,9 @@ jclient_run (struct jclient *jclient)
     {
       jclient->output_ports[i] =
 	jack_port_register (jclient->client,
-			    jclient->resampler.ow.
-			    device_desc->output_track_names[i],
-			    JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+			    jclient->resampler.ow.device_desc->
+			    output_track_names[i], JACK_DEFAULT_AUDIO_TYPE,
+			    JackPortIsOutput, 0);
 
       if (jclient->output_ports[i] == NULL)
 	{
@@ -494,9 +494,9 @@ jclient_run (struct jclient *jclient)
     {
       jclient->input_ports[i] =
 	jack_port_register (jclient->client,
-			    jclient->resampler.ow.
-			    device_desc->input_track_names[i],
-			    JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
+			    jclient->resampler.ow.device_desc->
+			    input_track_names[i], JACK_DEFAULT_AUDIO_TYPE,
+			    JackPortIsInput, 0);
 
       if (jclient->input_ports[i] == NULL)
 	{
@@ -542,8 +542,6 @@ jclient_run (struct jclient *jclient)
   jack_ringbuffer_mlock (jclient->o2p_midi_rb);
 
   //The so-called Overwitch API
-  resampler_init (&jclient->resampler, jclient->quality);
-
   jclient->resampler.ow.o2p_audio_buf = jclient->o2p_audio_rb;
   jclient->resampler.ow.p2o_audio_buf = jclient->p2o_audio_rb;
   jclient->resampler.ow.p2o_midi_buf = jclient->p2o_midi_rb;
@@ -560,15 +558,12 @@ jclient_run (struct jclient *jclient)
   jclient->resampler.ow.dll_ow = &jclient->resampler.dll.dll_ow;
   //end
 
-  if (overwitch_activate
-      (&jclient->resampler.ow, OW_OPTION_MIDI | OW_OPTION_SECONDARY_DLL))
+  if (resampler_activate
+      (&jclient->resampler, OW_OPTION_MIDI, jclient->priority,
+       set_rt_priority))
     {
       goto cleanup_jack;
     }
-
-  set_rt_priority (&jclient->resampler.ow.p2o_midi_thread, jclient->priority);
-  set_rt_priority (&jclient->resampler.ow.audio_o2p_midi_thread,
-		   jclient->priority);
 
   jclient_set_sample_rate_cb (jack_get_sample_rate (jclient->client),
 			      jclient);
@@ -581,7 +576,7 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
-  overwitch_wait (&jclient->resampler.ow);
+  resampler_wait (&jclient->resampler);
 
   debug_print (1, "Exiting...\n");
   jack_deactivate (jclient->client);
@@ -595,8 +590,6 @@ cleanup_jack:
   free (jclient->output_ports);
   free (jclient->input_ports);
   resampler_destroy (&jclient->resampler);
-cleanup_overwitch:
-  overwitch_destroy (&jclient->resampler.ow);
 
 end:
   return jclient->resampler.status;
