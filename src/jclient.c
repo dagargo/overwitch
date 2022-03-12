@@ -388,7 +388,7 @@ jclient_run (struct jclient *jclient)
 {
   jack_options_t options = JackNoStartServer;
   jack_status_t status;
-  ow_engine_err_t err;
+  ow_err_t err;
   char *client_name;
 
   err =
@@ -397,7 +397,7 @@ jclient_run (struct jclient *jclient)
 		       jclient->quality);
   if (err)
     {
-      error_print ("Overwitch error: %s\n", overbrigde_get_err_str (err));
+      error_print ("Overwitch error: %s\n", ow_get_err_str (err));
       goto end;
     }
 

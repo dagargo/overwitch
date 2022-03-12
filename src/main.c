@@ -209,7 +209,7 @@ main (int argc, char *argv[])
   char *endstr;
   char *device_name = NULL;
   int long_index = 0;
-  ow_engine_err_t ow_err;
+  ow_err_t ow_err;
   struct sigaction action;
   int device_num = -1;
   int blocks_per_transfer = DEFAULT_BLOCKS;
@@ -301,8 +301,7 @@ main (int argc, char *argv[])
       ow_err = ow_list_devices ();
       if (ow_err)
 	{
-	  fprintf (stderr, "USB error: %s\n",
-		   overbrigde_get_err_str (ow_err));
+	  fprintf (stderr, "USB error: %s\n", ow_get_err_str (ow_err));
 	  exit (EXIT_FAILURE);
 	}
       exit (EXIT_SUCCESS);

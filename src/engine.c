@@ -32,19 +32,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#define ELEKTRON_VID 0x1935
-
-#define AFMK1_PID 0x0004
-#define AKEYS_PID 0x0006
-#define ARMK1_PID 0x0008
-#define AHMK1_PID 0x000a
-#define DTAKT_PID 0x000c
-#define AFMK2_PID 0x000e
-#define ARMK2_PID 0x0010
-#define DTONE_PID 0x0014
-#define AHMK2_PID 0x0016
-#define DKEYS_PID 0x001c
-
 #define AUDIO_IN_EP  0x83
 #define AUDIO_OUT_EP 0x03
 #define MIDI_IN_EP   0x81
@@ -57,127 +44,17 @@
 
 #define SAMPLE_TIME_NS (1000000000 / ((int)OB_SAMPLE_RATE))
 
-#define ERROR_ON_GET_DEV_DESC "Error while getting device description: %s\n"
-
-static const struct ow_device_desc DIGITAKT_DESC = {
-  .pid = DTAKT_PID,
-  .name = "Digitakt",
-  .inputs = 2,
-  .outputs = 12,
-  .input_track_names = {"Main L Input", "Main R Input"},
-  .output_track_names =
-    {"Main L", "Main R", "Track 1", "Track 2", "Track 3", "Track 4",
-     "Track 5", "Track 6", "Track 7", "Track 8", "Input L",
-     "Input R"}
+struct ow_engine_usb_blk
+{
+  uint16_t header;
+  uint16_t frames;
+  uint8_t padding[OB_PADDING_SIZE];
+  int32_t data[];
 };
-
-static const struct ow_device_desc DIGITONE_DESC = {
-  .pid = DTONE_PID,
-  .name = "Digitone",
-  .inputs = 2,
-  .outputs = 12,
-  .input_track_names = {"Main L Input", "Main R Input"},
-  .output_track_names =
-    {"Main L", "Main R", "Track 1 L", "Track 1 R", "Track 2 L",
-     "Track 2 R", "Track 3 L", "Track 3 R", "Track 4 L", "Track 4 R",
-     "Input L", "Input R"}
-};
-
-static const struct ow_device_desc AFMK2_DESC = {
-  .pid = AFMK2_PID,
-  .name = "Analog Four MKII",
-  .inputs = 6,
-  .outputs = 8,
-  .input_track_names = {"Main L Input", "Main R Input", "Synth Track 1 Input",
-			"Synth Track 2 Input", "Synth Track 3 Input",
-			"Synth Track 4 Input"},
-  .output_track_names =
-    {"Main L", "Main R", "Synth Track 1", "Synth Track 2", "Synth Track 3",
-     "Synth Track 4", "Input L", "Input R"}
-};
-
-static const struct ow_device_desc ARMK2_DESC = {
-  .pid = ARMK2_PID,
-  .name = "Analog Rytm MKII",
-  .inputs = 12,
-  .outputs = 12,
-  .input_track_names =
-    {"Main L Input", "Main R Input", "Main FX L Input", "Main FX R Input",
-     "BD Input", "SD Input", "RS/CP Input", "BT Input",
-     "LT Input", "MT/HT Input", "CH/OH Input", "CY/CB Input"},
-  .output_track_names = {"Main L", "Main R", "BD", "SD", "RS/CP",
-			 "BT", "LT", "MT/HT", "CH/OH", "CY/CB", "Input L",
-			 "Input R"}
-};
-
-static const struct ow_device_desc DKEYS_DESC = {
-  .pid = DKEYS_PID,
-  .name = "Digitone Keys",
-  .inputs = 2,
-  .outputs = 12,
-  .input_track_names = {"Main L Input", "Main R Input"},
-  .output_track_names =
-    {"Main L", "Main R", "Track 1 L", "Track 1 R", "Track 2 L",
-     "Track 2 R", "Track 3 L", "Track 3 R", "Track 4 L", "Track 4 R",
-     "Input L", "Input R"}
-};
-
-static const struct ow_device_desc AHMK1_DESC = {
-  .pid = AHMK1_PID,
-  .name = "Analog Heat",
-  .inputs = 4,
-  .outputs = 4,
-  .input_track_names =
-    {"Main L Input", "Main R Input", "FX Send L", "FX Send R"},
-  .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
-};
-
-static const struct ow_device_desc AHMK2_DESC = {
-  .pid = AHMK2_PID,
-  .name = "Analog Heat MKII",
-  .inputs = 4,
-  .outputs = 4,
-  .input_track_names =
-    {"Main L Input", "Main R Input", "FX Send L", "FX Send R"},
-  .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
-};
-
-static const struct ow_device_desc *OB_DEVICE_DESCS[] = {
-  &DIGITAKT_DESC, &DIGITONE_DESC, &AFMK2_DESC, &ARMK2_DESC, &DKEYS_DESC,
-  &AHMK1_DESC, &AHMK2_DESC
-};
-
-static const int OB_DEVICE_DESCS_N =
-  sizeof (OB_DEVICE_DESCS) / sizeof (struct ow_device_desc *);
 
 static void prepare_cycle_in ();
 static void prepare_cycle_out ();
 static void prepare_cycle_in_midi ();
-
-int
-ow_bytes_to_frame_bytes (int bytes, int bytes_per_frame)
-{
-  int frames = bytes / bytes_per_frame;
-  return frames * bytes_per_frame;
-}
-
-int
-ow_is_valid_device (uint16_t vid, uint16_t pid, char **name)
-{
-  if (vid != ELEKTRON_VID)
-    {
-      return 0;
-    }
-  for (int i = 0; i < OB_DEVICE_DESCS_N; i++)
-    {
-      if (OB_DEVICE_DESCS[i]->pid == pid)
-	{
-	  *name = OB_DEVICE_DESCS[i]->name;
-	  return 1;
-	}
-    }
-  return 0;
-}
 
 static struct ow_engine_usb_blk *
 get_nth_usb_in_blk (struct ow_engine *ow, int n)
@@ -556,7 +433,7 @@ usb_shutdown (struct ow_engine *ow)
 
 // initialization taken from sniffed session
 
-ow_engine_err_t
+ow_err_t
 ow_engine_init (struct ow_engine *ow, uint8_t bus, uint8_t address,
 		int blocks_per_transfer)
 {
@@ -582,7 +459,8 @@ ow_engine_init (struct ow_engine *ow, uint8_t bus, uint8_t address,
       err = libusb_get_device_descriptor (device, &desc);
       if (err)
 	{
-	  error_print (ERROR_ON_GET_DEV_DESC, libusb_error_name (err));
+	  error_print ("Error while getting device description: %s",
+		       libusb_error_name (err));
 	  continue;
 	}
 
@@ -608,12 +486,12 @@ ow_engine_init (struct ow_engine *ow, uint8_t bus, uint8_t address,
       goto end;
     }
 
-  for (i = 0; i < OB_DEVICE_DESCS_N; i++)
+  for (const struct ow_device_desc ** d = OB_DEVICE_DESCS; *d != NULL; d++)
     {
-      debug_print (2, "Checking for %s...\n", OB_DEVICE_DESCS[i]->name);
-      if (strcmp (OB_DEVICE_DESCS[i]->name, name) == 0)
+      debug_print (2, "Checking for %s...\n", (*d)->name);
+      if (strcmp ((*d)->name, name) == 0)
 	{
-	  ow->device_desc = OB_DEVICE_DESCS[i];
+	  ow->device_desc = *d;
 	  break;
 	}
     }
@@ -731,8 +609,8 @@ end:
 	  blk->header = htobe16 (0x07ff);
 	}
 
-      ow->p2o_frame_size = OB_BYTES_PER_FRAME * ow->device_desc->inputs;
-      ow->o2p_frame_size = OB_BYTES_PER_FRAME * ow->device_desc->outputs;
+      ow->p2o_frame_size = OB_BYTES_PER_SAMPLE * ow->device_desc->inputs;
+      ow->o2p_frame_size = OB_BYTES_PER_SAMPLE * ow->device_desc->outputs;
 
       ow->p2o_transfer_size = ow->frames_per_transfer * ow->p2o_frame_size;
       ow->o2p_transfer_size = ow->frames_per_transfer * ow->o2p_frame_size;
@@ -787,7 +665,7 @@ static const char *ob_err_strgs[] = {
   "can't find a matching device"
 };
 
-void *
+static void *
 run_p2o_midi (void *data)
 {
   int pos, p2o_midi_ready, event_read = 0;
@@ -873,7 +751,7 @@ run_p2o_midi (void *data)
   return NULL;
 }
 
-void *
+static void *
 run_audio_o2p_midi (void *data)
 {
   size_t rsj2o, bytes;
@@ -930,7 +808,7 @@ run_audio_o2p_midi (void *data)
   return NULL;
 }
 
-int
+inline int
 ow_engine_activate (struct ow_engine *ow, uint64_t features)
 {
   int ret;
@@ -1002,7 +880,7 @@ ow_engine_activate (struct ow_engine *ow, uint64_t features)
   return ret;
 }
 
-void
+inline void
 ow_engine_wait (struct ow_engine *ow)
 {
   pthread_join (ow->audio_o2p_midi_thread, NULL);
@@ -1013,7 +891,7 @@ ow_engine_wait (struct ow_engine *ow)
 }
 
 const char *
-overbrigde_get_err_str (ow_engine_err_t errcode)
+ow_get_err_str (ow_err_t errcode)
 {
   return ob_err_strgs[errcode];
 }
@@ -1073,115 +951,4 @@ ow_engine_set_p2o_audio_enable (struct ow_engine *ow, int enabled)
       pthread_spin_unlock (&ow->lock);
       debug_print (1, "Setting j2o audio to %d...\n", enabled);
     }
-}
-
-int
-ow_list_devices ()
-{
-  libusb_context *context = NULL;
-  libusb_device **list = NULL;
-  ssize_t count = 0;
-  libusb_device *device;
-  struct libusb_device_descriptor desc;
-  int i, j, err;
-  char *name;
-  uint8_t bus, address;
-
-  if (libusb_init (&context) != LIBUSB_SUCCESS)
-    {
-      return 1;
-    }
-
-  count = libusb_get_device_list (context, &list);
-  j = 0;
-  for (i = 0; i < count; i++)
-    {
-      device = list[i];
-      err = libusb_get_device_descriptor (device, &desc);
-      if (err)
-	{
-	  error_print (ERROR_ON_GET_DEV_DESC, libusb_error_name (err));
-	  continue;
-	}
-
-      if (ow_is_valid_device (desc.idVendor, desc.idProduct, &name))
-	{
-	  bus = libusb_get_bus_number (device);
-	  address = libusb_get_device_address (device);
-	  printf ("%d: Bus %03d Device %03d: ID %04x:%04x %s\n", j,
-		  bus, address, desc.idVendor, desc.idProduct, name);
-	  j++;
-	}
-    }
-
-  libusb_free_device_list (list, count);
-  libusb_exit (context);
-  return 0;
-}
-
-int
-ow_get_bus_address (int index, char *name, uint8_t * bus, uint8_t * address)
-{
-  libusb_context *context = NULL;
-  libusb_device **list = NULL;
-  int err, i, j;
-  ssize_t count = 0;
-  libusb_device *device = NULL;
-  struct libusb_device_descriptor desc;
-  char *dev_name;
-
-  err = libusb_init (&context);
-  if (err != LIBUSB_SUCCESS)
-    {
-      return err;
-    }
-
-  j = 0;
-  count = libusb_get_device_list (context, &list);
-  for (i = 0; i < count; i++)
-    {
-      device = list[i];
-      err = libusb_get_device_descriptor (device, &desc);
-      if (err)
-	{
-	  error_print (ERROR_ON_GET_DEV_DESC, libusb_error_name (err));
-	  continue;
-	}
-
-      err = 1;
-      if (ow_is_valid_device (desc.idVendor, desc.idProduct, &dev_name))
-	{
-	  if (index >= 0)
-	    {
-	      if (j == index)
-		{
-		  err = 0;
-		  break;
-		}
-	    }
-	  else
-	    {
-	      if (strcmp (name, dev_name) == 0)
-		{
-		  err = 0;
-		  break;
-		}
-	    }
-	  j++;
-	}
-    }
-
-  if (err)
-    {
-      error_print ("No device found\n");
-    }
-  else
-    {
-      *bus = libusb_get_bus_number (device);
-      *address = libusb_get_device_address (device);
-    }
-
-  libusb_free_device_list (list, count);
-  libusb_exit (context);
-  return err;
 }

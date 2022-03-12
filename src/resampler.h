@@ -62,7 +62,7 @@ struct ow_resampler
   double samplerate;
 };
 
-ow_engine_err_t ow_resampler_init (struct ow_resampler *, int, int, int, int);
+ow_err_t ow_resampler_init (struct ow_resampler *, int, int, int, int);
 
 int ow_resampler_activate (struct ow_resampler *, uint64_t, int,
 			   ow_engine_set_rt_priority_t);

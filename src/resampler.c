@@ -369,11 +369,11 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
   return 0;
 }
 
-ow_engine_err_t
+ow_err_t
 ow_resampler_init (struct ow_resampler *resampler, int bus, int address,
 		   int blocks_per_transfer, int quality)
 {
-  ow_engine_err_t err =
+  ow_err_t err =
     ow_engine_init (&resampler->ow, bus, address, blocks_per_transfer);
   if (err)
     {
