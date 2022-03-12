@@ -126,13 +126,6 @@ const struct ow_device_desc *OB_DEVICE_DESCS[] = {
 };
 
 int
-ow_bytes_to_frame_bytes (int bytes, int bytes_per_frame)
-{
-  int frames = bytes / bytes_per_frame;
-  return frames * bytes_per_frame;
-}
-
-int
 ow_print_devices ()
 {
   libusb_context *context = NULL;

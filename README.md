@@ -79,7 +79,7 @@ Options:
   --use-device, -d value
   --resampling-quality, -q value
   --transfer-blocks, -b value
-  --rt-overbridge-priority, -p value
+  --rt-priority, -p value
   --list-devices, -l
   --verbose, -v
   --help, -h

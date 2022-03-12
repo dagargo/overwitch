@@ -29,7 +29,7 @@ struct instant
   uint32_t frames;
 };
 
-struct dll_overwitch
+struct ow_dll_overwitch
 {
   struct instant i0;
   struct instant i1;
@@ -38,7 +38,7 @@ struct dll_overwitch
   double c;
 };
 
-struct dll
+struct ow_dll
 {
   double ratio;
   uint32_t kj;
@@ -57,25 +57,25 @@ struct dll
   uint32_t ko1;
   double to0;
   double to1;
-  struct dll_overwitch dll_ow;
+  struct ow_dll_overwitch dll_ow;
 };
 
-void dll_overwitch_init (struct dll_overwitch *, double, int, double);
+void ow_dll_overwitch_init (struct ow_dll_overwitch *, double, int, double);
 
-void dll_overwitch_inc (struct dll_overwitch *, int, double);
+void ow_dll_overwitch_inc (struct ow_dll_overwitch *, int, double);
 
-void dll_init (struct dll *, double, double, int, int);
+void ow_dll_primary_init (struct ow_dll *, double, double, int, int);
 
-void dll_set_loop_filter (struct dll *, double, int, double);
+void ow_dll_primary_set_loop_filter (struct ow_dll *, double, int, double);
 
-void dll_update_err (struct dll *, double);
+void ow_dll_primary_update_err (struct ow_dll *, double);
 
-void dll_update (struct dll *);
+void ow_dll_primary_update (struct ow_dll *);
 
-void dll_calc_avg (struct dll *, int);
+void ow_dll_primary_calc_avg (struct ow_dll *, int);
 
-void dll_first_time_run (struct dll *);
+void ow_dll_primary_first_time_run (struct ow_dll *);
 
-void dll_load_dll_overwitch (struct dll *);
+void ow_dll_primary_load_dll_overwitch (struct ow_dll *);
 
 #endif

@@ -156,12 +156,6 @@
 #define OB_BYTES_PER_SAMPLE sizeof(float)
 #define OB_PADDING_SIZE 28
 
-typedef size_t (*ow_engine_buffer_rw_space_t) (void *);
-typedef size_t (*ow_engine_buffer_read_t) (void *, char *, size_t);
-typedef size_t (*ow_engine_buffer_write_t) (void *, const char *, size_t);
-
-typedef double (*ow_engine_get_time) ();	//Time in seconds
-
 struct ow_engine
 {
   int midi;
@@ -182,8 +176,6 @@ struct ow_engine
   struct libusb_transfer *xfr_out;
   char *usb_data_in;
   char *usb_data_out;
-  void *p2o_audio_buf;
-  void *o2p_audio_buf;
   size_t usb_data_in_blk_len;
   size_t usb_data_out_blk_len;
   size_t p2o_transfer_size;
@@ -202,18 +194,15 @@ struct ow_engine
   unsigned char *o2p_midi_data;
   struct libusb_transfer *xfr_out_midi;
   struct libusb_transfer *xfr_in_midi;
-  void *p2o_midi_buf;
-  void *o2p_midi_buf;
   int reading_at_p2o_end;
   pthread_spinlock_t p2o_midi_lock;
   int p2o_midi_ready;
-  //Overwitch side DLL
-  struct dll_overwitch *dll_ow;
-  //buffer operations
-  ow_engine_buffer_rw_space_t buffer_write_space;
-  ow_engine_buffer_write_t buffer_write;
-  ow_engine_buffer_rw_space_t buffer_read_space;
-  ow_engine_buffer_read_t buffer_read;
-  //time operations
-  ow_engine_get_time get_time;
+  struct ow_dll_overwitch *dll_ow;
+  struct ow_io_buffers *io_buffers;
 };
+
+int ow_bytes_to_frame_bytes (int, int);
+
+ow_err_t ow_engine_activate_with_dll (struct ow_engine *,
+				      struct ow_io_buffers *,
+				      struct ow_dll_overwitch *);

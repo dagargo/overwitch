@@ -20,15 +20,12 @@
 
 #include <jack/ringbuffer.h>
 #include <jack/midiport.h>
-#include "resampler.h"
+#include "overwitch.h"
 
 struct jclient
 {
+  //JACK stuff
   jack_client_t *client;
-  jack_ringbuffer_t *o2p_audio_rb;
-  jack_ringbuffer_t *p2o_audio_rb;
-  jack_ringbuffer_t *o2p_midi_rb;
-  jack_ringbuffer_t *p2o_midi_rb;
   jack_port_t **output_ports;
   jack_port_t **input_ports;
   jack_port_t *midi_output_port;
@@ -39,7 +36,10 @@ struct jclient
   int blocks_per_transfer;
   int quality;
   int priority;
-  struct ow_resampler resampler;
+  jack_nframes_t bufsize;
+  // Overwitch stuff
+  struct ow_resampler *resampler;
+  struct ow_io_buffers io_buffers;
 };
 
 int jclient_run (struct jclient *);

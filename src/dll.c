@@ -24,8 +24,8 @@
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc.
 inline void
-dll_overwitch_init (struct dll_overwitch *dll_ow, double samplerate,
-		    int frames_per_transfer, double time)
+ow_dll_overwitch_init (struct ow_dll_overwitch *dll_ow, double samplerate,
+		       int frames_per_transfer, double time)
 {
   double dtime = frames_per_transfer / samplerate;
   double w = 2 * M_PI * 0.1 * dtime;
@@ -41,8 +41,8 @@ dll_overwitch_init (struct dll_overwitch *dll_ow, double samplerate,
 }
 
 inline void
-dll_overwitch_inc (struct dll_overwitch *dll_ow,
-		   int frames_per_transfer, double time)
+ow_dll_overwitch_inc (struct ow_dll_overwitch *dll_ow,
+		      int frames_per_transfer, double time)
 {
   double e = time - dll_ow->i1.time;
   dll_ow->i0.time = dll_ow->i1.time;
@@ -54,7 +54,7 @@ dll_overwitch_inc (struct dll_overwitch *dll_ow,
 
 //The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
-dll_update_err (struct dll *dll, double time)
+ow_dll_primary_update_err (struct ow_dll *dll, double time)
 {
   double tj = time;
   uint32_t frames = dll->ko1 - dll->ko0;
@@ -65,7 +65,7 @@ dll_update_err (struct dll *dll, double time)
 }
 
 inline void
-dll_update (struct dll *dll)
+ow_dll_primary_update (struct ow_dll *dll)
 {
   dll->_z1 += dll->_w0 * (dll->_w1 * dll->err - dll->_z1);
   dll->_z2 += dll->_w0 * (dll->_z1 - dll->_z2);
@@ -76,7 +76,7 @@ dll_update (struct dll *dll)
 }
 
 inline void
-dll_calc_avg (struct dll *dll, int cycles)
+ow_dll_primary_calc_avg (struct ow_dll *dll, int cycles)
 {
   dll->last_ratio_avg = dll->ratio_avg;
   dll->ratio_avg = dll->ratio_sum / cycles;
@@ -84,8 +84,9 @@ dll_calc_avg (struct dll *dll, int cycles)
 }
 
 inline void
-dll_init (struct dll *dll, double output_samplerate, double input_samplerate,
-	  int output_frames_per_transfer, int input_frames_per_transfer)
+ow_dll_primary_init (struct ow_dll *dll, double output_samplerate,
+		     double input_samplerate, int output_frames_per_transfer,
+		     int input_frames_per_transfer)
 {
   dll->_z1 = 0.0;
   dll->_z2 = 0.0;
@@ -107,7 +108,7 @@ dll_init (struct dll *dll, double output_samplerate, double input_samplerate,
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
-dll_first_time_run (struct dll *dll)
+ow_dll_primary_first_time_run (struct ow_dll *dll)
 {
   int n = (int) (floor (dll->err + 0.5));
   dll->kj += n;
@@ -116,8 +117,9 @@ dll_first_time_run (struct dll *dll)
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
-dll_set_loop_filter (struct dll *dll, double bw,
-		     int output_frames_per_transfer, double output_samplerate)
+ow_dll_primary_set_loop_filter (struct ow_dll *dll, double bw,
+				int output_frames_per_transfer,
+				double output_samplerate)
 {
   double w =
     2.0 * M_PI * 20 * bw * output_frames_per_transfer / output_samplerate;
@@ -128,7 +130,7 @@ dll_set_loop_filter (struct dll *dll, double bw,
 }
 
 inline void
-dll_load_dll_overwitch (struct dll *dll)
+ow_dll_primary_load_dll_overwitch (struct ow_dll *dll)
 {
   dll->ko0 = dll->dll_ow.i0.frames;
   dll->to0 = dll->dll_ow.i0.time;

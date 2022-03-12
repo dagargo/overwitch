@@ -24,8 +24,8 @@
 struct ow_resampler
 {
   ow_resampler_status_t status;
-  struct ow_engine ow;
-  struct dll dll;		//The DLL is based on o2j data
+  struct ow_engine *engine;
+  struct ow_dll dll;		//The DLL is based on o2j data
   double o2p_ratio;
   double p2o_ratio;
   SRC_STATE *p2o_state;
@@ -46,8 +46,8 @@ struct ow_resampler
   int xruns;
   pthread_spinlock_t lock;	//Used to synchronize access to xruns.
   int reading_at_o2p_end;
-  size_t o2p_buf_size;
-  size_t p2o_buf_size;
+  size_t o2p_bufsize;
+  size_t p2o_bufsize;
   uint32_t bufsize;
   double samplerate;
 };
