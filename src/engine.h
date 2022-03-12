@@ -162,8 +162,6 @@ typedef size_t (*ow_engine_buffer_write_t) (void *, const char *, size_t);
 
 typedef double (*ow_engine_get_time) ();	//Time in seconds
 
-typedef void (*ow_engine_set_rt_priority_t) (pthread_t *, int);
-
 struct ow_engine
 {
   int midi;

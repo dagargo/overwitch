@@ -133,7 +133,7 @@ ow_bytes_to_frame_bytes (int bytes, int bytes_per_frame)
 }
 
 int
-ow_list_devices ()
+ow_print_devices ()
 {
   libusb_context *context = NULL;
   libusb_device **list = NULL;

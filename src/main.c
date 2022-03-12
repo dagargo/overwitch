@@ -298,7 +298,7 @@ main (int argc, char *argv[])
 
   if (lflg)
     {
-      ow_err = ow_list_devices ();
+      ow_err = ow_print_devices ();
       if (ow_err)
 	{
 	  fprintf (stderr, "USB error: %s\n", ow_get_err_str (ow_err));

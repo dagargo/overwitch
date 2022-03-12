@@ -26,6 +26,8 @@
 #define OB_MAX_TRACKS 12
 #define OB_MIDI_EVENT_SIZE 4
 
+typedef void (*ow_set_rt_priority_t) (pthread_t *, int);
+
 typedef enum
 {
   OW_OPTION_MIDI = 1,
@@ -61,6 +63,16 @@ typedef enum
   OW_STATUS_RUN
 } ow_engine_status_t;
 
+typedef enum
+{
+  RES_STATUS_ERROR = -1,
+  RES_STATUS_STOP,
+  RES_STATUS_READY,
+  RES_STATUS_BOOT,
+  RES_STATUS_TUNE,
+  RES_STATUS_RUN
+} ow_resampler_status_t;
+
 struct ow_device_desc
 {
   uint16_t pid;
@@ -78,11 +90,22 @@ struct ow_midi_event
 };
 
 struct ow_engine;
+struct ow_resampler;
 
 extern const struct ow_device_desc *OB_DEVICE_DESCS[];
 
+//Common
 const char *ow_get_err_str (ow_err_t);
 
+int ow_print_devices ();
+
+int ow_get_bus_address (int, char *, uint8_t *, uint8_t *);
+
+int ow_is_valid_device (uint16_t, uint16_t, char **);
+
+int ow_bytes_to_frame_bytes (int, int);
+
+//Engine
 ow_err_t ow_engine_init (struct ow_engine *, uint8_t, uint8_t, int);
 
 int ow_engine_activate (struct ow_engine *, uint64_t);
@@ -99,12 +122,28 @@ void ow_engine_set_p2o_audio_enable (struct ow_engine *, int);
 
 int ow_engine_is_p2o_audio_enable (struct ow_engine *);
 
-int ow_list_devices ();
+//Resampler
+ow_err_t ow_resampler_init (struct ow_resampler *, int, int, int, int);
 
-int ow_get_bus_address (int, char *, uint8_t *, uint8_t *);
+int ow_resampler_activate (struct ow_resampler *, uint64_t, int,
+			   ow_set_rt_priority_t);
 
-int ow_is_valid_device (uint16_t, uint16_t, char **);
+void ow_resampler_wait (struct ow_resampler *);
 
-int ow_bytes_to_frame_bytes (int, int);
+void ow_resampler_destroy (struct ow_resampler *);
+
+void ow_resampler_print_status (struct ow_resampler *);
+
+void ow_resampler_reset_buffers (struct ow_resampler *);
+
+void ow_resampler_reset_dll (struct ow_resampler *, uint32_t);
+
+void ow_resampler_read_audio (struct ow_resampler *);
+
+void ow_resampler_write_audio (struct ow_resampler *);
+
+int ow_resampler_compute_ratios (struct ow_resampler *, double);
+
+void ow_resampler_inc_xruns (struct ow_resampler *);
 
 #endif

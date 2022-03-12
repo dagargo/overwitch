@@ -21,19 +21,9 @@
 #include "dll.h"
 #include "engine.h"
 
-typedef enum
-{
-  RES_STATUS_ERROR = -1,
-  RES_STATUS_STOP,
-  RES_STATUS_READY,
-  RES_STATUS_BOOT,
-  RES_STATUS_TUNE,
-  RES_STATUS_RUN
-} resampler_status_t;
-
 struct ow_resampler
 {
-  resampler_status_t status;
+  ow_resampler_status_t status;
   struct ow_engine ow;
   struct dll dll;		//The DLL is based on o2j data
   double o2p_ratio;
@@ -61,26 +51,3 @@ struct ow_resampler
   uint32_t bufsize;
   double samplerate;
 };
-
-ow_err_t ow_resampler_init (struct ow_resampler *, int, int, int, int);
-
-int ow_resampler_activate (struct ow_resampler *, uint64_t, int,
-			   ow_engine_set_rt_priority_t);
-
-void ow_resampler_wait (struct ow_resampler *);
-
-void ow_resampler_destroy (struct ow_resampler *);
-
-void ow_resampler_print_status (struct ow_resampler *);
-
-void ow_resampler_reset_buffers (struct ow_resampler *);
-
-void ow_resampler_reset_dll (struct ow_resampler *, uint32_t);
-
-void ow_resampler_read_audio (struct ow_resampler *);
-
-void ow_resampler_write_audio (struct ow_resampler *);
-
-int ow_resampler_compute_ratios (struct ow_resampler *, double);
-
-void ow_resampler_inc_xruns (struct ow_resampler *);

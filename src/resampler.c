@@ -415,8 +415,7 @@ ow_resampler_destroy (struct ow_resampler *resampler)
 
 int
 ow_resampler_activate (struct ow_resampler *resampler, uint64_t features,
-		       int priority,
-		       ow_engine_set_rt_priority_t set_rt_priority)
+		       int priority, ow_set_rt_priority_t set_rt_priority)
 {
   features |= OW_OPTION_SECONDARY_DLL;
   int ret = ow_engine_activate (&resampler->ow, features);
