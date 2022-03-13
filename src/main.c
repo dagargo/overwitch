@@ -18,17 +18,13 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
 #include <signal.h>
 #include <errno.h>
-#include <libgen.h>
-#define _GNU_SOURCE
-#include <getopt.h>
-#include <string.h>
 #include <libusb.h>
 #include "../config.h"
 #include "jclient.h"
 #include "utils.h"
+#include "common.h"
 
 #define DEFAULT_QUALITY 2
 #define DEFAULT_BLOCKS 24
@@ -71,29 +67,6 @@ signal_handler (int signo)
 	{
 	  ow_resampler_print_status (jclients[i]->jclient.resampler);
 	}
-    }
-}
-
-void
-print_help (char *executable_path)
-{
-  char *exec_name;
-  struct option *option;
-
-  fprintf (stderr, "%s\n", PACKAGE_STRING);
-  exec_name = basename (executable_path);
-  fprintf (stderr, "Usage: %s [options]\n", exec_name);
-  fprintf (stderr, "Options:\n");
-  option = options;
-  while (option->name)
-    {
-      fprintf (stderr, "  --%s, -%c", option->name, option->val);
-      if (option->has_arg)
-	{
-	  fprintf (stderr, " value");
-	}
-      fprintf (stderr, "\n");
-      option++;
     }
 }
 
@@ -279,7 +252,7 @@ main (int argc, char *argv[])
 	  vflg++;
 	  break;
 	case 'h':
-	  print_help (argv[0]);
+	  print_help (argv[0], PACKAGE_STRING, options);
 	  exit (EXIT_SUCCESS);
 	case '?':
 	  errflg++;
@@ -288,7 +261,7 @@ main (int argc, char *argv[])
 
   if (errflg > 0)
     {
-      print_help (argv[0]);
+      print_help (argv[0], PACKAGE_STRING, options);
       exit (EXIT_FAILURE);
     }
 
