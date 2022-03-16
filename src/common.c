@@ -19,6 +19,7 @@
  */
 
 #include "common.h"
+#include "utils.h"
 
 void
 print_help (const char *executable_path, const char *package_string,
@@ -42,4 +43,29 @@ print_help (const char *executable_path, const char *package_string,
       option++;
     }
   free (executable_path_copy);
+}
+
+ow_err_t
+print_devices ()
+{
+  ssize_t total;
+  struct ow_usb_device *devices;
+  struct ow_usb_device *device;
+  ow_err_t err = ow_get_devices (&devices, &total);
+
+  if (err)
+    {
+      return err;
+    }
+
+  device = devices;
+  for (int i = 0; i < total; i++, device++)
+    {
+      fprintf (stderr, "%d: Bus %03d Device %03d: ID %04x:%04x %s\n", i,
+	       device->bus, device->address, device->vid, device->pid,
+	       device->name);
+    }
+
+  ow_free_usb_device_list (devices, total);
+  return OW_OK;
 }

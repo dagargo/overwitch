@@ -20,7 +20,6 @@
 
 #include <signal.h>
 #include <errno.h>
-#include <libusb.h>
 #include "../config.h"
 #include "jclient.h"
 #include "utils.h"
@@ -36,8 +35,8 @@ struct jclient_thread
   struct jclient jclient;
 };
 
-static int jclient_count;
-static struct jclient_thread **jclients;
+static ssize_t jclient_count;
+static struct jclient_thread *jclients;
 
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
@@ -56,123 +55,90 @@ signal_handler (int signo)
 {
   if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
     {
-      for (int i = 0; i < jclient_count; i++)
+      struct jclient_thread *jclient = jclients;
+      for (int i = 0; i < jclient_count; i++, jclient++)
 	{
-	  jclient_exit (&jclients[i]->jclient);
+	  jclient_exit (&jclient->jclient);
 	}
     }
   else if (signo == SIGUSR1)
     {
-      for (int i = 0; i < jclient_count; i++)
+      struct jclient_thread *jclient = jclients;
+      for (int i = 0; i < jclient_count; i++, jclient++)
 	{
-	  ow_resampler_print_status (jclients[i]->jclient.resampler);
+	  ow_resampler_print_status (jclient->jclient.resampler);
 	}
     }
 }
 
 static int
-run_single (int device_num, char *device_name,
+run_single (int device_num, const char *device_name,
 	    int blocks_per_transfer, int quality, int priority)
 {
-  uint8_t bus, address;
-  int status;
+  struct ow_usb_device *device;
 
-  if (ow_get_bus_address (device_num, device_name, &bus, &address))
+  if (ow_get_usb_device_from_device_attrs (device_num, device_name, &device))
     {
-      return EXIT_FAILURE;
+      return OW_GENERIC_ERROR;
     }
 
   jclient_count = 1;
-  jclients = malloc (sizeof (struct jclient_thread *));
-  jclients[0] = malloc (sizeof (struct jclient_thread));
-  jclients[0]->jclient.bus = bus;
-  jclients[0]->jclient.address = address;
-  jclients[0]->jclient.blocks_per_transfer = blocks_per_transfer;
-  jclients[0]->jclient.quality = quality;
-  jclients[0]->jclient.priority = priority;
+  jclients = malloc (sizeof (struct jclient_thread));
+  jclients->jclient.bus = device->bus;
+  jclients->jclient.address = device->address;
+  jclients->jclient.blocks_per_transfer = blocks_per_transfer;
+  jclients->jclient.quality = quality;
+  jclients->jclient.priority = priority;
+  free (device);
 
-  pthread_create (&jclients[0]->thread, NULL, jclient_run_thread,
-		  &jclients[0]->jclient);
-  pthread_join (jclients[0]->thread, NULL);
-  status = ow_resampler_get_status (jclients[0]->jclient.resampler);
-  free (jclients[0]);
+  pthread_create (&jclients->thread, NULL, jclient_run_thread,
+		  &jclients->jclient);
+  pthread_join (jclients->thread, NULL);
   free (jclients);
 
-  return status;
+  return OW_OK;
 }
 
 static int
 run_all (int blocks_per_transfer, int quality, int priority)
 {
-  uint8_t bus, address;
-  libusb_context *context = NULL;
-  libusb_device **list = NULL;
-  int err, i;
-  ssize_t count = 0;
-  libusb_device *device = NULL;
-  struct libusb_device_descriptor desc;
-  char *dev_name;
-  int status;
+  struct ow_usb_device *devices;
+  struct ow_usb_device *device;
+  struct jclient_thread *jclient;
+  ow_err_t err = ow_get_devices (&devices, &jclient_count);
 
-  err = libusb_init (&context);
-  if (err != LIBUSB_SUCCESS)
+  if (err)
     {
       return err;
     }
 
-  jclient_count = 0;
-  count = libusb_get_device_list (context, &list);
-  jclients = malloc (sizeof (struct jclient_thread *) * count);
-  for (i = 0; i < count; i++)
+  jclients = malloc (sizeof (struct jclient_thread) * jclient_count);
+
+  device = devices;
+  jclient = jclients;
+  for (int i = 0; i < jclient_count; i++, jclient++, device++)
     {
-      device = list[i];
-      err = libusb_get_device_descriptor (device, &desc);
-      if (err)
-	{
-	  continue;
-	}
+      jclient->jclient.bus = device->bus;
+      jclient->jclient.address = device->address;
+      jclient->jclient.blocks_per_transfer = blocks_per_transfer;
+      jclient->jclient.quality = quality;
+      jclient->jclient.priority = priority;
 
-      if (ow_is_valid_device (desc.idVendor, desc.idProduct, &dev_name))
-	{
-	  jclients[jclient_count] = malloc (sizeof (struct jclient_thread));
-	  bus = libusb_get_bus_number (device);
-	  address = libusb_get_device_address (device);
-
-	  jclients[jclient_count]->jclient.bus = bus;
-	  jclients[jclient_count]->jclient.address = address;
-	  jclients[jclient_count]->jclient.blocks_per_transfer =
-	    blocks_per_transfer;
-	  jclients[jclient_count]->jclient.quality = quality;
-	  jclients[jclient_count]->jclient.priority = priority;
-
-	  pthread_create (&jclients[jclient_count]->thread, NULL,
-			  jclient_run_thread,
-			  &jclients[jclient_count]->jclient);
-
-	  jclient_count++;
-	}
+      pthread_create (&jclient->thread, NULL, jclient_run_thread,
+		      &jclient->jclient);
     }
 
-  libusb_free_device_list (list, count);
-  libusb_exit (context);
+  ow_free_usb_device_list (devices, jclient_count);
 
-  if (jclient_count)
+  jclient = jclients;
+  for (int i = 0; i < jclient_count; i++, jclient++)
     {
-      status = 0;
-      for (int i = 0; i < jclient_count; i++)
-	{
-	  pthread_join (jclients[i]->thread, NULL);
-	  status |= ow_resampler_get_status (jclients[i]->jclient.resampler);
-	  free (jclients[i]);
-	}
-      free (jclients);
-    }
-  else
-    {
-      error_print ("No device found\n");
+      pthread_join (jclient->thread, NULL);
     }
 
-  return status;
+  free (jclients);
+
+  return OW_OK;
 }
 
 int
@@ -272,7 +238,7 @@ main (int argc, char *argv[])
 
   if (lflg)
     {
-      ow_err = ow_print_devices ();
+      ow_err = print_devices ();
       if (ow_err)
 	{
 	  fprintf (stderr, "USB error: %s\n", ow_get_err_str (ow_err));

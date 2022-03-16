@@ -151,9 +151,6 @@
 #include "dll.h"
 #include "overwitch.h"
 
-#define OB_SAMPLE_RATE 48000.0
-#define OB_FRAMES_PER_BLOCK 7
-#define OB_BYTES_PER_SAMPLE sizeof(float)
 #define OB_PADDING_SIZE 28
 
 struct ow_engine

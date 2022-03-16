@@ -448,10 +448,9 @@ ow_engine_init (struct ow_engine **engine_,
 {
   int i, err;
   ow_err_t ret = OW_OK;
-  libusb_device **list = NULL;
-  ssize_t count = 0;
-  libusb_device *device;
-  char *name = NULL;
+  libusb_device **devices;
+  ssize_t total = 0;
+  libusb_device **device;
   struct libusb_device_descriptor desc;
   struct ow_engine_usb_blk *blk;
   struct ow_engine *engine = malloc (sizeof (struct ow_engine));
@@ -464,11 +463,11 @@ ow_engine_init (struct ow_engine **engine_,
     }
 
   engine->device_handle = NULL;
-  count = libusb_get_device_list (engine->context, &list);
-  for (i = 0; i < count; i++)
+  total = libusb_get_device_list (engine->context, &devices);
+  device = devices;
+  for (i = 0; i < total; i++, device++)
     {
-      device = list[i];
-      err = libusb_get_device_descriptor (device, &desc);
+      err = libusb_get_device_descriptor (*device, &desc);
       if (err)
 	{
 	  error_print ("Error while getting device description: %s",
@@ -476,11 +475,12 @@ ow_engine_init (struct ow_engine **engine_,
 	  continue;
 	}
 
-      if (ow_is_valid_device (desc.idVendor, desc.idProduct, &name) &&
-	  libusb_get_bus_number (device) == bus &&
-	  libusb_get_device_address (device) == address)
+      if (ow_get_device_desc_from_vid_pid
+	  (desc.idVendor, desc.idProduct, &engine->device_desc)
+	  && libusb_get_bus_number (*device) == bus
+	  && libusb_get_device_address (*device) == address)
 	{
-	  if (libusb_open (device, &engine->device_handle))
+	  if (libusb_open (*device, &engine->device_handle))
 	    {
 	      error_print ("Error while opening device: %s\n",
 			   libusb_error_name (err));
@@ -490,25 +490,9 @@ ow_engine_init (struct ow_engine **engine_,
     }
 
   err = 0;
-  libusb_free_device_list (list, count);
+  libusb_free_device_list (devices, total);
 
   if (!engine->device_handle)
-    {
-      ret = OW_USB_ERROR_CANT_FIND_DEV;
-      goto end;
-    }
-
-  for (const struct ow_device_desc ** d = OB_DEVICE_DESCS; *d != NULL; d++)
-    {
-      debug_print (2, "Checking for %s...\n", (*d)->name);
-      if (strcmp ((*d)->name, name) == 0)
-	{
-	  engine->device_desc = *d;
-	  break;
-	}
-    }
-
-  if (!engine->device_desc)
     {
       ret = OW_USB_ERROR_CANT_FIND_DEV;
       goto end;
@@ -666,6 +650,7 @@ end:
 
 static const char *ob_err_strgs[] = {
   "ok",
+  "generic error",
   "libusb init failed",
   "can't open device",
   "can't set usb config",
@@ -674,15 +659,15 @@ static const char *ob_err_strgs[] = {
   "can't cleat endpoint",
   "can't prepare transfer",
   "can't find a matching device",
-  "'buffer_read_space' not set",
-  "'buffer_write_space' not set",
-  "'buffer_read' not set",
-  "'buffer_write' not set",
-  "'get_time' not set",
+  "'read_space' not set",
+  "'write_space' not set",
+  "'read' not set",
+  "'write' not set",
   "'p2o_audio_buf' not set",
   "'o2p_audio_buf' not set",
   "'p2o_midi_buf' not set",
-  "'o2p_midi_buf' not set"
+  "'o2p_midi_buf' not set",
+  "'get_time' not set"
 };
 
 static void *
@@ -799,15 +784,17 @@ run_audio_o2p_midi (void *data)
       //status == OW_STATUS_BOOT
 
       pthread_spin_lock (&engine->lock);
-
       if (engine->dll_ow)
 	{
 	  ow_dll_overwitch_init (engine->dll_ow, OB_SAMPLE_RATE,
 				 engine->frames_per_transfer,
 				 engine->io_buffers->get_time ());
+	  engine->status = OW_STATUS_WAIT;
 	}
-
-      engine->status = OW_STATUS_WAIT;
+      else
+	{
+	  engine->status = OW_STATUS_RUN;
+	}
       pthread_spin_unlock (&engine->lock);
 
       while (ow_engine_get_status (engine) >= OW_STATUS_WAIT)
@@ -819,8 +806,6 @@ run_audio_o2p_midi (void *data)
 	{
 	  break;
 	}
-
-      ow_engine_set_status (engine, OW_STATUS_BOOT);
 
       rsj2o = engine->io_buffers->read_space (engine->io_buffers->p2o_audio);
       bytes = ow_bytes_to_frame_bytes (rsj2o, engine->p2o_frame_size);
@@ -839,17 +824,9 @@ ow_engine_activate_with_dll (struct ow_engine *engine,
   engine->io_buffers = io_buffers;
   engine->dll_ow = dll_ow;
 
-  if (!io_buffers->read_space)
-    {
-      return OW_INIT_ERROR_NO_READ_SPACE;
-    }
   if (!io_buffers->write_space)
     {
       return OW_INIT_ERROR_NO_WRITE_SPACE;
-    }
-  if (!io_buffers->read)
-    {
-      return OW_INIT_ERROR_NO_READ;
     }
   if (!io_buffers->write)
     {
@@ -859,12 +836,26 @@ ow_engine_activate_with_dll (struct ow_engine *engine,
     {
       return OW_INIT_ERROR_NO_O2P_AUDIO_BUF;
     }
-  if (!io_buffers->p2o_audio)
+
+  if (0)
     {
-      return OW_INIT_ERROR_NO_P2O_AUDIO_BUF;
+      if (!io_buffers->read_space)
+	{
+	  return OW_INIT_ERROR_NO_READ_SPACE;
+	}
+      if (!io_buffers->read)
+	{
+	  return OW_INIT_ERROR_NO_READ;
+	}
+      if (!io_buffers->p2o_audio)
+	{
+	  return OW_INIT_ERROR_NO_P2O_AUDIO_BUF;
+	}
     }
 
-  if (!io_buffers->get_time && !io_buffers->o2p_midi && !io_buffers->p2o_midi)
+  if (1
+      && (!io_buffers->get_time && !io_buffers->o2p_midi
+	  && !io_buffers->p2o_midi))
     {
       engine->midi = 0;
     }
@@ -891,11 +882,11 @@ ow_engine_activate_with_dll (struct ow_engine *engine,
 	{
 	  return OW_INIT_ERROR_NO_GET_TIME;
 	}
+      engine->status = OW_STATUS_READY;
     }
 
   engine->frames = 0;
 
-  engine->status = OW_STATUS_READY;
   if (engine->midi)
     {
       debug_print (1, "Starting j2o MIDI thread...\n");

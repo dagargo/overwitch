@@ -24,5 +24,8 @@
 #include <libgen.h>
 #define _GNU_SOURCE
 #include <getopt.h>
+#include "overwitch.h"
 
 void print_help (const char *, const char *, struct option *);
+
+ow_err_t print_devices ();

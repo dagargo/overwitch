@@ -22,7 +22,11 @@
 #define OVERWITCH_H
 
 #include <stdint.h>
+#include <stdlib.h>
 
+#define OB_SAMPLE_RATE 48000.0
+#define OB_FRAMES_PER_BLOCK 7
+#define OB_BYTES_PER_SAMPLE sizeof(float)
 #define OB_MAX_TRACKS 12
 #define OB_MIDI_EVENT_SIZE 4
 
@@ -54,8 +58,7 @@ typedef enum
   OW_INIT_ERROR_NO_P2O_AUDIO_BUF,
   OW_INIT_ERROR_NO_O2P_MIDI_BUF,
   OW_INIT_ERROR_NO_P2O_MIDI_BUF,
-  OW_INIT_ERROR_NO_GET_TIME,
-  OW_INIT_ERROR_NO_SECONDARY_DLL
+  OW_INIT_ERROR_NO_GET_TIME
 } ow_err_t;
 
 typedef enum
@@ -94,6 +97,15 @@ struct ow_io_buffers
   void *o2p_midi;
 };
 
+struct ow_usb_device
+{
+  char *name;
+  uint16_t vid;
+  uint16_t pid;
+  uint8_t bus;
+  uint8_t address;
+};
+
 struct ow_device_desc
 {
   uint16_t pid;
@@ -118,11 +130,15 @@ extern const struct ow_device_desc *OB_DEVICE_DESCS[];
 //Common
 const char *ow_get_err_str (ow_err_t);
 
-int ow_print_devices ();
+int ow_get_devices (struct ow_usb_device **, ssize_t *);
 
-int ow_get_bus_address (int, char *, uint8_t *, uint8_t *);
+void ow_free_usb_device_list (struct ow_usb_device *, ssize_t);
 
-int ow_is_valid_device (uint16_t, uint16_t, char **);
+int ow_get_device_desc_from_vid_pid (uint16_t, uint16_t,
+				     const struct ow_device_desc **);
+
+int ow_get_usb_device_from_device_attrs (int, const char *,
+					 struct ow_usb_device **);
 
 //Engine
 ow_err_t ow_engine_init (struct ow_engine **, uint8_t, uint8_t, int);
@@ -148,8 +164,9 @@ void ow_engine_stop (struct ow_engine *);
 //Resampler
 ow_err_t ow_resampler_init (struct ow_resampler **, int, int, int, int);
 
-ow_err_t ow_resampler_activate (struct ow_resampler *, struct ow_io_buffers *,
-				int, ow_set_rt_priority_t);
+ow_err_t ow_resampler_activate (struct ow_resampler *,
+				struct ow_io_buffers *, int,
+				ow_set_rt_priority_t);
 
 void ow_resampler_wait (struct ow_resampler *);
 

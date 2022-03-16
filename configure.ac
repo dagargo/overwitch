@@ -20,6 +20,11 @@ PKG_CHECK_MODULES(JACK, jack >= 0.100.0)
 # Checks for header files.
 AC_CHECK_HEADERS([stdio.h unistd.h stdlib.h errno.h string.h signal.h libusb.h limits.h])
 
+PKG_CHECK_MODULES(SNDFILE, sndfile >= 1.0.2, ac_cv_sndfile=1, ac_cv_sndfile=0)
+AC_DEFINE_UNQUOTED([HAVE_SNDFILE],${ac_cv_sndfile}, [Set to 1 if you have libsndfile.])
+AC_SUBST(SNDFILE_CFLAGS)
+AC_SUBST(SNDFILE_LIBS)
+
 PKG_CHECK_MODULES(SAMPLERATE, samplerate >= 0.1.9, ac_cv_samplerate=1, ac_cv_samplerate=0)
 AC_DEFINE_UNQUOTED([HAVE_SAMPLERATE],${ac_cv_samplerate}, [Set to 1 if you have libsamplerate.])
 AC_SUBST(SAMPLERATE_CFLAGS)

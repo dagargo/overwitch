@@ -24,8 +24,9 @@ The package dependencies for Debian based distributions are:
 - libusb-1.0-0-dev
 - libjack-jackd2-dev
 - libsamplerate0-dev
+- libasound2-dev
 
-You can easily install them by running `sudo apt install automake libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev`.
+You can easily install them by running `sudo apt install automake libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev libasound2-dev`.
 
 As this will install `jackd2`, you would be asked to configure it to be run with real time priority. Be sure to answer yes. With this, the `audio` group would be able to run processes with real time priority. Be sure to be in the `audio` group too.
 

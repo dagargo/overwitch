@@ -18,7 +18,6 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
 #include <libusb.h>
 #include <string.h>
 #include "overwitch.h"
@@ -125,133 +124,137 @@ const struct ow_device_desc *OB_DEVICE_DESCS[] = {
   &AHMK1_DESC, &AHMK2_DESC, NULL
 };
 
-int
-ow_print_devices ()
+void
+ow_free_usb_device_list (struct ow_usb_device *devices, ssize_t size)
 {
-  libusb_context *context = NULL;
-  libusb_device **list = NULL;
-  ssize_t count = 0;
-  libusb_device *device;
-  struct libusb_device_descriptor desc;
-  int i, j, err;
-  char *name;
+  int i = 0;
+  struct ow_usb_device *device = devices;
+
+  for (i = 0; i < size; i++, device++)
+    {
+      free (device->name);
+    }
+  free (devices);
+}
+
+int
+ow_get_devices (struct ow_usb_device **devices, ssize_t * size)
+{
+  int i, err;
   uint8_t bus, address;
+  libusb_device **usb_device;
+  struct libusb_device_descriptor desc;
+  struct ow_usb_device *device;
+  const struct ow_device_desc *device_desc;
+  ssize_t total = 0;
+  libusb_context *context = NULL;
+  libusb_device **usb_devices = NULL;
 
   if (libusb_init (&context) != LIBUSB_SUCCESS)
     {
       return 1;
     }
 
-  count = libusb_get_device_list (context, &list);
-  j = 0;
-  for (i = 0; i < count; i++)
+  total = libusb_get_device_list (context, &usb_devices);
+  *devices = malloc (sizeof (struct ow_usb_device) * total);
+  device = *devices;
+  usb_device = usb_devices;
+  *size = 0;
+  for (i = 0; i < total; i++, usb_device++)
     {
-      device = list[i];
-      err = libusb_get_device_descriptor (device, &desc);
+      err = libusb_get_device_descriptor (*usb_device, &desc);
       if (err)
 	{
-	  error_print ("Error while getting device description: %s",
+	  error_print ("Error while getting USB device description: %s",
 		       libusb_error_name (err));
 	  continue;
 	}
 
-      if (ow_is_valid_device (desc.idVendor, desc.idProduct, &name))
+      if (ow_get_device_desc_from_vid_pid
+	  (desc.idVendor, desc.idProduct, &device_desc))
 	{
-	  bus = libusb_get_bus_number (device);
-	  address = libusb_get_device_address (device);
-	  printf ("%d: Bus %03d Device %03d: ID %04x:%04x %s\n", j,
-		  bus, address, desc.idVendor, desc.idProduct, name);
-	  j++;
+	  bus = libusb_get_bus_number (*usb_device);
+	  address = libusb_get_device_address (*usb_device);
+	  debug_print (1, "Bus %03d Device %03d: ID %04x:%04x %s\n",
+		       bus, address, desc.idVendor, desc.idProduct,
+		       device_desc->name);
+	  device->name = strdup (device_desc->name);
+	  device->vid = desc.idVendor;
+	  device->pid = desc.idProduct;
+	  device->bus = bus;
+	  device->address = address;
+	  device++;
+	  (*size)++;
 	}
     }
 
-  libusb_free_device_list (list, count);
+  libusb_free_device_list (usb_devices, total);
   libusb_exit (context);
   return 0;
 }
 
 int
-ow_get_bus_address (int index, char *name, uint8_t * bus, uint8_t * address)
-{
-  libusb_context *context = NULL;
-  libusb_device **list = NULL;
-  int err, i, j;
-  ssize_t count = 0;
-  libusb_device *device = NULL;
-  struct libusb_device_descriptor desc;
-  char *dev_name;
-
-  err = libusb_init (&context);
-  if (err != LIBUSB_SUCCESS)
-    {
-      return err;
-    }
-
-  j = 0;
-  count = libusb_get_device_list (context, &list);
-  for (i = 0; i < count; i++)
-    {
-      device = list[i];
-      err = libusb_get_device_descriptor (device, &desc);
-      if (err)
-	{
-	  error_print ("Error while getting device description: %s",
-		       libusb_error_name (err));
-	  continue;
-	}
-
-      err = 1;
-      if (ow_is_valid_device (desc.idVendor, desc.idProduct, &dev_name))
-	{
-	  if (index >= 0)
-	    {
-	      if (j == index)
-		{
-		  err = 0;
-		  break;
-		}
-	    }
-	  else
-	    {
-	      if (strcmp (name, dev_name) == 0)
-		{
-		  err = 0;
-		  break;
-		}
-	    }
-	  j++;
-	}
-    }
-
-  if (err)
-    {
-      error_print ("No device found\n");
-    }
-  else
-    {
-      *bus = libusb_get_bus_number (device);
-      *address = libusb_get_device_address (device);
-    }
-
-  libusb_free_device_list (list, count);
-  libusb_exit (context);
-  return err;
-}
-
-int
-ow_is_valid_device (uint16_t vid, uint16_t pid, char **name)
+ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
+				 const struct ow_device_desc **device_desc)
 {
   if (vid != ELEKTRON_VID)
     {
       return 0;
     }
-  for (const struct ow_device_desc ** d = OB_DEVICE_DESCS; *d != NULL; d++)
+  for (const struct ow_device_desc ** d = OB_DEVICE_DESCS; *d != NULL; (*d)++)
     {
       if ((*d)->pid == pid)
 	{
-	  *name = (*d)->name;
+	  *device_desc = *d;
 	  return 1;
 	}
     }
   return 0;
+}
+
+int
+ow_get_usb_device_from_device_attrs (int device_num, const char *device_name,
+				     struct ow_usb_device **device)
+{
+  int i;
+  ssize_t total;
+  struct ow_usb_device *usb_devices;
+  struct ow_usb_device *usb_device;
+  ow_err_t err = ow_get_devices (&usb_devices, &total);
+
+  if (err)
+    {
+      return 1;
+    }
+
+  usb_device = usb_devices;
+  for (i = 0; i < total; i++, usb_device++)
+    {
+      if (device_num >= 0)
+	{
+	  if (i == device_num)
+	    {
+	      break;
+	    }
+	}
+      else
+	{
+	  if (strcmp (usb_device->name, device_name) == 0)
+	    {
+	      break;
+	    }
+	}
+    }
+
+  if (i == total)
+    {
+      err = 1;
+    }
+  else
+    {
+      *device = malloc (sizeof (struct ow_usb_device));
+      memcpy (*device, usb_device, sizeof (struct ow_usb_device));
+    }
+
+  return err;
 }
