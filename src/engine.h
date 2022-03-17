@@ -195,11 +195,11 @@ struct ow_engine
   pthread_spinlock_t p2o_midi_lock;
   int p2o_midi_ready;
   struct ow_dll_overwitch *dll_ow;
-  struct ow_io_buffers *io_buffers;
+  struct ow_io_context *io_context;
 };
 
 int ow_bytes_to_frame_bytes (int, int);
 
 ow_err_t ow_engine_activate_with_dll (struct ow_engine *,
-				      struct ow_io_buffers *,
+				      struct ow_io_context *,
 				      struct ow_dll_overwitch *);

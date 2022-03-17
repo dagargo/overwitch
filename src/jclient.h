@@ -39,7 +39,7 @@ struct jclient
   jack_nframes_t bufsize;
   // Overwitch stuff
   struct ow_resampler *resampler;
-  struct ow_io_buffers io_buffers;
+  struct ow_io_context io_context;
 };
 
 int jclient_run (struct jclient *);

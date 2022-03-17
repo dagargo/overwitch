@@ -85,12 +85,12 @@ ow_resampler_reset_buffers (struct ow_resampler *resampler)
   resampler->reading_at_o2p_end = 0;
 
   rso2p =
-    resampler->engine->io_buffers->read_space (resampler->engine->
-					       io_buffers->o2p_audio);
+    resampler->engine->io_context->read_space (resampler->engine->
+					       io_context->o2p_audio);
   bytes =
     ow_bytes_to_frame_bytes (rso2p,
 			     ow_resampler_get_o2p_frame_size (resampler));
-  resampler->engine->io_buffers->read (resampler->engine->io_buffers->
+  resampler->engine->io_context->read (resampler->engine->io_context->
 				       o2p_audio, NULL, bytes);
 }
 
@@ -157,7 +157,7 @@ resampler_o2p_reader (void *cb_data, float **data)
   *data = resampler->o2p_buf_in;
 
   rso2p =
-    resampler->engine->io_buffers->read_space (resampler->engine->io_buffers->
+    resampler->engine->io_context->read_space (resampler->engine->io_context->
 					       o2p_audio);
   if (resampler->reading_at_o2p_end)
     {
@@ -172,8 +172,8 @@ resampler_o2p_reader (void *cb_data, float **data)
 	  frames = rso2p / ow_resampler_get_o2p_frame_size (resampler);
 	  frames = frames > MAX_READ_FRAMES ? MAX_READ_FRAMES : frames;
 	  bytes = frames * ow_resampler_get_o2p_frame_size (resampler);
-	  resampler->engine->io_buffers->read (resampler->engine->
-					       io_buffers->o2p_audio,
+	  resampler->engine->io_context->read (resampler->engine->
+					       io_context->o2p_audio,
 					       (void *) resampler->o2p_buf_in,
 					       bytes);
 	}
@@ -198,8 +198,8 @@ resampler_o2p_reader (void *cb_data, float **data)
 	{
 	  debug_print (2, "o2j: Emptying buffer and running...\n");
 	  bytes = ow_bytes_to_frame_bytes (rso2p, resampler->o2p_bufsize);
-	  resampler->engine->io_buffers->read (resampler->engine->
-					       io_buffers->o2p_audio, NULL,
+	  resampler->engine->io_context->read (resampler->engine->
+					       io_context->o2p_audio, NULL,
 					       bytes);
 	  resampler->reading_at_o2p_end = 1;
 	}
@@ -264,13 +264,13 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
 
   bytes = gen_frames * resampler->engine->p2o_frame_size;
   wsj2o =
-    resampler->engine->io_buffers->write_space (resampler->
-						engine->io_buffers->
+    resampler->engine->io_context->write_space (resampler->
+						engine->io_context->
 						p2o_audio);
 
   if (bytes <= wsj2o)
     {
-      resampler->engine->io_buffers->write (resampler->engine->io_buffers->
+      resampler->engine->io_context->write (resampler->engine->io_context->
 					    p2o_audio,
 					    (void *) resampler->p2o_buf_out,
 					    bytes);
@@ -446,10 +446,10 @@ ow_resampler_destroy (struct ow_resampler *resampler)
 
 ow_err_t
 ow_resampler_activate (struct ow_resampler *resampler,
-		       struct ow_io_buffers *iobuffers,
+		       struct ow_io_context *io_context,
 		       int priority, ow_set_rt_priority_t set_rt_priority)
 {
-  ow_err_t ret = ow_engine_activate_with_dll (resampler->engine, iobuffers,
+  ow_err_t ret = ow_engine_activate_with_dll (resampler->engine, io_context,
 					      &resampler->dll.dll_ow);
   if (!ret)
     {

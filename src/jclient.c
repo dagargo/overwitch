@@ -127,10 +127,10 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   jack_midi_clear_buffer (midi_port_buf);
   last_frames = 0;
 
-  while (jack_ringbuffer_read_space (jclient->io_buffers.o2p_midi) >=
+  while (jack_ringbuffer_read_space (jclient->io_context.o2p_midi) >=
 	 sizeof (struct ow_midi_event))
     {
-      jack_ringbuffer_peek (jclient->io_buffers.o2p_midi, (void *) &event,
+      jack_ringbuffer_peek (jclient->io_context.o2p_midi, (void *) &event,
 			    sizeof (struct ow_midi_event));
 
       event_frames = jack_time_to_frames (jclient->client, event.time);
@@ -157,7 +157,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	}
       last_frames = frames;
 
-      jack_ringbuffer_read_advance (jclient->io_buffers.o2p_midi,
+      jack_ringbuffer_read_advance (jclient->io_context.o2p_midi,
 				    sizeof (struct ow_midi_event));
 
       if (event.bytes[0] == 0x0f)
@@ -252,10 +252,10 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 
       if (oevent.bytes[0])
 	{
-	  if (jack_ringbuffer_write_space (jclient->io_buffers.p2o_midi)
+	  if (jack_ringbuffer_write_space (jclient->io_context.p2o_midi)
 	      >= sizeof (struct ow_midi_event))
 	    {
-	      jack_ringbuffer_write (jclient->io_buffers.p2o_midi,
+	      jack_ringbuffer_write (jclient->io_context.p2o_midi,
 				     (void *) &oevent,
 				     sizeof (struct ow_midi_event));
 	    }
@@ -497,34 +497,34 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
-  jclient->io_buffers.o2p_audio =
+  jclient->io_context.o2p_audio =
     jack_ringbuffer_create (MAX_LATENCY *
 			    ow_resampler_get_o2p_frame_size
 			    (jclient->resampler));
-  jack_ringbuffer_mlock (jclient->io_buffers.o2p_audio);
+  jack_ringbuffer_mlock (jclient->io_context.o2p_audio);
 
-  jclient->io_buffers.p2o_audio =
+  jclient->io_context.p2o_audio =
     jack_ringbuffer_create (MAX_LATENCY *
 			    ow_resampler_get_p2o_frame_size
 			    (jclient->resampler));
-  jack_ringbuffer_mlock (jclient->io_buffers.p2o_audio);
+  jack_ringbuffer_mlock (jclient->io_context.p2o_audio);
 
-  jclient->io_buffers.o2p_midi = jack_ringbuffer_create (MIDI_BUF_SIZE);
-  jack_ringbuffer_mlock (jclient->io_buffers.o2p_midi);
+  jclient->io_context.o2p_midi = jack_ringbuffer_create (MIDI_BUF_SIZE);
+  jack_ringbuffer_mlock (jclient->io_context.o2p_midi);
 
-  jclient->io_buffers.p2o_midi = jack_ringbuffer_create (MIDI_BUF_SIZE);
-  jack_ringbuffer_mlock (jclient->io_buffers.p2o_midi);
+  jclient->io_context.p2o_midi = jack_ringbuffer_create (MIDI_BUF_SIZE);
+  jack_ringbuffer_mlock (jclient->io_context.p2o_midi);
 
-  jclient->io_buffers.read_space =
+  jclient->io_context.read_space =
     (ow_buffer_rw_space_t) jack_ringbuffer_read_space;
-  jclient->io_buffers.write_space =
+  jclient->io_context.write_space =
     (ow_buffer_rw_space_t) jack_ringbuffer_write_space;
-  jclient->io_buffers.read = jclient_buffer_read;
-  jclient->io_buffers.write = (ow_buffer_write_t) jack_ringbuffer_write;
-  jclient->io_buffers.get_time = jclient_get_time;
+  jclient->io_context.read = jclient_buffer_read;
+  jclient->io_context.write = (ow_buffer_write_t) jack_ringbuffer_write;
+  jclient->io_context.get_time = jclient_get_time;
 
   err =
-    ow_resampler_activate (jclient->resampler, &jclient->io_buffers,
+    ow_resampler_activate (jclient->resampler, &jclient->io_context,
 			   jclient->priority, set_rt_priority);
   if (err)
     {
@@ -550,10 +550,10 @@ jclient_run (struct jclient *jclient)
   jack_deactivate (jclient->client);
 
 cleanup_jack:
-  jack_ringbuffer_free (jclient->io_buffers.p2o_audio);
-  jack_ringbuffer_free (jclient->io_buffers.o2p_audio);
-  jack_ringbuffer_free (jclient->io_buffers.p2o_midi);
-  jack_ringbuffer_free (jclient->io_buffers.o2p_midi);
+  jack_ringbuffer_free (jclient->io_context.p2o_audio);
+  jack_ringbuffer_free (jclient->io_context.o2p_audio);
+  jack_ringbuffer_free (jclient->io_context.p2o_midi);
+  jack_ringbuffer_free (jclient->io_context.o2p_midi);
   jack_client_close (jclient->client);
   free (jclient->output_ports);
   free (jclient->input_ports);

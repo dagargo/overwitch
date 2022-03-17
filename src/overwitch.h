@@ -81,7 +81,7 @@ typedef enum
   RES_STATUS_RUN
 } ow_resampler_status_t;
 
-struct ow_io_buffers
+struct ow_io_context
 {
   //Functions
   ow_buffer_rw_space_t write_space;
@@ -143,7 +143,7 @@ int ow_get_usb_device_from_device_attrs (int, const char *,
 //Engine
 ow_err_t ow_engine_init (struct ow_engine **, uint8_t, uint8_t, int);
 
-ow_err_t ow_engine_activate (struct ow_engine *, struct ow_io_buffers *);
+ow_err_t ow_engine_activate (struct ow_engine *, struct ow_io_context *);
 
 void ow_engine_destroy (struct ow_engine *);
 
@@ -165,7 +165,7 @@ void ow_engine_stop (struct ow_engine *);
 ow_err_t ow_resampler_init (struct ow_resampler **, int, int, int, int);
 
 ow_err_t ow_resampler_activate (struct ow_resampler *,
-				struct ow_io_buffers *, int,
+				struct ow_io_context *, int,
 				ow_set_rt_priority_t);
 
 void ow_resampler_wait (struct ow_resampler *);
