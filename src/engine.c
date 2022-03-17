@@ -120,10 +120,10 @@ set_usb_input_data_blks (struct ow_engine *engine)
   ow_engine_status_t status;
 
   pthread_spin_lock (&engine->lock);
-  if (engine->dll_ow)
+  if (engine->context->dll)
     {
-      ow_dll_overwitch_inc (engine->dll_ow, engine->frames_per_transfer,
-			    engine->io_context->get_time ());
+      ow_dll_overwitch_inc (engine->context->dll, engine->frames_per_transfer,
+			    engine->context->get_time ());
     }
   status = engine->status;
   pthread_spin_unlock (&engine->lock);
@@ -150,10 +150,10 @@ set_usb_input_data_blks (struct ow_engine *engine)
       return;
     }
 
-  wso2j = engine->io_context->write_space (engine->io_context->o2p_audio);
+  wso2j = engine->context->write_space (engine->context->o2p_audio);
   if (engine->o2p_transfer_size <= wso2j)
     {
-      engine->io_context->write (engine->io_context->o2p_audio,
+      engine->context->write (engine->context->o2p_audio,
 				 (void *) engine->o2p_transfer_buf,
 				 engine->o2p_transfer_size);
     }
@@ -176,14 +176,14 @@ set_usb_output_data_blks (struct ow_engine *engine)
   int32_t *s;
   int enabled = ow_engine_is_p2o_audio_enable (engine);
 
-  rsj2o = engine->io_context->read_space (engine->io_context->p2o_audio);
+  rsj2o = engine->context->read_space (engine->context->p2o_audio);
   if (!engine->reading_at_p2o_end)
     {
       if (enabled && rsj2o >= engine->p2o_transfer_size)
 	{
 	  debug_print (2, "j2o: Emptying buffer and running...\n");
 	  bytes = ow_bytes_to_frame_bytes (rsj2o, engine->p2o_frame_size);
-	  engine->io_context->read (engine->io_context->p2o_audio, NULL,
+	  engine->context->read (engine->context->p2o_audio, NULL,
 				    bytes);
 	  engine->reading_at_p2o_end = 1;
 	}
@@ -208,7 +208,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
 
   if (rsj2o >= engine->p2o_transfer_size)
     {
-      engine->io_context->read (engine->io_context->p2o_audio,
+      engine->context->read (engine->context->p2o_audio,
 				(void *) engine->p2o_transfer_buf,
 				engine->p2o_transfer_size);
     }
@@ -219,7 +219,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
 		   rsj2o, engine->p2o_transfer_size);
       frames = rsj2o / engine->p2o_frame_size;
       bytes = frames * engine->p2o_frame_size;
-      engine->io_context->read (engine->io_context->p2o_audio,
+      engine->context->read (engine->context->p2o_audio,
 				(void *) engine->p2o_resampler_buf, bytes);
       engine->p2o_data.input_frames = frames;
       engine->p2o_data.src_ratio =
@@ -308,7 +308,7 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
       length = 0;
-      event.time = engine->io_context->get_time ();
+      event.time = engine->context->get_time ();
 
       while (length < xfr->actual_length)
 	{
@@ -322,10 +322,10 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 			   event.bytes[3], event.time);
 
 	      if (engine->
-		  io_context->write_space (engine->io_context->o2p_midi) >=
+		  context->write_space (engine->context->o2p_midi) >=
 		  sizeof (struct ow_midi_event))
 		{
-		  engine->io_context->write (engine->io_context->o2p_midi,
+		  engine->context->write (engine->context->o2p_midi,
 					     (void *) &event,
 					     sizeof (struct ow_midi_event));
 		}
@@ -684,12 +684,12 @@ run_p2o_midi (void *data)
 
   pos = 0;
   diff = 0.0;
-  last_time = engine->io_context->get_time ();
+  last_time = engine->context->get_time ();
   engine->p2o_midi_ready = 1;
   while (1)
     {
 
-      while (engine->io_context->read_space (engine->io_context->p2o_midi) >=
+      while (engine->context->read_space (engine->context->p2o_midi) >=
 	     sizeof (struct ow_midi_event) && pos < USB_BULK_MIDI_SIZE)
 	{
 	  if (!pos)
@@ -700,7 +700,7 @@ run_p2o_midi (void *data)
 
 	  if (!event_read)
 	    {
-	      engine->io_context->read (engine->io_context->p2o_midi,
+	      engine->context->read (engine->context->p2o_midi,
 					(void *) &event,
 					sizeof (struct ow_midi_event));
 	      event_read = 1;
@@ -784,11 +784,11 @@ run_audio_o2p_midi (void *data)
       //status == OW_STATUS_BOOT
 
       pthread_spin_lock (&engine->lock);
-      if (engine->dll_ow)
+      if (engine->context->dll)
 	{
-	  ow_dll_overwitch_init (engine->dll_ow, OB_SAMPLE_RATE,
+	  ow_dll_overwitch_init (engine->context->dll, OB_SAMPLE_RATE,
 				 engine->frames_per_transfer,
-				 engine->io_context->get_time ());
+				 engine->context->get_time ());
 	  engine->status = OW_STATUS_WAIT;
 	}
       else
@@ -807,9 +807,9 @@ run_audio_o2p_midi (void *data)
 	  break;
 	}
 
-      rsj2o = engine->io_context->read_space (engine->io_context->p2o_audio);
+      rsj2o = engine->context->read_space (engine->context->p2o_audio);
       bytes = ow_bytes_to_frame_bytes (rsj2o, engine->p2o_frame_size);
-      engine->io_context->read (engine->io_context->p2o_audio, NULL, bytes);
+      engine->context->read (engine->context->p2o_audio, NULL, bytes);
       memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
     }
 
@@ -817,68 +817,65 @@ run_audio_o2p_midi (void *data)
 }
 
 ow_err_t
-ow_engine_activate_with_dll (struct ow_engine *engine,
-			     struct ow_io_context *io_context,
-			     struct ow_dll_overwitch *dll_ow)
+ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 {
-  engine->io_context = io_context;
-  engine->dll_ow = dll_ow;
+  engine->context = context;
 
-  if (!io_context->write_space)
+  if (!context->write_space)
     {
       return OW_INIT_ERROR_NO_WRITE_SPACE;
     }
-  if (!io_context->write)
+  if (!context->write)
     {
       return OW_INIT_ERROR_NO_WRITE;
     }
-  if (!io_context->o2p_audio)
+  if (!context->o2p_audio)
     {
       return OW_INIT_ERROR_NO_O2P_AUDIO_BUF;
     }
 
   if (0)
     {
-      if (!io_context->read_space)
+      if (!context->read_space)
 	{
 	  return OW_INIT_ERROR_NO_READ_SPACE;
 	}
-      if (!io_context->read)
+      if (!context->read)
 	{
 	  return OW_INIT_ERROR_NO_READ;
 	}
-      if (!io_context->p2o_audio)
+      if (!context->p2o_audio)
 	{
 	  return OW_INIT_ERROR_NO_P2O_AUDIO_BUF;
 	}
     }
 
   if (1
-      && (!io_context->get_time && !io_context->o2p_midi
-	  && !io_context->p2o_midi))
+      && (!context->get_time && !context->o2p_midi
+	  && !context->p2o_midi))
     {
       engine->midi = 0;
     }
   else
     {
-      if (!io_context->get_time)
+      if (!context->get_time)
 	{
 	  return OW_INIT_ERROR_NO_GET_TIME;
 	}
-      if (!io_context->o2p_midi)
+      if (!context->o2p_midi)
 	{
 	  return OW_INIT_ERROR_NO_O2P_MIDI_BUF;
 	}
-      if (!io_context->p2o_midi)
+      if (!context->p2o_midi)
 	{
 	  return OW_INIT_ERROR_NO_P2O_MIDI_BUF;
 	}
       engine->midi = 1;
     }
 
-  if (dll_ow)
+  if (context->dll)
     {
-      if (!io_context->get_time)
+      if (!context->get_time)
 	{
 	  return OW_INIT_ERROR_NO_GET_TIME;
 	}
@@ -907,13 +904,6 @@ ow_engine_activate_with_dll (struct ow_engine *engine,
     }
 
   return OW_OK;
-}
-
-ow_err_t
-ow_engine_activate (struct ow_engine *engine,
-		    struct ow_io_context *io_context)
-{
-  return ow_engine_activate_with_dll (engine, io_context, NULL);
 }
 
 inline void

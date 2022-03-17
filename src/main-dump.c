@@ -28,7 +28,7 @@
 #define DEFAULT_BLOCKS 24
 #define DISK_BUF_LEN (1024 * 1024 * 16)
 
-static struct ow_io_context io_context;
+static struct ow_context context;
 static struct ow_engine *engine;
 static SF_INFO sfinfo;
 static SNDFILE *sf;
@@ -143,15 +143,15 @@ run_dump (int device_num, char *device_name)
   debug_print (1, "Creating sample...\n");
   sf = sf_open ("dump.wav", SFM_WRITE, &sfinfo);
 
-  io_context.write_space = buffer_write_space;
-  io_context.write = buffer_write;
-  io_context.o2p_audio = sf;
+  context.write_space = buffer_write_space;
+  context.write = buffer_write;
+  context.o2p_audio = sf;
 
-  io_context.read_space = buffer_write_space;
-  io_context.read = buffer_read;
-  io_context.o2p_audio = sf;
+  context.read_space = buffer_write_space;
+  context.read = buffer_read;
+  context.o2p_audio = sf;
 
-  err = ow_engine_activate (engine, &io_context);
+  err = ow_engine_activate (engine, &context);
   if (err)
     {
       goto cleanup;

@@ -36,6 +36,9 @@ typedef size_t (*ow_buffer_write_t) (void *, const char *, size_t);
 
 typedef double (*ow_get_time_t) ();	//Time in seconds
 
+typedef size_t (*ow_dll_overwitch_init_t) (void*, double, int, double);
+typedef size_t (*ow_dll_overwitch_inc_t) (void *,  int, double);
+
 typedef void (*ow_set_rt_priority_t) (pthread_t *, int);
 
 typedef enum
@@ -81,20 +84,24 @@ typedef enum
   RES_STATUS_RUN
 } ow_resampler_status_t;
 
-struct ow_io_context
+struct ow_context
 {
   //Functions
   ow_buffer_rw_space_t write_space;
   ow_buffer_write_t write;
   ow_buffer_rw_space_t read_space;
   ow_buffer_read_t read;
-  //Needed for MIDI
+  //Needed for MIDI and the DLL
   ow_get_time_t get_time;
   //Data
   void *p2o_audio;
   void *o2p_audio;
   void *p2o_midi;
   void *o2p_midi;
+  //DLL
+  void * dll;
+  ow_dll_overwitch_init_t dll_init;
+  ow_dll_overwitch_inc_t dll_inc;
 };
 
 struct ow_usb_device
@@ -143,7 +150,7 @@ int ow_get_usb_device_from_device_attrs (int, const char *,
 //Engine
 ow_err_t ow_engine_init (struct ow_engine **, uint8_t, uint8_t, int);
 
-ow_err_t ow_engine_activate (struct ow_engine *, struct ow_io_context *);
+ow_err_t ow_engine_activate (struct ow_engine *, struct ow_context *);
 
 void ow_engine_destroy (struct ow_engine *);
 
@@ -165,7 +172,7 @@ void ow_engine_stop (struct ow_engine *);
 ow_err_t ow_resampler_init (struct ow_resampler **, int, int, int, int);
 
 ow_err_t ow_resampler_activate (struct ow_resampler *,
-				struct ow_io_context *, int,
+				struct ow_context *, int,
 				ow_set_rt_priority_t);
 
 void ow_resampler_wait (struct ow_resampler *);
