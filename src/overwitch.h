@@ -36,8 +36,8 @@ typedef size_t (*ow_buffer_write_t) (void *, const char *, size_t);
 
 typedef double (*ow_get_time_t) ();	//Time in seconds
 
-typedef size_t (*ow_dll_overwitch_init_t) (void*, double, int, double);
-typedef size_t (*ow_dll_overwitch_inc_t) (void *,  int, double);
+typedef size_t (*ow_dll_overwitch_init_t) (void *, double, int, double);
+typedef size_t (*ow_dll_overwitch_inc_t) (void *, int, double);
 
 typedef void (*ow_set_rt_priority_t) (pthread_t *, int);
 
@@ -61,7 +61,8 @@ typedef enum
   OW_INIT_ERROR_NO_P2O_AUDIO_BUF,
   OW_INIT_ERROR_NO_O2P_MIDI_BUF,
   OW_INIT_ERROR_NO_P2O_MIDI_BUF,
-  OW_INIT_ERROR_NO_GET_TIME
+  OW_INIT_ERROR_NO_GET_TIME,
+  OW_INIT_ERROR_NO_DLL
 } ow_err_t;
 
 typedef enum
@@ -84,6 +85,15 @@ typedef enum
   RES_STATUS_RUN
 } ow_resampler_status_t;
 
+typedef enum
+{
+  OW_ENGINE_OPTION_O2P_AUDIO = 1,
+  OW_ENGINE_OPTION_P2O_AUDIO = 2,
+  OW_ENGINE_OPTION_O2P_MIDI = 4,
+  OW_ENGINE_OPTION_P2O_MIDI = 8,
+  OW_ENGINE_OPTION_DLL = 16,
+} ow_engine_option_t;
+
 struct ow_context
 {
   //Functions
@@ -99,9 +109,11 @@ struct ow_context
   void *p2o_midi;
   void *o2p_midi;
   //DLL
-  void * dll;
+  void *dll;
   ow_dll_overwitch_init_t dll_init;
   ow_dll_overwitch_inc_t dll_inc;
+  //Options
+  int options;
 };
 
 struct ow_usb_device

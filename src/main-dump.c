@@ -98,12 +98,6 @@ buffer_write (void *data, const char *buff, size_t size)
   return size;
 }
 
-static size_t
-buffer_read (void *data, char *buff, size_t size)
-{
-  return size;
-}
-
 static void
 signal_handler (int signo)
 {
@@ -146,10 +140,7 @@ run_dump (int device_num, char *device_name)
   context.write_space = buffer_write_space;
   context.write = buffer_write;
   context.o2p_audio = sf;
-
-  context.read_space = buffer_write_space;
-  context.read = buffer_read;
-  context.o2p_audio = sf;
+  context.options = OW_ENGINE_OPTION_O2P_AUDIO;
 
   err = ow_engine_activate (engine, &context);
   if (err)

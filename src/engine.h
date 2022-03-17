@@ -155,18 +155,21 @@
 
 struct ow_engine
 {
-  int midi;
   ow_engine_status_t status;
   int blocks_per_transfer;
   int frames_per_transfer;
-  int p2o_audio_enabled;
   pthread_spinlock_t lock;
   size_t p2o_latency;
   size_t p2o_max_latency;
   pthread_t audio_o2p_midi_thread;
   pthread_t p2o_midi_thread;
-  uint16_t frames;
   const struct ow_device_desc *device_desc;
+  size_t p2o_transfer_size;
+  size_t o2p_transfer_size;
+  float *p2o_transfer_buf;
+  float *o2p_transfer_buf;
+  size_t o2p_frame_size;
+  size_t p2o_frame_size;
   struct
   {
     libusb_context *context;
@@ -175,19 +178,14 @@ struct ow_engine
     struct libusb_transfer *xfr_out;
     struct libusb_transfer *xfr_out_midi;
     struct libusb_transfer *xfr_in_midi;
+    char *data_in;
+    char *data_out;
+    size_t data_in_blk_len;
+    size_t data_out_blk_len;
+    int data_in_len;
+    int data_out_len;
+    uint16_t frames;
   } usb;
-  char *usb_data_in;
-  char *usb_data_out;
-  size_t usb_data_in_blk_len;
-  size_t usb_data_out_blk_len;
-  size_t p2o_transfer_size;
-  size_t o2p_transfer_size;
-  int usb_data_in_len;
-  int usb_data_out_len;
-  float *p2o_transfer_buf;
-  float *o2p_transfer_buf;
-  size_t o2p_frame_size;
-  size_t p2o_frame_size;
   //j2o resampler
   float *p2o_resampler_buf;
   SRC_DATA p2o_data;
@@ -198,6 +196,14 @@ struct ow_engine
   pthread_spinlock_t p2o_midi_lock;
   int p2o_midi_ready;
   struct ow_context *context;
+  struct
+  {
+    int o2p_audio;
+    int p2o_audio;
+    int o2p_midi;
+    int p2o_midi;
+    int dll;
+  } options;
 };
 
 int ow_bytes_to_frame_bytes (int, int);

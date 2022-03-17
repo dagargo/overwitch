@@ -52,21 +52,21 @@ struct ow_engine_usb_blk
   int32_t data[];
 };
 
-static void prepare_cycle_in ();
-static void prepare_cycle_out ();
+static void prepare_cycle_in_audio ();
+static void prepare_cycle_out_audio ();
 static void prepare_cycle_in_midi ();
 
 static struct ow_engine_usb_blk *
 get_nth_usb_in_blk (struct ow_engine *engine, int n)
 {
-  char *blk = &engine->usb_data_in[n * engine->usb_data_in_blk_len];
+  char *blk = &engine->usb.data_in[n * engine->usb.data_in_blk_len];
   return (struct ow_engine_usb_blk *) blk;
 }
 
 static struct ow_engine_usb_blk *
 get_nth_usb_out_blk (struct ow_engine *engine, int n)
 {
-  char *blk = &engine->usb_data_out[n * engine->usb_data_out_blk_len];
+  char *blk = &engine->usb.data_out[n * engine->usb.data_out_blk_len];
   return (struct ow_engine_usb_blk *) blk;
 }
 
@@ -154,8 +154,8 @@ set_usb_input_data_blks (struct ow_engine *engine)
   if (engine->o2p_transfer_size <= wso2j)
     {
       engine->context->write (engine->context->o2p_audio,
-				 (void *) engine->o2p_transfer_buf,
-				 engine->o2p_transfer_size);
+			      (void *) engine->o2p_transfer_buf,
+			      engine->o2p_transfer_size);
     }
   else
     {
@@ -176,21 +176,22 @@ set_usb_output_data_blks (struct ow_engine *engine)
   int32_t *s;
   int enabled = ow_engine_is_p2o_audio_enable (engine);
 
-  rsj2o = engine->context->read_space (engine->context->p2o_audio);
-  if (!engine->reading_at_p2o_end)
+  if (enabled)
     {
-      if (enabled && rsj2o >= engine->p2o_transfer_size)
+      rsj2o = engine->context->read_space (engine->context->p2o_audio);
+      if (!engine->reading_at_p2o_end)
 	{
-	  debug_print (2, "j2o: Emptying buffer and running...\n");
-	  bytes = ow_bytes_to_frame_bytes (rsj2o, engine->p2o_frame_size);
-	  engine->context->read (engine->context->p2o_audio, NULL,
-				    bytes);
-	  engine->reading_at_p2o_end = 1;
+	  if (enabled && rsj2o >= engine->p2o_transfer_size)
+	    {
+	      debug_print (2, "j2o: Emptying buffer and running...\n");
+	      bytes = ow_bytes_to_frame_bytes (rsj2o, engine->p2o_frame_size);
+	      engine->context->read (engine->context->p2o_audio, NULL, bytes);
+	      engine->reading_at_p2o_end = 1;
+	    }
+	  goto set_blocks;
 	}
-      goto set_blocks;
     }
-
-  if (!enabled)
+  else
     {
       engine->reading_at_p2o_end = 0;
       debug_print (2, "j2o: Clearing buffer and stopping...\n");
@@ -209,8 +210,8 @@ set_usb_output_data_blks (struct ow_engine *engine)
   if (rsj2o >= engine->p2o_transfer_size)
     {
       engine->context->read (engine->context->p2o_audio,
-				(void *) engine->p2o_transfer_buf,
-				engine->p2o_transfer_size);
+			     (void *) engine->p2o_transfer_buf,
+			     engine->p2o_transfer_size);
     }
   else
     {
@@ -220,7 +221,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
       frames = rsj2o / engine->p2o_frame_size;
       bytes = frames * engine->p2o_frame_size;
       engine->context->read (engine->context->p2o_audio,
-				(void *) engine->p2o_resampler_buf, bytes);
+			     (void *) engine->p2o_resampler_buf, bytes);
       engine->p2o_data.input_frames = frames;
       engine->p2o_data.src_ratio =
 	(double) engine->frames_per_transfer / frames;
@@ -247,8 +248,8 @@ set_blocks:
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
       blk = get_nth_usb_out_blk (engine, i);
-      engine->frames += OB_FRAMES_PER_BLOCK;
-      blk->frames = htobe16 (engine->frames);
+      engine->usb.frames += OB_FRAMES_PER_BLOCK;
+      blk->frames = htobe16 (engine->usb.frames);
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
@@ -276,7 +277,7 @@ cb_xfr_in (struct libusb_transfer *xfr)
 		   libusb_strerror (xfr->status));
     }
   // start new cycle even if this one did not succeed
-  prepare_cycle_in (xfr->user_data);
+  prepare_cycle_in_audio (xfr->user_data);
 }
 
 static void LIBUSB_CALL
@@ -290,7 +291,7 @@ cb_xfr_out (struct libusb_transfer *xfr)
   set_usb_output_data_blks (xfr->user_data);
   // We have to make sure that the out cycle is always started after its callback
   // Race condition on slower systems!
-  prepare_cycle_out (xfr->user_data);
+  prepare_cycle_out_audio (xfr->user_data);
 }
 
 static void LIBUSB_CALL
@@ -321,13 +322,12 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 			   event.bytes[0], event.bytes[1], event.bytes[2],
 			   event.bytes[3], event.time);
 
-	      if (engine->
-		  context->write_space (engine->context->o2p_midi) >=
+	      if (engine->context->write_space (engine->context->o2p_midi) >=
 		  sizeof (struct ow_midi_event))
 		{
 		  engine->context->write (engine->context->o2p_midi,
-					     (void *) &event,
-					     sizeof (struct ow_midi_event));
+					  (void *) &event,
+					  sizeof (struct ow_midi_event));
 		}
 	      else
 		{
@@ -368,11 +368,12 @@ cb_xfr_out_midi (struct libusb_transfer *xfr)
 }
 
 static void
-prepare_cycle_out (struct ow_engine *engine)
+prepare_cycle_out_audio (struct ow_engine *engine)
 {
-  libusb_fill_interrupt_transfer (engine->usb.xfr_out, engine->usb.device_handle,
-				  AUDIO_OUT_EP, (void *) engine->usb_data_out,
-				  engine->usb_data_out_len, cb_xfr_out,
+  libusb_fill_interrupt_transfer (engine->usb.xfr_out,
+				  engine->usb.device_handle, AUDIO_OUT_EP,
+				  (void *) engine->usb.data_out,
+				  engine->usb.data_out_len, cb_xfr_out,
 				  engine, 0);
 
   int err = libusb_submit_transfer (engine->usb.xfr_out);
@@ -385,11 +386,12 @@ prepare_cycle_out (struct ow_engine *engine)
 }
 
 static void
-prepare_cycle_in (struct ow_engine *engine)
+prepare_cycle_in_audio (struct ow_engine *engine)
 {
-  libusb_fill_interrupt_transfer (engine->usb.xfr_in, engine->usb.device_handle,
-				  AUDIO_IN_EP, (void *) engine->usb_data_in,
-				  engine->usb_data_in_len, cb_xfr_in, engine,
+  libusb_fill_interrupt_transfer (engine->usb.xfr_in,
+				  engine->usb.device_handle, AUDIO_IN_EP,
+				  (void *) engine->usb.data_in,
+				  engine->usb.data_in_len, cb_xfr_in, engine,
 				  0);
 
   int err = libusb_submit_transfer (engine->usb.xfr_in);
@@ -404,8 +406,9 @@ prepare_cycle_in (struct ow_engine *engine)
 static void
 prepare_cycle_in_midi (struct ow_engine *engine)
 {
-  libusb_fill_bulk_transfer (engine->usb.xfr_in_midi, engine->usb.device_handle,
-			     MIDI_IN_EP, (void *) engine->o2p_midi_data,
+  libusb_fill_bulk_transfer (engine->usb.xfr_in_midi,
+			     engine->usb.device_handle, MIDI_IN_EP,
+			     (void *) engine->o2p_midi_data,
 			     USB_BULK_MIDI_SIZE, cb_xfr_in_midi, engine, 0);
 
   int err = libusb_submit_transfer (engine->usb.xfr_in_midi);
@@ -420,8 +423,9 @@ prepare_cycle_in_midi (struct ow_engine *engine)
 static void
 prepare_cycle_out_midi (struct ow_engine *engine)
 {
-  libusb_fill_bulk_transfer (engine->usb.xfr_out_midi, engine->usb.device_handle,
-			     MIDI_OUT_EP, (void *) engine->p2o_midi_data,
+  libusb_fill_bulk_transfer (engine->usb.xfr_out_midi,
+			     engine->usb.device_handle, MIDI_OUT_EP,
+			     (void *) engine->p2o_midi_data,
 			     USB_BULK_MIDI_SIZE, cb_xfr_out_midi, engine, 0);
 
   int err = libusb_submit_transfer (engine->usb.xfr_out_midi);
@@ -582,23 +586,21 @@ end:
       engine->frames_per_transfer =
 	OB_FRAMES_PER_BLOCK * engine->blocks_per_transfer;
 
-      engine->p2o_audio_enabled = 0;
-
-      engine->usb_data_in_blk_len =
+      engine->usb.data_in_blk_len =
 	sizeof (struct ow_engine_usb_blk) +
 	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * engine->device_desc->outputs;
-      engine->usb_data_out_blk_len =
+      engine->usb.data_out_blk_len =
 	sizeof (struct ow_engine_usb_blk) +
 	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * engine->device_desc->inputs;
 
-      engine->usb_data_in_len =
-	engine->usb_data_in_blk_len * engine->blocks_per_transfer;
-      engine->usb_data_out_len =
-	engine->usb_data_out_blk_len * engine->blocks_per_transfer;
-      engine->usb_data_in = malloc (engine->usb_data_in_len);
-      engine->usb_data_out = malloc (engine->usb_data_out_len);
-      memset (engine->usb_data_in, 0, engine->usb_data_in_len);
-      memset (engine->usb_data_out, 0, engine->usb_data_out_len);
+      engine->usb.data_in_len =
+	engine->usb.data_in_blk_len * engine->blocks_per_transfer;
+      engine->usb.data_out_len =
+	engine->usb.data_out_blk_len * engine->blocks_per_transfer;
+      engine->usb.data_in = malloc (engine->usb.data_in_len);
+      engine->usb.data_out = malloc (engine->usb.data_out_len);
+      memset (engine->usb.data_in, 0, engine->usb.data_in_len);
+      memset (engine->usb.data_out, 0, engine->usb.data_out_len);
 
       for (int i = 0; i < engine->blocks_per_transfer; i++)
 	{
@@ -659,15 +661,16 @@ static const char *ob_err_strgs[] = {
   "can't cleat endpoint",
   "can't prepare transfer",
   "can't find a matching device",
-  "'read_space' not set",
-  "'write_space' not set",
-  "'read' not set",
-  "'write' not set",
-  "'p2o_audio_buf' not set",
-  "'o2p_audio_buf' not set",
-  "'p2o_midi_buf' not set",
-  "'o2p_midi_buf' not set",
-  "'get_time' not set"
+  "'read_space' not set in context",
+  "'write_space' not set in context",
+  "'read' not set in context",
+  "'write' not set in context",
+  "'p2o_audio_buf' not set in context",
+  "'o2p_audio_buf' not set in context",
+  "'p2o_midi_buf' not set in context",
+  "'o2p_midi_buf' not set in context",
+  "'get_time' not set in context",
+  "'dll' not set in context"
 };
 
 static void *
@@ -701,8 +704,8 @@ run_p2o_midi (void *data)
 	  if (!event_read)
 	    {
 	      engine->context->read (engine->context->p2o_midi,
-					(void *) &event,
-					sizeof (struct ow_midi_event));
+				     (void *) &event,
+				     sizeof (struct ow_midi_event));
 	      event_read = 1;
 	    }
 
@@ -768,9 +771,9 @@ run_audio_o2p_midi (void *data)
 
   //status == OW_STATUS_BOOT
 
-  prepare_cycle_in (engine);
-  prepare_cycle_out (engine);
-  if (engine->midi)
+  prepare_cycle_in_audio (engine);
+  prepare_cycle_out_audio (engine);
+  if (engine->options.o2p_midi)
     {
       prepare_cycle_in_midi (engine);
     }
@@ -821,20 +824,30 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 {
   engine->context = context;
 
-  if (!context->write_space)
+  if (!context->options)
     {
-      return OW_INIT_ERROR_NO_WRITE_SPACE;
-    }
-  if (!context->write)
-    {
-      return OW_INIT_ERROR_NO_WRITE;
-    }
-  if (!context->o2p_audio)
-    {
-      return OW_INIT_ERROR_NO_O2P_AUDIO_BUF;
+      return OW_GENERIC_ERROR;
     }
 
-  if (0)
+  engine->options.o2p_audio = context->options & OW_ENGINE_OPTION_O2P_AUDIO;
+  if (engine->options.o2p_audio)
+    {
+      if (!context->write_space)
+	{
+	  return OW_INIT_ERROR_NO_WRITE_SPACE;
+	}
+      if (!context->write)
+	{
+	  return OW_INIT_ERROR_NO_WRITE;
+	}
+      if (!context->o2p_audio)
+	{
+	  return OW_INIT_ERROR_NO_O2P_AUDIO_BUF;
+	}
+    }
+
+  engine->options.p2o_audio = context->options & OW_ENGINE_OPTION_P2O_AUDIO;
+  if (engine->options.p2o_audio)
     {
       if (!context->read_space)
 	{
@@ -850,13 +863,8 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 	}
     }
 
-  if (1
-      && (!context->get_time && !context->o2p_midi
-	  && !context->p2o_midi))
-    {
-      engine->midi = 0;
-    }
-  else
+  engine->options.o2p_midi = context->options & OW_ENGINE_OPTION_O2P_MIDI;
+  if (engine->options.o2p_midi)
     {
       if (!context->get_time)
 	{
@@ -866,27 +874,40 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 	{
 	  return OW_INIT_ERROR_NO_O2P_MIDI_BUF;
 	}
-      if (!context->p2o_midi)
-	{
-	  return OW_INIT_ERROR_NO_P2O_MIDI_BUF;
-	}
-      engine->midi = 1;
     }
 
-  if (context->dll)
+  engine->options.p2o_midi = context->options & OW_ENGINE_OPTION_P2O_MIDI;
+  if (engine->options.p2o_midi)
     {
       if (!context->get_time)
 	{
 	  return OW_INIT_ERROR_NO_GET_TIME;
 	}
+      if (!context->p2o_midi)
+	{
+	  return OW_INIT_ERROR_NO_P2O_MIDI_BUF;
+	}
+    }
+
+  engine->options.dll = context->options & OW_ENGINE_OPTION_DLL;
+  if (engine->options.dll)
+    {
+      if (!context->get_time)
+	{
+	  return OW_INIT_ERROR_NO_GET_TIME;
+	}
+      if (!context->dll)
+	{
+	  return OW_INIT_ERROR_NO_DLL;
+	}
       engine->status = OW_STATUS_READY;
     }
 
-  engine->frames = 0;
+  engine->usb.frames = 0;
 
-  if (engine->midi)
+  if (engine->options.p2o_midi)
     {
-      debug_print (1, "Starting j2o MIDI thread...\n");
+      debug_print (1, "Starting p2o MIDI thread...\n");
       if (pthread_create (&engine->p2o_midi_thread, NULL, run_p2o_midi,
 			  engine))
 	{
@@ -895,12 +916,16 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 	}
     }
 
-  debug_print (1, "Starting audio and o2j MIDI thread...\n");
-  if (pthread_create (&engine->audio_o2p_midi_thread, NULL,
-		      run_audio_o2p_midi, engine))
+  if (engine->options.o2p_midi || engine->options.o2p_audio
+      || engine->options.p2o_audio)
     {
-      error_print ("Could not start device thread\n");
-      return OW_GENERIC_ERROR;
+      debug_print (1, "Starting audio and o2p MIDI thread...\n");
+      if (pthread_create (&engine->audio_o2p_midi_thread, NULL,
+			  run_audio_o2p_midi, engine))
+	{
+	  error_print ("Could not start device thread\n");
+	  return OW_GENERIC_ERROR;
+	}
     }
 
   return OW_OK;
@@ -910,7 +935,7 @@ inline void
 ow_engine_wait (struct ow_engine *engine)
 {
   pthread_join (engine->audio_o2p_midi_thread, NULL);
-  if (engine->midi)
+  if (engine->options.o2p_midi)
     {
       pthread_join (engine->p2o_midi_thread, NULL);
     }
@@ -930,8 +955,8 @@ ow_engine_destroy (struct ow_engine *engine)
   free (engine->p2o_transfer_buf);
   free (engine->p2o_resampler_buf);
   free (engine->o2p_transfer_buf);
-  free (engine->usb_data_in);
-  free (engine->usb_data_out);
+  free (engine->usb.data_in);
+  free (engine->usb.data_out);
   free (engine->p2o_midi_data);
   free (engine->o2p_midi_data);
   pthread_spin_destroy (&engine->lock);
@@ -962,7 +987,7 @@ ow_engine_is_p2o_audio_enable (struct ow_engine *engine)
 {
   int enabled;
   pthread_spin_lock (&engine->lock);
-  enabled = engine->p2o_audio_enabled;
+  enabled = engine->options.p2o_audio;
   pthread_spin_unlock (&engine->lock);
   return enabled;
 }
@@ -974,7 +999,7 @@ ow_engine_set_p2o_audio_enable (struct ow_engine *engine, int enabled)
   if (last != enabled)
     {
       pthread_spin_lock (&engine->lock);
-      engine->p2o_audio_enabled = enabled;
+      engine->options.p2o_audio = enabled;
       pthread_spin_unlock (&engine->lock);
       debug_print (1, "Setting j2o audio to %d...\n", enabled);
     }
