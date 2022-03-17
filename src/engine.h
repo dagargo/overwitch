@@ -166,11 +166,16 @@ struct ow_engine
   pthread_t audio_o2p_midi_thread;
   pthread_t p2o_midi_thread;
   uint16_t frames;
-  libusb_context *context;
-  libusb_device_handle *device_handle;
   const struct ow_device_desc *device_desc;
-  struct libusb_transfer *xfr_in;
-  struct libusb_transfer *xfr_out;
+  struct
+  {
+    libusb_context *context;
+    libusb_device_handle *device_handle;
+    struct libusb_transfer *xfr_in;
+    struct libusb_transfer *xfr_out;
+    struct libusb_transfer *xfr_out_midi;
+    struct libusb_transfer *xfr_in_midi;
+  } usb;
   char *usb_data_in;
   char *usb_data_out;
   size_t usb_data_in_blk_len;
@@ -189,8 +194,6 @@ struct ow_engine
   //MIDI
   unsigned char *p2o_midi_data;
   unsigned char *o2p_midi_data;
-  struct libusb_transfer *xfr_out_midi;
-  struct libusb_transfer *xfr_in_midi;
   int reading_at_p2o_end;
   pthread_spinlock_t p2o_midi_lock;
   int p2o_midi_ready;

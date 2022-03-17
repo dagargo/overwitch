@@ -73,26 +73,26 @@ get_nth_usb_out_blk (struct ow_engine *engine, int n)
 static int
 prepare_transfers (struct ow_engine *engine)
 {
-  engine->xfr_in = libusb_alloc_transfer (0);
-  if (!engine->xfr_in)
+  engine->usb.xfr_in = libusb_alloc_transfer (0);
+  if (!engine->usb.xfr_in)
     {
       return -ENOMEM;
     }
 
-  engine->xfr_out = libusb_alloc_transfer (0);
-  if (!engine->xfr_out)
+  engine->usb.xfr_out = libusb_alloc_transfer (0);
+  if (!engine->usb.xfr_out)
     {
       return -ENOMEM;
     }
 
-  engine->xfr_in_midi = libusb_alloc_transfer (0);
-  if (!engine->xfr_in_midi)
+  engine->usb.xfr_in_midi = libusb_alloc_transfer (0);
+  if (!engine->usb.xfr_in_midi)
     {
       return -ENOMEM;
     }
 
-  engine->xfr_out_midi = libusb_alloc_transfer (0);
-  if (!engine->xfr_out_midi)
+  engine->usb.xfr_out_midi = libusb_alloc_transfer (0);
+  if (!engine->usb.xfr_out_midi)
     {
       return -ENOMEM;
     }
@@ -103,10 +103,10 @@ prepare_transfers (struct ow_engine *engine)
 static void
 free_transfers (struct ow_engine *engine)
 {
-  libusb_free_transfer (engine->xfr_in);
-  libusb_free_transfer (engine->xfr_out);
-  libusb_free_transfer (engine->xfr_in_midi);
-  libusb_free_transfer (engine->xfr_out_midi);
+  libusb_free_transfer (engine->usb.xfr_in);
+  libusb_free_transfer (engine->usb.xfr_out);
+  libusb_free_transfer (engine->usb.xfr_in_midi);
+  libusb_free_transfer (engine->usb.xfr_out_midi);
 }
 
 static void
@@ -321,8 +321,8 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 			   event.bytes[0], event.bytes[1], event.bytes[2],
 			   event.bytes[3], event.time);
 
-	      if (engine->io_context->
-		  write_space (engine->io_context->o2p_midi) >=
+	      if (engine->
+		  io_context->write_space (engine->io_context->o2p_midi) >=
 		  sizeof (struct ow_midi_event))
 		{
 		  engine->io_context->write (engine->io_context->o2p_midi,
@@ -370,12 +370,12 @@ cb_xfr_out_midi (struct libusb_transfer *xfr)
 static void
 prepare_cycle_out (struct ow_engine *engine)
 {
-  libusb_fill_interrupt_transfer (engine->xfr_out, engine->device_handle,
+  libusb_fill_interrupt_transfer (engine->usb.xfr_out, engine->usb.device_handle,
 				  AUDIO_OUT_EP, (void *) engine->usb_data_out,
 				  engine->usb_data_out_len, cb_xfr_out,
 				  engine, 0);
 
-  int err = libusb_submit_transfer (engine->xfr_out);
+  int err = libusb_submit_transfer (engine->usb.xfr_out);
   if (err)
     {
       error_print ("j2o: Error when submitting USB audio transfer: %s\n",
@@ -387,12 +387,12 @@ prepare_cycle_out (struct ow_engine *engine)
 static void
 prepare_cycle_in (struct ow_engine *engine)
 {
-  libusb_fill_interrupt_transfer (engine->xfr_in, engine->device_handle,
+  libusb_fill_interrupt_transfer (engine->usb.xfr_in, engine->usb.device_handle,
 				  AUDIO_IN_EP, (void *) engine->usb_data_in,
 				  engine->usb_data_in_len, cb_xfr_in, engine,
 				  0);
 
-  int err = libusb_submit_transfer (engine->xfr_in);
+  int err = libusb_submit_transfer (engine->usb.xfr_in);
   if (err)
     {
       error_print ("o2j: Error when submitting USB audio in transfer: %s\n",
@@ -404,11 +404,11 @@ prepare_cycle_in (struct ow_engine *engine)
 static void
 prepare_cycle_in_midi (struct ow_engine *engine)
 {
-  libusb_fill_bulk_transfer (engine->xfr_in_midi, engine->device_handle,
+  libusb_fill_bulk_transfer (engine->usb.xfr_in_midi, engine->usb.device_handle,
 			     MIDI_IN_EP, (void *) engine->o2p_midi_data,
 			     USB_BULK_MIDI_SIZE, cb_xfr_in_midi, engine, 0);
 
-  int err = libusb_submit_transfer (engine->xfr_in_midi);
+  int err = libusb_submit_transfer (engine->usb.xfr_in_midi);
   if (err)
     {
       error_print ("o2j: Error when submitting USB MIDI transfer: %s\n",
@@ -420,11 +420,11 @@ prepare_cycle_in_midi (struct ow_engine *engine)
 static void
 prepare_cycle_out_midi (struct ow_engine *engine)
 {
-  libusb_fill_bulk_transfer (engine->xfr_out_midi, engine->device_handle,
+  libusb_fill_bulk_transfer (engine->usb.xfr_out_midi, engine->usb.device_handle,
 			     MIDI_OUT_EP, (void *) engine->p2o_midi_data,
 			     USB_BULK_MIDI_SIZE, cb_xfr_out_midi, engine, 0);
 
-  int err = libusb_submit_transfer (engine->xfr_out_midi);
+  int err = libusb_submit_transfer (engine->usb.xfr_out_midi);
   if (err)
     {
       error_print ("j2o: Error when submitting USB MIDI transfer: %s\n",
@@ -436,8 +436,8 @@ prepare_cycle_out_midi (struct ow_engine *engine)
 static void
 usb_shutdown (struct ow_engine *engine)
 {
-  libusb_close (engine->device_handle);
-  libusb_exit (engine->context);
+  libusb_close (engine->usb.device_handle);
+  libusb_exit (engine->usb.context);
 }
 
 // initialization taken from sniffed session
@@ -456,14 +456,14 @@ ow_engine_init (struct ow_engine **engine_,
   struct ow_engine *engine = malloc (sizeof (struct ow_engine));
 
   // libusb setup
-  if (libusb_init (&engine->context) != LIBUSB_SUCCESS)
+  if (libusb_init (&engine->usb.context) != LIBUSB_SUCCESS)
     {
       ret = OW_USB_ERROR_LIBUSB_INIT_FAILED;
       goto end;
     }
 
-  engine->device_handle = NULL;
-  total = libusb_get_device_list (engine->context, &devices);
+  engine->usb.device_handle = NULL;
+  total = libusb_get_device_list (engine->usb.context, &devices);
   device = devices;
   for (i = 0; i < total; i++, device++)
     {
@@ -480,7 +480,7 @@ ow_engine_init (struct ow_engine **engine_,
 	  && libusb_get_bus_number (*device) == bus
 	  && libusb_get_device_address (*device) == address)
 	{
-	  if (libusb_open (*device, &engine->device_handle))
+	  if (libusb_open (*device, &engine->usb.device_handle))
 	    {
 	      error_print ("Error while opening device: %s\n",
 			   libusb_error_name (err));
@@ -492,7 +492,7 @@ ow_engine_init (struct ow_engine **engine_,
   err = 0;
   libusb_free_device_list (devices, total);
 
-  if (!engine->device_handle)
+  if (!engine->usb.device_handle)
     {
       ret = OW_USB_ERROR_CANT_FIND_DEV;
       goto end;
@@ -501,67 +501,67 @@ ow_engine_init (struct ow_engine **engine_,
   printf ("Device: %s (outputs: %d, inputs: %d)\n", engine->device_desc->name,
 	  engine->device_desc->outputs, engine->device_desc->inputs);
 
-  err = libusb_set_configuration (engine->device_handle, 1);
+  err = libusb_set_configuration (engine->usb.device_handle, 1);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_SET_USB_CONFIG;
       goto end;
     }
-  err = libusb_claim_interface (engine->device_handle, 1);
+  err = libusb_claim_interface (engine->usb.device_handle, 1);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
-  err = libusb_set_interface_alt_setting (engine->device_handle, 1, 3);
+  err = libusb_set_interface_alt_setting (engine->usb.device_handle, 1, 3);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_SET_ALT_SETTING;
       goto end;
     }
-  err = libusb_claim_interface (engine->device_handle, 2);
+  err = libusb_claim_interface (engine->usb.device_handle, 2);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
-  err = libusb_set_interface_alt_setting (engine->device_handle, 2, 2);
+  err = libusb_set_interface_alt_setting (engine->usb.device_handle, 2, 2);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_SET_ALT_SETTING;
       goto end;
     }
-  err = libusb_claim_interface (engine->device_handle, 3);
+  err = libusb_claim_interface (engine->usb.device_handle, 3);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
-  err = libusb_set_interface_alt_setting (engine->device_handle, 3, 0);
+  err = libusb_set_interface_alt_setting (engine->usb.device_handle, 3, 0);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_SET_ALT_SETTING;
       goto end;
     }
-  err = libusb_clear_halt (engine->device_handle, AUDIO_IN_EP);
+  err = libusb_clear_halt (engine->usb.device_handle, AUDIO_IN_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLEAR_EP;
       goto end;
     }
-  err = libusb_clear_halt (engine->device_handle, AUDIO_OUT_EP);
+  err = libusb_clear_halt (engine->usb.device_handle, AUDIO_OUT_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLEAR_EP;
       goto end;
     }
-  err = libusb_clear_halt (engine->device_handle, MIDI_IN_EP);
+  err = libusb_clear_halt (engine->usb.device_handle, MIDI_IN_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLEAR_EP;
       goto end;
     }
-  err = libusb_clear_halt (engine->device_handle, MIDI_OUT_EP);
+  err = libusb_clear_halt (engine->usb.device_handle, MIDI_OUT_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLEAR_EP;
@@ -799,7 +799,7 @@ run_audio_o2p_midi (void *data)
 
       while (ow_engine_get_status (engine) >= OW_STATUS_WAIT)
 	{
-	  libusb_handle_events_completed (engine->context, NULL);
+	  libusb_handle_events_completed (engine->usb.context, NULL);
 	}
 
       if (ow_engine_get_status (engine) <= OW_STATUS_STOP)
