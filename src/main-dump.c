@@ -20,19 +20,38 @@
 
 #include <signal.h>
 #include <sndfile.h>
+#include <unistd.h>
 #include "../config.h"
 #include "overwitch.h"
 #include "utils.h"
 #include "common.h"
 
 #define DEFAULT_BLOCKS 24
-#define DISK_BUF_LEN (1024 * 1024 * 16)
+#define DISK_BUF_LEN (1024 * 1024 * 4)
 
 static struct ow_context context;
 static struct ow_engine *engine;
 static SF_INFO sfinfo;
 static SNDFILE *sf;
 static const struct ow_device_desc *desc;
+
+typedef enum
+{
+  END = -1,
+  EMPTY,
+  READY
+} buffer_status_t;
+
+static struct
+{
+  char mem[DISK_BUF_LEN];
+  char disk[DISK_BUF_LEN];
+  pthread_t pthread;
+  size_t disk_samples;
+  size_t disk_frames;
+  pthread_spinlock_t lock;
+  buffer_status_t status;
+} buffer;
 
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
@@ -56,11 +75,47 @@ buffer_write_space (void *data)
     OB_BYTES_PER_SAMPLE;
 }
 
+buffer_status_t
+get_buffer_status ()
+{
+  buffer_status_t status;
+
+  pthread_spin_lock (&buffer.lock);
+  status = buffer.status;
+  pthread_spin_unlock (&buffer.lock);
+
+  return status;
+}
+
+void *
+dump_buffer (void *data)
+{
+  buffer_status_t status = get_buffer_status ();
+  while (buffer.status >= EMPTY)
+    {
+      pthread_spin_lock (&buffer.lock);
+      if (status == READY)
+	{
+	  debug_print (2, "Writing %ld frames to disk...\n",
+		       buffer.disk_frames);
+	  sf_write_float (sf, (float *) buffer.disk, buffer.disk_samples);
+	  debug_print (2, "Done\n");
+
+          buffer.status = EMPTY;
+	}
+      pthread_spin_unlock (&buffer.lock);
+
+      usleep (1000);
+
+      status = get_buffer_status ();
+    }
+  return NULL;
+}
+
 static size_t
 buffer_write (void *data, const char *buff, size_t size)
 {
   static int print_control = 0;
-  static char disk_buff[DISK_BUF_LEN];
   static size_t pos = 0;
   int new_pos;
   size_t frames = size / (desc->outputs * OB_BYTES_PER_SAMPLE);
@@ -70,20 +125,20 @@ buffer_write (void *data, const char *buff, size_t size)
   new_pos = pos + size;
   if (new_pos >= DISK_BUF_LEN)
     {
-      size_t disk_samples = pos / (OB_BYTES_PER_SAMPLE);
-      size_t disk_frames = disk_samples / desc->outputs;
-      debug_print (2, "Writing %ld frames to disk...\n", disk_frames);
-      sf_write_float (sf, (float *) disk_buff, disk_samples);
-      debug_print (2, "Done\n");
+      pthread_spin_lock (&buffer.lock);
+      buffer.status = READY;
+      buffer.disk_samples = pos / OB_BYTES_PER_SAMPLE;
+      buffer.disk_frames = buffer.disk_samples / desc->outputs;
+      memcpy (buffer.disk, buffer.mem,
+	      buffer.disk_frames * desc->outputs * OB_BYTES_PER_SAMPLE);
+      pthread_spin_unlock (&buffer.lock);
+      sfinfo.frames += buffer.disk_frames;
       pos = 0;
-      memcpy (&disk_buff[pos], buff, size);
-      sfinfo.frames += disk_frames;
+      new_pos = size;
     }
-  else
-    {
-      memcpy (&disk_buff[pos], buff, size);
-      pos = new_pos;
-    }
+
+  memcpy (&buffer.mem[pos], buff, size);
+  pos = new_pos;
 
   if (debug_level)
     {
@@ -148,9 +203,24 @@ run_dump (int device_num, char *device_name)
       goto cleanup;
     }
 
+  buffer.status = READY;
+  pthread_spin_init (&buffer.lock, PTHREAD_PROCESS_SHARED);
+  if (pthread_create (&buffer.pthread, NULL, dump_buffer, NULL))
+    {
+      error_print ("Could not start dump thread\n");
+      goto cleanup;
+    }
+  ow_set_thread_rt_priority (&buffer.pthread, OW_DEFAULT_RT_PROPERTY);
+
   ow_engine_wait (engine);
 
+  pthread_spin_lock (&buffer.lock);
+  buffer.status = END;
+  pthread_spin_unlock (&buffer.lock);
+  pthread_join (buffer.pthread, NULL);
+
 cleanup:
+  pthread_spin_destroy (&buffer.lock);
   ow_engine_destroy (engine);
   sf_close (sf);
 end:
