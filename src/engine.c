@@ -903,6 +903,12 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
       engine->status = OW_STATUS_READY;
     }
 
+  if (!context->set_rt_priority)
+    {
+      context->set_rt_priority = ow_set_thread_rt_priority;
+      context->priority = OW_DEFAULT_RT_PROPERTY;
+    }
+
   engine->usb.frames = 0;
 
   if (engine->options.p2o_midi)
@@ -914,6 +920,8 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 	  error_print ("Could not start MIDI thread\n");
 	  return OW_GENERIC_ERROR;
 	}
+      context->set_rt_priority (&engine->p2o_midi_thread,
+				engine->context->priority);
     }
 
   if (engine->options.o2p_midi || engine->options.o2p_audio
@@ -926,7 +934,10 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 	  error_print ("Could not start device thread\n");
 	  return OW_GENERIC_ERROR;
 	}
+      context->set_rt_priority (&engine->audio_o2p_midi_thread,
+				engine->context->priority);
     }
+
 
   return OW_OK;
 }

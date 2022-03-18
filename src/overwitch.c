@@ -20,6 +20,7 @@
 
 #include <libusb.h>
 #include <string.h>
+#include <sched.h>
 #include "overwitch.h"
 #include "utils.h"
 
@@ -257,4 +258,13 @@ ow_get_usb_device_from_device_attrs (int device_num, const char *device_name,
     }
 
   return err;
+}
+
+void
+ow_set_thread_rt_priority (pthread_t * thread, int p)
+{
+  struct sched_param default_rt_param = {
+    .sched_priority = p
+  };
+  pthread_setschedparam (*thread, SCHED_FIFO, &default_rt_param);
 }

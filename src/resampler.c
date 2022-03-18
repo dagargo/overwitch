@@ -49,6 +49,8 @@ void
 ow_resampler_reset_buffers (struct ow_resampler *resampler)
 {
   size_t rso2p, bytes;
+  size_t frame_size = ow_resampler_get_o2p_frame_size (resampler);
+  struct ow_context *context = resampler->engine->context;
 
   resampler->o2p_bufsize =
     resampler->bufsize * ow_resampler_get_o2p_frame_size (resampler);
@@ -84,14 +86,9 @@ ow_resampler_reset_buffers (struct ow_resampler *resampler)
   resampler->o2p_latency = 0;
   resampler->reading_at_o2p_end = 0;
 
-  rso2p =
-    resampler->engine->context->read_space (resampler->engine->
-					    context->o2p_audio);
-  bytes =
-    ow_bytes_to_frame_bytes (rso2p,
-			     ow_resampler_get_o2p_frame_size (resampler));
-  resampler->engine->context->read (resampler->engine->context->o2p_audio,
-				    NULL, bytes);
+  rso2p = context->read_space (context->o2p_audio);
+  bytes = ow_bytes_to_frame_bytes (rso2p, frame_size);
+  context->read (context->o2p_audio, NULL, bytes);
 }
 
 void
@@ -444,20 +441,13 @@ ow_resampler_destroy (struct ow_resampler *resampler)
 
 ow_err_t
 ow_resampler_activate (struct ow_resampler *resampler,
-		       struct ow_context *context,
-		       int priority, ow_set_rt_priority_t set_rt_priority)
+		       struct ow_context *context)
 {
   context->dll = &resampler->dll.dll_ow;
   context->dll_init = (ow_dll_overwitch_init_t) ow_dll_overwitch_init;
   context->dll_inc = (ow_dll_overwitch_inc_t) ow_dll_overwitch_inc;
   context->options |= OW_ENGINE_OPTION_DLL;
-  ow_err_t ret = ow_engine_activate (resampler->engine, context);
-  if (!ret)
-    {
-      set_rt_priority (&resampler->engine->p2o_midi_thread, priority);
-      set_rt_priority (&resampler->engine->audio_o2p_midi_thread, priority);
-    }
-  return ret;
+  return ow_engine_activate (resampler->engine, context);
 }
 
 void

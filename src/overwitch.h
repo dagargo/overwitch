@@ -23,12 +23,15 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #define OB_SAMPLE_RATE 48000.0
 #define OB_FRAMES_PER_BLOCK 7
 #define OB_BYTES_PER_SAMPLE sizeof(float)
 #define OB_MAX_TRACKS 12
 #define OB_MIDI_EVENT_SIZE 4
+
+#define OW_DEFAULT_RT_PROPERTY 20
 
 typedef size_t (*ow_buffer_rw_space_t) (void *);
 typedef size_t (*ow_buffer_read_t) (void *, char *, size_t);
@@ -91,7 +94,7 @@ typedef enum
   OW_ENGINE_OPTION_P2O_AUDIO = 2,
   OW_ENGINE_OPTION_O2P_MIDI = 4,
   OW_ENGINE_OPTION_P2O_MIDI = 8,
-  OW_ENGINE_OPTION_DLL = 16,
+  OW_ENGINE_OPTION_DLL = 16
 } ow_engine_option_t;
 
 struct ow_context
@@ -112,6 +115,9 @@ struct ow_context
   void *dll;
   ow_dll_overwitch_init_t dll_init;
   ow_dll_overwitch_inc_t dll_inc;
+  //RT priority is always activated. If this is NULL, Overwitch will set itself with its default RT priority and policy.
+  ow_set_rt_priority_t set_rt_priority;
+  int priority;
   //Options
   int options;
 };
@@ -159,6 +165,8 @@ int ow_get_device_desc_from_vid_pid (uint16_t, uint16_t,
 int ow_get_usb_device_from_device_attrs (int, const char *,
 					 struct ow_usb_device **);
 
+void ow_set_thread_rt_priority (pthread_t *, int);
+
 //Engine
 ow_err_t ow_engine_init (struct ow_engine **, uint8_t, uint8_t, int);
 
@@ -183,9 +191,7 @@ void ow_engine_stop (struct ow_engine *);
 //Resampler
 ow_err_t ow_resampler_init (struct ow_resampler **, int, int, int, int);
 
-ow_err_t ow_resampler_activate (struct ow_resampler *,
-				struct ow_context *, int,
-				ow_set_rt_priority_t);
+ow_err_t ow_resampler_activate (struct ow_resampler *, struct ow_context *);
 
 void ow_resampler_wait (struct ow_resampler *);
 

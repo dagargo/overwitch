@@ -523,13 +523,14 @@ jclient_run (struct jclient *jclient)
   jclient->context.write = (ow_buffer_write_t) jack_ringbuffer_write;
   jclient->context.get_time = jclient_get_time;
 
+  jclient->context.set_rt_priority = set_rt_priority;
+  jclient->context.priority = jclient->priority;
+
   jclient->context.options =
     OW_ENGINE_OPTION_O2P_AUDIO | OW_ENGINE_OPTION_O2P_MIDI |
     OW_ENGINE_OPTION_P2O_MIDI;
 
-  err =
-    ow_resampler_activate (jclient->resampler, &jclient->context,
-			   jclient->priority, set_rt_priority);
+  err = ow_resampler_activate (jclient->resampler, &jclient->context);
   if (err)
     {
       goto cleanup_jack;
