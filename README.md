@@ -86,6 +86,16 @@ Options:
   --help, -h
 ```
 
+### Dump audio to a WAVE file
+
+It is possible to directly record the audio output from the Overbridge devices into a WAVE file with the following command. To stop, just press `Ctrl+C`.
+
+```
+$ overwitch-dump -n 0
+Device: Digitakt (outputs: 12, inputs: 2)
+^C1572480 frames written
+```
+
 ## Latency
 
 Device to JACK latency is different from JACK to device latency though they are very close. These latencies are the transferred frames to and from the device and, by default, these are performed in 24 groups (blocks) of 7 frames (168 frames).
