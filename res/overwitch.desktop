@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Overwitch
+Comment=Overbridge 2 device client for JACK
+Categories=Music;AudioVideo;X-Sound;Audio;X-Alsa
+Keywords=music;alsa;realtime;standalone;
+Exec=overwitch-gui
+Icon=overwitch
+Terminal=false

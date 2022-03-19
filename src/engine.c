@@ -29,7 +29,6 @@
 #include <endian.h>
 #include <time.h>
 #include <unistd.h>
-#include "dll.h"
 #include "engine.h"
 
 #define AUDIO_IN_EP  0x83

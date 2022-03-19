@@ -66,7 +66,7 @@ signal_handler (int signo)
       struct jclient_thread *jclient = jclients;
       for (int i = 0; i < jclient_count; i++, jclient++)
 	{
-	  ow_resampler_print_status (jclient->jclient.resampler);
+	  ow_resampler_report_status (jclient->jclient.resampler);
 	}
     }
 }
@@ -89,6 +89,7 @@ run_single (int device_num, const char *device_name,
   jclients->jclient.blocks_per_transfer = blocks_per_transfer;
   jclients->jclient.quality = quality;
   jclients->jclient.priority = priority;
+  jclients->jclient.reporter.callback = NULL;
   free (device);
 
   pthread_create (&jclients->thread, NULL, jclient_run_thread,
@@ -123,6 +124,7 @@ run_all (int blocks_per_transfer, int quality, int priority)
       jclient->jclient.blocks_per_transfer = blocks_per_transfer;
       jclient->jclient.quality = quality;
       jclient->jclient.priority = priority;
+      jclient->jclient.reporter.callback = NULL;
 
       pthread_create (&jclient->thread, NULL, jclient_run_thread,
 		      &jclient->jclient);

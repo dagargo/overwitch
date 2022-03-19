@@ -20,6 +20,9 @@
 
 #include "dll.h"
 #include "engine.h"
+#include "overwitch.h"
+
+struct ow_resampler_reporter;
 
 struct ow_resampler
 {
@@ -50,4 +53,5 @@ struct ow_resampler
   size_t p2o_bufsize;
   uint32_t bufsize;
   double samplerate;
+  struct ow_resampler_reporter reporter;
 };

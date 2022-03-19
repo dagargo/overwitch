@@ -25,24 +25,38 @@
 
 #define MAX_READ_FRAMES 5
 #define STARTUP_TIME 5
-#define LOG_TIME 2
+#define DEFAULT_REPORT_PERIOD 2
 #define RATIO_DIFF_THRES 0.00001
 
 void
-ow_resampler_print_status (struct ow_resampler *resampler)
+ow_resampler_report_status (struct ow_resampler *resampler)
 {
-  printf
-    ("%s: o2j latency: %.1f ms, max. %.1f ms; j2o latency: %.1f ms, max. %.1f ms, o2j ratio: %f, avg. %f\n",
-     resampler->engine->device_desc->name,
-     resampler->o2p_latency * 1000.0 /
-     (ow_resampler_get_o2p_frame_size (resampler) * OB_SAMPLE_RATE),
-     resampler->o2p_max_latency * 1000.0 /
-     (ow_resampler_get_o2p_frame_size (resampler) * OB_SAMPLE_RATE),
-     resampler->p2o_latency * 1000.0 / (resampler->engine->p2o_frame_size *
-					OB_SAMPLE_RATE),
-     resampler->p2o_max_latency * 1000.0 /
-     (resampler->engine->p2o_frame_size * OB_SAMPLE_RATE),
-     resampler->dll.ratio, resampler->dll.ratio_avg);
+  double o2p_latency =
+    resampler->o2p_latency * 1000.0 / (resampler->engine->o2p_frame_size *
+				       OB_SAMPLE_RATE);
+  double p2o_latency =
+    resampler->p2o_latency * 1000.0 / (resampler->engine->p2o_frame_size *
+				       OB_SAMPLE_RATE);
+  if (debug_level)
+    {
+      printf
+	("%s: o2j latency: %.1f ms, max. %.1f ms; j2o latency: %.1f ms, max. %.1f ms, o2j ratio: %f, avg. %f\n",
+	 resampler->engine->device_desc->name,
+	 o2p_latency,
+	 resampler->o2p_max_latency * 1000.0 /
+	 (ow_resampler_get_o2p_frame_size (resampler) * OB_SAMPLE_RATE),
+	 p2o_latency,
+	 resampler->p2o_max_latency * 1000.0 /
+	 (resampler->engine->p2o_frame_size * OB_SAMPLE_RATE),
+	 resampler->dll.ratio, resampler->dll.ratio_avg);
+    }
+
+  if (resampler->reporter.callback)
+    {
+      resampler->reporter.callback (resampler->reporter.data, o2p_latency,
+				    p2o_latency, resampler->o2p_ratio,
+				    resampler->p2o_ratio);
+    }
 }
 
 void
@@ -212,8 +226,9 @@ ow_resampler_read_audio (struct ow_resampler *resampler)
 {
   long gen_frames;
 
-  gen_frames = src_callback_read (resampler->o2p_state, resampler->o2p_ratio,
-				  resampler->bufsize, resampler->o2p_buf_out);
+  gen_frames =
+    src_callback_read (resampler->o2p_state, resampler->o2p_ratio,
+		       resampler->bufsize, resampler->o2p_buf_out);
   if (gen_frames != resampler->bufsize)
     {
       error_print
@@ -357,10 +372,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
     {
       ow_dll_primary_calc_avg (dll, resampler->log_control_cycles);
 
-      if (debug_level)
-	{
-	  ow_resampler_print_status (resampler);
-	}
+      ow_resampler_report_status (resampler);
 
       resampler->log_cycles = 0;
 
@@ -371,7 +383,8 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
 					  resampler->samplerate);
 	  resampler->status = RES_STATUS_TUNE;
 	  resampler->log_control_cycles =
-	    LOG_TIME * resampler->samplerate / resampler->bufsize;
+	    resampler->reporter.period * resampler->samplerate /
+	    resampler->bufsize;
 	}
 
       if (resampler->status == RES_STATUS_TUNE
@@ -421,6 +434,10 @@ ow_resampler_init_from_bus_address (struct ow_resampler **resampler_, int bus,
 		      resampler);
 
   pthread_spin_init (&resampler->lock, PTHREAD_PROCESS_SHARED);
+
+  resampler->reporter.callback = NULL;
+  resampler->reporter.data = NULL;
+  resampler->reporter.period = DEFAULT_REPORT_PERIOD;
 
   return OW_OK;
 }
@@ -535,4 +552,15 @@ inline float *
 ow_resampler_get_p2o_audio_buffer (struct ow_resampler *resampler)
 {
   return resampler->p2o_buf_in;
+}
+
+void
+ow_resampler_set_report_callback (struct ow_resampler *resampler,
+				  const struct ow_resampler_reporter
+				  *reporter)
+{
+  resampler->reporter.callback = reporter->callback;
+  resampler->reporter.data = reporter->data;
+  resampler->reporter.period =
+    reporter->period > 0 ? reporter->period : DEFAULT_REPORT_PERIOD;
 }

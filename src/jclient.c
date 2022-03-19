@@ -356,8 +356,11 @@ set_rt_priority (pthread_t * thread, int priority)
 void
 jclient_exit (struct jclient *jclient)
 {
-  ow_resampler_print_status (jclient->resampler);
-  ow_resampler_stop (jclient->resampler);
+  if (jclient->client)
+    {
+      ow_resampler_report_status (jclient->resampler);
+      ow_resampler_stop (jclient->resampler);
+    }
 }
 
 int
@@ -380,6 +383,8 @@ jclient_run (struct jclient *jclient)
       goto end;
     }
 
+  ow_resampler_set_report_callback (jclient->resampler, &jclient->reporter);
+
   engine = ow_resampler_get_engine (jclient->resampler);
   desc = ow_engine_get_device_desc (engine);
 
@@ -392,8 +397,8 @@ jclient_run (struct jclient *jclient)
 	{
 	  error_print ("Unable to connect to JACK server\n");
 	}
-
-      goto cleanup_jack;
+      err = OW_GENERIC_ERROR;
+      goto end;
     }
 
   if (status & JackServerStarted)
@@ -563,9 +568,9 @@ cleanup_jack:
   jack_client_close (jclient->client);
   free (jclient->output_ports);
   free (jclient->input_ports);
-  ow_resampler_destroy (jclient->resampler);
-
 end:
+  ow_resampler_destroy (jclient->resampler);
+  jclient->client = NULL;
   return err;
 }
 

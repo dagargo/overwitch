@@ -209,6 +209,12 @@ ow_get_devices (struct ow_usb_device **devices, ssize_t * size)
 	}
     }
 
+  if (!total)
+    {
+      free (*devices);
+      *devices = NULL;
+    }
+
   libusb_free_device_list (usb_devices, total);
   libusb_exit (context);
   return 0;

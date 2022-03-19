@@ -13,6 +13,12 @@ AM_INIT_AUTOMAKE
 # Checks for programs.
 AC_PROG_CC
 
+# Define conditional prior to package checks
+AM_CONDITIONAL([CLI_ONLY], [test "${CLI_ONLY}" == yes])
+AM_CONDITIONAL([GUI], [test "${CLI_ONLY}" != yes])
+
+AM_COND_IF(GUI, [PKG_CHECK_MODULES([GTK], [gtk+-3.0])])
+
 # Checks for libraries.
 PKG_CHECK_MODULES(libusb, libusb, HAVE_LIBUSB=1, HAVE_LIBUSB=0)
 PKG_CHECK_MODULES(JACK, jack >= 0.100.0)
@@ -37,5 +43,5 @@ AC_FUNC_MALLOC
 
 AM_CONDITIONAL([UDEV_AVAIL], [test "`pkg-config --variable=udevdir udev`" != ""])
 
-AC_CONFIG_FILES([Makefile src/Makefile udev/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile udev/Makefile res/Makefile])
 AC_OUTPUT
