@@ -63,7 +63,21 @@ print_devices ()
     {
       fprintf (stderr, "%d: Bus %03d Device %03d: ID %04x:%04x %s\n", i,
 	       device->bus, device->address, device->vid, device->pid,
-	       device->name);
+	       device->desc->name);
+      if (debug_level)
+	{
+	  fprintf (stderr, "  Inputs:\n");
+	  for (int j = 0; j < device->desc->inputs; j++)
+	    {
+	      fprintf (stderr, "    %s\n", device->desc->input_track_names[j]);
+	    }
+	  fprintf (stderr, "  Outputs:\n");
+	  for (int j = 0; j < device->desc->outputs; j++)
+	    {
+	      fprintf (stderr, "    %s\n", device->desc->output_track_names[j]);
+	    }
+	}
+
     }
 
   ow_free_usb_device_list (devices, total);

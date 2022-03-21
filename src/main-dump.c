@@ -101,7 +101,7 @@ dump_buffer (void *data)
 	  sf_write_float (sf, (float *) buffer.disk, buffer.disk_samples);
 	  debug_print (2, "Done\n");
 
-          buffer.status = EMPTY;
+	  buffer.status = EMPTY;
 	}
       pthread_spin_unlock (&buffer.lock);
 

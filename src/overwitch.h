@@ -122,15 +122,6 @@ struct ow_context
   int options;
 };
 
-struct ow_usb_device
-{
-  char *name;
-  uint16_t vid;
-  uint16_t pid;
-  uint8_t bus;
-  uint8_t address;
-};
-
 struct ow_device_desc
 {
   uint16_t pid;
@@ -139,6 +130,15 @@ struct ow_device_desc
   int outputs;
   char *input_track_names[OB_MAX_TRACKS];
   char *output_track_names[OB_MAX_TRACKS];
+};
+
+struct ow_usb_device
+{
+  const struct ow_device_desc *desc;
+  uint16_t vid;
+  uint16_t pid;
+  uint8_t bus;
+  uint8_t address;
 };
 
 struct ow_midi_event
