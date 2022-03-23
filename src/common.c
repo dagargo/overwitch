@@ -69,12 +69,14 @@ print_devices ()
 	  fprintf (stderr, "  Inputs:\n");
 	  for (int j = 0; j < device->desc->inputs; j++)
 	    {
-	      fprintf (stderr, "    %s\n", device->desc->input_track_names[j]);
+	      fprintf (stderr, "    %s\n",
+		       device->desc->input_track_names[j]);
 	    }
 	  fprintf (stderr, "  Outputs:\n");
 	  for (int j = 0; j < device->desc->outputs; j++)
 	    {
-	      fprintf (stderr, "    %s\n", device->desc->output_track_names[j]);
+	      fprintf (stderr, "    %s\n",
+		       device->desc->output_track_names[j]);
 	    }
 	}
 

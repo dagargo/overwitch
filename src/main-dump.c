@@ -27,13 +27,16 @@
 #include "common.h"
 
 #define DEFAULT_BLOCKS 24
-#define DISK_BUF_LEN (1024 * 1024 * 4)
+#define DISK_BUF_LEN_MULT (256 * 1024)
+#define ALL_TRACKS_MASK "111111111111"	//OB_MAX_TRACKS == 12
 
 static struct ow_context context;
 static struct ow_engine *engine;
 static SF_INFO sfinfo;
 static SNDFILE *sf;
 static const struct ow_device_desc *desc;
+static const char *track_mask = ALL_TRACKS_MASK;
+static int outputs;
 
 typedef enum
 {
@@ -44,8 +47,9 @@ typedef enum
 
 static struct
 {
-  char mem[DISK_BUF_LEN];
-  char disk[DISK_BUF_LEN];
+  char *mem;
+  char *disk;
+  size_t len;
   pthread_t pthread;
   size_t disk_samples;
   size_t disk_frames;
@@ -57,6 +61,7 @@ static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
   {"use-device", 1, NULL, 'd'},
   {"list-devices", 0, NULL, 'l'},
+  {"track-mask", 1, NULL, 'm'},
   {"verbose", 0, NULL, 'v'},
   {"help", 0, NULL, 'h'},
   {NULL, 0, NULL, 0}
@@ -113,32 +118,44 @@ dump_buffer (void *data)
 }
 
 static size_t
-buffer_write (void *data, const char *buff, size_t size)
+buffer_write (void *data, const char *buf, size_t size)
 {
   static int print_control = 0;
   static size_t pos = 0;
-  int new_pos;
+  size_t new_pos;
   size_t frames = size / (desc->outputs * OB_BYTES_PER_SAMPLE);
 
-  debug_print (3, "Writing %ld bytes (%ld frames) to buffer...\n", size,
+  debug_print (2, "Writing %ld bytes (%ld frames) to buffer...\n", size,
 	       frames);
-  new_pos = pos + size;
-  if (new_pos >= DISK_BUF_LEN)
+  new_pos = pos + frames * outputs * OB_BYTES_PER_SAMPLE;
+  if (new_pos >= buffer.len)
     {
       pthread_spin_lock (&buffer.lock);
       buffer.status = READY;
       buffer.disk_samples = pos / OB_BYTES_PER_SAMPLE;
-      buffer.disk_frames = buffer.disk_samples / desc->outputs;
+      buffer.disk_frames = buffer.disk_samples / outputs;
       memcpy (buffer.disk, buffer.mem,
-	      buffer.disk_frames * desc->outputs * OB_BYTES_PER_SAMPLE);
+	      buffer.disk_frames * outputs * OB_BYTES_PER_SAMPLE);
       pthread_spin_unlock (&buffer.lock);
       sfinfo.frames += buffer.disk_frames;
       pos = 0;
       new_pos = size;
     }
 
-  memcpy (&buffer.mem[pos], buff, size);
-  pos = new_pos;
+  void *dst = &buffer.mem[pos];
+  for (int i = 0; i < frames; i++)
+    {
+      const char *c = track_mask;
+      for (int j = 0; j < desc->outputs; j++, c++, buf += OB_BYTES_PER_SAMPLE)
+	{
+	  if (*c != '0')
+	    {
+	      memcpy (dst, buf, OB_BYTES_PER_SAMPLE);
+	      dst += OB_BYTES_PER_SAMPLE;
+	      pos += OB_BYTES_PER_SAMPLE;
+	    }
+	}
+    }
 
   if (debug_level)
     {
@@ -164,7 +181,7 @@ signal_handler (int signo)
 }
 
 static int
-run_dump (int device_num, char *device_name)
+run_dump (int device_num, const char *device_name)
 {
   ow_err_t err;
   struct ow_usb_device *device;
@@ -183,13 +200,22 @@ run_dump (int device_num, char *device_name)
     }
 
   desc = ow_engine_get_device_desc (engine);
+  outputs = 0;
+  const char *c = track_mask;
+  for (int i = 0; i < desc->outputs; i++, c++)
+    {
+      if (*c != '0')
+	{
+	  outputs++;
+	}
+    }
 
   sfinfo.frames = 0;
   sfinfo.samplerate = OB_SAMPLE_RATE;
-  sfinfo.channels = desc->outputs;
+  sfinfo.channels = outputs;
   sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
 
-  debug_print (1, "Creating sample...\n");
+  debug_print (1, "Creating sample (%d channels)...\n", outputs);
   sf = sf_open ("dump.wav", SFM_WRITE, &sfinfo);
 
   context.write_space = buffer_write_space;
@@ -202,6 +228,10 @@ run_dump (int device_num, char *device_name)
     {
       goto cleanup;
     }
+
+  buffer.len = DISK_BUF_LEN_MULT * outputs;
+  buffer.mem = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
+  buffer.disk = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
 
   buffer.status = READY;
   pthread_spin_init (&buffer.lock, PTHREAD_PROCESS_SHARED);
@@ -223,6 +253,8 @@ cleanup:
   pthread_spin_destroy (&buffer.lock);
   ow_engine_destroy (engine);
   sf_close (sf);
+  free (buffer.mem);
+  free (buffer.disk);
 end:
   if (err)
     {
@@ -235,9 +267,9 @@ int
 main (int argc, char *argv[])
 {
   int opt;
-  int vflg = 0, lflg = 0, dflg = 0, nflg = 0, errflg = 0;
+  int vflg = 0, lflg = 0, dflg = 0, nflg = 0, mflg = 0, errflg = 0;
   char *endstr;
-  char *device_name = NULL;
+  const char *device_name = NULL;
   int long_index = 0;
   ow_err_t ow_err;
   struct sigaction action;
@@ -251,7 +283,7 @@ main (int argc, char *argv[])
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGUSR1, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "n:d:lvh",
+  while ((opt = getopt_long (argc, argv, "n:d:m:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
@@ -263,6 +295,10 @@ main (int argc, char *argv[])
 	case 'd':
 	  device_name = optarg;
 	  dflg++;
+	  break;
+	case 'm':
+	  track_mask = optarg;
+	  mflg++;
 	  break;
 	case 'l':
 	  lflg++;
@@ -298,6 +334,12 @@ main (int argc, char *argv[])
 	  exit (EXIT_FAILURE);
 	}
       exit (EXIT_SUCCESS);
+    }
+
+  if (mflg > 1)
+    {
+      fprintf (stderr, "Undetermined track mask\n");
+      exit (EXIT_FAILURE);
     }
 
   if (nflg + dflg == 1)
