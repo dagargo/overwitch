@@ -19,6 +19,8 @@ make
 sudo make install
 ```
 
+Some udev rules might need to be installed manually with `sudo make install` from the `udev` directory as they are not part of the `install` target. This is not needed when packaging or when distributions already provide them.
+
 The package dependencies for Debian based distributions are:
 - automake
 - libusb-1.0-0-dev
