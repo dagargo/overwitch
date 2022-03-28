@@ -195,7 +195,7 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
     {
       return 0;
     }
-  for (const struct ow_device_desc ** d = OB_DEVICE_DESCS; *d != NULL; (*d)++)
+  for (const struct ow_device_desc ** d = OB_DEVICE_DESCS; *d != NULL; d++)
     {
       if ((*d)->pid == pid)
 	{
