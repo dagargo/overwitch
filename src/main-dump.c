@@ -27,7 +27,7 @@
 #include "common.h"
 
 #define DEFAULT_BLOCKS 24
-#define DISK_BUF_LEN_MULT (256 * 1024)
+#define TRACK_BUF_KB 256
 #define ALL_TRACKS_MASK "111111111111"	//OB_MAX_TRACKS == 12
 
 static struct ow_context context;
@@ -37,6 +37,7 @@ static SNDFILE *sf;
 static const struct ow_device_desc *desc;
 static const char *track_mask = ALL_TRACKS_MASK;
 static int outputs;
+static size_t track_buf_kb = TRACK_BUF_KB;
 
 typedef enum
 {
@@ -62,6 +63,7 @@ static struct option options[] = {
   {"use-device", 1, NULL, 'd'},
   {"list-devices", 0, NULL, 'l'},
   {"track-mask", 1, NULL, 'm'},
+  {"track-buffer-kilobytes", 1, NULL, 'b'},
   {"verbose", 0, NULL, 'v'},
   {"help", 0, NULL, 'h'},
   {NULL, 0, NULL, 0}
@@ -139,7 +141,6 @@ buffer_write (void *data, const char *buf, size_t size)
       pthread_spin_unlock (&buffer.lock);
       sfinfo.frames += buffer.disk_frames;
       pos = 0;
-      new_pos = size;
     }
 
   void *dst = &buffer.mem[pos];
@@ -229,7 +230,7 @@ run_dump (int device_num, const char *device_name)
       goto cleanup;
     }
 
-  buffer.len = DISK_BUF_LEN_MULT * outputs;
+  buffer.len = track_buf_kb * 1000 * outputs;
   buffer.mem = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
   buffer.disk = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
 
@@ -267,7 +268,7 @@ int
 main (int argc, char *argv[])
 {
   int opt;
-  int vflg = 0, lflg = 0, dflg = 0, nflg = 0, mflg = 0, errflg = 0;
+  int vflg = 0, lflg = 0, dflg = 0, nflg = 0, mflg = 0, bflg = 0, errflg = 0;
   char *endstr;
   const char *device_name = NULL;
   int long_index = 0;
@@ -283,7 +284,7 @@ main (int argc, char *argv[])
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGUSR1, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "n:d:m:lvh",
+  while ((opt = getopt_long (argc, argv, "n:d:m:b:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
@@ -299,6 +300,10 @@ main (int argc, char *argv[])
 	case 'm':
 	  track_mask = optarg;
 	  mflg++;
+	  break;
+	case 'b':
+	  track_buf_kb = atoi (optarg);
+	  bflg++;
 	  break;
 	case 'l':
 	  lflg++;
