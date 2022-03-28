@@ -112,7 +112,7 @@ dump_buffer (void *data)
 	}
       pthread_spin_unlock (&buffer.lock);
 
-      usleep (1000);
+      usleep (100);
 
       status = get_buffer_status ();
     }
