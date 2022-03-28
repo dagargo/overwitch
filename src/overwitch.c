@@ -37,6 +37,9 @@
 #define AHMK2_PID 0x0016
 #define DKEYS_PID 0x001c
 
+#define OW_CONV_SCALE_32 (1.0f / (float) INT_MAX)
+#define OW_CONV_SCALE_30 (1.0f / (float) (INT_MAX >> 2))
+
 static const struct ow_device_desc DIGITAKT_DESC = {
   .pid = DTAKT_PID,
   .name = "Digitakt",
@@ -46,7 +49,11 @@ static const struct ow_device_desc DIGITAKT_DESC = {
   .output_track_names =
     {"Main L", "Main R", "Track 1", "Track 2", "Track 3", "Track 4",
      "Track 5", "Track 6", "Track 7", "Track 8", "Input L",
-     "Input R"}
+     "Input R"},
+  .output_track_scales =
+    {OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_30, OW_CONV_SCALE_30,
+     OW_CONV_SCALE_30, OW_CONV_SCALE_30, OW_CONV_SCALE_30, OW_CONV_SCALE_30,
+     OW_CONV_SCALE_30, OW_CONV_SCALE_30, OW_CONV_SCALE_32, OW_CONV_SCALE_32}
 };
 
 static const struct ow_device_desc DIGITONE_DESC = {
@@ -58,7 +65,11 @@ static const struct ow_device_desc DIGITONE_DESC = {
   .output_track_names =
     {"Main L", "Main R", "Track 1 L", "Track 1 R", "Track 2 L",
      "Track 2 R", "Track 3 L", "Track 3 R", "Track 4 L", "Track 4 R",
-     "Input L", "Input R"}
+     "Input L", "Input R"},
+  .output_track_scales =
+    {OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
+     OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
+     OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32}
 };
 
 static const struct ow_device_desc AFMK2_DESC = {
@@ -71,7 +82,11 @@ static const struct ow_device_desc AFMK2_DESC = {
 			"Synth Track 4 Input"},
   .output_track_names =
     {"Main L", "Main R", "Synth Track 1", "Synth Track 2", "Synth Track 3",
-     "Synth Track 4", "Input L", "Input R"}
+     "Synth Track 4", "Input L", "Input R"},
+  .output_track_scales =
+    {OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
+     OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32}
+
 };
 
 static const struct ow_device_desc ARMK2_DESC = {
@@ -85,7 +100,11 @@ static const struct ow_device_desc ARMK2_DESC = {
      "LT Input", "MT/HT Input", "CH/OH Input", "CY/CB Input"},
   .output_track_names = {"Main L", "Main R", "BD", "SD", "RS/CP",
 			 "BT", "LT", "MT/HT", "CH/OH", "CY/CB", "Input L",
-			 "Input R"}
+			 "Input R"},
+  .output_track_scales =
+    {OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
+     OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
+     OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32}
 };
 
 static const struct ow_device_desc DKEYS_DESC = {
@@ -97,7 +116,11 @@ static const struct ow_device_desc DKEYS_DESC = {
   .output_track_names =
     {"Main L", "Main R", "Track 1 L", "Track 1 R", "Track 2 L",
      "Track 2 R", "Track 3 L", "Track 3 R", "Track 4 L", "Track 4 R",
-     "Input L", "Input R"}
+     "Input L", "Input R"},
+  .output_track_scales =
+    {OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
+     OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
+     OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32}
 };
 
 static const struct ow_device_desc AHMK1_DESC = {
@@ -107,7 +130,9 @@ static const struct ow_device_desc AHMK1_DESC = {
   .outputs = 4,
   .input_track_names =
     {"Main L Input", "Main R Input", "FX Send L", "FX Send R"},
-  .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
+  .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"},
+  .output_track_scales =
+    {OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32}
 };
 
 static const struct ow_device_desc AHMK2_DESC = {
@@ -117,7 +142,9 @@ static const struct ow_device_desc AHMK2_DESC = {
   .outputs = 4,
   .input_track_names =
     {"Main L Input", "Main R Input", "FX Send L", "FX Send R"},
-  .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
+  .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"},
+  .output_track_scales =
+    {OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32}
 };
 
 const struct ow_device_desc *OB_DEVICE_DESCS[] = {

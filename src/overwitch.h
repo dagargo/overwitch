@@ -130,6 +130,7 @@ struct ow_device_desc
   int outputs;
   char *input_track_names[OB_MAX_TRACKS];
   char *output_track_names[OB_MAX_TRACKS];
+  float output_track_scales[OB_MAX_TRACKS];
 };
 
 struct ow_usb_device

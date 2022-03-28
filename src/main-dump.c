@@ -39,6 +39,13 @@ static const char *track_mask = ALL_TRACKS_MASK;
 static int outputs;
 static size_t track_buf_kb = TRACK_BUF_KB;
 
+
+
+static float max[OB_MAX_TRACKS];
+static float min[OB_MAX_TRACKS];
+
+
+
 typedef enum
 {
   END = -1,
@@ -154,6 +161,21 @@ buffer_write (void *data, const char *buf, size_t size)
 	      memcpy (dst, buf, OB_BYTES_PER_SAMPLE);
 	      dst += OB_BYTES_PER_SAMPLE;
 	      pos += OB_BYTES_PER_SAMPLE;
+	      float x = *((float *) buf);
+	      if (x >= 0.0)
+		{
+		  if (x > max[j])
+		    {
+		      max[j] = x;
+		    }
+		}
+	      else
+		{
+		  if (x < min[j])
+		    {
+		      min[j] = x;
+		    }
+		}
 	    }
 	}
     }
@@ -175,6 +197,10 @@ static void
 signal_handler (int signo)
 {
   print_status ();
+  for (int i = 0; i < OB_MAX_TRACKS; i++)
+    {
+      printf ("max: %f; min: %f\n", max[i], min[i]);
+    }
   if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
     {
       ow_engine_stop (engine);
@@ -233,6 +259,12 @@ run_dump (int device_num, const char *device_name)
   buffer.len = track_buf_kb * 1000 * outputs;
   buffer.mem = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
   buffer.disk = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
+
+  for (int i = 0; i < OB_MAX_TRACKS; i++)
+    {
+      max[i] = 0.0;
+      min[i] = 0.0;
+    }
 
   buffer.status = READY;
   pthread_spin_init (&buffer.lock, PTHREAD_PROCESS_SHARED);

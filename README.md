@@ -178,6 +178,8 @@ To define a new device, just add a new struct like this and add the new constant
 
 Notice that the definition of the device must match the device itself, so outputs and inputs must match the ones the device has and must be in the same order. As this struct defines the device, an input is a port the device will read data from and an output is a port the device will write data to.
 
+Finally, the `output_track_scales` member is a `float` that is used to scale every track differently as some devices do not provide the same gain in every track. By default, `OW_CONV_SCALE_32` is used, which is equivalent to unity gain.
+
 ```
 static const struct overbridge_device_desc ARMK2_DESC = {
   .pid = ARMK2_PID,
@@ -190,11 +192,15 @@ static const struct overbridge_device_desc ARMK2_DESC = {
      "LT Input", "MT/HT Input", "CH/OH Input", "CY/CB Input"},
   .output_track_names = {"Main L", "Main R", "BD", "SD", "RS/CP",
 			 "BT", "LT", "MT/HT", "CH/OH", "CY/CB", "Input L",
-			 "Input R"}
+			 "Input R"},
+  .output_track_scales =
+    {OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
+     OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
+     OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32}
 };
 
 static const struct overbridge_device_desc OB_DEVICE_DESCS[] = {
-  DIGITAKT_DESC, DIGITONE_DESC, ARMK2_DESC
+  DIGITAKT_DESC, DIGITONE_DESC, ARMK2_DESC, NULL
 };
 ```
 
