@@ -36,15 +36,9 @@ static SF_INFO sfinfo;
 static SNDFILE *sf;
 static const struct ow_device_desc *desc;
 static const char *track_mask = ALL_TRACKS_MASK;
-static int outputs;
 static size_t track_buf_kb = TRACK_BUF_KB;
-
-
-
 static float max[OB_MAX_TRACKS];
 static float min[OB_MAX_TRACKS];
-
-
 
 typedef enum
 {
@@ -63,6 +57,8 @@ static struct
   size_t disk_frames;
   pthread_spinlock_t lock;
   buffer_status_t status;
+  int outputs;
+  int outputs_mask_len;
 } buffer;
 
 static struct option options[] = {
@@ -89,7 +85,14 @@ buffer_write_space (void *data)
     OB_BYTES_PER_SAMPLE;
 }
 
-buffer_status_t
+static inline int
+get_outputs_mask_len ()
+{
+  int outputs = strlen (track_mask);
+  return outputs < desc->outputs ? outputs : desc->outputs;
+}
+
+static buffer_status_t
 get_buffer_status ()
 {
   buffer_status_t status;
@@ -101,7 +104,7 @@ get_buffer_status ()
   return status;
 }
 
-void *
+static void *
 dump_buffer (void *data)
 {
   buffer_status_t status = get_buffer_status ();
@@ -132,29 +135,30 @@ buffer_write (void *data, const char *buf, size_t size)
   static int print_control = 0;
   static size_t pos = 0;
   size_t new_pos;
+  void *dst;
   size_t frames = size / (desc->outputs * OB_BYTES_PER_SAMPLE);
 
   debug_print (2, "Writing %ld bytes (%ld frames) to buffer...\n", size,
 	       frames);
-  new_pos = pos + frames * outputs * OB_BYTES_PER_SAMPLE;
+  new_pos = pos + frames * buffer.outputs * OB_BYTES_PER_SAMPLE;
   if (new_pos >= buffer.len)
     {
       pthread_spin_lock (&buffer.lock);
       buffer.status = READY;
       buffer.disk_samples = pos / OB_BYTES_PER_SAMPLE;
-      buffer.disk_frames = buffer.disk_samples / outputs;
+      buffer.disk_frames = buffer.disk_samples / buffer.outputs;
       memcpy (buffer.disk, buffer.mem,
-	      buffer.disk_frames * outputs * OB_BYTES_PER_SAMPLE);
+	      buffer.disk_frames * buffer.outputs * OB_BYTES_PER_SAMPLE);
       pthread_spin_unlock (&buffer.lock);
       sfinfo.frames += buffer.disk_frames;
       pos = 0;
     }
 
-  void *dst = &buffer.mem[pos];
+  dst = &buffer.mem[pos];
   for (int i = 0; i < frames; i++)
     {
       const char *c = track_mask;
-      for (int j = 0; j < desc->outputs; j++, c++, buf += OB_BYTES_PER_SAMPLE)
+      for (int j = 0; j < buffer.outputs_mask_len; j++, c++)
 	{
 	  if (*c != '0')
 	    {
@@ -177,6 +181,7 @@ buffer_write (void *data, const char *buf, size_t size)
 		    }
 		}
 	    }
+	  buf += OB_BYTES_PER_SAMPLE;
 	}
     }
 
@@ -197,9 +202,17 @@ static void
 signal_handler (int signo)
 {
   print_status ();
-  for (int i = 0; i < OB_MAX_TRACKS; i++)
+  if (debug_level)
     {
-      printf ("max: %f; min: %f\n", max[i], min[i]);
+      const char *c = track_mask;
+      for (int i = 0; i < buffer.outputs_mask_len; i++, c++)
+	{
+	  if (*c != '0')
+	    {
+	      printf ("%s: max %f, min: %f\n", desc->output_track_names[i],
+		      max[i], min[i]);
+	    }
+	}
     }
   if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
     {
@@ -227,22 +240,29 @@ run_dump (int device_num, const char *device_name)
     }
 
   desc = ow_engine_get_device_desc (engine);
-  outputs = 0;
+
+  buffer.outputs = 0;
   const char *c = track_mask;
-  for (int i = 0; i < desc->outputs; i++, c++)
+  for (int i = 0; i < strlen (track_mask); i++, c++)
     {
       if (*c != '0')
 	{
-	  outputs++;
+	  buffer.outputs++;
 	}
+    }
+
+  if (buffer.outputs == 0)
+    {
+      err = OW_GENERIC_ERROR;
+      goto cleanup_engine;
     }
 
   sfinfo.frames = 0;
   sfinfo.samplerate = OB_SAMPLE_RATE;
-  sfinfo.channels = outputs;
+  sfinfo.channels = buffer.outputs;
   sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
 
-  debug_print (1, "Creating sample (%d channels)...\n", outputs);
+  debug_print (1, "Creating sample (%d channels)...\n", buffer.outputs);
   sf = sf_open ("dump.wav", SFM_WRITE, &sfinfo);
 
   context.write_space = buffer_write_space;
@@ -256,14 +276,15 @@ run_dump (int device_num, const char *device_name)
       goto cleanup;
     }
 
-  buffer.len = track_buf_kb * 1000 * outputs;
+  buffer.len = track_buf_kb * 1000 * buffer.outputs;
   buffer.mem = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
   buffer.disk = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
+  buffer.outputs_mask_len = get_outputs_mask_len ();
 
   for (int i = 0; i < OB_MAX_TRACKS; i++)
     {
-      max[i] = 0.0;
-      min[i] = 0.0;
+      max[i] = 0.0f;
+      min[i] = 0.0f;
     }
 
   buffer.status = READY;
@@ -284,10 +305,11 @@ run_dump (int device_num, const char *device_name)
 
 cleanup:
   pthread_spin_destroy (&buffer.lock);
-  ow_engine_destroy (engine);
-  sf_close (sf);
   free (buffer.mem);
   free (buffer.disk);
+  sf_close (sf);
+cleanup_engine:
+  ow_engine_destroy (engine);
 end:
   if (err)
     {

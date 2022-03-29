@@ -135,7 +135,7 @@ set_usb_input_data_blks (struct ow_engine *engine)
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  float *scale = engine->device_desc->output_track_scales;
+	  const float *scale = engine->device_desc->output_track_scales;
 	  for (int k = 0; k < engine->device_desc->outputs; k++, scale++)
 	    {
 	      hv = be32toh (*s);
