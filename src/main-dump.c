@@ -21,6 +21,7 @@
 #include <signal.h>
 #include <sndfile.h>
 #include <unistd.h>
+#include <time.h>
 #include "../config.h"
 #include "overwitch.h"
 #include "utils.h"
@@ -29,6 +30,7 @@
 #define DEFAULT_BLOCKS 24
 #define TRACK_BUF_KB 256
 #define ALL_TRACKS_MASK "111111111111"	//OB_MAX_TRACKS == 12
+#define MAX_FILENAME_LEN 64
 
 static struct ow_context context;
 static struct ow_engine *engine;
@@ -223,6 +225,10 @@ signal_handler (int signo)
 static int
 run_dump (int device_num, const char *device_name)
 {
+  char filename[MAX_FILENAME_LEN];
+  char curr_time_string[MAX_FILENAME_LEN >> 1];
+  time_t curr_time;
+  struct tm tm;
   ow_err_t err;
   struct ow_usb_device *device;
 
@@ -262,8 +268,15 @@ run_dump (int device_num, const char *device_name)
   sfinfo.channels = buffer.outputs;
   sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
 
+  curr_time = time (NULL);
+  localtime_r (&curr_time, &tm);
+  strftime (curr_time_string, MAX_FILENAME_LEN, "%F %T", &tm);
+
+  snprintf (filename, MAX_FILENAME_LEN, "%s dump %s.wav", desc->name,
+	    curr_time_string);
+
   debug_print (1, "Creating sample (%d channels)...\n", buffer.outputs);
-  sf = sf_open ("dump.wav", SFM_WRITE, &sfinfo);
+  sf = sf_open (filename, SFM_WRITE, &sfinfo);
 
   context.write_space = buffer_write_space;
   context.write = buffer_write;
