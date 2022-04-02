@@ -447,61 +447,12 @@ usb_shutdown (struct ow_engine *engine)
 
 // initialization taken from sniffed session
 
-ow_err_t
-ow_engine_init (struct ow_engine **engine_,
-		uint8_t bus, uint8_t address, int blocks_per_transfer)
+static ow_err_t
+ow_engine_init (struct ow_engine *engine, int blocks_per_transfer)
 {
-  int i, err;
+  int err;
   ow_err_t ret = OW_OK;
-  libusb_device **devices;
-  ssize_t total = 0;
-  libusb_device **device;
-  struct libusb_device_descriptor desc;
   struct ow_engine_usb_blk *blk;
-  struct ow_engine *engine = malloc (sizeof (struct ow_engine));
-
-  // libusb setup
-  if (libusb_init (&engine->usb.context) != LIBUSB_SUCCESS)
-    {
-      ret = OW_USB_ERROR_LIBUSB_INIT_FAILED;
-      goto end;
-    }
-
-  engine->usb.device_handle = NULL;
-  total = libusb_get_device_list (engine->usb.context, &devices);
-  device = devices;
-  for (i = 0; i < total; i++, device++)
-    {
-      err = libusb_get_device_descriptor (*device, &desc);
-      if (err)
-	{
-	  error_print ("Error while getting device description: %s",
-		       libusb_error_name (err));
-	  continue;
-	}
-
-      if (ow_get_device_desc_from_vid_pid
-	  (desc.idVendor, desc.idProduct, &engine->device_desc)
-	  && libusb_get_bus_number (*device) == bus
-	  && libusb_get_device_address (*device) == address)
-	{
-	  if (libusb_open (*device, &engine->usb.device_handle))
-	    {
-	      error_print ("Error while opening device: %s\n",
-			   libusb_error_name (err));
-	    }
-	  break;
-	}
-    }
-
-  err = 0;
-  libusb_free_device_list (devices, total);
-
-  if (!engine->usb.device_handle)
-    {
-      ret = OW_USB_ERROR_CANT_FIND_DEV;
-      goto end;
-    }
 
   printf ("Device: %s (outputs: %d, inputs: %d)\n", engine->device_desc->name,
 	  engine->device_desc->outputs, engine->device_desc->inputs);
@@ -638,8 +589,6 @@ end:
       memset (engine->p2o_midi_data, 0, USB_BULK_MIDI_SIZE);
       memset (engine->o2p_midi_data, 0, USB_BULK_MIDI_SIZE);
       pthread_spin_init (&engine->p2o_midi_lock, PTHREAD_PROCESS_SHARED);
-
-      *engine_ = engine;
     }
   else
     {
@@ -648,6 +597,110 @@ end:
       error_print ("Error while initializing device: %s\n",
 		   libusb_error_name (ret));
     }
+  return ret;
+}
+
+ow_err_t
+ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
+					      int libusb_device_descriptor,
+					      int blocks_per_transfer)
+{
+  ow_err_t ret;
+  struct ow_engine *engine;
+  struct libusb_device *device;
+  struct libusb_device_descriptor desc;
+
+  engine = malloc (sizeof (struct ow_engine));
+
+  libusb_set_option (engine->usb.context, LIBUSB_OPTION_WEAK_AUTHORITY, NULL);
+
+  if (libusb_init (&engine->usb.context) != LIBUSB_SUCCESS)
+    {
+      ret = OW_USB_ERROR_LIBUSB_INIT_FAILED;
+      goto error;
+    }
+
+  if (libusb_wrap_sys_device (NULL, (intptr_t) libusb_device_descriptor,
+			      &engine->usb.device_handle))
+    {
+      ret = OW_USB_ERROR_LIBUSB_INIT_FAILED;
+      goto error;
+    }
+
+  device = libusb_get_device (engine->usb.device_handle);
+  libusb_get_device_descriptor (device, &desc);
+  ow_get_device_desc_from_vid_pid (desc.idVendor, desc.idProduct,
+				   &engine->device_desc);
+
+  *engine_ = engine;
+  return ow_engine_init (engine, blocks_per_transfer);
+
+error:
+  free (engine);
+  return ret;
+}
+
+ow_err_t
+ow_engine_init_from_bus_address (struct ow_engine **engine_,
+				 uint8_t bus, uint8_t address,
+				 int blocks_per_transfer)
+{
+  int err;
+  ow_err_t ret;
+  ssize_t total = 0;
+  libusb_device **devices;
+  libusb_device **device;
+  struct ow_engine *engine;
+  struct libusb_device_descriptor desc;
+
+  engine = malloc (sizeof (struct ow_engine));
+
+  if (libusb_init (&engine->usb.context) != LIBUSB_SUCCESS)
+    {
+      ret = OW_USB_ERROR_LIBUSB_INIT_FAILED;
+      goto error;
+    }
+
+  engine->usb.device_handle = NULL;
+  total = libusb_get_device_list (engine->usb.context, &devices);
+  device = devices;
+  for (int i = 0; i < total; i++, device++)
+    {
+      err = libusb_get_device_descriptor (*device, &desc);
+      if (err)
+	{
+	  error_print ("Error while getting device description: %s",
+		       libusb_error_name (err));
+	  continue;
+	}
+
+      if (ow_get_device_desc_from_vid_pid
+	  (desc.idVendor, desc.idProduct, &engine->device_desc)
+	  && libusb_get_bus_number (*device) == bus
+	  && libusb_get_device_address (*device) == address)
+	{
+	  if (libusb_open (*device, &engine->usb.device_handle))
+	    {
+	      error_print ("Error while opening device: %s\n",
+			   libusb_error_name (err));
+	    }
+	  break;
+	}
+    }
+
+  libusb_free_device_list (devices, total);
+
+  if (!engine->usb.device_handle)
+    {
+      ret = OW_USB_ERROR_CANT_FIND_DEV;
+      goto error;
+    }
+
+  *engine_ = engine;
+  return ow_engine_init (engine, blocks_per_transfer);
+
+error:
+  free (engine);
   return ret;
 }
 

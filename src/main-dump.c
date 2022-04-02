@@ -238,7 +238,8 @@ run_dump (int device_num, const char *device_name)
     }
 
   err =
-    ow_engine_init (&engine, device->bus, device->address, DEFAULT_BLOCKS);
+    ow_engine_init_from_bus_address (&engine, device->bus, device->address,
+				     DEFAULT_BLOCKS);
   free (device);
   if (err)
     {

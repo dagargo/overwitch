@@ -389,12 +389,14 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
 }
 
 ow_err_t
-ow_resampler_init (struct ow_resampler **resampler_, int bus, int address,
-		   int blocks_per_transfer, int quality)
+ow_resampler_init_from_bus_address (struct ow_resampler **resampler_, int bus,
+				    int address, int blocks_per_transfer,
+				    int quality)
 {
   struct ow_resampler *resampler = malloc (sizeof (struct ow_resampler));
-  ow_err_t err = ow_engine_init (&resampler->engine, bus, address,
-				 blocks_per_transfer);
+  ow_err_t err =
+    ow_engine_init_from_bus_address (&resampler->engine, bus, address,
+				     blocks_per_transfer);
   if (err)
     {
       free (resampler);

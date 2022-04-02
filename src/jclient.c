@@ -370,9 +370,10 @@ jclient_run (struct jclient *jclient)
   struct ow_engine *engine;
   const struct ow_device_desc *desc;
 
-  err = ow_resampler_init (&jclient->resampler, jclient->bus,
-			   jclient->address, jclient->blocks_per_transfer,
-			   jclient->quality);
+  err = ow_resampler_init_from_bus_address (&jclient->resampler, jclient->bus,
+					    jclient->address,
+					    jclient->blocks_per_transfer,
+					    jclient->quality);
   if (err)
     {
       error_print ("Overwitch error: %s\n", ow_get_err_str (err));

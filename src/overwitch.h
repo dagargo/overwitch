@@ -169,7 +169,11 @@ int ow_get_usb_device_from_device_attrs (int, const char *,
 void ow_set_thread_rt_priority (pthread_t *, int);
 
 //Engine
-ow_err_t ow_engine_init (struct ow_engine **, uint8_t, uint8_t, int);
+ow_err_t ow_engine_init_from_bus_address (struct ow_engine **, uint8_t,
+					  uint8_t, int);
+
+ow_err_t ow_engine_init_from_libusb_device_descriptor (struct ow_engine **,
+						       int, int);
 
 ow_err_t ow_engine_activate (struct ow_engine *, struct ow_context *);
 
@@ -190,7 +194,8 @@ const struct ow_device_desc *ow_engine_get_device_desc (struct ow_engine *);
 void ow_engine_stop (struct ow_engine *);
 
 //Resampler
-ow_err_t ow_resampler_init (struct ow_resampler **, int, int, int, int);
+ow_err_t ow_resampler_init_from_bus_address (struct ow_resampler **, int, int,
+					     int, int);
 
 ow_err_t ow_resampler_activate (struct ow_resampler *, struct ow_context *);
 
