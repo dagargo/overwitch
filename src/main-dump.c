@@ -110,19 +110,19 @@ static void *
 dump_buffer (void *data)
 {
   buffer_status_t status = get_buffer_status ();
-  while (buffer.status >= EMPTY)
+  while (status >= EMPTY)
     {
-      pthread_spin_lock (&buffer.lock);
       if (status == READY)
 	{
+	  pthread_spin_lock (&buffer.lock);
 	  debug_print (2, "Writing %ld frames to disk...\n",
 		       buffer.disk_frames);
 	  sf_write_float (sf, (float *) buffer.disk, buffer.disk_samples);
 	  debug_print (2, "Done\n");
 
 	  buffer.status = EMPTY;
+	  pthread_spin_unlock (&buffer.lock);
 	}
-      pthread_spin_unlock (&buffer.lock);
 
       usleep (100);
 
