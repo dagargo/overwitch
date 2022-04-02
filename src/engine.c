@@ -113,7 +113,7 @@ static void
 set_usb_input_data_blks (struct ow_engine *engine)
 {
   struct ow_engine_usb_blk *blk;
-  size_t wso2j;
+  size_t wso2p;
   int32_t hv;
   float *f;
   int32_t *s;
@@ -151,8 +151,8 @@ set_usb_input_data_blks (struct ow_engine *engine)
       return;
     }
 
-  wso2j = engine->context->write_space (engine->context->o2p_audio);
-  if (engine->o2p_transfer_size <= wso2j)
+  wso2p = engine->context->write_space (engine->context->o2p_audio);
+  if (engine->o2p_transfer_size <= wso2p)
     {
       engine->context->write (engine->context->o2p_audio,
 			      (void *) engine->o2p_transfer_buf,
@@ -160,7 +160,7 @@ set_usb_input_data_blks (struct ow_engine *engine)
     }
   else
     {
-      error_print ("o2j: Audio ring buffer overflow. Discarding data...\n");
+      error_print ("o2p: Audio ring buffer overflow. Discarding data...\n");
     }
 }
 
@@ -168,7 +168,7 @@ static void
 set_usb_output_data_blks (struct ow_engine *engine)
 {
   struct ow_engine_usb_blk *blk;
-  size_t rsj2o;
+  size_t rsp2o;
   int32_t hv;
   size_t bytes;
   long frames;
@@ -179,13 +179,13 @@ set_usb_output_data_blks (struct ow_engine *engine)
 
   if (enabled)
     {
-      rsj2o = engine->context->read_space (engine->context->p2o_audio);
+      rsp2o = engine->context->read_space (engine->context->p2o_audio);
       if (!engine->reading_at_p2o_end)
 	{
-	  if (enabled && rsj2o >= engine->p2o_transfer_size)
+	  if (enabled && rsp2o >= engine->p2o_transfer_size)
 	    {
-	      debug_print (2, "j2o: Emptying buffer and running...\n");
-	      bytes = ow_bytes_to_frame_bytes (rsj2o, engine->p2o_frame_size);
+	      debug_print (2, "p2o: Emptying buffer and running...\n");
+	      bytes = ow_bytes_to_frame_bytes (rsp2o, engine->p2o_frame_size);
 	      engine->context->read (engine->context->p2o_audio, NULL, bytes);
 	      engine->reading_at_p2o_end = 1;
 	    }
@@ -195,20 +195,20 @@ set_usb_output_data_blks (struct ow_engine *engine)
   else
     {
       engine->reading_at_p2o_end = 0;
-      debug_print (2, "j2o: Clearing buffer and stopping...\n");
+      debug_print (2, "p2o: Clearing buffer and stopping...\n");
       memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
       goto set_blocks;
     }
 
   pthread_spin_lock (&engine->lock);
-  engine->p2o_latency = rsj2o;
+  engine->p2o_latency = rsp2o;
   if (engine->p2o_latency > engine->p2o_max_latency)
     {
       engine->p2o_max_latency = engine->p2o_latency;
     }
   pthread_spin_unlock (&engine->lock);
 
-  if (rsj2o >= engine->p2o_transfer_size)
+  if (rsp2o >= engine->p2o_transfer_size)
     {
       engine->context->read (engine->context->p2o_audio,
 			     (void *) engine->p2o_transfer_buf,
@@ -217,9 +217,9 @@ set_usb_output_data_blks (struct ow_engine *engine)
   else
     {
       debug_print (2,
-		   "j2o: Audio ring buffer underflow (%zu < %zu). Resampling...\n",
-		   rsj2o, engine->p2o_transfer_size);
-      frames = rsj2o / engine->p2o_frame_size;
+		   "p2o: Audio ring buffer underflow (%zu < %zu). Resampling...\n",
+		   rsp2o, engine->p2o_transfer_size);
+      frames = rsp2o / engine->p2o_frame_size;
       bytes = frames * engine->p2o_frame_size;
       engine->context->read (engine->context->p2o_audio,
 			     (void *) engine->p2o_resampler_buf, bytes);
@@ -231,14 +231,14 @@ set_usb_output_data_blks (struct ow_engine *engine)
 			engine->device_desc->inputs);
       if (res)
 	{
-	  debug_print (2, "j2o: Error while resampling: %s\n",
+	  debug_print (2, "p2o: Error while resampling: %s\n",
 		       src_strerror (res));
 	}
       else if (engine->p2o_data.output_frames_gen !=
 	       engine->frames_per_transfer)
 	{
 	  error_print
-	    ("j2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
+	    ("p2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
 	     engine->p2o_data.src_ratio, engine->p2o_data.output_frames_gen,
 	     engine->frames_per_transfer);
 	}
@@ -274,7 +274,7 @@ cb_xfr_in (struct libusb_transfer *xfr)
     }
   else
     {
-      error_print ("o2j: Error on USB audio transfer: %s\n",
+      error_print ("o2p: Error on USB audio transfer: %s\n",
 		   libusb_strerror (xfr->status));
     }
   // start new cycle even if this one did not succeed
@@ -286,7 +286,7 @@ cb_xfr_out (struct libusb_transfer *xfr)
 {
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
     {
-      error_print ("j2o: Error on USB audio transfer: %s\n",
+      error_print ("p2o: Error on USB audio transfer: %s\n",
 		   libusb_strerror (xfr->status));
     }
   set_usb_output_data_blks (xfr->user_data);
@@ -319,7 +319,7 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 	  //Note-off, Note-on, Poly-KeyPress, Control Change, Program Change, Channel Pressure, PitchBend Change, Single Byte
 	  if (event.bytes[0] >= 0x08 && event.bytes[0] <= 0x0f)
 	    {
-	      debug_print (2, "o2j MIDI: %02x, %02x, %02x, %02x (%f)\n",
+	      debug_print (2, "o2p MIDI: %02x, %02x, %02x, %02x (%f)\n",
 			   event.bytes[0], event.bytes[1], event.bytes[2],
 			   event.bytes[3], event.time);
 
@@ -333,7 +333,7 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
 	      else
 		{
 		  error_print
-		    ("o2j: MIDI ring buffer overflow. Discarding data...\n");
+		    ("o2p: MIDI ring buffer overflow. Discarding data...\n");
 		}
 	    }
 	  length += OB_MIDI_EVENT_SIZE;
@@ -380,7 +380,7 @@ prepare_cycle_out_audio (struct ow_engine *engine)
   int err = libusb_submit_transfer (engine->usb.xfr_out);
   if (err)
     {
-      error_print ("j2o: Error when submitting USB audio transfer: %s\n",
+      error_print ("p2o: Error when submitting USB audio transfer: %s\n",
 		   libusb_strerror (err));
       ow_engine_set_status (engine, OW_STATUS_ERROR);
     }
@@ -398,7 +398,7 @@ prepare_cycle_in_audio (struct ow_engine *engine)
   int err = libusb_submit_transfer (engine->usb.xfr_in);
   if (err)
     {
-      error_print ("o2j: Error when submitting USB audio in transfer: %s\n",
+      error_print ("o2p: Error when submitting USB audio in transfer: %s\n",
 		   libusb_strerror (err));
       ow_engine_set_status (engine, OW_STATUS_ERROR);
     }
@@ -415,7 +415,7 @@ prepare_cycle_in_midi (struct ow_engine *engine)
   int err = libusb_submit_transfer (engine->usb.xfr_in_midi);
   if (err)
     {
-      error_print ("o2j: Error when submitting USB MIDI transfer: %s\n",
+      error_print ("o2p: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
       ow_engine_set_status (engine, OW_STATUS_ERROR);
     }
@@ -432,7 +432,7 @@ prepare_cycle_out_midi (struct ow_engine *engine)
   int err = libusb_submit_transfer (engine->usb.xfr_out_midi);
   if (err)
     {
-      error_print ("j2o: Error when submitting USB MIDI transfer: %s\n",
+      error_print ("p2o: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
       ow_engine_set_status (engine, OW_STATUS_ERROR);
     }
@@ -575,7 +575,7 @@ end:
       memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
       memset (engine->o2p_transfer_buf, 0, engine->o2p_transfer_size);
 
-      //o2j resampler
+      //o2p resampler
       engine->p2o_resampler_buf = malloc (engine->p2o_transfer_size);
       memset (engine->p2o_resampler_buf, 0, engine->p2o_transfer_size);
       engine->p2o_data.data_in = engine->p2o_resampler_buf;
@@ -819,7 +819,7 @@ run_p2o_midi (void *data)
 static void *
 run_audio_o2p_midi (void *data)
 {
-  size_t rsj2o, bytes;
+  size_t rsp2o, bytes;
   struct ow_engine *engine = data;
 
   while (ow_engine_get_status (engine) == OW_STATUS_READY);
@@ -865,8 +865,8 @@ run_audio_o2p_midi (void *data)
 	  break;
 	}
 
-      rsj2o = engine->context->read_space (engine->context->p2o_audio);
-      bytes = ow_bytes_to_frame_bytes (rsj2o, engine->p2o_frame_size);
+      rsp2o = engine->context->read_space (engine->context->p2o_audio);
+      bytes = ow_bytes_to_frame_bytes (rsp2o, engine->p2o_frame_size);
       engine->context->read (engine->context->p2o_audio, NULL, bytes);
       memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
     }
@@ -1067,7 +1067,7 @@ ow_engine_set_p2o_audio_enable (struct ow_engine *engine, int enabled)
       pthread_spin_lock (&engine->lock);
       engine->options.p2o_audio = enabled;
       pthread_spin_unlock (&engine->lock);
-      debug_print (1, "Setting j2o audio to %d...\n", enabled);
+      debug_print (1, "Setting p2o audio to %d...\n", enabled);
     }
 }
 
