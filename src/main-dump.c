@@ -77,7 +77,7 @@ static struct option options[] = {
 static void
 print_status ()
 {
-  printf ("%lu frames written\n", sfinfo.frames);
+  fprintf (stderr, "%lu frames written\n", sfinfo.frames);
 }
 
 static size_t
@@ -211,8 +211,8 @@ signal_handler (int signo)
 	{
 	  if (*c != '0')
 	    {
-	      printf ("%s: max %f, min: %f\n", desc->output_track_names[i],
-		      max[i], min[i]);
+	      fprintf (stderr, "%s: max: %f; min: %f\n",
+		       desc->output_track_names[i], max[i], min[i]);
 	    }
 	}
     }

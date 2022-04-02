@@ -454,8 +454,9 @@ ow_engine_init (struct ow_engine *engine, int blocks_per_transfer)
   ow_err_t ret = OW_OK;
   struct ow_engine_usb_blk *blk;
 
-  printf ("Device: %s (outputs: %d, inputs: %d)\n", engine->device_desc->name,
-	  engine->device_desc->outputs, engine->device_desc->inputs);
+  fprintf (stderr, "Device: %s (outputs: %d, inputs: %d)\n",
+	   engine->device_desc->name, engine->device_desc->outputs,
+	   engine->device_desc->inputs);
 
   err = libusb_set_configuration (engine->usb.device_handle, 1);
   if (LIBUSB_SUCCESS != err)
