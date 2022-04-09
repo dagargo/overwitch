@@ -611,9 +611,13 @@ ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
   struct libusb_device *device;
   struct libusb_device_descriptor desc;
 
-  engine = malloc (sizeof (struct ow_engine));
+  if (libusb_set_option (NULL, LIBUSB_OPTION_WEAK_AUTHORITY, NULL) !=
+      LIBUSB_SUCCESS)
+    {
+      return OW_USB_ERROR_LIBUSB_INIT_FAILED;
+    }
 
-  libusb_set_option (engine->usb.context, LIBUSB_OPTION_WEAK_AUTHORITY, NULL);
+  engine = malloc (sizeof (struct ow_engine));
 
   if (libusb_init (&engine->usb.context) != LIBUSB_SUCCESS)
     {
