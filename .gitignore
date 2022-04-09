@@ -33,7 +33,7 @@ test-driver
 *.gcno
 *.gcda
 src/overwitch
-src/overwitch-gui
+src/overwitch-cli
 src/overwitch-dump
 src/*~
 config.guess

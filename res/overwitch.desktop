@@ -4,6 +4,6 @@ Name=Overwitch
 Comment=Overbridge 2 device client for JACK
 Categories=Music;AudioVideo;X-Sound;Audio;X-Alsa
 Keywords=music;alsa;realtime;standalone;
-Exec=overwitch-gui
+Exec=overwitch
 Icon=overwitch
 Terminal=false

@@ -1,6 +1,6 @@
 /*
  *   main.c
- *   Copyright (C) 2021 David García Goñi <dagargo@gmail.com>
+ *   Copyright (C) 2022 David García Goñi <dagargo@gmail.com>
  *
  *   This file is part of Overwitch.
  *
@@ -18,263 +18,248 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <signal.h>
-#include <errno.h>
+#include <libusb.h>
+#include <string.h>
+#include <sched.h>
+#include <gtk/gtk.h>
+#define _GNU_SOURCE
 #include "../config.h"
+#include "common.h"
+#include "overwitch.h"
 #include "jclient.h"
 #include "utils.h"
-#include "common.h"
 
-#define DEFAULT_QUALITY 2
-#define DEFAULT_BLOCKS 24
-#define DEFAULT_PRIORITY -1	//With this value the default priority will be used.
-
-struct jclient_thread
+enum status_list_store_columns
 {
+  STATUS_LIST_STORE_DEVICE,
+  STATUS_LIST_STORE_BUS,
+  STATUS_LIST_STORE_ADDRESS,
+  STATUS_LIST_STORE_NAME,
+  STATUS_LIST_STORE_O2J_LATENCY,
+  STATUS_LIST_STORE_J2O_LATENCY,
+  STATUS_LIST_STORE_O2J_RATIO,
+  STATUS_LIST_STORE_J2O_RATIO
+};
+
+struct overwitch_instance
+{
+  int device;
   pthread_t thread;
+  double o2j_latency;
+  double j2o_latency;
+  double o2j_ratio;
+  double j2o_ratio;
   struct jclient jclient;
 };
 
-static ssize_t jclient_count;
-static struct jclient_thread *jclients;
+static struct overwitch_instance **instances;
+static ssize_t instance_count;
 
-static struct option options[] = {
-  {"use-device-number", 1, NULL, 'n'},
-  {"use-device", 1, NULL, 'd'},
-  {"resampling-quality", 1, NULL, 'q'},
-  {"transfer-blocks", 1, NULL, 'b'},
-  {"rt-priority", 1, NULL, 'p'},
-  {"list-devices", 0, NULL, 'l'},
-  {"verbose", 0, NULL, 'v'},
-  {"help", 0, NULL, 'h'},
-  {NULL, 0, NULL, 0}
-};
+static GtkWidget *main_window;
+static GtkAboutDialog *about_dialog;
+
+static GtkWidget *about_button;
+
+static GtkListStore *status_list_store;
+
+static gboolean
+set_overwith_instance_metrics (struct overwitch_instance *instance)
+{
+  GtkTreeIter iter;
+  gint bus, address;
+  gboolean valid =
+    gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store), &iter);
+
+  while (valid)
+    {
+      gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
+			  STATUS_LIST_STORE_BUS, &bus,
+			  STATUS_LIST_STORE_ADDRESS, &address, -1);
+
+      if (instance->jclient.bus == bus
+	  && instance->jclient.address == address)
+	{
+	  gtk_list_store_set (status_list_store, &iter,
+			      STATUS_LIST_STORE_O2J_LATENCY,
+			      instance->o2j_latency,
+			      STATUS_LIST_STORE_J2O_LATENCY,
+			      instance->j2o_latency,
+			      STATUS_LIST_STORE_O2J_RATIO,
+			      instance->o2j_ratio,
+			      STATUS_LIST_STORE_J2O_RATIO,
+			      instance->j2o_ratio, -1);
+	  break;
+	}
+
+      valid =
+	gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store), &iter);
+    }
+
+  return FALSE;
+}
 
 static void
-signal_handler (int signo)
+set_report_data (struct overwitch_instance *instance, double o2j_latency,
+		 double j2o_latency, double o2j_ratio, double j2o_ratio)
 {
-  if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
-    {
-      struct jclient_thread *jclient = jclients;
-      for (int i = 0; i < jclient_count; i++, jclient++)
-	{
-	  jclient_exit (&jclient->jclient);
-	}
-    }
-  else if (signo == SIGUSR1)
-    {
-      struct jclient_thread *jclient = jclients;
-      for (int i = 0; i < jclient_count; i++, jclient++)
-	{
-	  ow_resampler_report_status (jclient->jclient.resampler);
-	}
-    }
+  debug_print (1, "Updating data for device %d...\n", instance->device);
+  instance->o2j_latency = o2j_latency;
+  instance->j2o_latency = j2o_latency;
+  instance->o2j_ratio = o2j_ratio;
+  instance->j2o_ratio = j2o_ratio;
+  g_idle_add ((GSourceFunc) set_overwith_instance_metrics, instance);
+}
+
+static void
+overwitch_show_about (GtkWidget * object, gpointer data)
+{
+  gtk_dialog_run (GTK_DIALOG (about_dialog));
+  gtk_widget_hide (GTK_WIDGET (about_dialog));
 }
 
 static int
-run_single (int device_num, const char *device_name,
-	    int blocks_per_transfer, int quality, int priority)
-{
-  struct ow_usb_device *device;
-
-  if (ow_get_usb_device_from_device_attrs (device_num, device_name, &device))
-    {
-      return OW_GENERIC_ERROR;
-    }
-
-  jclient_count = 1;
-  jclients = malloc (sizeof (struct jclient_thread));
-  jclients->jclient.bus = device->bus;
-  jclients->jclient.address = device->address;
-  jclients->jclient.blocks_per_transfer = blocks_per_transfer;
-  jclients->jclient.quality = quality;
-  jclients->jclient.priority = priority;
-  jclients->jclient.reporter.callback = NULL;
-  free (device);
-
-  pthread_create (&jclients->thread, NULL, jclient_run_thread,
-		  &jclients->jclient);
-  pthread_join (jclients->thread, NULL);
-  free (jclients);
-
-  return OW_OK;
-}
-
-static int
-run_all (int blocks_per_transfer, int quality, int priority)
+overwitch_run ()
 {
   struct ow_usb_device *devices;
   struct ow_usb_device *device;
-  struct jclient_thread *jclient;
-  ow_err_t err = ow_get_devices (&devices, &jclient_count);
+  ow_err_t err = ow_get_devices (&devices, &instance_count);
 
   if (err)
     {
       return err;
     }
 
-  jclients = malloc (sizeof (struct jclient_thread) * jclient_count);
+  if (!instance_count)
+    {
+      return EXIT_SUCCESS;
+    }
 
   device = devices;
-  jclient = jclients;
-  for (int i = 0; i < jclient_count; i++, jclient++, device++)
-    {
-      jclient->jclient.bus = device->bus;
-      jclient->jclient.address = device->address;
-      jclient->jclient.blocks_per_transfer = blocks_per_transfer;
-      jclient->jclient.quality = quality;
-      jclient->jclient.priority = priority;
-      jclient->jclient.reporter.callback = NULL;
 
-      pthread_create (&jclient->thread, NULL, jclient_run_thread,
-		      &jclient->jclient);
+  instances = malloc (sizeof (struct overwitch_instance *) * instance_count);
+  for (int i = 0; i < instance_count; i++)
+    {
+      debug_print (1,
+		   "Creating client for device %d (bus %03d, address %03d)...\n",
+		   i, device->bus, device->address);
+
+      instances[i] = malloc (sizeof (struct overwitch_instance));
+      instances[i]->jclient.bus = device->bus;
+      instances[i]->jclient.address = device->address;
+      instances[i]->jclient.blocks_per_transfer = 4;
+      instances[i]->jclient.quality = 2;
+      instances[i]->jclient.priority = -1;
+      instances[i]->jclient.reporter.callback =
+	(ow_resampler_report_t) set_report_data;
+      instances[i]->jclient.reporter.data = instances[i];
+      instances[i]->jclient.reporter.period = -1;
+      instances[i]->device = i;
+      instances[i]->o2j_latency = 0.0;
+      instances[i]->j2o_latency = 0.0;
+      instances[i]->o2j_ratio = 1.0;
+      instances[i]->j2o_ratio = 1.0;
+
+      gtk_list_store_insert_with_values (status_list_store, NULL, -1,
+					 STATUS_LIST_STORE_DEVICE, i,
+					 STATUS_LIST_STORE_BUS, device->bus,
+					 STATUS_LIST_STORE_ADDRESS,
+					 device->address,
+					 STATUS_LIST_STORE_NAME,
+					 device->desc->name,
+					 STATUS_LIST_STORE_O2J_LATENCY,
+					 instances[i]->o2j_latency,
+					 STATUS_LIST_STORE_J2O_LATENCY,
+					 instances[i]->j2o_latency,
+					 STATUS_LIST_STORE_O2J_RATIO,
+					 instances[i]->o2j_ratio,
+					 STATUS_LIST_STORE_J2O_RATIO,
+					 instances[i]->j2o_ratio, -1);
     }
 
-  ow_free_usb_device_list (devices, jclient_count);
+  ow_free_usb_device_list (devices, instance_count);
 
-  jclient = jclients;
-  for (int i = 0; i < jclient_count; i++, jclient++)
+  pthread_create (&instances[0]->thread, NULL, jclient_run_thread,
+		  &instances[0]->jclient);
+
+  return EXIT_SUCCESS;
+}
+
+static void
+overwitch_stop ()
+{
+  for (int i = 0; i < instance_count; i++)
     {
-      pthread_join (jclient->thread, NULL);
+      jclient_exit (&instances[i]->jclient);
+      pthread_join (instances[0]->thread, NULL);
+      free (instances[0]);
     }
+  free (instances);
+  instances = NULL;
+}
 
-  free (jclients);
+static void
+overwitch_quit ()
+{
+  overwitch_stop ();
+  debug_print (1, "Quitting GTK+...\n");
+  gtk_main_quit ();
+}
 
-  return OW_OK;
+static gboolean
+overwitch_delete_window (GtkWidget * widget, GdkEvent * event, gpointer data)
+{
+  overwitch_quit ();
+  return FALSE;
 }
 
 int
 main (int argc, char *argv[])
 {
-  int opt;
-  int vflg = 0, lflg = 0, dflg = 0, bflg = 0, pflg = 0, nflg = 0, errflg = 0;
-  char *endstr;
-  char *device_name = NULL;
-  int long_index = 0;
-  ow_err_t ow_err;
-  struct sigaction action;
-  int device_num = -1;
-  int blocks_per_transfer = DEFAULT_BLOCKS;
-  int quality = DEFAULT_QUALITY;
-  int priority = DEFAULT_PRIORITY;
+  GtkBuilder *builder;
+  char *glade_file = malloc (PATH_MAX);
 
-  action.sa_handler = signal_handler;
-  sigemptyset (&action.sa_mask);
-  action.sa_flags = 0;
-  sigaction (SIGHUP, &action, NULL);
-  sigaction (SIGINT, &action, NULL);
-  sigaction (SIGTERM, &action, NULL);
-  sigaction (SIGUSR1, &action, NULL);
+  debug_level = 1;
 
-  while ((opt = getopt_long (argc, argv, "n:d:q:b:p:lvh",
-			     options, &long_index)) != -1)
+  if (snprintf
+      (glade_file, PATH_MAX, "%s/%s/res/gui.glade", DATADIR,
+       PACKAGE) >= PATH_MAX)
     {
-      switch (opt)
-	{
-	case 'n':
-	  device_num = (int) strtol (optarg, &endstr, 10);
-	  nflg++;
-	  break;
-	case 'd':
-	  device_name = optarg;
-	  dflg++;
-	  break;
-	case 'q':
-	  quality = (int) strtol (optarg, &endstr, 10);
-	  if (errno || endstr == optarg || *endstr != '\0' || quality > 4
-	      || quality < 0)
-	    {
-	      quality = DEFAULT_QUALITY;
-	      fprintf (stderr,
-		       "Resampling quality value must be in [0..4]. Using value %d...\n",
-		       quality);
-	    }
-	  break;
-	case 'b':
-	  blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
-	  if (errno || endstr == optarg || *endstr != '\0'
-	      || blocks_per_transfer < 2 || blocks_per_transfer > 32)
-	    {
-	      blocks_per_transfer = DEFAULT_BLOCKS;
-	      fprintf (stderr,
-		       "Blocks value must be in [2..32]. Using value %d...\n",
-		       blocks_per_transfer);
-	    }
-	  bflg++;
-	  break;
-	case 'p':
-	  priority = (int) strtol (optarg, &endstr, 10);
-	  if (errno || endstr == optarg || *endstr != '\0' || priority < 0
-	      || priority > 99)
-	    {
-	      priority = -1;
-	      fprintf (stderr,
-		       "Priority value must be in [0..99]. Using default JACK value...\n");
-	    }
-	  pflg++;
-	  break;
-	case 'l':
-	  lflg++;
-	  break;
-	case 'v':
-	  vflg++;
-	  break;
-	case 'h':
-	  print_help (argv[0], PACKAGE_STRING, options);
-	  exit (EXIT_SUCCESS);
-	case '?':
-	  errflg++;
-	}
+      error_print ("Path too long\n");
+      return -1;
     }
 
-  if (errflg > 0)
+  gtk_init (&argc, &argv);
+  builder = gtk_builder_new ();
+  gtk_builder_add_from_file (builder, glade_file, NULL);
+  free (glade_file);
+
+  main_window = GTK_WIDGET (gtk_builder_get_object (builder, "main_window"));
+  gtk_window_resize (GTK_WINDOW (main_window), 1, 1);	//Compact window
+
+  about_dialog =
+    GTK_ABOUT_DIALOG (gtk_builder_get_object (builder, "about_dialog"));
+  gtk_about_dialog_set_version (about_dialog, PACKAGE_VERSION);
+
+  about_button =
+    GTK_WIDGET (gtk_builder_get_object (builder, "about_button"));
+
+  status_list_store =
+    GTK_LIST_STORE (gtk_builder_get_object (builder, "status_list_store"));
+
+  g_signal_connect (about_button, "clicked",
+		    G_CALLBACK (overwitch_show_about), NULL);
+
+  g_signal_connect (main_window, "delete-event",
+		    G_CALLBACK (overwitch_delete_window), NULL);
+
+  if (overwitch_run ())
     {
-      print_help (argv[0], PACKAGE_STRING, options);
-      exit (EXIT_FAILURE);
+      goto end;
     }
 
-  if (vflg)
-    {
-      debug_level = vflg;
-    }
+  gtk_widget_show (main_window);
+  gtk_main ();
 
-  if (lflg)
-    {
-      ow_err = print_devices ();
-      if (ow_err)
-	{
-	  fprintf (stderr, "USB error: %s\n", ow_get_err_str (ow_err));
-	  exit (EXIT_FAILURE);
-	}
-      exit (EXIT_SUCCESS);
-    }
-
-  if (bflg > 1)
-    {
-      fprintf (stderr, "Undetermined blocks\n");
-      exit (EXIT_FAILURE);
-    }
-
-  if (pflg > 1)
-    {
-      fprintf (stderr, "Undetermined priority\n");
-      exit (EXIT_FAILURE);
-    }
-
-  if (nflg + dflg == 0)
-    {
-      return run_all (blocks_per_transfer, quality, priority);
-    }
-  else if (nflg + dflg == 1)
-    {
-      return run_single (device_num, device_name,
-			 blocks_per_transfer, quality, priority);
-    }
-  else
-    {
-      fprintf (stderr, "Device not provided properly\n");
-      exit (EXIT_FAILURE);
-    }
-
-  return EXIT_SUCCESS;
+end:
+  return 0;
 }
