@@ -29,6 +29,8 @@
 #include "jclient.h"
 #include "utils.h"
 
+#define MAX_OVERWITCH_INSTANCES 16
+
 enum status_list_store_columns
 {
   STATUS_LIST_STORE_DEVICE,
@@ -52,7 +54,7 @@ struct overwitch_instance
   struct jclient jclient;
 };
 
-static struct overwitch_instance **instances;
+static struct overwitch_instance instances[MAX_OVERWITCH_INSTANCES];
 static size_t instance_count;
 
 static GtkWidget *main_window;
@@ -117,11 +119,26 @@ overwitch_show_about (GtkWidget * object, gpointer data)
   gtk_widget_hide (GTK_WIDGET (about_dialog));
 }
 
+static void
+start_instance (struct overwitch_instance *instance)
+{
+  pthread_create (&instance->thread, NULL, jclient_run_thread,
+		  &instance->jclient);
+}
+
+static void
+stop_instance (struct overwitch_instance *instance)
+{
+  jclient_exit (&instance->jclient);
+  pthread_join (instance->thread, NULL);
+}
+
 static int
 overwitch_run ()
 {
   struct ow_usb_device *devices;
   struct ow_usb_device *device;
+  struct overwitch_instance *instance;
   ow_err_t err = ow_get_devices (&devices, &instance_count);
 
   if (err)
@@ -136,28 +153,34 @@ overwitch_run ()
 
   device = devices;
 
-  instances = malloc (sizeof (struct overwitch_instance *) * instance_count);
-  for (int i = 0; i < instance_count; i++)
+  if (instance_count > MAX_OVERWITCH_INSTANCES)
+    {
+      error_print ("Too many instances (%zu > %d)", instance_count,
+		   MAX_OVERWITCH_INSTANCES);
+      instance_count = MAX_OVERWITCH_INSTANCES;
+    }
+
+  instance = instances;
+  for (int i = 0; i < instance_count; i++, instance++)
     {
       debug_print (1,
 		   "Creating client for device %d (bus %03d, address %03d)...\n",
 		   i, device->bus, device->address);
 
-      instances[i] = malloc (sizeof (struct overwitch_instance));
-      instances[i]->jclient.bus = device->bus;
-      instances[i]->jclient.address = device->address;
-      instances[i]->jclient.blocks_per_transfer = 4;
-      instances[i]->jclient.quality = 2;
-      instances[i]->jclient.priority = -1;
-      instances[i]->jclient.reporter.callback =
+      instance->jclient.bus = device->bus;
+      instance->jclient.address = device->address;
+      instance->jclient.blocks_per_transfer = 4;
+      instance->jclient.quality = 2;
+      instance->jclient.priority = -1;
+      instance->jclient.reporter.callback =
 	(ow_resampler_report_t) set_report_data;
-      instances[i]->jclient.reporter.data = instances[i];
-      instances[i]->jclient.reporter.period = -1;
-      instances[i]->device = i;
-      instances[i]->o2j_latency = 0.0;
-      instances[i]->j2o_latency = 0.0;
-      instances[i]->o2j_ratio = 1.0;
-      instances[i]->j2o_ratio = 1.0;
+      instance->jclient.reporter.data = instance;
+      instance->jclient.reporter.period = -1;
+      instance->device = i;
+      instance->o2j_latency = 0.0;
+      instance->j2o_latency = 0.0;
+      instance->o2j_ratio = 1.0;
+      instance->j2o_ratio = 1.0;
 
       gtk_list_store_insert_with_values (status_list_store, NULL, -1,
 					 STATUS_LIST_STORE_DEVICE, i,
@@ -167,19 +190,18 @@ overwitch_run ()
 					 STATUS_LIST_STORE_NAME,
 					 device->desc->name,
 					 STATUS_LIST_STORE_O2J_LATENCY,
-					 instances[i]->o2j_latency,
+					 instance->o2j_latency,
 					 STATUS_LIST_STORE_J2O_LATENCY,
-					 instances[i]->j2o_latency,
+					 instance->j2o_latency,
 					 STATUS_LIST_STORE_O2J_RATIO,
-					 instances[i]->o2j_ratio,
+					 instance->o2j_ratio,
 					 STATUS_LIST_STORE_J2O_RATIO,
-					 instances[i]->j2o_ratio, -1);
+					 instance->j2o_ratio, -1);
+
+      start_instance (instance);
     }
 
   ow_free_usb_device_list (devices, instance_count);
-
-  pthread_create (&instances[0]->thread, NULL, jclient_run_thread,
-		  &instances[0]->jclient);
 
   return EXIT_SUCCESS;
 }
@@ -187,14 +209,11 @@ overwitch_run ()
 static void
 overwitch_stop ()
 {
-  for (int i = 0; i < instance_count; i++)
+  struct overwitch_instance *instance = instances;
+  for (int i = 0; i < instance_count; i++, instance++)
     {
-      jclient_exit (&instances[i]->jclient);
-      pthread_join (instances[0]->thread, NULL);
-      free (instances[0]);
+      stop_instance (instance);
     }
-  free (instances);
-  instances = NULL;
 }
 
 static void
