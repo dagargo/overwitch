@@ -35,7 +35,7 @@ struct jclient_thread
   struct jclient jclient;
 };
 
-static ssize_t jclient_count;
+static size_t jclient_count;
 static struct jclient_thread *jclients;
 
 static struct option options[] = {

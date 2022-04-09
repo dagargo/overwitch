@@ -48,7 +48,7 @@ print_help (const char *executable_path, const char *package_string,
 ow_err_t
 print_devices ()
 {
-  ssize_t total;
+  size_t total;
   struct ow_usb_device *devices;
   struct ow_usb_device *device;
   ow_err_t err = ow_get_devices (&devices, &total);

@@ -53,7 +53,7 @@ struct overwitch_instance
 };
 
 static struct overwitch_instance **instances;
-static ssize_t instance_count;
+static size_t instance_count;
 
 static GtkWidget *main_window;
 static GtkAboutDialog *about_dialog;

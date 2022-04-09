@@ -153,13 +153,13 @@ const struct ow_device_desc *OB_DEVICE_DESCS[] = {
 };
 
 void
-ow_free_usb_device_list (struct ow_usb_device *devices, ssize_t size)
+ow_free_usb_device_list (struct ow_usb_device *devices, size_t size)
 {
   free (devices);
 }
 
 int
-ow_get_devices (struct ow_usb_device **devices, ssize_t * size)
+ow_get_devices (struct ow_usb_device **devices, size_t * size)
 {
   int i, err;
   uint8_t bus, address;
@@ -244,7 +244,7 @@ ow_get_usb_device_from_device_attrs (int device_num, const char *device_name,
 				     struct ow_usb_device **device)
 {
   int i;
-  ssize_t total;
+  size_t total;
   struct ow_usb_device *usb_devices;
   struct ow_usb_device *usb_device;
   ow_err_t err = ow_get_devices (&usb_devices, &total);
