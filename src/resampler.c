@@ -110,13 +110,13 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
 			uint32_t new_samplerate)
 {
   if (!resampler->dll.init
-      || ow_engine_get_status (resampler->engine) < OW_STATUS_RUN)
+      || ow_engine_get_status (resampler->engine) < OW_ENGINE_STATUS_RUN)
     {
       debug_print (2, "Initializing DLL...\n");
       ow_dll_primary_reset (&resampler->dll, new_samplerate, OB_SAMPLE_RATE,
 			    resampler->bufsize,
 			    resampler->engine->frames_per_transfer);
-      ow_engine_set_status (resampler->engine, OW_STATUS_READY);
+      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_READY);
     }
   else
     {
@@ -124,7 +124,7 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
       resampler->dll.ratio =
 	resampler->dll.last_ratio_avg * new_samplerate /
 	resampler->samplerate;
-      ow_engine_set_status (resampler->engine, OW_STATUS_READY);
+      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_READY);
       resampler->log_cycles = 0;
       resampler->log_control_cycles =
 	STARTUP_TIME * new_samplerate / resampler->bufsize;
@@ -310,18 +310,18 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
 
   engine_status = ow_engine_get_status (resampler->engine);
   if (resampler->status == RES_STATUS_READY
-      && engine_status <= OW_STATUS_BOOT)
+      && engine_status <= OW_ENGINE_STATUS_BOOT)
     {
-      if (engine_status == OW_STATUS_READY)
+      if (engine_status == OW_ENGINE_STATUS_READY)
 	{
-	  ow_engine_set_status (resampler->engine, OW_STATUS_BOOT);
+	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_BOOT);
 	  debug_print (2, "Booting Overbridge side...\n");
 	}
       return 1;
     }
 
   if (resampler->status == RES_STATUS_READY
-      && engine_status == OW_STATUS_WAIT)
+      && engine_status == OW_ENGINE_STATUS_WAIT)
     {
       ow_dll_primary_update_err (dll, time);
       ow_dll_primary_first_time_run (dll);
@@ -359,7 +359,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
   if (dll->ratio < 0.0)
     {
       error_print ("Negative ratio detected. Stopping resampler...\n");
-      ow_engine_set_status (resampler->engine, OW_STATUS_ERROR);
+      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_ERROR);
       return 1;
     }
 
@@ -393,7 +393,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
 	  ow_dll_primary_set_loop_filter (dll, 0.02, resampler->bufsize,
 					  resampler->samplerate);
 	  resampler->status = RES_STATUS_RUN;
-	  ow_engine_set_status (resampler->engine, OW_STATUS_RUN);
+	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_RUN);
 	}
     }
 

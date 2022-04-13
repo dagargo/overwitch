@@ -145,7 +145,7 @@ set_usb_input_data_blks (struct ow_engine *engine)
 	}
     }
 
-  if (status < OW_STATUS_RUN)
+  if (status < OW_ENGINE_STATUS_RUN)
     {
       return;
     }
@@ -301,7 +301,7 @@ cb_xfr_in_midi (struct libusb_transfer *xfr)
   int length;
   struct ow_engine *engine = xfr->user_data;
 
-  if (ow_engine_get_status (engine) < OW_STATUS_RUN)
+  if (ow_engine_get_status (engine) < OW_ENGINE_STATUS_RUN)
     {
       goto end;
     }
@@ -381,7 +381,7 @@ prepare_cycle_out_audio (struct ow_engine *engine)
     {
       error_print ("p2o: Error when submitting USB audio transfer: %s\n",
 		   libusb_strerror (err));
-      ow_engine_set_status (engine, OW_STATUS_ERROR);
+      ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
     }
 }
 
@@ -399,7 +399,7 @@ prepare_cycle_in_audio (struct ow_engine *engine)
     {
       error_print ("o2p: Error when submitting USB audio in transfer: %s\n",
 		   libusb_strerror (err));
-      ow_engine_set_status (engine, OW_STATUS_ERROR);
+      ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
     }
 }
 
@@ -416,7 +416,7 @@ prepare_cycle_in_midi (struct ow_engine *engine)
     {
       error_print ("o2p: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
-      ow_engine_set_status (engine, OW_STATUS_ERROR);
+      ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
     }
 }
 
@@ -433,7 +433,7 @@ prepare_cycle_out_midi (struct ow_engine *engine)
     {
       error_print ("p2o: Error when submitting USB MIDI transfer: %s\n",
 		   libusb_strerror (err));
-      ow_engine_set_status (engine, OW_STATUS_ERROR);
+      ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
     }
 }
 
@@ -810,7 +810,7 @@ run_p2o_midi (void *data)
 	  pthread_spin_unlock (&engine->p2o_midi_lock);
 	};
 
-      if (ow_engine_get_status (engine) <= OW_STATUS_STOP)
+      if (ow_engine_get_status (engine) <= OW_ENGINE_STATUS_STOP)
 	{
 	  break;
 	}
@@ -825,9 +825,9 @@ run_audio_o2p_midi (void *data)
   size_t rsp2o, bytes;
   struct ow_engine *engine = data;
 
-  while (ow_engine_get_status (engine) == OW_STATUS_READY);
+  while (ow_engine_get_status (engine) == OW_ENGINE_STATUS_READY);
 
-  //status == OW_STATUS_BOOT
+  //status == OW_ENGINE_STATUS_BOOT
 
   prepare_cycle_in_audio (engine);
   prepare_cycle_out_audio (engine);
@@ -842,7 +842,7 @@ run_audio_o2p_midi (void *data)
       engine->p2o_max_latency = 0;
       engine->reading_at_p2o_end = 0;
 
-      //status == OW_STATUS_BOOT
+      //status == OW_ENGINE_STATUS_BOOT
 
       pthread_spin_lock (&engine->lock);
       if (engine->context->dll)
@@ -850,20 +850,20 @@ run_audio_o2p_midi (void *data)
 	  ow_dll_overwitch_init (engine->context->dll, OB_SAMPLE_RATE,
 				 engine->frames_per_transfer,
 				 engine->context->get_time ());
-	  engine->status = OW_STATUS_WAIT;
+	  engine->status = OW_ENGINE_STATUS_WAIT;
 	}
       else
 	{
-	  engine->status = OW_STATUS_RUN;
+	  engine->status = OW_ENGINE_STATUS_RUN;
 	}
       pthread_spin_unlock (&engine->lock);
 
-      while (ow_engine_get_status (engine) >= OW_STATUS_WAIT)
+      while (ow_engine_get_status (engine) >= OW_ENGINE_STATUS_WAIT)
 	{
 	  libusb_handle_events_completed (engine->usb.context, NULL);
 	}
 
-      if (ow_engine_get_status (engine) <= OW_STATUS_STOP)
+      if (ow_engine_get_status (engine) <= OW_ENGINE_STATUS_STOP)
 	{
 	  break;
 	}
@@ -958,7 +958,7 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 	{
 	  return OW_INIT_ERROR_NO_DLL;
 	}
-      engine->status = OW_STATUS_READY;
+      engine->status = OW_ENGINE_STATUS_READY;
     }
 
   if (!context->set_rt_priority)
@@ -1090,5 +1090,5 @@ ow_engine_get_device_desc (struct ow_engine *engine)
 inline void
 ow_engine_stop (struct ow_engine *engine)
 {
-  ow_engine_set_status (engine, OW_STATUS_STOP);
+  ow_engine_set_status (engine, OW_ENGINE_STATUS_STOP);
 }
