@@ -109,15 +109,14 @@ void
 ow_resampler_reset_dll (struct ow_resampler *resampler,
 			uint32_t new_samplerate)
 {
-  static int init = 0;
-  if (!init || ow_engine_get_status (resampler->engine) < OW_STATUS_RUN)
+  if (!resampler->dll.init
+      || ow_engine_get_status (resampler->engine) < OW_STATUS_RUN)
     {
       debug_print (2, "Initializing DLL...\n");
-      ow_dll_primary_init (&resampler->dll, new_samplerate, OB_SAMPLE_RATE,
-			   resampler->bufsize,
-			   resampler->engine->frames_per_transfer);
+      ow_dll_primary_reset (&resampler->dll, new_samplerate, OB_SAMPLE_RATE,
+			    resampler->bufsize,
+			    resampler->engine->frames_per_transfer);
       ow_engine_set_status (resampler->engine, OW_STATUS_READY);
-      init = 1;
     }
   else
     {
@@ -438,6 +437,8 @@ ow_resampler_init_from_bus_address (struct ow_resampler **resampler_, int bus,
   resampler->reporter.callback = NULL;
   resampler->reporter.data = NULL;
   resampler->reporter.period = DEFAULT_REPORT_PERIOD;
+
+  ow_dll_primary_init (&resampler->dll);
 
   return OW_OK;
 }

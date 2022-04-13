@@ -159,7 +159,7 @@ ow_free_usb_device_list (struct ow_usb_device *devices, size_t size)
 }
 
 int
-ow_get_devices (struct ow_usb_device **devices, size_t * size)
+ow_get_devices (struct ow_usb_device **devices, size_t *size)
 {
   int i, err;
   uint8_t bus, address;

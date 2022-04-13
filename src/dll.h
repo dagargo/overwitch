@@ -58,13 +58,16 @@ struct ow_dll
   double to0;
   double to1;
   struct ow_dll_overwitch dll_ow;
+  int init;
 };
 
 void ow_dll_overwitch_init (struct ow_dll_overwitch *, double, int, double);
 
 void ow_dll_overwitch_inc (struct ow_dll_overwitch *, int, double);
 
-void ow_dll_primary_init (struct ow_dll *, double, double, int, int);
+void ow_dll_primary_init (struct ow_dll *);
+
+void ow_dll_primary_reset (struct ow_dll *, double, double, int, int);
 
 void ow_dll_primary_set_loop_filter (struct ow_dll *, double, int, double);
 
