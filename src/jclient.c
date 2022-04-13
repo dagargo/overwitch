@@ -75,7 +75,7 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
   int p2o_enabled = 0;
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
   const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
-  //We only check for j2o (imput) ports as o2j must always be running.
+  //We only check for j2o (input) ports as o2j must always be running.
   for (int i = 0; i < desc->inputs; i++)
     {
       if (jack_port_connected (jclient->input_ports[i]))
@@ -364,6 +364,26 @@ jclient_exit (struct jclient *jclient)
 }
 
 int
+jclient_init (struct jclient *jclient)
+{
+  struct ow_resampler *resampler;
+  ow_err_t err = ow_resampler_init_from_bus_address (&resampler, jclient->bus,
+						     jclient->address,
+						     jclient->blocks_per_transfer,
+						     jclient->quality);
+
+  if (err)
+    {
+      error_print ("Overwitch error: %s\n", ow_get_err_str (err));
+      return -1;
+    }
+
+  jclient->resampler = resampler;
+
+  return 0;
+}
+
+int
 jclient_run (struct jclient *jclient)
 {
   jack_options_t options = JackNoStartServer;
@@ -372,16 +392,6 @@ jclient_run (struct jclient *jclient)
   char *client_name;
   struct ow_engine *engine;
   const struct ow_device_desc *desc;
-
-  err = ow_resampler_init_from_bus_address (&jclient->resampler, jclient->bus,
-					    jclient->address,
-					    jclient->blocks_per_transfer,
-					    jclient->quality);
-  if (err)
-    {
-      error_print ("Overwitch error: %s\n", ow_get_err_str (err));
-      goto end;
-    }
 
   ow_resampler_set_report_callback (jclient->resampler, &jclient->reporter);
 
@@ -570,7 +580,6 @@ cleanup_jack:
   free (jclient->input_ports);
 end:
   ow_resampler_destroy (jclient->resampler);
-  jclient->client = NULL;
   return err;
 }
 
@@ -579,5 +588,9 @@ jclient_run_thread (void *data)
 {
   struct jclient *jclient = data;
   jclient_run (jclient);
+  if (jclient->end_notifier)
+    {
+      jclient->end_notifier (jclient->bus, jclient->address);
+    }
   return NULL;
 }

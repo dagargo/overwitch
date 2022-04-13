@@ -1,5 +1,5 @@
 /*
- *   main.c
+ *   main-cli.c
  *   Copyright (C) 2021 David García Goñi <dagargo@gmail.com>
  *
  *   This file is part of Overwitch.
@@ -29,14 +29,14 @@
 #define DEFAULT_BLOCKS 24
 #define DEFAULT_PRIORITY -1	//With this value the default priority will be used.
 
-struct jclient_thread
+struct overwitch_instance
 {
   pthread_t thread;
   struct jclient jclient;
 };
 
-static size_t jclient_count;
-static struct jclient_thread *jclients;
+static size_t instance_count;
+static struct overwitch_instance *instances;
 
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
@@ -55,18 +55,18 @@ signal_handler (int signo)
 {
   if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
     {
-      struct jclient_thread *jclient = jclients;
-      for (int i = 0; i < jclient_count; i++, jclient++)
+      struct overwitch_instance *instance = instances;
+      for (int i = 0; i < instance_count; i++, instance++)
 	{
-	  jclient_exit (&jclient->jclient);
+	  jclient_exit (&instance->jclient);
 	}
     }
   else if (signo == SIGUSR1)
     {
-      struct jclient_thread *jclient = jclients;
-      for (int i = 0; i < jclient_count; i++, jclient++)
+      struct overwitch_instance *instance = instances;
+      for (int i = 0; i < instance_count; i++, instance++)
 	{
-	  ow_resampler_report_status (jclient->jclient.resampler);
+	  ow_resampler_report_status (instance->jclient.resampler);
 	}
     }
 }
@@ -76,28 +76,37 @@ run_single (int device_num, const char *device_name,
 	    int blocks_per_transfer, int quality, int priority)
 {
   struct ow_usb_device *device;
+  ow_err_t err = OW_OK;
 
   if (ow_get_usb_device_from_device_attrs (device_num, device_name, &device))
     {
       return OW_GENERIC_ERROR;
     }
 
-  jclient_count = 1;
-  jclients = malloc (sizeof (struct jclient_thread));
-  jclients->jclient.bus = device->bus;
-  jclients->jclient.address = device->address;
-  jclients->jclient.blocks_per_transfer = blocks_per_transfer;
-  jclients->jclient.quality = quality;
-  jclients->jclient.priority = priority;
-  jclients->jclient.reporter.callback = NULL;
+  instance_count = 1;
+  instances = malloc (sizeof (struct overwitch_instance));
+  instances->jclient.bus = device->bus;
+  instances->jclient.address = device->address;
+  instances->jclient.blocks_per_transfer = blocks_per_transfer;
+  instances->jclient.quality = quality;
+  instances->jclient.priority = priority;
+  instances->jclient.reporter.callback = NULL;
+  instances->jclient.end_notifier = NULL;
   free (device);
 
-  pthread_create (&jclients->thread, NULL, jclient_run_thread,
-		  &jclients->jclient);
-  pthread_join (jclients->thread, NULL);
-  free (jclients);
+  if (jclient_init (&instances->jclient))
+    {
+      err = OW_GENERIC_ERROR;
+      goto end;
+    }
 
-  return OW_OK;
+  pthread_create (&instances->thread, NULL, jclient_run_thread,
+		  &instances->jclient);
+  pthread_join (instances->thread, NULL);
+
+end:
+  free (instances);
+  return err;
 }
 
 static int
@@ -105,40 +114,46 @@ run_all (int blocks_per_transfer, int quality, int priority)
 {
   struct ow_usb_device *devices;
   struct ow_usb_device *device;
-  struct jclient_thread *jclient;
-  ow_err_t err = ow_get_devices (&devices, &jclient_count);
+  struct overwitch_instance *instance;
+  ow_err_t err = ow_get_devices (&devices, &instance_count);
 
   if (err)
     {
       return err;
     }
 
-  jclients = malloc (sizeof (struct jclient_thread) * jclient_count);
+  instances = malloc (sizeof (struct overwitch_instance) * instance_count);
 
   device = devices;
-  jclient = jclients;
-  for (int i = 0; i < jclient_count; i++, jclient++, device++)
+  instance = instances;
+  for (int i = 0; i < instance_count; i++, instance++, device++)
     {
-      jclient->jclient.bus = device->bus;
-      jclient->jclient.address = device->address;
-      jclient->jclient.blocks_per_transfer = blocks_per_transfer;
-      jclient->jclient.quality = quality;
-      jclient->jclient.priority = priority;
-      jclient->jclient.reporter.callback = NULL;
+      instance->jclient.bus = device->bus;
+      instance->jclient.address = device->address;
+      instance->jclient.blocks_per_transfer = blocks_per_transfer;
+      instance->jclient.quality = quality;
+      instance->jclient.priority = priority;
+      instance->jclient.reporter.callback = NULL;
+      instance->jclient.end_notifier = NULL;
 
-      pthread_create (&jclient->thread, NULL, jclient_run_thread,
-		      &jclient->jclient);
+      if (jclient_init (&instance->jclient))
+	{
+	  continue;
+	}
+
+      pthread_create (&instance->thread, NULL, jclient_run_thread,
+		      &instance->jclient);
     }
 
-  ow_free_usb_device_list (devices, jclient_count);
+  ow_free_usb_device_list (devices, instance_count);
 
-  jclient = jclients;
-  for (int i = 0; i < jclient_count; i++, jclient++)
+  instance = instances;
+  for (int i = 0; i < instance_count; i++, instance++)
     {
-      pthread_join (jclient->thread, NULL);
+      pthread_join (instance->thread, NULL);
     }
 
-  free (jclients);
+  free (instances);
 
   return OW_OK;
 }

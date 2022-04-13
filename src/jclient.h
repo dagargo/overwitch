@@ -22,6 +22,8 @@
 #include <jack/midiport.h>
 #include "overwitch.h"
 
+typedef void (*jclient_end_notifier_t) (uint8_t, uint8_t);
+
 struct jclient
 {
   //JACK stuff
@@ -41,7 +43,11 @@ struct jclient
   struct ow_resampler *resampler;
   struct ow_context context;
   struct ow_resampler_reporter reporter;
+  // Thread end notifier
+  jclient_end_notifier_t end_notifier;
 };
+
+int jclient_init (struct jclient *);
 
 int jclient_run (struct jclient *);
 

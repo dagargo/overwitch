@@ -29,43 +29,56 @@
 #include "jclient.h"
 #include "utils.h"
 
-#define MAX_OVERWITCH_INSTANCES 16
-
-enum status_list_store_columns
+enum list_store_columns
 {
-  STATUS_LIST_STORE_DEVICE,
+  STATUS_LIST_STORE_NAME,
   STATUS_LIST_STORE_BUS,
   STATUS_LIST_STORE_ADDRESS,
-  STATUS_LIST_STORE_NAME,
   STATUS_LIST_STORE_O2J_LATENCY,
   STATUS_LIST_STORE_J2O_LATENCY,
   STATUS_LIST_STORE_O2J_RATIO,
-  STATUS_LIST_STORE_J2O_RATIO
+  STATUS_LIST_STORE_J2O_RATIO,
+  STATUS_LIST_STORE_INSTANCE
 };
 
 struct overwitch_instance
 {
-  int device;
   pthread_t thread;
-  double o2j_latency;
-  double j2o_latency;
-  double o2j_ratio;
-  double j2o_ratio;
+  gdouble o2j_latency;
+  gdouble j2o_latency;
+  gdouble o2j_ratio;
+  gdouble j2o_ratio;
   struct jclient jclient;
+  const struct ow_device_desc *device_desc;
 };
-
-static struct overwitch_instance instances[MAX_OVERWITCH_INSTANCES];
-static size_t instance_count;
 
 static GtkWidget *main_window;
 static GtkAboutDialog *about_dialog;
-
 static GtkWidget *about_button;
-
+static GtkWidget *refresh_button;
 static GtkListStore *status_list_store;
 
+static void
+start_instance (struct overwitch_instance *instance)
+{
+  debug_print (1, "Starting %s instance (bus %03d, address %03d)...\n",
+	       instance->device_desc->name, instance->jclient.bus,
+	       instance->jclient.address);
+  pthread_create (&instance->thread, NULL, jclient_run_thread,
+		  &instance->jclient);
+}
+
+static void
+stop_instance (struct overwitch_instance *instance)
+{
+  debug_print (1, "Stopping %s instance (bus %03d, address %03d)...\n",
+	       instance->device_desc->name, instance->jclient.bus,
+	       instance->jclient.address);
+  jclient_exit (&instance->jclient);
+}
+
 static gboolean
-set_overwith_instance_metrics (struct overwitch_instance *instance)
+set_overwitch_instance_metrics (struct overwitch_instance *instance)
 {
   GtkTreeIter iter;
   gint bus, address;
@@ -90,6 +103,7 @@ set_overwith_instance_metrics (struct overwitch_instance *instance)
 			      instance->o2j_ratio,
 			      STATUS_LIST_STORE_J2O_RATIO,
 			      instance->j2o_ratio, -1);
+
 	  break;
 	}
 
@@ -104,12 +118,11 @@ static void
 set_report_data (struct overwitch_instance *instance, double o2j_latency,
 		 double j2o_latency, double o2j_ratio, double j2o_ratio)
 {
-  debug_print (1, "Updating data for device %d...\n", instance->device);
   instance->o2j_latency = o2j_latency;
   instance->j2o_latency = j2o_latency;
   instance->o2j_ratio = o2j_ratio;
   instance->j2o_ratio = j2o_ratio;
-  g_idle_add ((GSourceFunc) set_overwith_instance_metrics, instance);
+  g_idle_add ((GSourceFunc) set_overwitch_instance_metrics, instance);
 }
 
 static void
@@ -119,54 +132,107 @@ overwitch_show_about (GtkWidget * object, gpointer data)
   gtk_widget_hide (GTK_WIDGET (about_dialog));
 }
 
-static void
-start_instance (struct overwitch_instance *instance)
+static gboolean
+overwitch_instance_running (uint8_t bus, uint8_t address)
 {
-  pthread_create (&instance->thread, NULL, jclient_run_thread,
-		  &instance->jclient);
+  guint dev_bus, dev_address;
+  GtkTreeIter iter;
+  gboolean valid =
+    gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store), &iter);
+
+  while (valid)
+    {
+      gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
+			  STATUS_LIST_STORE_BUS, &dev_bus,
+			  STATUS_LIST_STORE_ADDRESS, &dev_address, -1);
+
+      if (dev_bus == bus && dev_address == address)
+	{
+	  return TRUE;
+	}
+
+      valid =
+	gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store), &iter);
+    }
+
+  return FALSE;
 }
 
-static void
-stop_instance (struct overwitch_instance *instance)
+static gboolean
+remove_jclient_bg (guint * id)
 {
-  jclient_exit (&instance->jclient);
-  pthread_join (instance->thread, NULL);
-}
-
-static int
-overwitch_run ()
-{
-  struct ow_usb_device *devices;
-  struct ow_usb_device *device;
   struct overwitch_instance *instance;
-  ow_err_t err = ow_get_devices (&devices, &instance_count);
+  GtkTreeIter iter;
+  uint8_t bus = *id >> 8;
+  uint8_t address = 0xff & *id;
+  gboolean valid =
+    gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store), &iter);
+
+  g_free (id);
+
+  while (valid)
+    {
+      gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
+			  STATUS_LIST_STORE_INSTANCE, &instance, -1);
+
+      if (instance->jclient.bus == bus
+	  && instance->jclient.address == address)
+	{
+	  pthread_join (instance->thread, NULL);
+	  gtk_list_store_remove (status_list_store, &iter);
+          break;
+	}
+
+      valid =
+	gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store), &iter);
+    }
+
+    return FALSE;
+}
+
+static void
+remove_jclient (uint8_t bus, uint8_t address)
+{
+  guint * id = g_malloc (sizeof(guint));
+  *id = (bus << 8) + address;
+  g_idle_add ((GSourceFunc) remove_jclient_bg, id);
+}
+
+static void
+overwitch_refresh_devices (GtkWidget * object, gpointer data)
+{
+  struct ow_usb_device *devices, *device;
+  struct overwitch_instance *instance;
+  size_t devices_count;
+  ow_err_t err = ow_get_devices (&devices, &devices_count);
 
   if (err)
     {
-      return err;
+      return;
     }
 
-  if (!instance_count)
+  if (!devices_count)
     {
-      return EXIT_SUCCESS;
+      return;
     }
 
   device = devices;
 
-  if (instance_count > MAX_OVERWITCH_INSTANCES)
+  for (int i = 0; i < devices_count; i++, device++)
     {
-      error_print ("Too many instances (%zu > %d)", instance_count,
-		   MAX_OVERWITCH_INSTANCES);
-      instance_count = MAX_OVERWITCH_INSTANCES;
-    }
+      if (overwitch_instance_running (device->bus, device->address))
+	{
+	  debug_print (1,
+		       "%s instance (bus %03d, address %03d) already running. Skipping...\n",
+		       device->desc->name, device->bus, device->address);
+	  continue;
+	}
 
-  instance = instances;
-  for (int i = 0; i < instance_count; i++, instance++)
-    {
       debug_print (1,
-		   "Creating client for device %d (bus %03d, address %03d)...\n",
-		   i, device->bus, device->address);
+		   "Adding %s instance (bus %03d, address %03d)...\n",
+		   device->desc->name, device->bus, device->address);
 
+      instance = malloc (sizeof (struct overwitch_instance));
       instance->jclient.bus = device->bus;
       instance->jclient.address = device->address;
       instance->jclient.blocks_per_transfer = 4;
@@ -176,19 +242,26 @@ overwitch_run ()
 	(ow_resampler_report_t) set_report_data;
       instance->jclient.reporter.data = instance;
       instance->jclient.reporter.period = -1;
-      instance->device = i;
+      instance->jclient.end_notifier = remove_jclient;
       instance->o2j_latency = 0.0;
       instance->j2o_latency = 0.0;
       instance->o2j_ratio = 1.0;
       instance->j2o_ratio = 1.0;
+      instance->device_desc = device->desc;
+
+      if (jclient_init (&instance->jclient))
+	{
+	  free (instance);
+	  continue;
+	}
 
       gtk_list_store_insert_with_values (status_list_store, NULL, -1,
-					 STATUS_LIST_STORE_DEVICE, i,
-					 STATUS_LIST_STORE_BUS, device->bus,
-					 STATUS_LIST_STORE_ADDRESS,
-					 device->address,
 					 STATUS_LIST_STORE_NAME,
 					 device->desc->name,
+					 STATUS_LIST_STORE_BUS,
+					 instance->jclient.bus,
+					 STATUS_LIST_STORE_ADDRESS,
+					 instance->jclient.address,
 					 STATUS_LIST_STORE_O2J_LATENCY,
 					 instance->o2j_latency,
 					 STATUS_LIST_STORE_J2O_LATENCY,
@@ -196,23 +269,41 @@ overwitch_run ()
 					 STATUS_LIST_STORE_O2J_RATIO,
 					 instance->o2j_ratio,
 					 STATUS_LIST_STORE_J2O_RATIO,
-					 instance->j2o_ratio, -1);
+					 instance->j2o_ratio,
+					 STATUS_LIST_STORE_INSTANCE, instance,
+					 -1);
 
       start_instance (instance);
     }
 
-  ow_free_usb_device_list (devices, instance_count);
+  ow_free_usb_device_list (devices, devices_count);
+}
 
-  return EXIT_SUCCESS;
+static void
+overwitch_run ()
+{
+  overwitch_refresh_devices (NULL, NULL);
 }
 
 static void
 overwitch_stop ()
 {
-  struct overwitch_instance *instance = instances;
-  for (int i = 0; i < instance_count; i++, instance++)
+  struct overwitch_instance *instance;
+  GtkTreeIter iter;
+  gboolean valid =
+    gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store), &iter);
+
+  while (valid)
     {
+      gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
+			  STATUS_LIST_STORE_INSTANCE, &instance, -1);
+
       stop_instance (instance);
+      gtk_list_store_remove (status_list_store, &iter);
+
+      valid =
+	gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store),
+				       &iter);
     }
 }
 
@@ -262,23 +353,25 @@ main (int argc, char *argv[])
   about_button =
     GTK_WIDGET (gtk_builder_get_object (builder, "about_button"));
 
+  refresh_button =
+    GTK_WIDGET (gtk_builder_get_object (builder, "refresh_button"));
+
   status_list_store =
     GTK_LIST_STORE (gtk_builder_get_object (builder, "status_list_store"));
 
   g_signal_connect (about_button, "clicked",
 		    G_CALLBACK (overwitch_show_about), NULL);
 
+  g_signal_connect (refresh_button, "clicked",
+		    G_CALLBACK (overwitch_refresh_devices), NULL);
+
   g_signal_connect (main_window, "delete-event",
 		    G_CALLBACK (overwitch_delete_window), NULL);
 
-  if (overwitch_run ())
-    {
-      goto end;
-    }
+  overwitch_run ();
 
   gtk_widget_show (main_window);
   gtk_main ();
 
-end:
   return 0;
 }

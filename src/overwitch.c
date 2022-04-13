@@ -161,7 +161,7 @@ ow_free_usb_device_list (struct ow_usb_device *devices, size_t size)
 int
 ow_get_devices (struct ow_usb_device **devices, size_t *size)
 {
-  int i, err;
+  int err;
   uint8_t bus, address;
   libusb_device **usb_device;
   struct libusb_device_descriptor desc;
@@ -176,12 +176,19 @@ ow_get_devices (struct ow_usb_device **devices, size_t *size)
       return 1;
     }
 
+  *size = 0;
+
   total = libusb_get_device_list (context, &usb_devices);
+  if (!total)
+    {
+      *devices = NULL;
+      return 0;
+    }
+
   *devices = malloc (sizeof (struct ow_usb_device) * total);
   device = *devices;
   usb_device = usb_devices;
-  *size = 0;
-  for (i = 0; i < total; i++, usb_device++)
+  for (int i = 0; i < total; i++, usb_device++)
     {
       err = libusb_get_device_descriptor (*usb_device, &desc);
       if (err)
@@ -196,9 +203,9 @@ ow_get_devices (struct ow_usb_device **devices, size_t *size)
 	{
 	  bus = libusb_get_bus_number (*usb_device);
 	  address = libusb_get_device_address (*usb_device);
-	  debug_print (1, "Bus %03d Device %03d: ID %04x:%04x %s\n",
-		       bus, address, desc.idVendor, desc.idProduct,
-		       device_desc->name);
+	  debug_print (1, "Found %s (bus %03d, address %03d, ID %04x:%04x)\n",
+		       device_desc->name, bus, address, desc.idVendor,
+		       desc.idProduct);
 	  device->desc = device_desc;
 	  device->vid = desc.idVendor;
 	  device->pid = desc.idProduct;
@@ -209,7 +216,7 @@ ow_get_devices (struct ow_usb_device **devices, size_t *size)
 	}
     }
 
-  if (!total)
+  if (!*size)
     {
       free (*devices);
       *devices = NULL;
