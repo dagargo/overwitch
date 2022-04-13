@@ -267,7 +267,7 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
 	 resampler->p2o_ratio, gen_frames, frames);
     }
 
-  if (resampler->status < RES_STATUS_RUN)
+  if (resampler->status < OW_RESAMPLER_STATUS_RUN)
     {
       return;
     }
@@ -309,7 +309,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
   pthread_spin_unlock (&resampler->engine->lock);
 
   engine_status = ow_engine_get_status (resampler->engine);
-  if (resampler->status == RES_STATUS_READY
+  if (resampler->status == OW_RESAMPLER_STATUS_READY
       && engine_status <= OW_ENGINE_STATUS_BOOT)
     {
       if (engine_status == OW_ENGINE_STATUS_READY)
@@ -320,7 +320,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
       return 1;
     }
 
-  if (resampler->status == RES_STATUS_READY
+  if (resampler->status == OW_RESAMPLER_STATUS_READY
       && engine_status == OW_ENGINE_STATUS_WAIT)
     {
       ow_dll_primary_update_err (dll, time);
@@ -329,7 +329,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
       debug_print (2, "Starting up resampler...\n");
       ow_dll_primary_set_loop_filter (dll, 1.0, resampler->bufsize,
 				      resampler->samplerate);
-      resampler->status = RES_STATUS_BOOT;
+      resampler->status = OW_RESAMPLER_STATUS_BOOT;
 
       resampler->log_cycles = 0;
       resampler->log_control_cycles =
@@ -375,24 +375,24 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
 
       resampler->log_cycles = 0;
 
-      if (resampler->status == RES_STATUS_BOOT)
+      if (resampler->status == OW_RESAMPLER_STATUS_BOOT)
 	{
 	  debug_print (2, "Tunning resampler...\n");
 	  ow_dll_primary_set_loop_filter (dll, 0.05, resampler->bufsize,
 					  resampler->samplerate);
-	  resampler->status = RES_STATUS_TUNE;
+	  resampler->status = OW_RESAMPLER_STATUS_TUNE;
 	  resampler->log_control_cycles =
 	    resampler->reporter.period * resampler->samplerate /
 	    resampler->bufsize;
 	}
 
-      if (resampler->status == RES_STATUS_TUNE
+      if (resampler->status == OW_RESAMPLER_STATUS_TUNE
 	  && fabs (dll->ratio_avg - dll->last_ratio_avg) < RATIO_DIFF_THRES)
 	{
 	  debug_print (2, "Running resampler...\n");
 	  ow_dll_primary_set_loop_filter (dll, 0.02, resampler->bufsize,
 					  resampler->samplerate);
-	  resampler->status = RES_STATUS_RUN;
+	  resampler->status = OW_RESAMPLER_STATUS_RUN;
 	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_RUN);
 	}
     }
@@ -421,7 +421,7 @@ ow_resampler_init_from_bus_address (struct ow_resampler **resampler_, int bus,
   resampler->bufsize = 0;
   resampler->xruns = 0;
   resampler->p2o_aux = NULL;
-  resampler->status = RES_STATUS_READY;
+  resampler->status = OW_RESAMPLER_STATUS_READY;
 
   resampler->p2o_state =
     src_callback_new (resampler_p2o_reader, quality,

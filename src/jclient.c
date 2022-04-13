@@ -190,7 +190,7 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
   jack_nframes_t event_count;
   jack_midi_data_t status_byte;
 
-  if (ow_resampler_get_status (jclient->resampler) < RES_STATUS_RUN)
+  if (ow_resampler_get_status (jclient->resampler) < OW_RESAMPLER_STATUS_RUN)
     {
       return;
     }
