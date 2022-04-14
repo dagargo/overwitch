@@ -62,7 +62,6 @@
         <property name="visible">True</property>
         <property name="can-focus">False</property>
         <property name="orientation">vertical</property>
-        <property name="spacing">6</property>
         <child>
           <object class="GtkViewport">
             <property name="visible">True</property>
@@ -70,7 +69,6 @@
             <property name="margin-start">6</property>
             <property name="margin-end">6</property>
             <property name="margin-top">6</property>
-            <property name="margin-bottom">6</property>
             <child>
               <object class="GtkTreeView">
                 <property name="visible">True</property>
@@ -174,6 +172,7 @@
           <object class="GtkStatusbar" id="status_bar">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
+            <property name="halign">end</property>
             <property name="spacing">2</property>
           </object>
           <packing>
