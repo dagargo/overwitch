@@ -22,12 +22,16 @@
 #include <string.h>
 #include <sched.h>
 #include <gtk/gtk.h>
+#include <jack/jack.h>
 #define _GNU_SOURCE
 #include "../config.h"
 #include "common.h"
 #include "overwitch.h"
 #include "jclient.h"
 #include "utils.h"
+
+#define MSG_JACK_SERVER_FOUND "JACK server found"
+#define MSG_NO_JACK_SERVER_FOUND "No JACK server found"
 
 enum list_store_columns
 {
@@ -57,6 +61,7 @@ static GtkAboutDialog *about_dialog;
 static GtkWidget *about_button;
 static GtkWidget *refresh_button;
 static GtkListStore *status_list_store;
+static GtkStatusbar *status_bar;
 
 static void
 start_instance (struct overwitch_instance *instance)
@@ -158,6 +163,29 @@ overwitch_instance_running (uint8_t bus, uint8_t address, const char **name)
 }
 
 static gboolean
+overwitch_check_jack_server ()
+{
+  jack_client_t *client;
+  jack_status_t status;
+
+  gtk_statusbar_pop (status_bar, 0);
+
+  client = jack_client_open ("Overwitch control client", JackNoStartServer,
+			     &status, NULL);
+  if (client)
+    {
+      gtk_statusbar_push (status_bar, 0, MSG_JACK_SERVER_FOUND);
+      jack_client_close (client);
+      return TRUE;
+    }
+  else
+    {
+      gtk_statusbar_push (status_bar, 0, MSG_NO_JACK_SERVER_FOUND);
+      return FALSE;
+    }
+}
+
+static gboolean
 remove_jclient_bg (guint * id)
 {
   struct overwitch_instance *instance;
@@ -186,7 +214,9 @@ remove_jclient_bg (guint * id)
 	gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store), &iter);
     }
 
-    return FALSE;
+  overwitch_check_jack_server ();
+
+  return FALSE;
 }
 
 static void
@@ -204,8 +234,14 @@ overwitch_refresh_devices (GtkWidget * object, gpointer data)
   struct overwitch_instance *instance;
   size_t devices_count;
   const char *name;
-  ow_err_t err = ow_get_devices (&devices, &devices_count);
+  ow_err_t err;
 
+  if (!overwitch_check_jack_server ())
+    {
+      return;
+    }
+
+  err = ow_get_devices (&devices, &devices_count);
   if (err)
     {
       return;
@@ -355,6 +391,9 @@ main (int argc, char *argv[])
 
   status_list_store =
     GTK_LIST_STORE (gtk_builder_get_object (builder, "status_list_store"));
+
+  status_bar = GTK_STATUSBAR (gtk_builder_get_object (builder, "status_bar"));
+  gtk_statusbar_push (status_bar, 0, MSG_NO_JACK_SERVER_FOUND);
 
   g_signal_connect (about_button, "clicked",
 		    G_CALLBACK (overwitch_show_about), NULL);

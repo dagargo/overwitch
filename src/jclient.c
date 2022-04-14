@@ -386,7 +386,6 @@ jclient_init (struct jclient *jclient)
 int
 jclient_run (struct jclient *jclient)
 {
-  jack_options_t options = JackNoStartServer;
   jack_status_t status;
   ow_err_t err = OW_OK;
   char *client_name;
@@ -399,8 +398,8 @@ jclient_run (struct jclient *jclient)
   desc = ow_engine_get_device_desc (engine);
 
   jclient->client =
-    jack_client_open (ow_resampler_get_name (jclient->resampler), options,
-		      &status, NULL);
+    jack_client_open (ow_resampler_get_name (jclient->resampler),
+		      JackNoStartServer, &status, NULL);
   if (jclient->client == NULL)
     {
       error_print ("jack_client_open() failed, status = 0x%2.0x\n", status);
