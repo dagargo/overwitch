@@ -28,6 +28,12 @@
 #define DEFAULT_REPORT_PERIOD 2
 #define RATIO_DIFF_THRES 0.00001
 
+inline const char *
+ow_resampler_get_name (struct ow_resampler *resampler)
+{
+  return resampler->engine->name;
+}
+
 void
 ow_resampler_report_status (struct ow_resampler *resampler)
 {
@@ -41,7 +47,7 @@ ow_resampler_report_status (struct ow_resampler *resampler)
     {
       printf
 	("%s: o2j latency: %.1f ms, max. %.1f ms; j2o latency: %.1f ms, max. %.1f ms, o2j ratio: %f, avg. %f\n",
-	 resampler->engine->device_desc->name,
+	 ow_resampler_get_name (resampler),
 	 o2p_latency,
 	 resampler->o2p_max_latency * 1000.0 /
 	 (ow_resampler_get_o2p_frame_size (resampler) * OB_SAMPLE_RATE),
@@ -401,9 +407,9 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
 }
 
 ow_err_t
-ow_resampler_init_from_bus_address (struct ow_resampler **resampler_, int bus,
-				    int address, int blocks_per_transfer,
-				    int quality)
+ow_resampler_init_from_bus_address (struct ow_resampler **resampler_,
+				    uint8_t bus, uint8_t address,
+				    int blocks_per_transfer, int quality)
 {
   struct ow_resampler *resampler = malloc (sizeof (struct ow_resampler));
   ow_err_t err =

@@ -152,9 +152,11 @@
 #include "overwitch.h"
 
 #define OB_PADDING_SIZE 28
+#define ENGINE_NAME_MAX_LEN 128
 
 struct ow_engine
 {
+  char name[ENGINE_NAME_MAX_LEN];
   ow_engine_status_t status;
   int blocks_per_transfer;
   int frames_per_transfer;

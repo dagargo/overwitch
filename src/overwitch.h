@@ -204,8 +204,8 @@ const struct ow_device_desc *ow_engine_get_device_desc (struct ow_engine *);
 void ow_engine_stop (struct ow_engine *);
 
 //Resampler
-ow_err_t ow_resampler_init_from_bus_address (struct ow_resampler **, int, int,
-					     int, int);
+ow_err_t ow_resampler_init_from_bus_address (struct ow_resampler **, uint8_t,
+					     uint8_t, int, int);
 
 ow_err_t ow_resampler_activate (struct ow_resampler *, struct ow_context *);
 
@@ -249,5 +249,7 @@ float *ow_resampler_get_p2o_audio_buffer (struct ow_resampler *);
 
 void ow_resampler_set_report_callback (struct ow_resampler *,
 				       const struct ow_resampler_reporter *);
+
+const char *ow_resampler_get_name (struct ow_resampler *);
 
 #endif

@@ -61,9 +61,8 @@ static GtkListStore *status_list_store;
 static void
 start_instance (struct overwitch_instance *instance)
 {
-  debug_print (1, "Starting %s instance (bus %03d, address %03d)...\n",
-	       instance->device_desc->name, instance->jclient.bus,
-	       instance->jclient.address);
+  debug_print (1, "Starting %s...\n",
+	       ow_resampler_get_name (instance->jclient.resampler));
   pthread_create (&instance->thread, NULL, jclient_run_thread,
 		  &instance->jclient);
 }
@@ -71,9 +70,8 @@ start_instance (struct overwitch_instance *instance)
 static void
 stop_instance (struct overwitch_instance *instance)
 {
-  debug_print (1, "Stopping %s instance (bus %03d, address %03d)...\n",
-	       instance->device_desc->name, instance->jclient.bus,
-	       instance->jclient.address);
+  debug_print (1, "Stopping %s...\n",
+	       ow_resampler_get_name (instance->jclient.resampler));
   jclient_exit (&instance->jclient);
 }
 
@@ -133,7 +131,7 @@ overwitch_show_about (GtkWidget * object, gpointer data)
 }
 
 static gboolean
-overwitch_instance_running (uint8_t bus, uint8_t address)
+overwitch_instance_running (uint8_t bus, uint8_t address, const char **name)
 {
   guint dev_bus, dev_address;
   GtkTreeIter iter;
@@ -143,6 +141,7 @@ overwitch_instance_running (uint8_t bus, uint8_t address)
   while (valid)
     {
       gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
+			  STATUS_LIST_STORE_NAME, name,
 			  STATUS_LIST_STORE_BUS, &dev_bus,
 			  STATUS_LIST_STORE_ADDRESS, &dev_address, -1);
 
@@ -204,6 +203,7 @@ overwitch_refresh_devices (GtkWidget * object, gpointer data)
   struct ow_usb_device *devices, *device;
   struct overwitch_instance *instance;
   size_t devices_count;
+  const char *name;
   ow_err_t err = ow_get_devices (&devices, &devices_count);
 
   if (err)
@@ -220,17 +220,11 @@ overwitch_refresh_devices (GtkWidget * object, gpointer data)
 
   for (int i = 0; i < devices_count; i++, device++)
     {
-      if (overwitch_instance_running (device->bus, device->address))
+      if (overwitch_instance_running (device->bus, device->address, &name))
 	{
-	  debug_print (1,
-		       "%s instance (bus %03d, address %03d) already running. Skipping...\n",
-		       device->desc->name, device->bus, device->address);
+	  debug_print (2, "%s already running. Skipping...\n", name);
 	  continue;
 	}
-
-      debug_print (1,
-		   "Adding %s instance (bus %03d, address %03d)...\n",
-		   device->desc->name, device->bus, device->address);
 
       instance = malloc (sizeof (struct overwitch_instance));
       instance->jclient.bus = device->bus;
@@ -254,6 +248,9 @@ overwitch_refresh_devices (GtkWidget * object, gpointer data)
 	  free (instance);
 	  continue;
 	}
+
+      debug_print (1, "Adding %s...\n",
+		   ow_resampler_get_name (instance->jclient.resampler));
 
       gtk_list_store_insert_with_values (status_list_store, NULL, -1,
 					 STATUS_LIST_STORE_NAME,

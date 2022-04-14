@@ -55,6 +55,13 @@ static void prepare_cycle_in_audio ();
 static void prepare_cycle_out_audio ();
 static void prepare_cycle_in_midi ();
 
+inline static void
+ow_engine_set_name (struct ow_engine *engine, uint8_t bus, uint8_t address)
+{
+  snprintf (engine->name, ENGINE_NAME_MAX_LEN, "%s@%03d,%03d",
+	    engine->device_desc->name, bus, address);
+}
+
 static struct ow_engine_usb_blk *
 get_nth_usb_in_blk (struct ow_engine *engine, int n)
 {
@@ -453,10 +460,6 @@ ow_engine_init (struct ow_engine *engine, int blocks_per_transfer)
   ow_err_t ret = OW_OK;
   struct ow_engine_usb_blk *blk;
 
-  fprintf (stderr, "Device: %s (outputs: %d, inputs: %d)\n",
-	   engine->device_desc->name, engine->device_desc->outputs,
-	   engine->device_desc->inputs);
-
   err = libusb_set_configuration (engine->usb.device_handle, 1);
   if (LIBUSB_SUCCESS != err)
     {
@@ -605,7 +608,8 @@ ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
 					      int libusb_device_descriptor,
 					      int blocks_per_transfer)
 {
-  ow_err_t ret;
+  ow_err_t err;
+  uint8_t bus, address;
   struct ow_engine *engine;
   struct libusb_device *device;
   struct libusb_device_descriptor desc;
@@ -620,14 +624,14 @@ ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
 
   if (libusb_init (&engine->usb.context) != LIBUSB_SUCCESS)
     {
-      ret = OW_USB_ERROR_LIBUSB_INIT_FAILED;
+      err = OW_USB_ERROR_LIBUSB_INIT_FAILED;
       goto error;
     }
 
   if (libusb_wrap_sys_device (NULL, (intptr_t) libusb_device_descriptor,
 			      &engine->usb.device_handle))
     {
-      ret = OW_USB_ERROR_LIBUSB_INIT_FAILED;
+      err = OW_USB_ERROR_LIBUSB_INIT_FAILED;
       goto error;
     }
 
@@ -637,11 +641,18 @@ ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
 				   &engine->device_desc);
 
   *engine_ = engine;
-  return ow_engine_init (engine, blocks_per_transfer);
+  err = ow_engine_init (engine, blocks_per_transfer);
+  if (!err)
+    {
+      bus = libusb_get_bus_number (device);
+      address = libusb_get_device_address (device);
+      ow_engine_set_name (engine, bus, address);
+      return err;
+    }
 
 error:
   free (engine);
-  return ret;
+  return err;
 }
 
 ow_err_t
@@ -688,6 +699,11 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
 	      error_print ("Error while opening device: %s\n",
 			   libusb_error_name (err));
 	    }
+	  else
+	    {
+	      ow_engine_set_name (engine, bus, address);
+	    }
+
 	  break;
 	}
     }

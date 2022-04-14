@@ -398,7 +398,9 @@ jclient_run (struct jclient *jclient)
   engine = ow_resampler_get_engine (jclient->resampler);
   desc = ow_engine_get_device_desc (engine);
 
-  jclient->client = jack_client_open (desc->name, options, &status, NULL);
+  jclient->client =
+    jack_client_open (ow_resampler_get_name (jclient->resampler), options,
+		      &status, NULL);
   if (jclient->client == NULL)
     {
       error_print ("jack_client_open() failed, status = 0x%2.0x\n", status);
