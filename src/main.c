@@ -207,7 +207,7 @@ remove_jclient_bg (guint * id)
 	{
 	  pthread_join (instance->thread, NULL);
 	  gtk_list_store_remove (status_list_store, &iter);
-          break;
+	  break;
 	}
 
       valid =
@@ -222,7 +222,7 @@ remove_jclient_bg (guint * id)
 static void
 remove_jclient (uint8_t bus, uint8_t address)
 {
-  guint * id = g_malloc (sizeof(guint));
+  guint *id = g_malloc (sizeof (guint));
   *id = (bus << 8) + address;
   g_idle_add ((GSourceFunc) remove_jclient_bg, id);
 }
@@ -394,6 +394,11 @@ main (int argc, char *argv[])
 
   status_bar = GTK_STATUSBAR (gtk_builder_get_object (builder, "status_bar"));
   gtk_statusbar_push (status_bar, 0, MSG_NO_JACK_SERVER_FOUND);
+
+  gtk_popover_set_constrain_to (GTK_POPOVER
+				(gtk_builder_get_object
+				 (builder, "main_popover")),
+				GTK_POPOVER_CONSTRAINT_NONE);
 
   g_signal_connect (about_button, "clicked",
 		    G_CALLBACK (overwitch_show_about), NULL);
