@@ -59,7 +59,10 @@ struct overwitch_instance
 static GtkWidget *main_window;
 static GtkAboutDialog *about_dialog;
 static GtkWidget *about_button;
+static GtkWidget *show_all_metrics_button;
 static GtkWidget *refresh_button;
+static GtkTreeViewColumn *o2j_ratio_column;
+static GtkTreeViewColumn *j2o_ratio_column;
 static GtkListStore *status_list_store;
 static GtkStatusbar *status_bar;
 
@@ -133,6 +136,21 @@ overwitch_show_about (GtkWidget * object, gpointer data)
 {
   gtk_dialog_run (GTK_DIALOG (about_dialog));
   gtk_widget_hide (GTK_WIDGET (about_dialog));
+}
+
+static void
+overwitch_show_all_metrics (GtkWidget * object, gpointer data)
+{
+  gboolean active;
+
+  g_object_get (G_OBJECT (show_all_metrics_button), "active", &active, NULL);
+  active = !active;
+  g_object_set (G_OBJECT (show_all_metrics_button), "active", active, NULL);
+
+  gtk_tree_view_column_set_visible (o2j_ratio_column, active);
+  gtk_tree_view_column_set_visible (j2o_ratio_column, active);
+
+
 }
 
 static gboolean
@@ -383,6 +401,8 @@ main (int argc, char *argv[])
     GTK_ABOUT_DIALOG (gtk_builder_get_object (builder, "about_dialog"));
   gtk_about_dialog_set_version (about_dialog, PACKAGE_VERSION);
 
+  show_all_metrics_button =
+    GTK_WIDGET (gtk_builder_get_object (builder, "show_all_metrics_button"));
   about_button =
     GTK_WIDGET (gtk_builder_get_object (builder, "about_button"));
 
@@ -392,6 +412,13 @@ main (int argc, char *argv[])
   status_list_store =
     GTK_LIST_STORE (gtk_builder_get_object (builder, "status_list_store"));
 
+  o2j_ratio_column =
+    GTK_TREE_VIEW_COLUMN (gtk_builder_get_object
+			  (builder, "o2j_ratio_column"));
+  j2o_ratio_column =
+    GTK_TREE_VIEW_COLUMN (gtk_builder_get_object
+			  (builder, "j2o_ratio_column"));
+
   status_bar = GTK_STATUSBAR (gtk_builder_get_object (builder, "status_bar"));
   gtk_statusbar_push (status_bar, 0, MSG_NO_JACK_SERVER_FOUND);
 
@@ -400,8 +427,14 @@ main (int argc, char *argv[])
 				 (builder, "main_popover")),
 				GTK_POPOVER_CONSTRAINT_NONE);
 
+  g_object_set (G_OBJECT (show_all_metrics_button), "role",
+		GTK_BUTTON_ROLE_CHECK, NULL);
+
   g_signal_connect (about_button, "clicked",
 		    G_CALLBACK (overwitch_show_about), NULL);
+
+  g_signal_connect (show_all_metrics_button, "clicked",
+		    G_CALLBACK (overwitch_show_all_metrics), NULL);
 
   g_signal_connect (refresh_button, "clicked",
 		    G_CALLBACK (overwitch_refresh_devices), NULL);
