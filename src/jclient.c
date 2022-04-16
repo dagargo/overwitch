@@ -84,7 +84,7 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
 	  break;
 	}
     }
-  ow_engine_set_p2o_audio_enable (engine, p2o_enabled);
+  ow_engine_set_p2o_audio_enabled (engine, p2o_enabled);
 }
 
 static void
@@ -317,7 +317,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 
   //p2o
 
-  if (ow_engine_is_p2o_audio_enable (engine))
+  if (ow_engine_is_p2o_audio_enabled (engine))
     {
       f = ow_resampler_get_p2o_audio_buffer (jclient->resampler);
       for (int i = 0; i < desc->inputs; i++)

@@ -22,8 +22,6 @@
 #include "engine.h"
 #include "overwitch.h"
 
-struct ow_resampler_reporter;
-
 struct ow_resampler
 {
   ow_resampler_status_t status;
@@ -33,10 +31,6 @@ struct ow_resampler
   double p2o_ratio;
   SRC_STATE *p2o_state;
   SRC_STATE *o2p_state;
-  size_t p2o_latency;
-  size_t o2p_latency;
-  size_t p2o_max_latency;
-  size_t o2p_max_latency;
   float *p2o_buf_in;
   float *p2o_buf_out;
   float *p2o_aux;

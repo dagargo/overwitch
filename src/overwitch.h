@@ -33,6 +33,8 @@
 
 #define OW_DEFAULT_RT_PROPERTY 20
 
+#define OW_LABEL_MAX_LEN 64
+
 typedef size_t (*ow_buffer_rw_space_t) (void *);
 typedef size_t (*ow_buffer_read_t) (void *, char *, size_t);
 typedef size_t (*ow_buffer_write_t) (void *, const char *, size_t);
@@ -44,8 +46,8 @@ typedef size_t (*ow_dll_overwitch_inc_t) (void *, int, double);
 
 typedef void (*ow_set_rt_priority_t) (pthread_t *, int);
 
-typedef void (*ow_resampler_report_t) (void *, double, double, double,
-				       double);
+typedef void (*ow_resampler_report_t) (void *, double, double, double, double,
+				       double, double);
 
 typedef enum
 {
@@ -195,9 +197,9 @@ ow_engine_status_t ow_engine_get_status (struct ow_engine *);
 
 void ow_engine_set_status (struct ow_engine *, ow_engine_status_t);
 
-void ow_engine_set_p2o_audio_enable (struct ow_engine *, int);
+void ow_engine_set_p2o_audio_enabled (struct ow_engine *, int);
 
-int ow_engine_is_p2o_audio_enable (struct ow_engine *);
+int ow_engine_is_p2o_audio_enabled (struct ow_engine *);
 
 const struct ow_device_desc *ow_engine_get_device_desc (struct ow_engine *);
 

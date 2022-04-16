@@ -152,15 +152,16 @@
 #include "overwitch.h"
 
 #define OB_PADDING_SIZE 28
-#define ENGINE_NAME_MAX_LEN 128
 
 struct ow_engine
 {
-  char name[ENGINE_NAME_MAX_LEN];
+  char name[OW_LABEL_MAX_LEN];
   ow_engine_status_t status;
   int blocks_per_transfer;
   int frames_per_transfer;
   pthread_spinlock_t lock;
+  size_t o2p_latency;
+  size_t o2p_max_latency;
   size_t p2o_latency;
   size_t p2o_max_latency;
   pthread_t audio_o2p_midi_thread;
@@ -209,7 +210,3 @@ struct ow_engine
 };
 
 int ow_bytes_to_frame_bytes (int, int);
-
-ow_err_t ow_engine_activate_with_dll (struct ow_engine *,
-				      struct ow_context *,
-				      struct ow_dll_overwitch *);

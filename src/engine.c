@@ -58,7 +58,7 @@ static void prepare_cycle_in_midi ();
 inline static void
 ow_engine_set_name (struct ow_engine *engine, uint8_t bus, uint8_t address)
 {
-  snprintf (engine->name, ENGINE_NAME_MAX_LEN, "%s@%03d,%03d",
+  snprintf (engine->name, OW_LABEL_MAX_LEN, "%s@%03d,%03d",
 	    engine->device_desc->name, bus, address);
 }
 
@@ -157,6 +157,15 @@ set_usb_input_data_blks (struct ow_engine *engine)
       return;
     }
 
+  pthread_spin_lock (&engine->lock);
+  engine->o2p_latency =
+    engine->context->read_space (engine->context->o2p_audio);
+  if (engine->o2p_latency > engine->o2p_max_latency)
+    {
+      engine->o2p_max_latency = engine->o2p_latency;
+    }
+  pthread_spin_unlock (&engine->lock);
+
   wso2p = engine->context->write_space (engine->context->o2p_audio);
   if (engine->o2p_transfer_size <= wso2p)
     {
@@ -181,14 +190,14 @@ set_usb_output_data_blks (struct ow_engine *engine)
   float *f;
   int res;
   int32_t *s;
-  int enabled = ow_engine_is_p2o_audio_enable (engine);
+  int p2o_enabled = ow_engine_is_p2o_audio_enabled (engine);
 
-  if (enabled)
+  if (p2o_enabled)
     {
       rsp2o = engine->context->read_space (engine->context->p2o_audio);
       if (!engine->reading_at_p2o_end)
 	{
-	  if (enabled && rsp2o >= engine->p2o_transfer_size)
+	  if (p2o_enabled && rsp2o >= engine->p2o_transfer_size)
 	    {
 	      debug_print (2, "p2o: Emptying buffer and running...\n");
 	      bytes = ow_bytes_to_frame_bytes (rsp2o, engine->p2o_frame_size);
@@ -857,6 +866,8 @@ run_audio_o2p_midi (void *data)
       engine->p2o_latency = 0;
       engine->p2o_max_latency = 0;
       engine->reading_at_p2o_end = 0;
+      engine->o2p_latency = 0;
+      engine->o2p_max_latency = 0;
 
       //status == OW_ENGINE_STATUS_BOOT
 
@@ -1068,7 +1079,7 @@ ow_engine_set_status (struct ow_engine *engine, ow_engine_status_t status)
 }
 
 inline int
-ow_engine_is_p2o_audio_enable (struct ow_engine *engine)
+ow_engine_is_p2o_audio_enabled (struct ow_engine *engine)
 {
   int enabled;
   pthread_spin_lock (&engine->lock);
@@ -1078,9 +1089,9 @@ ow_engine_is_p2o_audio_enable (struct ow_engine *engine)
 }
 
 inline void
-ow_engine_set_p2o_audio_enable (struct ow_engine *engine, int enabled)
+ow_engine_set_p2o_audio_enabled (struct ow_engine *engine, int enabled)
 {
-  int last = ow_engine_is_p2o_audio_enable (engine);
+  int last = ow_engine_is_p2o_audio_enabled (engine);
   if (last != enabled)
     {
       pthread_spin_lock (&engine->lock);

@@ -11,9 +11,9 @@
       <!-- column-name address -->
       <column type="guint"/>
       <!-- column-name o2j_latency -->
-      <column type="gdouble"/>
+      <column type="gchararray"/>
       <!-- column-name j2o_latency -->
-      <column type="gdouble"/>
+      <column type="gchararray"/>
       <!-- column-name o2j_ratio -->
       <column type="gfloat"/>
       <!-- column-name j2o_ratio -->

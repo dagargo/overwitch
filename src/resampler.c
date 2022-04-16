@@ -34,33 +34,67 @@ ow_resampler_get_name (struct ow_resampler *resampler)
   return resampler->engine->name;
 }
 
-void
+inline void
 ow_resampler_report_status (struct ow_resampler *resampler)
 {
-  double o2p_latency =
-    resampler->o2p_latency * 1000.0 / (resampler->engine->o2p_frame_size *
-				       OB_SAMPLE_RATE);
-  double p2o_latency =
-    resampler->p2o_latency * 1000.0 / (resampler->engine->p2o_frame_size *
-				       OB_SAMPLE_RATE);
+  size_t o2p_latency_s, o2p_max_latency_s, p2o_latency_s, p2o_max_latency_s;
+  double o2p_latency_d, o2p_max_latency_d, p2o_latency_d, p2o_max_latency_d;
+  ow_engine_status_t status;
+  int p2o_audio_enabled;
+
+  pthread_spin_lock (&resampler->engine->lock);
+  o2p_latency_s = resampler->engine->o2p_latency;
+  o2p_max_latency_s = resampler->engine->o2p_max_latency;
+  p2o_latency_s = resampler->engine->p2o_latency;
+  p2o_max_latency_s = resampler->engine->p2o_max_latency;
+  p2o_audio_enabled = resampler->engine->options.p2o_audio;
+  status = resampler->engine->status;
+  pthread_spin_unlock (&resampler->engine->lock);
+
+  if (status == OW_ENGINE_STATUS_RUN)
+    {
+      o2p_latency_d =
+	o2p_latency_s * 1000.0 / (resampler->engine->o2p_frame_size *
+				  OB_SAMPLE_RATE);
+      o2p_max_latency_d =
+	o2p_max_latency_s * 1000.0 / (resampler->engine->o2p_frame_size *
+				      OB_SAMPLE_RATE);
+    }
+  else
+    {
+      o2p_latency_d = -1.0;
+      o2p_max_latency_d = -1.0;
+    }
+
+  if (p2o_audio_enabled)
+    {
+      p2o_latency_d =
+	p2o_latency_s * 1000.0 / (resampler->engine->p2o_frame_size *
+				  OB_SAMPLE_RATE);
+      p2o_max_latency_d =
+	p2o_max_latency_s * 1000.0 / (resampler->engine->p2o_frame_size *
+				      OB_SAMPLE_RATE);
+    }
+  else
+    {
+      p2o_latency_d = -1.0;
+      p2o_max_latency_d = -1.0;
+    }
+
   if (debug_level)
     {
       printf
 	("%s: o2j latency: %.1f ms, max. %.1f ms; j2o latency: %.1f ms, max. %.1f ms, o2j ratio: %f, avg. %f\n",
 	 ow_resampler_get_name (resampler),
-	 o2p_latency,
-	 resampler->o2p_max_latency * 1000.0 /
-	 (ow_resampler_get_o2p_frame_size (resampler) * OB_SAMPLE_RATE),
-	 p2o_latency,
-	 resampler->p2o_max_latency * 1000.0 /
-	 (resampler->engine->p2o_frame_size * OB_SAMPLE_RATE),
+	 o2p_latency_d, o2p_max_latency_d, p2o_latency_d, p2o_max_latency_d,
 	 resampler->dll.ratio, resampler->dll.ratio_avg);
     }
 
   if (resampler->reporter.callback)
     {
-      resampler->reporter.callback (resampler->reporter.data, o2p_latency,
-				    p2o_latency, resampler->o2p_ratio,
+      resampler->reporter.callback (resampler->reporter.data, o2p_latency_d,
+				    p2o_latency_d, o2p_max_latency_d,
+				    p2o_max_latency_d, resampler->o2p_ratio,
 				    resampler->p2o_ratio);
     }
 }
@@ -69,11 +103,11 @@ void
 ow_resampler_reset_buffers (struct ow_resampler *resampler)
 {
   size_t rso2p, bytes;
-  size_t frame_size = ow_resampler_get_o2p_frame_size (resampler);
+  size_t frame_size = resampler->engine->o2p_frame_size;
   struct ow_context *context = resampler->engine->context;
 
   resampler->o2p_bufsize =
-    resampler->bufsize * ow_resampler_get_o2p_frame_size (resampler);
+    resampler->bufsize * resampler->engine->o2p_frame_size;
   resampler->p2o_bufsize =
     resampler->bufsize * resampler->engine->p2o_frame_size;
 
@@ -100,10 +134,6 @@ ow_resampler_reset_buffers (struct ow_resampler *resampler)
   memset (resampler->p2o_aux, 0, resampler->p2o_bufsize);
   memset (resampler->o2p_buf_in, 0, resampler->p2o_bufsize);
 
-  resampler->p2o_max_latency = 0;
-  resampler->o2p_max_latency = 0;
-  resampler->p2o_latency = 0;
-  resampler->o2p_latency = 0;
   resampler->reading_at_o2p_end = 0;
 
   rso2p = context->read_space (context->o2p_audio);
@@ -177,17 +207,11 @@ resampler_o2p_reader (void *cb_data, float **data)
 					    o2p_audio);
   if (resampler->reading_at_o2p_end)
     {
-      resampler->o2p_latency = rso2p;
-      if (resampler->o2p_latency > resampler->o2p_max_latency)
+      if (rso2p >= resampler->engine->o2p_frame_size)
 	{
-	  resampler->o2p_max_latency = resampler->o2p_latency;
-	}
-
-      if (rso2p >= ow_resampler_get_o2p_frame_size (resampler))
-	{
-	  frames = rso2p / ow_resampler_get_o2p_frame_size (resampler);
+	  frames = rso2p / resampler->engine->o2p_frame_size;
 	  frames = frames > MAX_READ_FRAMES ? MAX_READ_FRAMES : frames;
-	  bytes = frames * ow_resampler_get_o2p_frame_size (resampler);
+	  bytes = frames * resampler->engine->o2p_frame_size;
 	  resampler->engine->context->read (resampler->engine->
 					    context->o2p_audio,
 					    (void *) resampler->o2p_buf_in,
@@ -203,7 +227,7 @@ resampler_o2p_reader (void *cb_data, float **data)
 	      uint64_t pos =
 		(last_frames - 1) * resampler->engine->device_desc->outputs;
 	      memcpy (resampler->o2p_buf_in, &resampler->o2p_buf_in[pos],
-		      ow_resampler_get_o2p_frame_size (resampler));
+		      resampler->engine->o2p_frame_size);
 	    }
 	  frames = MAX_READ_FRAMES;
 	}
@@ -309,8 +333,6 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
   pthread_spin_unlock (&resampler->lock);
 
   pthread_spin_lock (&resampler->engine->lock);
-  resampler->p2o_latency = resampler->engine->p2o_latency;
-  resampler->p2o_max_latency = resampler->engine->p2o_max_latency;
   ow_dll_primary_load_dll_overwitch (dll);
   pthread_spin_unlock (&resampler->engine->lock);
 
@@ -351,9 +373,6 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
       resampler->o2p_ratio = dll->ratio * (1 + xruns);
       resampler->p2o_ratio = 1.0 / resampler->o2p_ratio;
       ow_resampler_read_audio (resampler);
-
-      resampler->p2o_max_latency = 0;
-      resampler->o2p_max_latency = 0;
 
       //... we skip the current cycle DLL update as time masurements are not precise enough and would lead to errors.
       return 0;
