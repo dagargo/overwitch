@@ -40,6 +40,8 @@
 #define CONF_FILE "/preferences.json"
 
 #define CONF_SHOW_ALL_METRICS "showAllColumns"
+#define CONF_BLOCKS "blocks"
+#define CONF_QUALITY "quality"
 
 enum list_store_columns
 {
@@ -71,6 +73,8 @@ static GtkAboutDialog *about_dialog;
 static GtkWidget *about_button;
 static GtkWidget *show_all_metrics_button;
 static GtkWidget *refresh_button;
+static GtkSpinButton *blocks_spin_button;
+static GtkComboBox *quality_combo_box;
 static GtkTreeViewColumn *o2j_ratio_column;
 static GtkTreeViewColumn *j2o_ratio_column;
 static GtkListStore *status_list_store;
@@ -271,10 +275,22 @@ preferences_save ()
   builder = json_builder_new ();
 
   json_builder_begin_object (builder);
+
   json_builder_set_member_name (builder, CONF_SHOW_ALL_METRICS);
   g_object_get (G_OBJECT (show_all_metrics_button), "active",
 		&show_all_metrics, NULL);
   json_builder_add_boolean_value (builder, show_all_metrics);
+
+  json_builder_set_member_name (builder, CONF_BLOCKS);
+  json_builder_add_int_value (builder,
+			      gtk_spin_button_get_value_as_int
+			      (blocks_spin_button));
+
+  json_builder_set_member_name (builder, CONF_QUALITY);
+  json_builder_add_int_value (builder,
+			      gtk_combo_box_get_active (quality_combo_box));
+
+
   json_builder_end_object (builder);
 
   gen = json_generator_new ();
@@ -299,6 +315,8 @@ preferences_load ()
   JsonParser *parser = json_parser_new ();
   gchar *preferences_file = get_expanded_dir (CONF_DIR CONF_FILE);
   gboolean show_all_metrics = FALSE;
+  gint64 blocks = 24;
+  gint64 quality = 2;
 
   error = NULL;
   json_parser_load_from_file (parser, preferences_file, &error);
@@ -308,25 +326,39 @@ preferences_load ()
 		   CONF_DIR CONF_FILE, error->message);
       g_error_free (error);
       g_object_unref (parser);
+      goto end;
     }
-  else
+
+  reader = json_reader_new (json_parser_get_root (parser));
+
+  if (json_reader_read_member (reader, CONF_SHOW_ALL_METRICS))
     {
-      reader = json_reader_new (json_parser_get_root (parser));
-
-      if (json_reader_read_member (reader, CONF_SHOW_ALL_METRICS))
-	{
-	  show_all_metrics = json_reader_get_boolean_value (reader);
-	}
-      json_reader_end_member (reader);
-
-      g_object_unref (reader);
-      g_object_unref (parser);
-
-      g_free (preferences_file);
+      show_all_metrics = json_reader_get_boolean_value (reader);
     }
+  json_reader_end_member (reader);
 
+  if (json_reader_read_member (reader, CONF_BLOCKS))
+    {
+      blocks = json_reader_get_int_value (reader);
+    }
+  json_reader_end_member (reader);
+
+  if (json_reader_read_member (reader, CONF_QUALITY))
+    {
+      quality = json_reader_get_int_value (reader);
+    }
+  json_reader_end_member (reader);
+
+  g_object_unref (reader);
+  g_object_unref (parser);
+
+  g_free (preferences_file);
+
+end:
   g_object_set (G_OBJECT (show_all_metrics_button), "active",
 		show_all_metrics, NULL);
+  gtk_spin_button_set_value (blocks_spin_button, blocks);
+  gtk_combo_box_set_active (quality_combo_box, quality);
   overwitch_update_all_metrics (show_all_metrics);
 }
 
@@ -468,6 +500,10 @@ overwitch_refresh_devices (GtkWidget * object, gpointer data)
       instance->jclient.reporter.data = instance;
       instance->jclient.reporter.period = -1;
       instance->jclient.end_notifier = remove_jclient;
+      instance->jclient.blocks_per_transfer =
+	gtk_spin_button_get_value_as_int (blocks_spin_button);
+      instance->jclient.quality =
+	gtk_combo_box_get_active (quality_combo_box);
       instance->o2j_latency = 0.0;
       instance->j2o_latency = 0.0;
       instance->o2j_ratio = 1.0;
@@ -541,6 +577,7 @@ static void
 overwitch_quit ()
 {
   overwitch_stop ();
+  preferences_save ();
   debug_print (1, "Quitting GTK+...\n");
   gtk_main_quit ();
 }
@@ -557,8 +594,6 @@ main (int argc, char *argv[])
 {
   GtkBuilder *builder;
   char *glade_file = malloc (PATH_MAX);
-
-  debug_level = 1;
 
   if (snprintf
       (glade_file, PATH_MAX, "%s/%s/res/gui.glade", DATADIR,
@@ -584,6 +619,11 @@ main (int argc, char *argv[])
     GTK_WIDGET (gtk_builder_get_object (builder, "show_all_metrics_button"));
   about_button =
     GTK_WIDGET (gtk_builder_get_object (builder, "about_button"));
+
+  blocks_spin_button =
+    GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "blocks_spin_button"));
+  quality_combo_box =
+    GTK_COMBO_BOX (gtk_builder_get_object (builder, "quality_combo_box"));
 
   refresh_button =
     GTK_WIDGET (gtk_builder_get_object (builder, "refresh_button"));
@@ -627,8 +667,6 @@ main (int argc, char *argv[])
 
   gtk_widget_show (main_window);
   gtk_main ();
-
-  preferences_save ();
 
   return 0;
 }

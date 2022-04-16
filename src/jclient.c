@@ -99,7 +99,7 @@ static int
 jclient_set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  printf ("JACK buffer size: %d\n", nframes);
+  debug_print (1, "JACK buffer size: %d\n", nframes);
   jclient->bufsize = nframes;
   ow_resampler_set_buffer_size (jclient->resampler, nframes);
   return 0;
@@ -109,7 +109,7 @@ static int
 jclient_set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  printf ("JACK sample rate: %d\n", nframes);
+  debug_print (1, "JACK sample rate: %d\n", nframes);
   ow_resampler_set_samplerate (jclient->resampler, nframes);
   return 0;
 }
