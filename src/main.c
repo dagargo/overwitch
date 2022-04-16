@@ -489,7 +489,7 @@ overwitch_refresh_devices (GtkWidget * object, gpointer data)
 	  continue;
 	}
 
-      instance = malloc (sizeof (struct overwitch_instance));
+      instance = g_malloc (sizeof (struct overwitch_instance));
       instance->jclient.bus = device->bus;
       instance->jclient.address = device->address;
       instance->jclient.blocks_per_transfer = 4;
@@ -512,7 +512,7 @@ overwitch_refresh_devices (GtkWidget * object, gpointer data)
 
       if (jclient_init (&instance->jclient))
 	{
-	  free (instance);
+	  g_free (instance);
 	  continue;
 	}
 
@@ -565,6 +565,7 @@ overwitch_stop ()
 			  STATUS_LIST_STORE_INSTANCE, &instance, -1);
 
       stop_instance (instance);
+      g_free (instance);
       gtk_list_store_remove (status_list_store, &iter);
 
       valid =
