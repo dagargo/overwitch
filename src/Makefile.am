@@ -1,6 +1,6 @@
 PKG_CONFIG ?= pkg-config
 
-CLI_LIBS = jack libusb-1.0
+CLI_LIBS = jack libusb-1.0 json-glib-1.0
 GUI_LIBS = gtk+-3.0
 
 overwitch_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(CLI_LIBS) $(GUI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)

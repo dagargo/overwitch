@@ -23,6 +23,9 @@
 #include <sched.h>
 #include <gtk/gtk.h>
 #include <jack/jack.h>
+#include <sys/stat.h>
+#include <json-glib/json-glib.h>
+#include <wordexp.h>
 #define _GNU_SOURCE
 #include "../config.h"
 #include "common.h"
@@ -32,6 +35,11 @@
 
 #define MSG_JACK_SERVER_FOUND "JACK server found"
 #define MSG_NO_JACK_SERVER_FOUND "No JACK server found"
+
+#define CONF_DIR "~/.config/overwitch"
+#define CONF_FILE "/preferences.json"
+
+#define CONF_SHOW_ALL_METRICS "showAllColumns"
 
 enum list_store_columns
 {
@@ -168,6 +176,13 @@ overwitch_show_about (GtkWidget * object, gpointer data)
 }
 
 static void
+overwitch_update_all_metrics (gboolean active)
+{
+  gtk_tree_view_column_set_visible (o2j_ratio_column, active);
+  gtk_tree_view_column_set_visible (j2o_ratio_column, active);
+}
+
+static void
 overwitch_show_all_metrics (GtkWidget * object, gpointer data)
 {
   gboolean active;
@@ -175,11 +190,144 @@ overwitch_show_all_metrics (GtkWidget * object, gpointer data)
   g_object_get (G_OBJECT (show_all_metrics_button), "active", &active, NULL);
   active = !active;
   g_object_set (G_OBJECT (show_all_metrics_button), "active", active, NULL);
+  overwitch_update_all_metrics (active);
+}
 
-  gtk_tree_view_column_set_visible (o2j_ratio_column, active);
-  gtk_tree_view_column_set_visible (j2o_ratio_column, active);
+gchar *
+get_expanded_dir (const char *exp)
+{
+  wordexp_t exp_result;
+  size_t n;
+  gchar *exp_dir = malloc (PATH_MAX);
 
+  wordexp (exp, &exp_result, 0);
+  n = PATH_MAX - 1;
+  strncpy (exp_dir, exp_result.we_wordv[0], n);
+  exp_dir[PATH_MAX - 1] = 0;
+  wordfree (&exp_result);
 
+  return exp_dir;
+}
+
+gint
+save_file_char (const gchar * path, const guint8 * data, ssize_t len)
+{
+  gint res;
+  long bytes;
+  FILE *file;
+
+  file = fopen (path, "w");
+
+  if (!file)
+    {
+      return -errno;
+    }
+
+  debug_print (1, "Saving file %s...\n", path);
+
+  res = 0;
+  bytes = fwrite (data, 1, len, file);
+  if (bytes == len)
+    {
+      debug_print (1, "%zu bytes written\n", bytes);
+    }
+  else
+    {
+      error_print ("Error while writing to file %s\n", path);
+      res = -EIO;
+    }
+
+  fclose (file);
+
+  return res;
+}
+
+static void
+preferences_save ()
+{
+  size_t n;
+  gchar *preferences_path;
+  JsonBuilder *builder;
+  JsonGenerator *gen;
+  JsonNode *root;
+  gchar *json;
+  gboolean show_all_metrics;
+
+  preferences_path = get_expanded_dir (CONF_DIR);
+  if (g_mkdir_with_parents (preferences_path,
+			    S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH |
+			    S_IXOTH))
+    {
+      error_print ("Error wile creating dir `%s'\n", CONF_DIR);
+      return;
+    }
+
+  n = PATH_MAX - strlen (preferences_path) - 1;
+  strncat (preferences_path, CONF_FILE, n);
+  preferences_path[PATH_MAX - 1] = 0;
+
+  debug_print (1, "Saving preferences to '%s'...\n", preferences_path);
+
+  builder = json_builder_new ();
+
+  json_builder_begin_object (builder);
+  json_builder_set_member_name (builder, CONF_SHOW_ALL_METRICS);
+  g_object_get (G_OBJECT (show_all_metrics_button), "active",
+		&show_all_metrics, NULL);
+  json_builder_add_boolean_value (builder, show_all_metrics);
+  json_builder_end_object (builder);
+
+  gen = json_generator_new ();
+  root = json_builder_get_root (builder);
+  json_generator_set_root (gen, root);
+  json = json_generator_to_data (gen, NULL);
+
+  save_file_char (preferences_path, (guint8 *) json, strlen (json));
+
+  g_free (json);
+  json_node_free (root);
+  g_object_unref (gen);
+  g_object_unref (builder);
+  g_free (preferences_path);
+}
+
+static void
+preferences_load ()
+{
+  GError *error;
+  JsonReader *reader;
+  JsonParser *parser = json_parser_new ();
+  gchar *preferences_file = get_expanded_dir (CONF_DIR CONF_FILE);
+  gboolean show_all_metrics = FALSE;
+
+  error = NULL;
+  json_parser_load_from_file (parser, preferences_file, &error);
+  if (error)
+    {
+      error_print ("Error wile loading preferences from `%s': %s\n",
+		   CONF_DIR CONF_FILE, error->message);
+      g_error_free (error);
+      g_object_unref (parser);
+    }
+  else
+    {
+      reader = json_reader_new (json_parser_get_root (parser));
+
+      if (json_reader_read_member (reader, CONF_SHOW_ALL_METRICS))
+	{
+	  show_all_metrics = json_reader_get_boolean_value (reader);
+	}
+      json_reader_end_member (reader);
+
+      g_object_unref (reader);
+      g_object_unref (parser);
+
+      g_free (preferences_file);
+    }
+
+  g_object_set (G_OBJECT (show_all_metrics_button), "active",
+		show_all_metrics, NULL);
+  overwitch_update_all_metrics (show_all_metrics);
 }
 
 static gboolean
@@ -473,10 +621,14 @@ main (int argc, char *argv[])
   g_signal_connect (main_window, "delete-event",
 		    G_CALLBACK (overwitch_delete_window), NULL);
 
+  preferences_load ();
+
   overwitch_run ();
 
   gtk_widget_show (main_window);
   gtk_main ();
+
+  preferences_save ();
 
   return 0;
 }
