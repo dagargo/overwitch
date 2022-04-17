@@ -68,6 +68,8 @@ struct overwitch_instance
   const struct ow_device_desc *device_desc;
 };
 
+typedef void (*check_jack_server_callback_t) ();
+
 static GtkWidget *main_window;
 static GtkAboutDialog *about_dialog;
 static GtkWidget *about_button;
@@ -79,6 +81,8 @@ static GtkTreeViewColumn *o2j_ratio_column;
 static GtkTreeViewColumn *j2o_ratio_column;
 static GtkListStore *status_list_store;
 static GtkStatusbar *status_bar;
+
+static GThread *jack_control_client_thread;
 
 static void
 start_instance (struct overwitch_instance *instance)
@@ -390,10 +394,30 @@ overwitch_instance_running (uint8_t bus, uint8_t address, const char **name)
 }
 
 static gboolean
-overwitch_check_jack_server ()
+overwitch_check_jack_server_free (gpointer data)
+{
+  const char *msg;
+  check_jack_server_callback_t callback = data;
+
+  msg = g_thread_join (jack_control_client_thread);
+  jack_control_client_thread = NULL;
+
+  gtk_statusbar_push (status_bar, 0, msg);
+
+  if (callback)
+    {
+      callback ();
+    }
+
+  return G_SOURCE_REMOVE;
+}
+
+static gpointer
+overwitch_check_jack_server_func (gpointer callback)
 {
   jack_client_t *client;
   jack_status_t status;
+  char *msg;
 
   gtk_statusbar_pop (status_bar, 0);
 
@@ -401,14 +425,27 @@ overwitch_check_jack_server ()
 			     &status, NULL);
   if (client)
     {
-      gtk_statusbar_push (status_bar, 0, MSG_JACK_SERVER_FOUND);
+      msg = MSG_JACK_SERVER_FOUND;
       jack_client_close (client);
-      return TRUE;
     }
   else
     {
-      gtk_statusbar_push (status_bar, 0, MSG_NO_JACK_SERVER_FOUND);
-      return FALSE;
+      msg = MSG_NO_JACK_SERVER_FOUND;
+    }
+
+  g_idle_add (overwitch_check_jack_server_free, callback);
+
+  return msg;
+}
+
+static void
+overwitch_check_jack_server_bg (check_jack_server_callback_t callback)
+{
+  if (!jack_control_client_thread)
+    {
+      jack_control_client_thread = g_thread_new ("Overwitch control client",
+						 overwitch_check_jack_server_func,
+						 callback);
     }
 }
 
@@ -441,7 +478,7 @@ remove_jclient_bg (guint * id)
 	gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store), &iter);
     }
 
-  overwitch_check_jack_server ();
+  overwitch_check_jack_server_bg (NULL);
 
   return FALSE;
 }
@@ -455,18 +492,13 @@ remove_jclient (uint8_t bus, uint8_t address)
 }
 
 static void
-overwitch_refresh_devices (GtkWidget * object, gpointer data)
+overwitch_refresh_devices ()
 {
   struct ow_usb_device *devices, *device;
   struct overwitch_instance *instance;
   size_t devices_count;
   const char *name;
   ow_err_t err;
-
-  if (!overwitch_check_jack_server ())
-    {
-      return;
-    }
 
   err = ow_get_devices (&devices, &devices_count);
   if (err)
@@ -546,9 +578,15 @@ overwitch_refresh_devices (GtkWidget * object, gpointer data)
 }
 
 static void
+overwitch_refresh_devices_click (GtkWidget * object, gpointer data)
+{
+  overwitch_check_jack_server_bg (overwitch_refresh_devices);
+}
+
+static void
 overwitch_run ()
 {
-  overwitch_refresh_devices (NULL, NULL);
+  overwitch_check_jack_server_bg (overwitch_refresh_devices);
 }
 
 static void
@@ -657,7 +695,7 @@ main (int argc, char *argv[])
 		    G_CALLBACK (overwitch_show_all_metrics), NULL);
 
   g_signal_connect (refresh_button, "clicked",
-		    G_CALLBACK (overwitch_refresh_devices), NULL);
+		    G_CALLBACK (overwitch_refresh_devices_click), NULL);
 
   g_signal_connect (main_window, "delete-event",
 		    G_CALLBACK (overwitch_delete_window), NULL);
