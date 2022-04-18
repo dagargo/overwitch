@@ -145,16 +145,8 @@ void
 ow_resampler_reset_dll (struct ow_resampler *resampler,
 			uint32_t new_samplerate)
 {
-  if (!resampler->dll.init
-      || ow_engine_get_status (resampler->engine) < OW_ENGINE_STATUS_RUN)
-    {
-      debug_print (2, "Initializing DLL...\n");
-      ow_dll_primary_reset (&resampler->dll, new_samplerate, OB_SAMPLE_RATE,
-			    resampler->bufsize,
-			    resampler->engine->frames_per_transfer);
-      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_READY);
-    }
-  else
+  if (resampler->dll.set
+      && ow_engine_get_status (resampler->engine) == OW_ENGINE_STATUS_RUN)
     {
       debug_print (2, "Just adjusting DLL ratio...\n");
       resampler->dll.ratio =
@@ -165,6 +157,15 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
       resampler->log_control_cycles =
 	STARTUP_TIME * new_samplerate / resampler->bufsize;
     }
+  else
+    {
+      debug_print (2, "Resetting the DLL...\n");
+      ow_dll_primary_reset (&resampler->dll, new_samplerate, OB_SAMPLE_RATE,
+			    resampler->bufsize,
+			    resampler->engine->frames_per_transfer);
+      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_READY);
+    }
+
   resampler->o2p_ratio = resampler->dll.ratio;
   resampler->samplerate = new_samplerate;
 }

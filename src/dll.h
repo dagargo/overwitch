@@ -58,7 +58,7 @@ struct ow_dll
   double to0;
   double to1;
   struct ow_dll_overwitch dll_ow;
-  int init;
+  int set;
 };
 
 void ow_dll_overwitch_init (struct ow_dll_overwitch *, double, int, double);
