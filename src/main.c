@@ -75,6 +75,7 @@ static GtkAboutDialog *about_dialog;
 static GtkWidget *about_button;
 static GtkWidget *show_all_metrics_button;
 static GtkWidget *refresh_button;
+static GtkWidget *stop_button;
 static GtkSpinButton *blocks_spin_button;
 static GtkComboBox *quality_combo_box;
 static GtkTreeViewColumn *o2j_ratio_column;
@@ -572,6 +573,7 @@ overwitch_refresh_devices ()
       set_report_data (instance, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0);
 
       start_instance (instance);
+      gtk_widget_set_sensitive (stop_button, TRUE);
     }
 
   ow_free_usb_device_list (devices, devices_count);
@@ -584,13 +586,13 @@ overwitch_refresh_devices_click (GtkWidget * object, gpointer data)
 }
 
 static void
-overwitch_run ()
+overwitch_refresh ()
 {
   overwitch_check_jack_server_bg (overwitch_refresh_devices);
 }
 
 static void
-overwitch_stop ()
+overwitch_stop (GtkWidget * object, gpointer data)
 {
   struct overwitch_instance *instance;
   GtkTreeIter iter;
@@ -610,12 +612,14 @@ overwitch_stop ()
 	gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store),
 				       &iter);
     }
+
+  gtk_widget_set_sensitive (stop_button, FALSE);
 }
 
 static void
 overwitch_quit ()
 {
-  overwitch_stop ();
+  overwitch_stop (NULL, NULL);
   preferences_save ();
   debug_print (1, "Quitting GTK+...\n");
   gtk_main_quit ();
@@ -666,6 +670,7 @@ main (int argc, char *argv[])
 
   refresh_button =
     GTK_WIDGET (gtk_builder_get_object (builder, "refresh_button"));
+  stop_button = GTK_WIDGET (gtk_builder_get_object (builder, "stop_button"));
 
   status_list_store =
     GTK_LIST_STORE (gtk_builder_get_object (builder, "status_list_store"));
@@ -697,12 +702,15 @@ main (int argc, char *argv[])
   g_signal_connect (refresh_button, "clicked",
 		    G_CALLBACK (overwitch_refresh_devices_click), NULL);
 
+  g_signal_connect (stop_button, "clicked",
+		    G_CALLBACK (overwitch_stop), NULL);
+
   g_signal_connect (main_window, "delete-event",
 		    G_CALLBACK (overwitch_delete_window), NULL);
 
   preferences_load ();
 
-  overwitch_run ();
+  overwitch_refresh ();
 
   gtk_widget_show (main_window);
   gtk_main ();
