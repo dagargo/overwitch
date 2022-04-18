@@ -81,4 +81,6 @@ void ow_dll_primary_first_time_run (struct ow_dll *);
 
 void ow_dll_primary_load_dll_overwitch (struct ow_dll *);
 
+int ow_dll_tuned (struct ow_dll *);
+
 #endif

@@ -26,7 +26,6 @@
 #define MAX_READ_FRAMES 5
 #define STARTUP_TIME 5
 #define DEFAULT_REPORT_PERIOD 2
-#define RATIO_DIFF_THRES 0.00001
 
 inline const char *
 ow_resampler_get_name (struct ow_resampler *resampler)
@@ -412,8 +411,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
 	    resampler->bufsize;
 	}
 
-      if (resampler->status == OW_RESAMPLER_STATUS_TUNE
-	  && fabs (dll->ratio_avg - dll->last_ratio_avg) < RATIO_DIFF_THRES)
+      if (resampler->status == OW_RESAMPLER_STATUS_TUNE && ow_dll_tuned (dll))
 	{
 	  debug_print (2, "Running resampler...\n");
 	  ow_dll_primary_set_loop_filter (dll, 0.02, resampler->bufsize,

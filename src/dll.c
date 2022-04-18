@@ -22,6 +22,8 @@
 #include "utils.h"
 #include "dll.h"
 
+#define RATIO_DIFF_THRES 0.00001
+
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc.
 inline void
 ow_dll_overwitch_init (struct ow_dll_overwitch *dll_ow, double samplerate,
@@ -143,4 +145,11 @@ ow_dll_primary_load_dll_overwitch (struct ow_dll *dll)
   dll->to0 = dll->dll_ow.i0.time;
   dll->ko1 = dll->dll_ow.i1.frames;
   dll->to1 = dll->dll_ow.i1.time;
+}
+
+inline int
+ow_dll_tuned (struct ow_dll *dll)
+{
+  double diff = fabs (dll->ratio_avg - dll->last_ratio_avg);
+  return (diff < RATIO_DIFF_THRES);
 }
