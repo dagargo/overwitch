@@ -180,21 +180,21 @@ set_report_data (struct overwitch_instance *instance, double o2j_latency,
 }
 
 static void
-overwitch_show_about (GtkWidget * object, gpointer data)
+overwitch_cleanup_jack (GtkWidget * object, gpointer data)
 {
   gtk_dialog_run (GTK_DIALOG (about_dialog));
   gtk_widget_hide (GTK_WIDGET (about_dialog));
 }
 
 static void
-overwitch_update_all_metrics (gboolean active)
+update_all_metrics (gboolean active)
 {
   gtk_tree_view_column_set_visible (o2j_ratio_column, active);
   gtk_tree_view_column_set_visible (j2o_ratio_column, active);
 }
 
 static void
-overwitch_refresh_at_startup (GtkWidget * object, gpointer data)
+refresh_at_startup (GtkWidget * object, gpointer data)
 {
   gboolean active;
 
@@ -205,14 +205,14 @@ overwitch_refresh_at_startup (GtkWidget * object, gpointer data)
 }
 
 static void
-overwitch_show_all_metrics (GtkWidget * object, gpointer data)
+show_all_metrics (GtkWidget * object, gpointer data)
 {
   gboolean active;
 
   g_object_get (G_OBJECT (show_all_metrics_button), "active", &active, NULL);
   active = !active;
   g_object_set (G_OBJECT (show_all_metrics_button), "active", active, NULL);
-  overwitch_update_all_metrics (active);
+  update_all_metrics (active);
 }
 
 gchar *
@@ -265,7 +265,7 @@ save_file_char (const gchar * path, const guint8 * data, ssize_t len)
 }
 
 static void
-preferences_save ()
+save_preferences ()
 {
   size_t n;
   gchar *preferences_path;
@@ -331,7 +331,7 @@ preferences_save ()
 }
 
 static void
-preferences_load ()
+load_preferences ()
 {
   GError *error;
   JsonReader *reader;
@@ -391,11 +391,12 @@ end:
 		show_all_metrics, NULL);
   gtk_spin_button_set_value (blocks_spin_button, blocks);
   gtk_combo_box_set_active (quality_combo_box, quality);
-  overwitch_update_all_metrics (show_all_metrics);
+  update_all_metrics (show_all_metrics);
 }
 
 static gboolean
-overwitch_instance_running (uint8_t bus, uint8_t address, const char **name)
+is_device_at_bus_address_running (uint8_t bus, uint8_t address,
+				  const char **name)
 {
   guint dev_bus, dev_address;
   GtkTreeIter iter;
@@ -422,7 +423,7 @@ overwitch_instance_running (uint8_t bus, uint8_t address, const char **name)
 }
 
 static gboolean
-overwitch_check_jack_server_free (gpointer data)
+check_jack_server_free (gpointer data)
 {
   const char *msg;
   gboolean *status;
@@ -452,7 +453,7 @@ overwitch_check_jack_server_free (gpointer data)
 }
 
 static gpointer
-overwitch_is_jack_server_running (gpointer callback)
+check_jack_server (gpointer callback)
 {
   jack_status_t foo;
   jack_client_t *client;
@@ -472,19 +473,18 @@ overwitch_is_jack_server_running (gpointer callback)
       *status = FALSE;
     }
 
-  g_idle_add (overwitch_check_jack_server_free, callback);
+  g_idle_add (check_jack_server_free, callback);
 
   return status;
 }
 
 static void
-overwitch_check_jack_server_bg (check_jack_server_callback_t callback)
+check_jack_server_bg (check_jack_server_callback_t callback)
 {
   if (!jack_control_client_thread)
     {
       jack_control_client_thread = g_thread_new ("Overwitch control client",
-						 overwitch_is_jack_server_running,
-						 callback);
+						 check_jack_server, callback);
     }
 }
 
@@ -517,7 +517,7 @@ remove_jclient_bg (guint * id)
 	gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store), &iter);
     }
 
-  overwitch_check_jack_server_bg (NULL);
+  check_jack_server_bg (NULL);
 
   return FALSE;
 }
@@ -531,7 +531,7 @@ remove_jclient (uint8_t bus, uint8_t address)
 }
 
 static void
-overwitch_refresh_devices ()
+refresh_devices ()
 {
   struct ow_usb_device *devices, *device;
   struct overwitch_instance *instance;
@@ -554,7 +554,8 @@ overwitch_refresh_devices ()
 
   for (int i = 0; i < devices_count; i++, device++)
     {
-      if (overwitch_instance_running (device->bus, device->address, &name))
+      if (is_device_at_bus_address_running
+	  (device->bus, device->address, &name))
 	{
 	  debug_print (2, "%s already running. Skipping...\n", name);
 	  continue;
@@ -618,13 +619,13 @@ overwitch_refresh_devices ()
 }
 
 static void
-overwitch_refresh_devices_click (GtkWidget * object, gpointer data)
+refresh_devices_click (GtkWidget * object, gpointer data)
 {
-  overwitch_check_jack_server_bg (overwitch_refresh_devices);
+  check_jack_server_bg (refresh_devices);
 }
 
 static void
-overwitch_stop (GtkWidget * object, gpointer data)
+stop_all (GtkWidget * object, gpointer data)
 {
   struct overwitch_instance *instance;
   GtkTreeIter iter;
@@ -649,10 +650,10 @@ overwitch_stop (GtkWidget * object, gpointer data)
 }
 
 static void
-overwitch_quit (int signo)
+quit (int signo)
 {
-  overwitch_stop (NULL, NULL);
-  preferences_save ();
+  stop_all (NULL, NULL);
+  save_preferences ();
   debug_print (1, "Quitting GTK+...\n");
   gtk_main_quit ();
 }
@@ -660,7 +661,7 @@ overwitch_quit (int signo)
 static gboolean
 overwitch_delete_window (GtkWidget * widget, GdkEvent * event, gpointer data)
 {
-  overwitch_quit (0);
+  quit (0);
   return FALSE;
 }
 
@@ -669,10 +670,10 @@ main (int argc, char *argv[])
 {
   GtkBuilder *builder;
   struct sigaction action;
-  gboolean refresh_at_startup;
+  gboolean refresh;
   char *glade_file = malloc (PATH_MAX);
 
-  action.sa_handler = overwitch_quit;
+  action.sa_handler = quit;
   sigemptyset (&action.sa_mask);
   action.sa_flags = 0;
   sigaction (SIGHUP, &action, NULL);
@@ -740,29 +741,27 @@ main (int argc, char *argv[])
 		GTK_BUTTON_ROLE_CHECK, NULL);
 
   g_signal_connect (about_button, "clicked",
-		    G_CALLBACK (overwitch_show_about), NULL);
+		    G_CALLBACK (overwitch_cleanup_jack), NULL);
 
   g_signal_connect (refresh_at_startup_button, "clicked",
-		    G_CALLBACK (overwitch_refresh_at_startup), NULL);
+		    G_CALLBACK (refresh_at_startup), NULL);
 
   g_signal_connect (show_all_metrics_button, "clicked",
-		    G_CALLBACK (overwitch_show_all_metrics), NULL);
+		    G_CALLBACK (show_all_metrics), NULL);
 
   g_signal_connect (refresh_button, "clicked",
-		    G_CALLBACK (overwitch_refresh_devices_click), NULL);
+		    G_CALLBACK (refresh_devices_click), NULL);
 
-  g_signal_connect (stop_button, "clicked",
-		    G_CALLBACK (overwitch_stop), NULL);
+  g_signal_connect (stop_button, "clicked", G_CALLBACK (stop_all), NULL);
 
   g_signal_connect (main_window, "delete-event",
 		    G_CALLBACK (overwitch_delete_window), NULL);
 
-  preferences_load ();
+  load_preferences ();
 
-  g_object_get (G_OBJECT (refresh_at_startup_button), "active",
-		&refresh_at_startup, NULL);
-  overwitch_check_jack_server_bg (refresh_at_startup ?
-				  overwitch_refresh_devices : NULL);
+  g_object_get (G_OBJECT (refresh_at_startup_button), "active", &refresh,
+		NULL);
+  check_jack_server_bg (refresh ? refresh_devices : NULL);
 
   gtk_widget_show (main_window);
   gtk_main ();
