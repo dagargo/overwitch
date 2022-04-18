@@ -649,7 +649,7 @@ overwitch_stop (GtkWidget * object, gpointer data)
 }
 
 static void
-overwitch_quit ()
+overwitch_quit (int signo)
 {
   overwitch_stop (NULL, NULL);
   preferences_save ();
@@ -660,7 +660,7 @@ overwitch_quit ()
 static gboolean
 overwitch_delete_window (GtkWidget * widget, GdkEvent * event, gpointer data)
 {
-  overwitch_quit ();
+  overwitch_quit (0);
   return FALSE;
 }
 
@@ -668,8 +668,16 @@ int
 main (int argc, char *argv[])
 {
   GtkBuilder *builder;
+  struct sigaction action;
   gboolean refresh_at_startup;
   char *glade_file = malloc (PATH_MAX);
+
+  action.sa_handler = overwitch_quit;
+  sigemptyset (&action.sa_mask);
+  action.sa_flags = 0;
+  sigaction (SIGHUP, &action, NULL);
+  sigaction (SIGINT, &action, NULL);
+  sigaction (SIGTERM, &action, NULL);
 
   if (snprintf
       (glade_file, PATH_MAX, "%s/%s/res/gui.glade", DATADIR,
