@@ -392,6 +392,13 @@ jclient_run (struct jclient *jclient)
   struct ow_engine *engine;
   const struct ow_device_desc *desc;
 
+  jclient->output_ports = NULL;
+  jclient->input_ports = NULL;
+  jclient->context.p2o_audio = NULL;
+  jclient->context.o2p_audio = NULL;
+  jclient->context.p2o_midi = NULL;
+  jclient->context.o2p_midi = NULL;
+
   ow_resampler_set_report_callback (jclient->resampler, &jclient->reporter);
 
   engine = ow_resampler_get_engine (jclient->resampler);

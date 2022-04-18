@@ -39,6 +39,7 @@
 #define CONF_DIR "~/.config/overwitch"
 #define CONF_FILE "/preferences.json"
 
+#define CONF_REFRESH_AT_STARTUP "refreshAtStartup"
 #define CONF_SHOW_ALL_METRICS "showAllColumns"
 #define CONF_BLOCKS "blocks"
 #define CONF_QUALITY "quality"
@@ -73,6 +74,7 @@ typedef void (*check_jack_server_callback_t) ();
 static GtkWidget *main_window;
 static GtkAboutDialog *about_dialog;
 static GtkWidget *about_button;
+static GtkWidget *refresh_at_startup_button;
 static GtkWidget *show_all_metrics_button;
 static GtkWidget *refresh_button;
 static GtkWidget *stop_button;
@@ -192,6 +194,17 @@ overwitch_update_all_metrics (gboolean active)
 }
 
 static void
+overwitch_refresh_at_startup (GtkWidget * object, gpointer data)
+{
+  gboolean active;
+
+  g_object_get (G_OBJECT (refresh_at_startup_button), "active", &active,
+		NULL);
+  active = !active;
+  g_object_set (G_OBJECT (refresh_at_startup_button), "active", active, NULL);
+}
+
+static void
 overwitch_show_all_metrics (GtkWidget * object, gpointer data)
 {
   gboolean active;
@@ -260,7 +273,7 @@ preferences_save ()
   JsonGenerator *gen;
   JsonNode *root;
   gchar *json;
-  gboolean show_all_metrics;
+  gboolean show_all_metrics, refresh_at_startup;
 
   preferences_path = get_expanded_dir (CONF_DIR);
   if (g_mkdir_with_parents (preferences_path,
@@ -280,6 +293,11 @@ preferences_save ()
   builder = json_builder_new ();
 
   json_builder_begin_object (builder);
+
+  json_builder_set_member_name (builder, CONF_REFRESH_AT_STARTUP);
+  g_object_get (G_OBJECT (refresh_at_startup_button), "active",
+		&refresh_at_startup, NULL);
+  json_builder_add_boolean_value (builder, refresh_at_startup);
 
   json_builder_set_member_name (builder, CONF_SHOW_ALL_METRICS);
   g_object_get (G_OBJECT (show_all_metrics_button), "active",
@@ -320,6 +338,7 @@ preferences_load ()
   JsonParser *parser = json_parser_new ();
   gchar *preferences_file = get_expanded_dir (CONF_DIR CONF_FILE);
   gboolean show_all_metrics = FALSE;
+  gboolean refresh_at_startup = FALSE;
   gint64 blocks = 24;
   gint64 quality = 2;
 
@@ -335,6 +354,12 @@ preferences_load ()
     }
 
   reader = json_reader_new (json_parser_get_root (parser));
+
+  if (json_reader_read_member (reader, CONF_REFRESH_AT_STARTUP))
+    {
+      refresh_at_startup = json_reader_get_boolean_value (reader);
+    }
+  json_reader_end_member (reader);
 
   if (json_reader_read_member (reader, CONF_SHOW_ALL_METRICS))
     {
@@ -360,6 +385,8 @@ preferences_load ()
   g_free (preferences_file);
 
 end:
+  g_object_set (G_OBJECT (refresh_at_startup_button), "active",
+		refresh_at_startup, NULL);
   g_object_set (G_OBJECT (show_all_metrics_button), "active",
 		show_all_metrics, NULL);
   gtk_spin_button_set_value (blocks_spin_button, blocks);
@@ -398,45 +425,56 @@ static gboolean
 overwitch_check_jack_server_free (gpointer data)
 {
   const char *msg;
+  gboolean *status;
   check_jack_server_callback_t callback = data;
 
-  msg = g_thread_join (jack_control_client_thread);
+  status = g_thread_join (jack_control_client_thread);
   jack_control_client_thread = NULL;
 
+  if (*status)
+    {
+      msg = MSG_JACK_SERVER_FOUND;
+      if (callback)
+	{
+	  callback ();
+	}
+    }
+  else
+    {
+      msg = MSG_NO_JACK_SERVER_FOUND;
+      gtk_widget_set_sensitive (stop_button, FALSE);
+    }
   gtk_statusbar_push (status_bar, 0, msg);
 
-  if (callback)
-    {
-      callback ();
-    }
+  g_free (status);
 
   return G_SOURCE_REMOVE;
 }
 
 static gpointer
-overwitch_check_jack_server_func (gpointer callback)
+overwitch_is_jack_server_running (gpointer callback)
 {
+  jack_status_t foo;
   jack_client_t *client;
-  jack_status_t status;
-  char *msg;
+  gboolean *status = g_malloc (sizeof (gboolean));
 
   gtk_statusbar_pop (status_bar, 0);
 
   client = jack_client_open ("Overwitch control client", JackNoStartServer,
-			     &status, NULL);
+			     &foo, NULL);
   if (client)
     {
-      msg = MSG_JACK_SERVER_FOUND;
+      *status = TRUE;
       jack_client_close (client);
     }
   else
     {
-      msg = MSG_NO_JACK_SERVER_FOUND;
+      *status = FALSE;
     }
 
   g_idle_add (overwitch_check_jack_server_free, callback);
 
-  return msg;
+  return status;
 }
 
 static void
@@ -445,7 +483,7 @@ overwitch_check_jack_server_bg (check_jack_server_callback_t callback)
   if (!jack_control_client_thread)
     {
       jack_control_client_thread = g_thread_new ("Overwitch control client",
-						 overwitch_check_jack_server_func,
+						 overwitch_is_jack_server_running,
 						 callback);
     }
 }
@@ -586,12 +624,6 @@ overwitch_refresh_devices_click (GtkWidget * object, gpointer data)
 }
 
 static void
-overwitch_refresh ()
-{
-  overwitch_check_jack_server_bg (overwitch_refresh_devices);
-}
-
-static void
 overwitch_stop (GtkWidget * object, gpointer data)
 {
   struct overwitch_instance *instance;
@@ -636,6 +668,7 @@ int
 main (int argc, char *argv[])
 {
   GtkBuilder *builder;
+  gboolean refresh_at_startup;
   char *glade_file = malloc (PATH_MAX);
 
   if (snprintf
@@ -658,6 +691,9 @@ main (int argc, char *argv[])
     GTK_ABOUT_DIALOG (gtk_builder_get_object (builder, "about_dialog"));
   gtk_about_dialog_set_version (about_dialog, PACKAGE_VERSION);
 
+  refresh_at_startup_button =
+    GTK_WIDGET (gtk_builder_get_object
+		(builder, "refresh_at_startup_button"));
   show_all_metrics_button =
     GTK_WIDGET (gtk_builder_get_object (builder, "show_all_metrics_button"));
   about_button =
@@ -690,11 +726,16 @@ main (int argc, char *argv[])
 				 (builder, "main_popover")),
 				GTK_POPOVER_CONSTRAINT_NONE);
 
+  g_object_set (G_OBJECT (refresh_at_startup_button), "role",
+		GTK_BUTTON_ROLE_CHECK, NULL);
   g_object_set (G_OBJECT (show_all_metrics_button), "role",
 		GTK_BUTTON_ROLE_CHECK, NULL);
 
   g_signal_connect (about_button, "clicked",
 		    G_CALLBACK (overwitch_show_about), NULL);
+
+  g_signal_connect (refresh_at_startup_button, "clicked",
+		    G_CALLBACK (overwitch_refresh_at_startup), NULL);
 
   g_signal_connect (show_all_metrics_button, "clicked",
 		    G_CALLBACK (overwitch_show_all_metrics), NULL);
@@ -710,7 +751,10 @@ main (int argc, char *argv[])
 
   preferences_load ();
 
-  overwitch_refresh ();
+  g_object_get (G_OBJECT (refresh_at_startup_button), "active",
+		&refresh_at_startup, NULL);
+  overwitch_check_jack_server_bg (refresh_at_startup ?
+				  overwitch_refresh_devices : NULL);
 
   gtk_widget_show (main_window);
   gtk_main ();
