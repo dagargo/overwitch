@@ -189,8 +189,9 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
   struct ow_midi_event oevent;
   jack_nframes_t event_count;
   jack_midi_data_t status_byte;
+  struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
 
-  if (ow_resampler_get_status (jclient->resampler) < OW_RESAMPLER_STATUS_RUN)
+  if (ow_engine_get_status (engine) < OW_ENGINE_STATUS_RUN)
     {
       return;
     }
