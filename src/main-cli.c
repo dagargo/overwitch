@@ -91,6 +91,7 @@ run_single (int device_num, const char *device_name,
   instances->jclient.quality = quality;
   instances->jclient.priority = priority;
   instances->jclient.reporter.callback = NULL;
+  instances->jclient.reporter.period = 2;
   instances->jclient.end_notifier = NULL;
   free (device);
 
@@ -134,6 +135,7 @@ run_all (int blocks_per_transfer, int quality, int priority)
       instance->jclient.quality = quality;
       instance->jclient.priority = priority;
       instance->jclient.reporter.callback = NULL;
+      instances->jclient.reporter.period = 2;
       instance->jclient.end_notifier = NULL;
 
       if (jclient_init (&instance->jclient))
