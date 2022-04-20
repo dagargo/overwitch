@@ -41,6 +41,7 @@ static const char *track_mask = ALL_TRACKS_MASK;
 static size_t track_buf_kb = TRACK_BUF_KB;
 static float max[OB_MAX_TRACKS];
 static float min[OB_MAX_TRACKS];
+static char filename[MAX_FILENAME_LEN];
 
 typedef enum
 {
@@ -219,13 +220,13 @@ signal_handler (int signo)
   if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
     {
       ow_engine_stop (engine);
+      fprintf (stderr, "%s file created\n", filename);
     }
 }
 
 static int
 run_dump (int device_num, const char *device_name)
 {
-  char filename[MAX_FILENAME_LEN];
   char curr_time_string[MAX_FILENAME_LEN >> 1];
   time_t curr_time;
   struct tm tm;
@@ -271,9 +272,9 @@ run_dump (int device_num, const char *device_name)
 
   curr_time = time (NULL);
   localtime_r (&curr_time, &tm);
-  strftime (curr_time_string, MAX_FILENAME_LEN, "%F %T", &tm);
+  strftime (curr_time_string, MAX_FILENAME_LEN, "%FT%T", &tm);
 
-  snprintf (filename, MAX_FILENAME_LEN, "%s dump %s.wav", desc->name,
+  snprintf (filename, MAX_FILENAME_LEN, "%s_dump_%s.wav", desc->name,
 	    curr_time_string);
 
   debug_print (1, "Creating sample (%d channels)...\n", buffer.outputs);
