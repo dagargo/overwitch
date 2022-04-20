@@ -29,7 +29,6 @@
 
 #define DEFAULT_BLOCKS 24
 #define TRACK_BUF_KB 256
-#define ALL_TRACKS_MASK "111111111111"	//OB_MAX_TRACKS == 12
 #define MAX_FILENAME_LEN 64
 
 static struct ow_context context;
@@ -37,7 +36,7 @@ static struct ow_engine *engine;
 static SF_INFO sfinfo;
 static SNDFILE *sf;
 static const struct ow_device_desc *desc;
-static const char *track_mask = ALL_TRACKS_MASK;
+static const char *track_mask;
 static size_t track_buf_kb = TRACK_BUF_KB;
 static float max[OB_MAX_TRACKS];
 static float min[OB_MAX_TRACKS];
@@ -86,13 +85,6 @@ buffer_dummy_rw_space (void *data)
 {
   return DEFAULT_BLOCKS * OB_FRAMES_PER_BLOCK * OB_MAX_TRACKS *
     OB_BYTES_PER_SAMPLE;
-}
-
-static inline int
-get_outputs_mask_len ()
-{
-  int outputs = strlen (track_mask);
-  return outputs < desc->outputs ? outputs : desc->outputs;
 }
 
 static buffer_status_t
@@ -160,10 +152,10 @@ buffer_write (void *data, const char *buf, size_t size)
   dst = &buffer.mem[pos];
   for (int i = 0; i < frames; i++)
     {
-      const char *c = track_mask;
-      for (int j = 0; j < buffer.outputs_mask_len; j++, c++)
+      for (int j = 0; j < OB_MAX_TRACKS; j++)
 	{
-	  if (*c != '0')
+	  if (!track_mask
+	      || (j < buffer.outputs_mask_len && (track_mask[i] != '0')))
 	    {
 	      memcpy (dst, buf, OB_BYTES_PER_SAMPLE);
 	      dst += OB_BYTES_PER_SAMPLE;
@@ -295,7 +287,7 @@ run_dump (int device_num, const char *device_name)
   buffer.len = track_buf_kb * 1000 * buffer.outputs;
   buffer.mem = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
   buffer.disk = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
-  buffer.outputs_mask_len = get_outputs_mask_len ();
+  buffer.outputs_mask_len = strlen (track_mask);
 
   for (int i = 0; i < OB_MAX_TRACKS; i++)
     {
