@@ -83,7 +83,7 @@ ow_resampler_report_status (struct ow_resampler *resampler)
   if (debug_level)
     {
       printf
-	("%s: o2j latency: %.1f ms, max. %.1f ms; j2o latency: %.1f ms, max. %.1f ms, o2j ratio: %f, avg. %f\n",
+	("%s: o2j latency: %4.1f ms, max. %4.1f ms; j2o latency: %4.1f ms, max. %4.1f ms, o2j ratio: %f, avg. %f\n",
 	 ow_resampler_get_name (resampler),
 	 o2p_latency_d, o2p_max_latency_d, p2o_latency_d, p2o_max_latency_d,
 	 resampler->dll.ratio, resampler->dll.ratio_avg);
