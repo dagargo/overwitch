@@ -61,9 +61,9 @@ print_devices ()
   device = devices;
   for (int i = 0; i < total; i++, device++)
     {
-      fprintf (stderr, "%d: Bus %03d Device %03d: ID %04x:%04x %s\n", i,
-	       device->bus, device->address, device->vid, device->pid,
-	       device->desc->name);
+      fprintf (stderr, "%d: %s (ID %04x:%04x) at bus %03d, address %03d\n", i,
+	       device->desc->name, device->vid, device->pid, device->bus,
+	       device->address);
       if (debug_level)
 	{
 	  fprintf (stderr, "  Inputs:\n");
