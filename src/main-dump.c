@@ -81,7 +81,7 @@ print_status ()
 }
 
 static size_t
-buffer_write_space (void *data)
+buffer_dummy_rw_space (void *data)
 {
   return DEFAULT_BLOCKS * OB_FRAMES_PER_BLOCK * OB_MAX_TRACKS *
     OB_BYTES_PER_SAMPLE;
@@ -279,7 +279,8 @@ run_dump (int device_num, const char *device_name)
   debug_print (1, "Creating sample (%d channels)...\n", buffer.outputs);
   sf = sf_open (filename, SFM_WRITE, &sfinfo);
 
-  context.write_space = buffer_write_space;
+  context.write_space = buffer_dummy_rw_space;
+  context.read_space = buffer_dummy_rw_space;
   context.write = buffer_write;
   context.o2p_audio = sf;
   context.options = OW_ENGINE_OPTION_O2P_AUDIO;
