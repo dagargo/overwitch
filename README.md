@@ -8,9 +8,11 @@ The papers [Controlling adaptive resampling](https://kokkinizita.linuxaudio.org/
 
 At the moment, it provides support for all Overbridge 2 devices, which are Analog Four MKII, Analog Rytm MKII, Digitakt, Digitone, Digitone Keys, Analog Heat and Analog Heat MKII.
 
+Overwitch consists of 3 different binaries: `overwitch`, which is a GUI application, `overwitch-cli` which offers the same functionality for the command line; and `overwitch-dump` which  does not integrate with JACK at all but streams all the tracks to a WAVE file.
+
 ## Installation
 
-As with other autotools project, you need to run the following commands.
+As with other autotools project, you need to run the following commands. If you just want to compile the command line applications, pass `CLI_ONLY=yes` to `/configure`.
 
 ```
 autoreconf --install
@@ -23,22 +25,35 @@ Some udev rules might need to be installed manually with `sudo make install` fro
 
 The package dependencies for Debian based distributions are:
 - automake
+- libtool
 - libusb-1.0-0-dev
 - libjack-jackd2-dev
 - libsamplerate0-dev
-- libasound2-dev
+- libjson-glib-dev
+- libgtk-3-dev
+- libsndfile1-dev
 
-You can easily install them by running `sudo apt install automake libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev libasound2-dev`.
+You can easily install them by running `sudo apt install automake libtool libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev libjson-glib-dev libgtk-3-dev libsndfile1-dev`.
 
 As this will install `jackd2`, you would be asked to configure it to be run with real time priority. Be sure to answer yes. With this, the `audio` group would be able to run processes with real time priority. Be sure to be in the `audio` group too.
 
 ## Usage
 
+This are the usage instructions for the 3 different binaries.
+
+## overwitch
+
+The GUI is self explanatory and does not use any parameter passed from the command line.
+
+Notice that once an Overbridge device is running, neither the blocks nor the resampling quality can be changed so you will need to stop the running instances and refresh the list.
+
+## overwitch-cli
+
 First, list the available devices. The first element is an internal ID that allows to identify the devices.
 
 ```
-$ overwitch -l
-0: Bus 001 Port 003 Device 006: ID 1935:000c Digitakt
+$ overwitch-cli -l
+0: Digitakt (ID 1935:000c) at bus 001, address 005
 ```
 
 Then, you can choose which device you want to use by using one of these options. Notice that the second option will only work for the first device found with that name.
@@ -51,22 +66,20 @@ $ overwitch -d Digitakt
 To stop, just press `Ctrl+C`. You'll see an oputput like the one below. Notice that we are using the verbose option here but it is **not recommended** to use it and it is showed here for illustrative purposes only.
 
 ```
-$ overwitch -d Digitakt -v -b 4
-Device: Digitakt (outputs: 12, inputs: 2)
-JACK sample rate: 48000
-DEBUG:jclient.c:756:(jclient_run): Using RT priority 5...
-DEBUG:overbridge.c:910:(overbridge_activate): Starting j2o MIDI thread...
-DEBUG:overbridge.c:918:(overbridge_activate): Starting audio and o2j MIDI thread...
-JACK buffer size: 32
-Digitakt: o2j latency: 0.0 ms, max. 0.0 ms; j2o latency: 0.0 ms, max. 0.0 ms; o2j ratio: 1.000035, avg. 0.999897
-Digitakt: o2j latency: 0.0 ms, max. 0.0 ms; j2o latency: 0.0 ms, max. 0.0 ms; o2j ratio: 0.999910, avg. 0.999975
-Digitakt: o2j latency: 0.0 ms, max. 0.0 ms; j2o latency: 0.0 ms, max. 0.0 ms; o2j ratio: 0.999877, avg. 0.999884
-Digitakt: o2j latency: 0.0 ms, max. 0.0 ms; j2o latency: 0.0 ms, max. 0.0 ms; o2j ratio: 0.999858, avg. 0.999866
-Digitakt: o2j latency: 0.0 ms, max. 0.0 ms; j2o latency: 0.0 ms, max. 0.0 ms; o2j ratio: 0.999883, avg. 0.999872
-Digitakt: o2j latency: 0.4 ms, max. 1.6 ms; j2o latency: 0.0 ms, max. 0.0 ms; o2j ratio: 0.999893, avg. 0.999889
+$ overwitch-cli -d Digitakt -v -b 4
+DEBUG:overwitch.c:206:(ow_get_devices): Found Digitakt (bus 001, address 005, ID 1935:000c)
+DEBUG:jclient.c:112:(jclient_set_sample_rate_cb): JACK sample rate: 48000
+DEBUG:jclient.c:471:(jclient_run): Using RT priority 5...
+DEBUG:engine.c:1001:(ow_engine_activate): Starting p2o MIDI thread...
+DEBUG:engine.c:1015:(ow_engine_activate): Starting audio and o2p MIDI thread...
+DEBUG:jclient.c:112:(jclient_set_sample_rate_cb): JACK sample rate: 48000
+DEBUG:jclient.c:102:(jclient_set_buffer_size_cb): JACK buffer size: 64
+DEBUG:jclient.c:102:(jclient_set_buffer_size_cb): JACK buffer size: 64
+Digitakt@001,005: o2j latency: -1.0 ms, max. -1.0 ms; j2o latency: -1.0 ms, max. -1.0 ms, o2j ratio: 0.999888, avg. 0.999904
+Digitakt@001,005: o2j latency: -1.0 ms, max. -1.0 ms; j2o latency: -1.0 ms, max. -1.0 ms, o2j ratio: 0.999901, avg. 0.999903
+Digitakt@001,005: o2j latency:  1.4 ms, max.  1.8 ms; j2o latency: -1.0 ms, max. -1.0 ms, o2j ratio: 0.999903, avg. 0.999905
 ^C
-Digitakt: o2j latency: 0.5 ms, max. 1.8 ms; j2o latency: 0.0 ms, max. 0.0 ms
-DEBUG:jclient.c:830:(jclient_run): Exiting...
+DEBUG:jclient.c:579:(jclient_run): Exiting...
 ```
 
 To limit latency to the lowest possible value, audio is not sent through during the first seconds.
@@ -74,9 +87,9 @@ To limit latency to the lowest possible value, audio is not sent through during 
 You can list all the available options with `-h`.
 
 ```
-$ overwitch -h
-overwitch 0.2
-Usage: overwitch [options]
+$ overwitch-cli -h
+overwitch 1.0
+Usage: overwitch-cli [options]
 Options:
   --use-device-number, -n value
   --use-device, -d value
@@ -88,14 +101,66 @@ Options:
   --help, -h
 ```
 
-### Dump audio to a WAVE file
+## overwitch-dump
 
-It is possible to directly record the audio output from the Overbridge devices into a WAVE file with the following command. To stop, just press `Ctrl+C`.
+This small utility let the user record the audio output from the Overbridge devices into a WAVE file with the following command. To stop, just press `Ctrl+C`.
 
 ```
-$ overwitch-dump -n 0
-Device: Digitakt (outputs: 12, inputs: 2)
-^C1572480 frames written
+$ overwitch-dump -d Digitakt
+^C
+2106720 frames written
+Digitakt_dump_2022-04-20T19:20:19.wav file created
+```
+
+By default, it records all the output tracks from the Overbridge device but it is possible to select which ones to record. First, list the devices in verbose mode to see all the available tracks.
+
+```
+$ overwitch-dump -l -v
+DEBUG:overwitch.c:206:(ow_get_devices): Found Digitakt (bus 001, address 005, ID 1935:000c)
+0: Digitakt (ID 1935:000c) at bus 001, address 005
+  Inputs:
+    Main L Input
+    Main R Input
+  Outputs:
+    Main L
+    Main R
+    Track 1
+    Track 2
+    Track 3
+    Track 4
+    Track 5
+    Track 6
+    Track 7
+    Track 8
+    Input L
+    Input R
+```
+
+Then, just select the output tracks to record as this. `0` means that the track is not recorded while any other character means it will. In this example, we are recording tracks 1, 2, 5 and 6.
+
+```
+$ overwitch-dump -d Digitakt -m 001100110000
+^C
+829920 frames written
+Digitakt_dump_2022-04-20T19:33:30.wav file created
+```
+
+It is not neccessary to provide all tracks, meaning that using `00110011` as the mask will behave exactly as the example above.
+
+You can list all the available options with `-h`.
+
+```
+$ overwitch-dump -h
+overwitch 1.0
+Usage: overwitch-dump [options]
+Options:
+  --use-device-number, -n value
+  --use-device, -d value
+  --list-devices, -l
+  --track-mask, -m value
+  --track-buffer-kilobytes, -b value
+  --verbose, -v
+  --help, -h
 ```
 
 ## Latency
