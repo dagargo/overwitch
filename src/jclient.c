@@ -249,7 +249,7 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 	  oevent.bytes[3] = jevent.buffer[2];
 	}
 
-      oevent.time = jack_frames_to_time (jclient->client, jevent.time);
+      oevent.time = jack_frames_to_time (jclient->client, jevent.time) * 1e-6;
 
       if (oevent.bytes[0])
 	{
