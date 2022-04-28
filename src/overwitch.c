@@ -151,7 +151,7 @@ static const struct ow_device_desc STAKT_DESC = {
   .pid = STAKT_PID,
   .name = "Syntakt",
   .inputs = 8,
-  .outputs = 16,
+  .outputs = 20,
   .input_track_names =
     {"Main L Input", "Main R Input", "Analog FX L Input", "Analog FX R Input",
      "Track 9 Input", "Track 10 Input", "Track 11 Input", "Track 12 Input"},
