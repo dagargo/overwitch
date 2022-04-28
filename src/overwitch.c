@@ -36,6 +36,7 @@
 #define DTONE_PID 0x0014
 #define AHMK2_PID 0x0016
 #define DKEYS_PID 0x001c
+#define STAKT_PID 0x001e
 
 #define OW_CONV_SCALE_32 (1.0f / (float) INT_MAX)
 #define OW_CONV_SCALE_30 (1.0f / (float) (INT_MAX >> 2))
@@ -86,7 +87,6 @@ static const struct ow_device_desc AFMK2_DESC = {
   .output_track_scales =
     {OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
      OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32}
-
 };
 
 static const struct ow_device_desc ARMK2_DESC = {
@@ -147,9 +147,28 @@ static const struct ow_device_desc AHMK2_DESC = {
     {OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32}
 };
 
+static const struct ow_device_desc STAKT_DESC = {
+  .pid = STAKT_PID,
+  .name = "Syntakt",
+  .inputs = 8,
+  .outputs = 16,
+  .input_track_names =
+    {"Main L Input", "Main R Input", "Analog FX L Input", "Analog FX L Input",
+     "Track 9 Input", "Track 10 Input", "Track 11 Input", "Track 12 Input"},
+  .output_track_names =
+    {"Main L", "Main R", "Analog FX L", "Analog FX L", "Track 1", "Track 2",
+     "Track 3", "Track 4", "Track 5", "Track 6", "Track 7", "Track 8",
+     "Track 9", "Track 10", "Track 11", "Track 12"},
+  .output_track_scales =
+    {OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
+     OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
+     OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
+     OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32}
+};
+
 const struct ow_device_desc *OB_DEVICE_DESCS[] = {
   &DIGITAKT_DESC, &DIGITONE_DESC, &AFMK2_DESC, &ARMK2_DESC, &DKEYS_DESC,
-  &AHMK1_DESC, &AHMK2_DESC, NULL
+  &AHMK1_DESC, &AHMK2_DESC, &STAKT_DESC, NULL
 };
 
 void

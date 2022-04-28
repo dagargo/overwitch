@@ -28,7 +28,7 @@
 #define OB_SAMPLE_RATE 48000.0
 #define OB_FRAMES_PER_BLOCK 7
 #define OB_BYTES_PER_SAMPLE sizeof(float)
-#define OB_MAX_TRACKS 12
+#define OB_MAX_TRACKS 16
 #define OB_MIDI_EVENT_SIZE 4
 
 #define OW_DEFAULT_RT_PROPERTY 20
