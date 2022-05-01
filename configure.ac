@@ -8,7 +8,7 @@ AC_CONFIG_HEADERS([config.h])
 AM_PROG_LIBTOOL
 AC_SEARCH_LIBS([sqrt], [m])
 AC_CONFIG_MACRO_DIRS([m4])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([1.12 subdir-objects])
 
 # Checks for programs.
 AC_PROG_CC
@@ -22,6 +22,8 @@ AM_COND_IF(GUI, [PKG_CHECK_MODULES([GTK], [gtk+-3.0])])
 # Checks for libraries.
 PKG_CHECK_MODULES(libusb, libusb, HAVE_LIBUSB=1, HAVE_LIBUSB=0)
 PKG_CHECK_MODULES(JACK, jack >= 0.100.0)
+
+AC_CHECK_LIB([cunit], [CU_initialize_registry])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdio.h unistd.h stdlib.h errno.h string.h signal.h libusb.h limits.h time.h])
@@ -43,5 +45,5 @@ AC_FUNC_MALLOC
 
 AM_CONDITIONAL([UDEV_AVAIL], [test "`pkg-config --variable=udevdir udev`" != ""])
 
-AC_CONFIG_FILES([Makefile src/Makefile udev/Makefile res/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile udev/Makefile res/Makefile test/Makefile])
 AC_OUTPUT

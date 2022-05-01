@@ -32,10 +32,12 @@ test-driver
 *.lo
 *.gcno
 *.gcda
+*.dirstamp
 src/overwitch
 src/overwitch-cli
 src/overwitch-dump
-src/*~
+test/test_usb_blocks
+test/*.trs
 config.guess
 config.sub
 ltmain.sh

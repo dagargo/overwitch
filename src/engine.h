@@ -151,6 +151,10 @@
 #include "dll.h"
 #include "overwitch.h"
 
+#define GET_NTH_USB_BLK(blks,blk_len,n) ((struct ow_engine_usb_blk *) &blks[n * blk_len])
+#define GET_NTH_INPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.data_in, (engine)->usb.data_in_blk_len, n))
+#define GET_NTH_OUTPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.data_out, (engine)->usb.data_out_blk_len, n))
+
 #define OB_PADDING_SIZE 28
 
 struct ow_engine
@@ -209,4 +213,22 @@ struct ow_engine
   } options;
 };
 
+struct ow_engine_usb_blk
+{
+  uint16_t header;
+  uint16_t frames;
+  uint8_t padding[OB_PADDING_SIZE];
+  int32_t data[];
+};
+
 int ow_bytes_to_frame_bytes (int, int);
+
+void ow_engine_read_usb_input_blocks (struct ow_engine *);
+
+void ow_engine_write_usb_output_blocks (struct ow_engine *);
+
+void ow_engine_init_mem (struct ow_engine *, int);
+
+void ow_engine_free_mem (struct ow_engine *);
+
+void ow_engine_print_blocks (struct ow_engine *, char *, size_t);

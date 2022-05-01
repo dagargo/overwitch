@@ -43,37 +43,15 @@
 
 #define SAMPLE_TIME_NS (1e9 / ((int)OB_SAMPLE_RATE))
 
-struct ow_engine_usb_blk
-{
-  uint16_t header;
-  uint16_t frames;
-  uint8_t padding[OB_PADDING_SIZE];
-  int32_t data[];
-};
-
 static void prepare_cycle_in_audio ();
 static void prepare_cycle_out_audio ();
 static void prepare_cycle_in_midi ();
 
-inline static void
+static void
 ow_engine_set_name (struct ow_engine *engine, uint8_t bus, uint8_t address)
 {
   snprintf (engine->name, OW_LABEL_MAX_LEN, "%s@%03d,%03d",
 	    engine->device_desc->name, bus, address);
-}
-
-static struct ow_engine_usb_blk *
-get_nth_usb_in_blk (struct ow_engine *engine, int n)
-{
-  char *blk = &engine->usb.data_in[n * engine->usb.data_in_blk_len];
-  return (struct ow_engine_usb_blk *) blk;
-}
-
-static struct ow_engine_usb_blk *
-get_nth_usb_out_blk (struct ow_engine *engine, int n)
-{
-  char *blk = &engine->usb.data_out[n * engine->usb.data_out_blk_len];
-  return (struct ow_engine_usb_blk *) blk;
 }
 
 static int
@@ -115,29 +93,17 @@ free_transfers (struct ow_engine *engine)
   libusb_free_transfer (engine->usb.xfr_out_midi);
 }
 
-static void
-set_usb_input_data_blks (struct ow_engine *engine)
+inline void
+ow_engine_read_usb_input_blocks (struct ow_engine *engine)
 {
-  struct ow_engine_usb_blk *blk;
-  size_t wso2p;
   int32_t hv;
-  float *f;
   int32_t *s;
-  ow_engine_status_t status;
+  struct ow_engine_usb_blk *blk;
+  float *f = engine->o2p_transfer_buf;
 
-  pthread_spin_lock (&engine->lock);
-  if (engine->context->dll)
-    {
-      ow_dll_overwitch_inc (engine->context->dll, engine->frames_per_transfer,
-			    engine->context->get_time ());
-    }
-  status = engine->status;
-  pthread_spin_unlock (&engine->lock);
-
-  f = engine->o2p_transfer_buf;
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
-      blk = get_nth_usb_in_blk (engine, i);
+      blk = GET_NTH_INPUT_USB_BLK (engine, i);
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
@@ -151,6 +117,24 @@ set_usb_input_data_blks (struct ow_engine *engine)
 	    }
 	}
     }
+}
+
+static void
+set_usb_input_data_blks (struct ow_engine *engine)
+{
+  size_t wso2p;
+  ow_engine_status_t status;
+
+  pthread_spin_lock (&engine->lock);
+  if (engine->context->dll)
+    {
+      ow_dll_overwitch_inc (engine->context->dll, engine->frames_per_transfer,
+			    engine->context->get_time ());
+    }
+  status = engine->status;
+  pthread_spin_unlock (&engine->lock);
+
+  ow_engine_read_usb_input_blocks (engine);
 
   if (status < OW_ENGINE_STATUS_RUN)
     {
@@ -179,17 +163,40 @@ set_usb_input_data_blks (struct ow_engine *engine)
     }
 }
 
+inline void
+ow_engine_write_usb_output_blocks (struct ow_engine *engine)
+{
+  int32_t ov;
+  int32_t *s;
+  struct ow_engine_usb_blk *blk;
+  float *f = engine->p2o_transfer_buf;
+
+  for (int i = 0; i < engine->blocks_per_transfer; i++)
+    {
+      blk = GET_NTH_OUTPUT_USB_BLK (engine, i);
+      blk->frames = htobe16 (engine->usb.frames);
+      engine->usb.frames += OB_FRAMES_PER_BLOCK;
+      s = blk->data;
+      for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
+	{
+	  for (int k = 0; k < engine->device_desc->inputs; k++)
+	    {
+	      ov = htobe32 ((int32_t) (*f * INT_MAX));
+	      *s = ov;
+	      f++;
+	      s++;
+	    }
+	}
+    }
+}
+
 static void
 set_usb_output_data_blks (struct ow_engine *engine)
 {
-  struct ow_engine_usb_blk *blk;
   size_t rsp2o;
-  int32_t hv;
   size_t bytes;
   long frames;
-  float *f;
   int res;
-  int32_t *s;
   int p2o_enabled = ow_engine_is_p2o_audio_enabled (engine);
 
   if (p2o_enabled)
@@ -260,24 +267,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
     }
 
 set_blocks:
-  f = engine->p2o_transfer_buf;
-  for (int i = 0; i < engine->blocks_per_transfer; i++)
-    {
-      blk = get_nth_usb_out_blk (engine, i);
-      engine->usb.frames += OB_FRAMES_PER_BLOCK;
-      blk->frames = htobe16 (engine->usb.frames);
-      s = blk->data;
-      for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
-	{
-	  for (int k = 0; k < engine->device_desc->inputs; k++)
-	    {
-	      hv = htobe32 ((int32_t) (*f * INT_MAX));
-	      *s = hv;
-	      f++;
-	      s++;
-	    }
-	}
-    }
+  ow_engine_write_usb_output_blocks (engine);
 }
 
 static void LIBUSB_CALL
@@ -460,6 +450,69 @@ usb_shutdown (struct ow_engine *engine)
   libusb_exit (engine->usb.context);
 }
 
+void
+ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
+{
+  struct ow_engine_usb_blk *blk;
+
+  pthread_spin_init (&engine->lock, PTHREAD_PROCESS_SHARED);
+
+  engine->blocks_per_transfer = blocks_per_transfer;
+  engine->frames_per_transfer =
+    OB_FRAMES_PER_BLOCK * engine->blocks_per_transfer;
+
+  engine->usb.data_in_blk_len =
+    sizeof (struct ow_engine_usb_blk) +
+    sizeof (int32_t) * OB_FRAMES_PER_BLOCK * engine->device_desc->outputs;
+  engine->usb.data_out_blk_len =
+    sizeof (struct ow_engine_usb_blk) +
+    sizeof (int32_t) * OB_FRAMES_PER_BLOCK * engine->device_desc->inputs;
+
+  engine->usb.frames = 0;
+  engine->usb.data_in_len =
+    engine->usb.data_in_blk_len * engine->blocks_per_transfer;
+  engine->usb.data_out_len =
+    engine->usb.data_out_blk_len * engine->blocks_per_transfer;
+  engine->usb.data_in = malloc (engine->usb.data_in_len);
+  engine->usb.data_out = malloc (engine->usb.data_out_len);
+  memset (engine->usb.data_in, 0, engine->usb.data_in_len);
+  memset (engine->usb.data_out, 0, engine->usb.data_out_len);
+
+  for (int i = 0; i < engine->blocks_per_transfer; i++)
+    {
+      blk = GET_NTH_OUTPUT_USB_BLK (engine, i);
+      blk->header = htobe16 (0x07ff);
+    }
+
+  engine->p2o_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc->inputs;
+  engine->o2p_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc->outputs;
+
+  engine->p2o_transfer_size =
+    engine->frames_per_transfer * engine->p2o_frame_size;
+  engine->o2p_transfer_size =
+    engine->frames_per_transfer * engine->o2p_frame_size;
+  engine->p2o_transfer_buf = malloc (engine->p2o_transfer_size);
+  engine->o2p_transfer_buf = malloc (engine->o2p_transfer_size);
+  memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
+  memset (engine->o2p_transfer_buf, 0, engine->o2p_transfer_size);
+
+  //o2p resampler
+  engine->p2o_resampler_buf = malloc (engine->p2o_transfer_size);
+  memset (engine->p2o_resampler_buf, 0, engine->p2o_transfer_size);
+  engine->p2o_data.data_in = engine->p2o_resampler_buf;
+  engine->p2o_data.data_out = engine->p2o_transfer_buf;
+  engine->p2o_data.end_of_input = 1;
+  engine->p2o_data.input_frames = engine->frames_per_transfer;
+  engine->p2o_data.output_frames = engine->frames_per_transfer;
+
+  //MIDI
+  engine->p2o_midi_data = malloc (USB_BULK_MIDI_SIZE);
+  engine->o2p_midi_data = malloc (USB_BULK_MIDI_SIZE);
+  memset (engine->p2o_midi_data, 0, USB_BULK_MIDI_SIZE);
+  memset (engine->o2p_midi_data, 0, USB_BULK_MIDI_SIZE);
+  pthread_spin_init (&engine->p2o_midi_lock, PTHREAD_PROCESS_SHARED);
+}
+
 // initialization taken from sniffed session
 
 static ow_err_t
@@ -467,7 +520,6 @@ ow_engine_init (struct ow_engine *engine, int blocks_per_transfer)
 {
   int err;
   ow_err_t ret = OW_OK;
-  struct ow_engine_usb_blk *blk;
 
   err = libusb_set_configuration (engine->usb.device_handle, 1);
   if (LIBUSB_SUCCESS != err)
@@ -544,63 +596,7 @@ ow_engine_init (struct ow_engine *engine, int blocks_per_transfer)
 end:
   if (ret == OW_OK)
     {
-      pthread_spin_init (&engine->lock, PTHREAD_PROCESS_SHARED);
-
-      engine->blocks_per_transfer = blocks_per_transfer;
-      engine->frames_per_transfer =
-	OB_FRAMES_PER_BLOCK * engine->blocks_per_transfer;
-
-      engine->usb.data_in_blk_len =
-	sizeof (struct ow_engine_usb_blk) +
-	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * engine->device_desc->outputs;
-      engine->usb.data_out_blk_len =
-	sizeof (struct ow_engine_usb_blk) +
-	sizeof (int32_t) * OB_FRAMES_PER_BLOCK * engine->device_desc->inputs;
-
-      engine->usb.data_in_len =
-	engine->usb.data_in_blk_len * engine->blocks_per_transfer;
-      engine->usb.data_out_len =
-	engine->usb.data_out_blk_len * engine->blocks_per_transfer;
-      engine->usb.data_in = malloc (engine->usb.data_in_len);
-      engine->usb.data_out = malloc (engine->usb.data_out_len);
-      memset (engine->usb.data_in, 0, engine->usb.data_in_len);
-      memset (engine->usb.data_out, 0, engine->usb.data_out_len);
-
-      for (int i = 0; i < engine->blocks_per_transfer; i++)
-	{
-	  blk = get_nth_usb_out_blk (engine, i);
-	  blk->header = htobe16 (0x07ff);
-	}
-
-      engine->p2o_frame_size =
-	OB_BYTES_PER_SAMPLE * engine->device_desc->inputs;
-      engine->o2p_frame_size =
-	OB_BYTES_PER_SAMPLE * engine->device_desc->outputs;
-
-      engine->p2o_transfer_size =
-	engine->frames_per_transfer * engine->p2o_frame_size;
-      engine->o2p_transfer_size =
-	engine->frames_per_transfer * engine->o2p_frame_size;
-      engine->p2o_transfer_buf = malloc (engine->p2o_transfer_size);
-      engine->o2p_transfer_buf = malloc (engine->o2p_transfer_size);
-      memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
-      memset (engine->o2p_transfer_buf, 0, engine->o2p_transfer_size);
-
-      //o2p resampler
-      engine->p2o_resampler_buf = malloc (engine->p2o_transfer_size);
-      memset (engine->p2o_resampler_buf, 0, engine->p2o_transfer_size);
-      engine->p2o_data.data_in = engine->p2o_resampler_buf;
-      engine->p2o_data.data_out = engine->p2o_transfer_buf;
-      engine->p2o_data.end_of_input = 1;
-      engine->p2o_data.input_frames = engine->frames_per_transfer;
-      engine->p2o_data.output_frames = engine->frames_per_transfer;
-
-      //MIDI
-      engine->p2o_midi_data = malloc (USB_BULK_MIDI_SIZE);
-      engine->o2p_midi_data = malloc (USB_BULK_MIDI_SIZE);
-      memset (engine->p2o_midi_data, 0, USB_BULK_MIDI_SIZE);
-      memset (engine->o2p_midi_data, 0, USB_BULK_MIDI_SIZE);
-      pthread_spin_init (&engine->p2o_midi_lock, PTHREAD_PROCESS_SHARED);
+      ow_engine_init_mem (engine, blocks_per_transfer);
     }
   else
     {
@@ -994,8 +990,6 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
       context->priority = OW_DEFAULT_RT_PROPERTY;
     }
 
-  engine->usb.frames = 0;
-
   if (engine->options.p2o_midi)
     {
       debug_print (1, "Starting p2o MIDI thread...\n");
@@ -1048,6 +1042,13 @@ ow_engine_destroy (struct ow_engine *engine)
 {
   usb_shutdown (engine);
   free_transfers (engine);
+  ow_engine_free_mem (engine);
+  free (engine);
+}
+
+void
+ow_engine_free_mem (struct ow_engine *engine)
+{
   free (engine->p2o_transfer_buf);
   free (engine->p2o_resampler_buf);
   free (engine->o2p_transfer_buf);
@@ -1057,7 +1058,6 @@ ow_engine_destroy (struct ow_engine *engine)
   free (engine->o2p_midi_data);
   pthread_spin_destroy (&engine->lock);
   pthread_spin_destroy (&engine->p2o_midi_lock);
-  free (engine);
 }
 
 inline ow_engine_status_t
@@ -1118,4 +1118,30 @@ inline void
 ow_engine_stop (struct ow_engine *engine)
 {
   ow_engine_set_status (engine, OW_ENGINE_STATUS_STOP);
+}
+
+void
+ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
+{
+  int32_t *s, v;
+  struct ow_engine_usb_blk *blk;
+
+  for (int i = 0; i < engine->blocks_per_transfer; i++)
+    {
+      blk = GET_NTH_USB_BLK (blks, blk_len, i);
+      printf ("Block %d\n", i);
+      printf ("0x%04x | 0x%04x\n", be16toh (blk->header),
+	      be16toh (blk->frames));
+      s = blk->data;
+      for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
+	{
+	  const float *scale = engine->device_desc->output_track_scales;
+	  for (int k = 0; k < engine->device_desc->outputs; k++, scale++)
+	    {
+	      v = be32toh (*s);
+	      printf ("Frame %2d, track %2d: %d\n", j, k, v);
+	      s++;
+	    }
+	}
+    }
 }
