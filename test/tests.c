@@ -2,17 +2,19 @@
 #include <math.h>
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
+#include "../src/jclient.h"
 #include "../src/engine.h"
 
 #define OW_CONV_SCALE_32 (1.0f / (float) INT_MAX)
 #define BLOCKS 4
-#define INPUT_OUTPUTS 6
+#define TRACKS 6
+#define NFRAMES 64
 
 static const struct ow_device_desc TESTDEV_DESC = {
   .pid = 0,
   .name = "Test",
-  .inputs = INPUT_OUTPUTS,
-  .outputs = INPUT_OUTPUTS,
+  .inputs = TRACKS,
+  .outputs = TRACKS,
   .input_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"},
   .output_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"},
   .output_track_scales =
@@ -34,7 +36,7 @@ test_usb_blocks ()
 
   blk_size =
     sizeof (struct ow_engine_usb_blk) +
-    OB_FRAMES_PER_BLOCK * INPUT_OUTPUTS * sizeof (float);
+    OB_FRAMES_PER_BLOCK * TRACKS * sizeof (float);
 
   CU_ASSERT_EQUAL (engine.usb.data_out_blk_len, blk_size);
   CU_ASSERT_EQUAL (engine.usb.data_in_blk_len, blk_size);
@@ -53,7 +55,6 @@ test_usb_blocks ()
     }
 
   ow_engine_write_usb_output_blocks (&engine);
-
 
   for (int i = 0; i < BLOCKS; i++)
     {
@@ -90,6 +91,46 @@ test_usb_blocks ()
   ow_engine_free_mem (&engine);
 }
 
+void
+test_jack_buffers ()
+{
+  jack_default_audio_sample_t *jack_input[TRACKS];
+  jack_default_audio_sample_t *jack_output[TRACKS];
+  float input[TRACKS * NFRAMES];
+  float output[TRACKS * NFRAMES];
+
+  printf ("\n");
+
+  for (int i = 0; i < TRACKS; i++)
+    {
+      jack_input[i] = malloc(sizeof(jack_default_audio_sample_t) * NFRAMES);
+      jack_output[i] = malloc(sizeof(jack_default_audio_sample_t) * NFRAMES);
+      for (int j = 0; j < NFRAMES; j++)
+	{
+	  jack_input[i][j] = 1e-8 * (i + 1) * (j + 1);
+	}
+    }
+
+  jclient_copy_j2o_audio (output, NFRAMES, jack_input, &TESTDEV_DESC);
+
+  memcpy (input, output,
+	  TRACKS * NFRAMES * sizeof (jack_default_audio_sample_t));
+
+  jclient_copy_o2j_audio (input, NFRAMES, jack_output, &TESTDEV_DESC);
+
+  for (int i = 0; i < TRACKS; i++)
+    {
+      for (int j = 0; j < NFRAMES; j++)
+	{
+	  printf ("%.10f =?= %.10f\n", jack_output[i][j], jack_input[i][j]);
+	  CU_ASSERT_EQUAL (jack_output[i][j], jack_input[i][j]);
+	}
+
+      free (jack_input[i]);
+      free (jack_output[i]);
+    }
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -106,6 +147,11 @@ main (int argc, char *argv[])
     }
 
   if (!CU_add_test (suite, "test_usb_blocks", test_usb_blocks))
+    {
+      goto cleanup;
+    }
+
+  if (!CU_add_test (suite, "test_jack_buffers", test_jack_buffers))
     {
       goto cleanup;
     }

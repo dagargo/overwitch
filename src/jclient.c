@@ -269,6 +269,36 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
     }
 }
 
+inline void
+jclient_copy_o2j_audio (float *f, jack_nframes_t nframes,
+			jack_default_audio_sample_t * buffer[],
+			const struct ow_device_desc *desc)
+{
+  for (int i = 0; i < nframes; i++)
+    {
+      for (int j = 0; j < desc->outputs; j++)
+	{
+	  buffer[j][i] = *f;
+	  f++;
+	}
+    }
+}
+
+inline void
+jclient_copy_j2o_audio (float *f, jack_nframes_t nframes,
+			jack_default_audio_sample_t * buffer[],
+			const struct ow_device_desc *desc)
+{
+  for (int i = 0; i < nframes; i++)
+    {
+      for (int j = 0; j < desc->inputs; j++)
+	{
+	  *f = buffer[j][i];
+	  f++;
+	}
+    }
+}
+
 static inline int
 jclient_process_cb (jack_nframes_t nframes, void *arg)
 {
@@ -298,42 +328,28 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
       return 0;
     }
 
-  ow_resampler_read_audio (jclient->resampler);
-
   //o2p
 
-  f = ow_resampler_get_o2p_audio_buffer (jclient->resampler);
   for (int i = 0; i < desc->outputs; i++)
     {
       buffer[i] = jack_port_get_buffer (jclient->output_ports[i], nframes);
     }
-  for (int i = 0; i < nframes; i++)
-    {
-      for (int j = 0; j < desc->outputs; j++)
-	{
-	  buffer[j][i] = *f;
-	  f++;
-	}
-    }
+
+  f = ow_resampler_get_o2p_audio_buffer (jclient->resampler);
+  ow_resampler_read_audio (jclient->resampler);
+  jclient_copy_o2j_audio (f, nframes, buffer, desc);
 
   //p2o
 
   if (ow_engine_is_p2o_audio_enabled (engine))
     {
-      f = ow_resampler_get_p2o_audio_buffer (jclient->resampler);
       for (int i = 0; i < desc->inputs; i++)
 	{
 	  buffer[i] = jack_port_get_buffer (jclient->input_ports[i], nframes);
 	}
-      for (int i = 0; i < nframes; i++)
-	{
-	  for (int j = 0; j < desc->inputs; j++)
-	    {
-	      *f = buffer[j][i];
-	      f++;
-	    }
-	}
 
+      f = ow_resampler_get_p2o_audio_buffer (jclient->resampler);
+      jclient_copy_j2o_audio (f, nframes, buffer, desc);
       ow_resampler_write_audio (jclient->resampler);
     }
 

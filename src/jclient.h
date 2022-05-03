@@ -56,3 +56,11 @@ void *jclient_run_thread (void *);
 void jclient_exit (struct jclient *);
 
 void jclient_print_latencies (struct ow_resampler *, const char *);
+
+void jclient_copy_o2j_audio (float *, jack_nframes_t,
+			     jack_default_audio_sample_t *[],
+			     const struct ow_device_desc *);
+
+void jclient_copy_j2o_audio (float *, jack_nframes_t,
+			     jack_default_audio_sample_t *[],
+			     const struct ow_device_desc *);

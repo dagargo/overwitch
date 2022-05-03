@@ -36,7 +36,7 @@ test-driver
 src/overwitch
 src/overwitch-cli
 src/overwitch-dump
-test/test_usb_blocks
+test/tests
 test/*.trs
 config.guess
 config.sub
