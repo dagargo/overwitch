@@ -699,7 +699,8 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
 	  && libusb_get_bus_number (*device) == bus
 	  && libusb_get_device_address (*device) == address)
 	{
-	  if (libusb_open (*device, &engine->usb.device_handle))
+	  err = libusb_open (*device, &engine->usb.device_handle);
+	  if (err)
 	    {
 	      error_print ("Error while opening device: %s\n",
 			   libusb_error_name (err));
