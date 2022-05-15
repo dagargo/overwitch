@@ -16,5 +16,5 @@ usb:v1935p000D*
 usb:v1935p102C*
  ID_MODEL_FROM_DATABASE=Digitakt Audio/MIDI
 
- usb:v1935p001E*
-  ID_MODEL_FROM_DATABASE=Syntakt Overbridge
+usb:v1935p001E*
+ ID_MODEL_FROM_DATABASE=Syntakt Overbridge
