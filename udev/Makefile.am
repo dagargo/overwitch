@@ -1,3 +1,5 @@
+EXTRA_DIST = 20-usb-elektron.rules 20-usb-elektron.hwdb
+
 if UDEV_AVAIL
 
 udevhome = $$(env pkg-config --variable=udevdir udev)
