@@ -103,8 +103,9 @@ test_jack_buffers ()
 
   for (int i = 0; i < TRACKS; i++)
     {
-      jack_input[i] = malloc(sizeof(jack_default_audio_sample_t) * NFRAMES);
-      jack_output[i] = malloc(sizeof(jack_default_audio_sample_t) * NFRAMES);
+      jack_input[i] = malloc (sizeof (jack_default_audio_sample_t) * NFRAMES);
+      jack_output[i] =
+	malloc (sizeof (jack_default_audio_sample_t) * NFRAMES);
       for (int j = 0; j < NFRAMES; j++)
 	{
 	  jack_input[i][j] = 1e-8 * (i + 1) * (j + 1);
