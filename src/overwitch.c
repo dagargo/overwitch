@@ -156,8 +156,8 @@ static const struct ow_device_desc STAKT_DESC = {
     {"Main L Input", "Main R Input", "Analog FX L Input", "Analog FX R Input",
      "Track 9 Input", "Track 10 Input", "Track 11 Input", "Track 12 Input"},
   .output_track_names =
-    {"Main L", "Main R", "Track 1", "Track 2", "Track 3", "Track 4",
-     "Track 5", "Track 6", "Track 7", "Track 8", "Track 9", "Track 10",
+    {"Main L", "Main R", "Track  1", "Track  2", "Track  3", "Track  4",
+     "Track  5", "Track  6", "Track  7", "Track  8", "Track  9", "Track 10",
      "Track 11", "Track 12", "Analog FX L", "Analog FX R",
      "Delay/Reverb L", "Delay/Reverb R", "Input L", "Input R"},
   .output_track_scales =
