@@ -83,7 +83,7 @@ ow_resampler_report_status (struct ow_resampler *resampler)
   if (debug_level)
     {
       printf
-	("%s: o2j latency: %4.1f ms, max. %4.1f ms; j2o latency: %4.1f ms, max. %4.1f ms, o2j ratio: %f, avg. %f\n",
+	("%s: o2p latency: %4.1f ms, max. %4.1f ms; p2o latency: %4.1f ms, max. %4.1f ms, o2p ratio: %f, avg. %f\n",
 	 ow_resampler_get_name (resampler),
 	 o2p_latency_d, o2p_max_latency_d, p2o_latency_d, p2o_max_latency_d,
 	 resampler->dll.ratio, resampler->dll.ratio_avg);
@@ -179,7 +179,7 @@ resampler_p2o_reader (void *cb_data, float **data)
 
   if (resampler->p2o_queue_len == 0)
     {
-      debug_print (2, "j2o: Can not read data from queue\n");
+      debug_print (2, "p2o: Can not read data from queue\n");
       return resampler->bufsize;
     }
 
@@ -220,7 +220,7 @@ resampler_o2p_reader (void *cb_data, float **data)
       else
 	{
 	  debug_print (2,
-		       "o2j: Audio ring buffer underflow (%zu < %zu). Replicating last sample...\n",
+		       "o2p: Audio ring buffer underflow (%zu < %zu). Replicating last sample...\n",
 		       rso2p, resampler->engine->o2p_transfer_size);
 	  if (last_frames > 1)
 	    {
@@ -236,7 +236,7 @@ resampler_o2p_reader (void *cb_data, float **data)
     {
       if (rso2p >= resampler->o2p_bufsize)
 	{
-	  debug_print (2, "o2j: Emptying buffer and running...\n");
+	  debug_print (2, "o2p: Emptying buffer and running...\n");
 	  bytes = ow_bytes_to_frame_bytes (rso2p, resampler->o2p_bufsize);
 	  resampler->engine->context->read (resampler->engine->
 					    context->o2p_audio, NULL, bytes);
@@ -261,7 +261,7 @@ ow_resampler_read_audio (struct ow_resampler *resampler)
   if (gen_frames != resampler->bufsize)
     {
       error_print
-	("o2j: Unexpected frames with ratio %f (output %ld, expected %d)\n",
+	("o2p: Unexpected frames with ratio %f (output %ld, expected %d)\n",
 	 resampler->o2p_ratio, gen_frames, resampler->bufsize);
     }
 }
@@ -273,7 +273,7 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
   int inc;
   int frames;
   size_t bytes;
-  size_t wsj2o;
+  size_t wsp2o;
   static double p2o_acc = .0;
 
   memcpy (&resampler->p2o_queue
@@ -293,7 +293,7 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
   if (gen_frames != frames)
     {
       error_print
-	("j2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
+	("p2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
 	 resampler->p2o_ratio, gen_frames, frames);
     }
 
@@ -303,11 +303,11 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
     }
 
   bytes = gen_frames * resampler->engine->p2o_frame_size;
-  wsj2o =
+  wsp2o =
     resampler->engine->context->write_space (resampler->engine->context->
 					     p2o_audio);
 
-  if (bytes <= wsj2o)
+  if (bytes <= wsp2o)
     {
       resampler->engine->context->write (resampler->engine->context->
 					 p2o_audio,
@@ -316,7 +316,7 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
     }
   else
     {
-      error_print ("j2o: Audio ring buffer overflow. Discarding data...\n");
+      error_print ("p2o: Audio ring buffer overflow. Discarding data...\n");
     }
 }
 
