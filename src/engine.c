@@ -613,6 +613,7 @@ ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
 					      int libusb_device_descriptor,
 					      int blocks_per_transfer)
 {
+#ifdef LIBUSB_OPTION_WEAK_AUTHORITY
   ow_err_t err;
   struct ow_engine *engine;
   struct libusb_device *device;
@@ -655,6 +656,12 @@ ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
 error:
   free (engine);
   return err;
+#else
+  error_print
+    ("The libusb version 0x%.8x does not support opening a device descriptor\n",
+     LIBUSB_API_VERSION);
+  return OW_GENERIC_ERROR;
+#endif
 }
 
 ow_err_t
