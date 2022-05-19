@@ -18,6 +18,7 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <errno.h>
 #include <libusb.h>
 #include <string.h>
 #include <sched.h>
