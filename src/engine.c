@@ -48,10 +48,18 @@ static void prepare_cycle_out_audio ();
 static void prepare_cycle_in_midi ();
 
 static void
-ow_engine_set_name (struct ow_engine *engine)
+ow_engine_set_name (struct ow_engine *engine, uint8_t bus, uint8_t address)
 {
-  strncpy (engine->name, engine->device_desc->name, OW_LABEL_MAX_LEN);
-  engine->name[OW_LABEL_MAX_LEN - 1] = '\0';
+  snprintf (engine->name, OW_LABEL_MAX_LEN, "%s@%03d,%03d",
+	    engine->device_desc->name, bus, address);
+}
+
+static void
+ow_engine_set_overbridge_name (struct ow_engine *engine)
+{
+  strncpy (engine->overbridge_name, engine->device_desc->name,
+	   OB_NAME_MAX_LEN);
+  engine->overbridge_name[OB_NAME_MAX_LEN - 1] = '\0';
 }
 
 static int
@@ -615,6 +623,7 @@ ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
 {
 #ifdef LIBUSB_OPTION_WEAK_AUTHORITY
   ow_err_t err;
+  uint8_t bus, address;
   struct ow_engine *engine;
   struct libusb_device *device;
   struct libusb_device_descriptor desc;
@@ -649,7 +658,10 @@ ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
   err = ow_engine_init (engine, blocks_per_transfer);
   if (!err)
     {
-      ow_engine_set_name (engine);
+      bus = libusb_get_bus_number (device);
+      address = libusb_get_device_address (device);
+      ow_engine_set_name (engine, bus, address);
+      ow_engine_set_overbridge_name (engine);
       return err;
     }
 
@@ -711,7 +723,8 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
 	    }
 	  else
 	    {
-	      ow_engine_set_name (engine);
+	      ow_engine_set_name (engine, bus, address);
+	      ow_engine_set_overbridge_name (engine);
 	    }
 
 	  break;

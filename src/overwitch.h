@@ -252,6 +252,6 @@ float *ow_resampler_get_p2o_audio_buffer (struct ow_resampler *);
 void ow_resampler_set_report_callback (struct ow_resampler *,
 				       const struct ow_resampler_reporter *);
 
-const char *ow_resampler_get_name (struct ow_resampler *);
+const char *ow_resampler_get_overbridge_name (struct ow_resampler *);
 
 #endif

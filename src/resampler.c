@@ -27,10 +27,10 @@
 #define STARTUP_TIME 5
 #define DEFAULT_REPORT_PERIOD 2
 
-inline const char *
-ow_resampler_get_name (struct ow_resampler *resampler)
+const char *
+ow_resampler_get_overbridge_name (struct ow_resampler *resampler)
 {
-  return resampler->engine->name;
+  return resampler->engine->overbridge_name;
 }
 
 inline void
@@ -84,9 +84,9 @@ ow_resampler_report_status (struct ow_resampler *resampler)
     {
       printf
 	("%s: o2p latency: %4.1f ms, max. %4.1f ms; p2o latency: %4.1f ms, max. %4.1f ms, o2p ratio: %f, avg. %f\n",
-	 ow_resampler_get_name (resampler),
-	 o2p_latency_d, o2p_max_latency_d, p2o_latency_d, p2o_max_latency_d,
-	 resampler->dll.ratio, resampler->dll.ratio_avg);
+	 resampler->engine->name, o2p_latency_d, o2p_max_latency_d,
+	 p2o_latency_d, p2o_max_latency_d, resampler->dll.ratio,
+	 resampler->dll.ratio_avg);
     }
 
   if (resampler->reporter.callback)

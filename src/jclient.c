@@ -422,7 +422,7 @@ jclient_run (struct jclient *jclient)
   desc = ow_engine_get_device_desc (engine);
 
   jclient->client =
-    jack_client_open (ow_resampler_get_name (jclient->resampler),
+    jack_client_open (ow_resampler_get_overbridge_name (jclient->resampler),
 		      JackNoStartServer, &status, NULL);
   if (jclient->client == NULL)
     {

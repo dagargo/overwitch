@@ -157,9 +157,12 @@
 
 #define OB_PADDING_SIZE 28
 
+#define OB_NAME_MAX_LEN 32
+
 struct ow_engine
 {
   char name[OW_LABEL_MAX_LEN];
+  char overbridge_name[OB_NAME_MAX_LEN];
   ow_engine_status_t status;
   int blocks_per_transfer;
   int frames_per_transfer;

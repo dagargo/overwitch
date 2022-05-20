@@ -92,7 +92,8 @@ static void
 start_instance (struct overwitch_instance *instance)
 {
   debug_print (1, "Starting %s...\n",
-	       ow_resampler_get_name (instance->jclient.resampler));
+	       ow_resampler_get_overbridge_name (instance->
+						 jclient.resampler));
   pthread_create (&instance->thread, NULL, jclient_run_thread,
 		  &instance->jclient);
 }
@@ -101,7 +102,8 @@ static void
 stop_instance (struct overwitch_instance *instance)
 {
   debug_print (1, "Stopping %s...\n",
-	       ow_resampler_get_name (instance->jclient.resampler));
+	       ow_resampler_get_overbridge_name (instance->
+						 jclient.resampler));
   jclient_exit (&instance->jclient);
 }
 
@@ -590,7 +592,8 @@ refresh_devices ()
 	}
 
       debug_print (1, "Adding %s...\n",
-		   ow_resampler_get_name (instance->jclient.resampler));
+		   ow_resampler_get_overbridge_name (instance->
+						     jclient.resampler));
 
       gtk_list_store_insert_with_values (status_list_store, NULL, -1,
 					 STATUS_LIST_STORE_NAME,
