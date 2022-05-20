@@ -184,10 +184,10 @@ struct ow_engine
   {
     libusb_context *context;
     libusb_device_handle *device_handle;
-    struct libusb_transfer *xfr_in;
-    struct libusb_transfer *xfr_out;
-    struct libusb_transfer *xfr_out_midi;
-    struct libusb_transfer *xfr_in_midi;
+    struct libusb_transfer *xfr_audio_in;
+    struct libusb_transfer *xfr_audio_out;
+    struct libusb_transfer *xfr_midi_out;
+    struct libusb_transfer *xfr_midi_in;
     char *data_in;
     char *data_out;
     size_t data_in_blk_len;
