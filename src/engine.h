@@ -184,8 +184,8 @@ struct ow_engine
   {
     libusb_context *context;
     libusb_device_handle *device_handle;
-    uint16_t frames;
     //Audio
+    uint16_t audio_frames_counter;
     struct libusb_transfer *xfr_audio_in;
     struct libusb_transfer *xfr_audio_out;
     unsigned char *xfr_audio_in_data;

@@ -183,8 +183,8 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine)
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
       blk = GET_NTH_OUTPUT_USB_BLK (engine, i);
-      blk->frames = htobe16 (engine->usb.frames);
-      engine->usb.frames += OB_FRAMES_PER_BLOCK;
+      blk->frames = htobe16 (engine->usb.audio_frames_counter);
+      engine->usb.audio_frames_counter += OB_FRAMES_PER_BLOCK;
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
@@ -480,7 +480,7 @@ ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
     sizeof (struct ow_engine_usb_blk) +
     sizeof (int32_t) * OB_FRAMES_PER_BLOCK * engine->device_desc->inputs;
 
-  engine->usb.frames = 0;
+  engine->usb.audio_frames_counter = 0;
   engine->usb.xfr_audio_in_data_len =
     engine->usb.audio_in_blk_len * engine->blocks_per_transfer;
   engine->usb.xfr_audio_out_data_len =
