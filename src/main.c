@@ -86,6 +86,7 @@ static GtkTreeViewColumn *o2j_ratio_column;
 static GtkTreeViewColumn *j2o_ratio_column;
 static GtkListStore *status_list_store;
 static GtkStatusbar *status_bar;
+static GtkPopover *main_popover;
 
 static GThread *jack_control_client_thread;
 
@@ -207,6 +208,7 @@ refresh_at_startup (GtkWidget * object, gpointer data)
 		NULL);
   active = !active;
   g_object_set (G_OBJECT (refresh_at_startup_button), "active", active, NULL);
+  gtk_widget_hide (GTK_WIDGET (main_popover));
 }
 
 static void
@@ -218,6 +220,8 @@ show_all_metrics (GtkWidget * object, gpointer data)
   active = !active;
   g_object_set (G_OBJECT (show_all_metrics_button), "active", active, NULL);
   update_all_metrics (active);
+
+  gtk_widget_hide (GTK_WIDGET (main_popover));
 }
 
 gchar *
@@ -743,10 +747,9 @@ main (int argc, char *argv[])
   status_bar = GTK_STATUSBAR (gtk_builder_get_object (builder, "status_bar"));
   gtk_statusbar_push (status_bar, 0, MSG_NO_JACK_SERVER_FOUND);
 
-  gtk_popover_set_constrain_to (GTK_POPOVER
-				(gtk_builder_get_object
-				 (builder, "main_popover")),
-				GTK_POPOVER_CONSTRAINT_NONE);
+  main_popover =
+    GTK_POPOVER (gtk_builder_get_object (builder, "main_popover"));
+  gtk_popover_set_constrain_to (main_popover, GTK_POPOVER_CONSTRAINT_NONE);
 
   g_object_set (G_OBJECT (refresh_at_startup_button), "role",
 		GTK_BUTTON_ROLE_CHECK, NULL);
