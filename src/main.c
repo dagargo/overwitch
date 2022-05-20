@@ -106,6 +106,7 @@ stop_instance (struct overwitch_instance *instance)
 	       ow_resampler_get_overbridge_name (instance->
 						 jclient.resampler));
   jclient_exit (&instance->jclient);
+  pthread_join (instance->thread, NULL);
 }
 
 static gboolean
