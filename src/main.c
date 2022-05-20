@@ -47,6 +47,7 @@
 
 enum list_store_columns
 {
+  STATUS_LIST_STORE_STATUS,
   STATUS_LIST_STORE_NAME,
   STATUS_LIST_STORE_DEVICE,
   STATUS_LIST_STORE_BUS,
@@ -61,6 +62,7 @@ enum list_store_columns
 struct overwitch_instance
 {
   pthread_t thread;
+  const char *status;
   gdouble o2j_latency;
   gdouble j2o_latency;
   gdouble o2j_latency_max;
@@ -90,6 +92,27 @@ static GtkPopover *main_popover;
 
 static GThread *jack_control_client_thread;
 
+static const char *
+get_status_string (ow_resampler_status_t status)
+{
+  switch (status)
+    {
+    case OW_RESAMPLER_STATUS_ERROR:
+      return "Error";
+    case OW_RESAMPLER_STATUS_STOP:
+      return "Stopped";
+    case OW_RESAMPLER_STATUS_READY:
+      return "Ready";
+    case OW_RESAMPLER_STATUS_BOOT:
+      return "Booting";
+    case OW_RESAMPLER_STATUS_TUNE:
+      return "Tunning";
+    case OW_RESAMPLER_STATUS_RUN:
+      return "Running";
+    }
+  return NULL;
+}
+
 static void
 start_instance (struct overwitch_instance *instance)
 {
@@ -111,7 +134,7 @@ stop_instance (struct overwitch_instance *instance)
 }
 
 static gboolean
-set_overwitch_instance_metrics (struct overwitch_instance *instance)
+set_overwitch_instance_status (struct overwitch_instance *instance)
 {
   static char o2j_latency_s[OW_LABEL_MAX_LEN];
   static char j2o_latency_s[OW_LABEL_MAX_LEN];
@@ -152,6 +175,8 @@ set_overwitch_instance_metrics (struct overwitch_instance *instance)
 	    }
 
 	  gtk_list_store_set (status_list_store, &iter,
+			      STATUS_LIST_STORE_STATUS,
+			      instance->status,
 			      STATUS_LIST_STORE_O2J_LATENCY,
 			      o2j_latency_s,
 			      STATUS_LIST_STORE_J2O_LATENCY,
@@ -172,17 +197,19 @@ set_overwitch_instance_metrics (struct overwitch_instance *instance)
 }
 
 static void
-set_report_data (struct overwitch_instance *instance, double o2j_latency,
-		 double j2o_latency, double o2j_latency_max,
-		 double j2o_latency_max, double o2j_ratio, double j2o_ratio)
+set_report_data (struct overwitch_instance *instance,
+		 double o2j_latency, double j2o_latency,
+		 double o2j_latency_max, double j2o_latency_max,
+		 double o2j_ratio, double j2o_ratio)
 {
+  instance->status = get_status_string (ow_resampler_get_status(instance->jclient.resampler));
   instance->o2j_latency = o2j_latency;
   instance->j2o_latency = j2o_latency;
   instance->o2j_latency_max = o2j_latency_max;
   instance->j2o_latency_max = j2o_latency_max;
   instance->o2j_ratio = o2j_ratio;
   instance->j2o_ratio = j2o_ratio;
-  g_idle_add ((GSourceFunc) set_overwitch_instance_metrics, instance);
+  g_idle_add ((GSourceFunc) set_overwitch_instance_status, instance);
 }
 
 static void
@@ -547,7 +574,7 @@ refresh_devices ()
   struct ow_usb_device *devices, *device;
   struct overwitch_instance *instance;
   size_t devices_count;
-  const char *name;
+  const char *name, *overbridge_name, *status;
   ow_err_t err;
 
   err = ow_get_devices (&devices, &devices_count);
@@ -603,10 +630,17 @@ refresh_devices ()
 		   ow_resampler_get_overbridge_name (instance->
 						     jclient.resampler));
 
+      overbridge_name =
+	ow_resampler_get_overbridge_name (instance->jclient.resampler);
+      status =
+	get_status_string (ow_resampler_get_status
+			   (instance->jclient.resampler));
+
       gtk_list_store_insert_with_values (status_list_store, NULL, -1,
+					 STATUS_LIST_STORE_STATUS,
+					 status,
 					 STATUS_LIST_STORE_NAME,
-					 ow_resampler_get_overbridge_name
-					 (instance->jclient.resampler),
+					 overbridge_name,
 					 STATUS_LIST_STORE_DEVICE,
 					 device->desc->name,
 					 STATUS_LIST_STORE_BUS,

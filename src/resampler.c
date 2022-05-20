@@ -508,6 +508,12 @@ ow_resampler_inc_xruns (struct ow_resampler *resampler)
   pthread_spin_unlock (&resampler->lock);
 }
 
+inline ow_resampler_status_t
+ow_resampler_get_status (struct ow_resampler *resampler)
+{
+  return resampler->status;
+}
+
 inline struct ow_engine *
 ow_resampler_get_engine (struct ow_resampler *resampler)
 {
