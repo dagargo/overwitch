@@ -48,6 +48,7 @@
 enum list_store_columns
 {
   STATUS_LIST_STORE_NAME,
+  STATUS_LIST_STORE_DEVICE,
   STATUS_LIST_STORE_BUS,
   STATUS_LIST_STORE_ADDRESS,
   STATUS_LIST_STORE_O2J_LATENCY,
@@ -409,7 +410,7 @@ is_device_at_bus_address_running (uint8_t bus, uint8_t address,
   while (valid)
     {
       gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
-			  STATUS_LIST_STORE_NAME, name,
+			  STATUS_LIST_STORE_DEVICE, name,
 			  STATUS_LIST_STORE_BUS, &dev_bus,
 			  STATUS_LIST_STORE_ADDRESS, &dev_address, -1);
 
@@ -597,15 +598,16 @@ refresh_devices ()
 
       gtk_list_store_insert_with_values (status_list_store, NULL, -1,
 					 STATUS_LIST_STORE_NAME,
+					 ow_resampler_get_overbridge_name
+					 (instance->jclient.resampler),
+					 STATUS_LIST_STORE_DEVICE,
 					 device->desc->name,
 					 STATUS_LIST_STORE_BUS,
 					 instance->jclient.bus,
 					 STATUS_LIST_STORE_ADDRESS,
 					 instance->jclient.address,
-					 STATUS_LIST_STORE_O2J_LATENCY,
-					 "",
-					 STATUS_LIST_STORE_J2O_LATENCY,
-					 "",
+					 STATUS_LIST_STORE_O2J_LATENCY, "",
+					 STATUS_LIST_STORE_J2O_LATENCY, "",
 					 STATUS_LIST_STORE_O2J_RATIO,
 					 instance->o2j_ratio,
 					 STATUS_LIST_STORE_J2O_RATIO,
