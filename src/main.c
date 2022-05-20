@@ -202,7 +202,8 @@ set_report_data (struct overwitch_instance *instance,
 		 double o2j_latency_max, double j2o_latency_max,
 		 double o2j_ratio, double j2o_ratio)
 {
-  instance->status = get_status_string (ow_resampler_get_status(instance->jclient.resampler));
+  instance->status =
+    get_status_string (ow_resampler_get_status (instance->jclient.resampler));
   instance->o2j_latency = o2j_latency;
   instance->j2o_latency = j2o_latency;
   instance->o2j_latency_max = o2j_latency_max;
