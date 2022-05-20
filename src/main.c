@@ -448,6 +448,8 @@ check_jack_server_free (gpointer data)
     {
       msg = MSG_NO_JACK_SERVER_FOUND;
       gtk_widget_set_sensitive (stop_button, FALSE);
+      gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), TRUE);
+      gtk_widget_set_sensitive (GTK_WIDGET (quality_combo_box), TRUE);
     }
   gtk_statusbar_push (status_bar, 0, msg);
 
@@ -619,6 +621,8 @@ refresh_devices ()
 
       start_instance (instance);
       gtk_widget_set_sensitive (stop_button, TRUE);
+      gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), FALSE);
+      gtk_widget_set_sensitive (GTK_WIDGET (quality_combo_box), FALSE);
     }
 
   ow_free_usb_device_list (devices, devices_count);
@@ -653,6 +657,8 @@ stop_all (GtkWidget * object, gpointer data)
     }
 
   gtk_widget_set_sensitive (stop_button, FALSE);
+  gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), TRUE);
+  gtk_widget_set_sensitive (GTK_WIDGET (quality_combo_box), TRUE);
 }
 
 static void
