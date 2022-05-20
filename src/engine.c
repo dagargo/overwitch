@@ -328,7 +328,7 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
 
       while (length < xfr->actual_length)
 	{
-	  memcpy (event.bytes, &engine->o2p_midi_data[length],
+	  memcpy (event.bytes, &engine->usb.xfr_midi_in_data[length],
 		  OB_MIDI_EVENT_SIZE);
 	  //Note-off, Note-on, Poly-KeyPress, Control Change, Program Change, Channel Pressure, PitchBend Change, Single Byte
 	  if (event.bytes[0] >= 0x08 && event.bytes[0] <= 0x0f)
@@ -387,9 +387,9 @@ prepare_cycle_out_audio (struct ow_engine *engine)
 {
   libusb_fill_interrupt_transfer (engine->usb.xfr_audio_out,
 				  engine->usb.device_handle, AUDIO_OUT_EP,
-				  (void *) engine->usb.data_out,
-				  engine->usb.data_out_len, cb_xfr_audio_out,
-				  engine, 0);
+				  (void *) engine->usb.xfr_audio_out_data,
+				  engine->usb.xfr_audio_out_data_len,
+				  cb_xfr_audio_out, engine, 0);
 
   int err = libusb_submit_transfer (engine->usb.xfr_audio_out);
   if (err)
@@ -405,9 +405,9 @@ prepare_cycle_in_audio (struct ow_engine *engine)
 {
   libusb_fill_interrupt_transfer (engine->usb.xfr_audio_in,
 				  engine->usb.device_handle, AUDIO_IN_EP,
-				  (void *) engine->usb.data_in,
-				  engine->usb.data_in_len, cb_xfr_audio_in,
-				  engine, 0);
+				  (void *) engine->usb.xfr_audio_in_data,
+				  engine->usb.xfr_audio_in_data_len,
+				  cb_xfr_audio_in, engine, 0);
 
   int err = libusb_submit_transfer (engine->usb.xfr_audio_in);
   if (err)
@@ -423,7 +423,7 @@ prepare_cycle_in_midi (struct ow_engine *engine)
 {
   libusb_fill_bulk_transfer (engine->usb.xfr_midi_in,
 			     engine->usb.device_handle, MIDI_IN_EP,
-			     (void *) engine->o2p_midi_data,
+			     (void *) engine->usb.xfr_midi_in_data,
 			     USB_BULK_MIDI_SIZE, cb_xfr_midi_in, engine, 0);
 
   int err = libusb_submit_transfer (engine->usb.xfr_midi_in);
@@ -440,7 +440,7 @@ prepare_cycle_out_midi (struct ow_engine *engine)
 {
   libusb_fill_bulk_transfer (engine->usb.xfr_midi_out,
 			     engine->usb.device_handle, MIDI_OUT_EP,
-			     (void *) engine->p2o_midi_data,
+			     (void *) engine->usb.xfr_midi_out_data,
 			     USB_BULK_MIDI_SIZE, cb_xfr_midi_out, engine, 0);
 
   int err = libusb_submit_transfer (engine->usb.xfr_midi_out);
@@ -473,22 +473,25 @@ ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
   engine->frames_per_transfer =
     OB_FRAMES_PER_BLOCK * engine->blocks_per_transfer;
 
-  engine->usb.data_in_blk_len =
+  engine->usb.audio_in_blk_len =
     sizeof (struct ow_engine_usb_blk) +
     sizeof (int32_t) * OB_FRAMES_PER_BLOCK * engine->device_desc->outputs;
-  engine->usb.data_out_blk_len =
+  engine->usb.audio_out_blk_len =
     sizeof (struct ow_engine_usb_blk) +
     sizeof (int32_t) * OB_FRAMES_PER_BLOCK * engine->device_desc->inputs;
 
   engine->usb.frames = 0;
-  engine->usb.data_in_len =
-    engine->usb.data_in_blk_len * engine->blocks_per_transfer;
-  engine->usb.data_out_len =
-    engine->usb.data_out_blk_len * engine->blocks_per_transfer;
-  engine->usb.data_in = malloc (engine->usb.data_in_len);
-  engine->usb.data_out = malloc (engine->usb.data_out_len);
-  memset (engine->usb.data_in, 0, engine->usb.data_in_len);
-  memset (engine->usb.data_out, 0, engine->usb.data_out_len);
+  engine->usb.xfr_audio_in_data_len =
+    engine->usb.audio_in_blk_len * engine->blocks_per_transfer;
+  engine->usb.xfr_audio_out_data_len =
+    engine->usb.audio_out_blk_len * engine->blocks_per_transfer;
+  engine->usb.xfr_audio_in_data = malloc (engine->usb.xfr_audio_in_data_len);
+  engine->usb.xfr_audio_out_data =
+    malloc (engine->usb.xfr_audio_out_data_len);
+  memset (engine->usb.xfr_audio_in_data, 0,
+	  engine->usb.xfr_audio_in_data_len);
+  memset (engine->usb.xfr_audio_out_data, 0,
+	  engine->usb.xfr_audio_out_data_len);
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
@@ -518,10 +521,10 @@ ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
   engine->p2o_data.output_frames = engine->frames_per_transfer;
 
   //MIDI
-  engine->p2o_midi_data = malloc (USB_BULK_MIDI_SIZE);
-  engine->o2p_midi_data = malloc (USB_BULK_MIDI_SIZE);
-  memset (engine->p2o_midi_data, 0, USB_BULK_MIDI_SIZE);
-  memset (engine->o2p_midi_data, 0, USB_BULK_MIDI_SIZE);
+  engine->usb.xfr_midi_out_data = malloc (USB_BULK_MIDI_SIZE);
+  engine->usb.xfr_midi_in_data = malloc (USB_BULK_MIDI_SIZE);
+  memset (engine->usb.xfr_midi_out_data, 0, USB_BULK_MIDI_SIZE);
+  memset (engine->usb.xfr_midi_in_data, 0, USB_BULK_MIDI_SIZE);
   pthread_spin_init (&engine->p2o_midi_lock, PTHREAD_PROCESS_SHARED);
 }
 
@@ -798,7 +801,7 @@ run_p2o_midi (void *data)
 	{
 	  if (!pos)
 	    {
-	      memset (engine->p2o_midi_data, 0, USB_BULK_MIDI_SIZE);
+	      memset (engine->usb.xfr_midi_out_data, 0, USB_BULK_MIDI_SIZE);
 	      diff = 0;
 	    }
 
@@ -817,7 +820,7 @@ run_p2o_midi (void *data)
 	      break;
 	    }
 
-	  memcpy (&engine->p2o_midi_data[pos], event.bytes,
+	  memcpy (&engine->usb.xfr_midi_out_data[pos], event.bytes,
 		  OB_MIDI_EVENT_SIZE);
 	  pos += OB_MIDI_EVENT_SIZE;
 	  event_read = 0;
@@ -1073,10 +1076,10 @@ ow_engine_free_mem (struct ow_engine *engine)
   free (engine->p2o_transfer_buf);
   free (engine->p2o_resampler_buf);
   free (engine->o2p_transfer_buf);
-  free (engine->usb.data_in);
-  free (engine->usb.data_out);
-  free (engine->p2o_midi_data);
-  free (engine->o2p_midi_data);
+  free (engine->usb.xfr_audio_in_data);
+  free (engine->usb.xfr_audio_out_data);
+  free (engine->usb.xfr_midi_out_data);
+  free (engine->usb.xfr_midi_in_data);
   pthread_spin_destroy (&engine->lock);
   pthread_spin_destroy (&engine->p2o_midi_lock);
 }

@@ -152,8 +152,8 @@
 #include "overwitch.h"
 
 #define GET_NTH_USB_BLK(blks,blk_len,n) ((struct ow_engine_usb_blk *) &blks[n * blk_len])
-#define GET_NTH_INPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.data_in, (engine)->usb.data_in_blk_len, n))
-#define GET_NTH_OUTPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.data_out, (engine)->usb.data_out_blk_len, n))
+#define GET_NTH_INPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_len, n))
+#define GET_NTH_OUTPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_len, n))
 
 #define OB_PADDING_SIZE 28
 
@@ -184,24 +184,26 @@ struct ow_engine
   {
     libusb_context *context;
     libusb_device_handle *device_handle;
+    uint16_t frames;
+    //Audio
     struct libusb_transfer *xfr_audio_in;
     struct libusb_transfer *xfr_audio_out;
+    unsigned char *xfr_audio_in_data;
+    unsigned char *xfr_audio_out_data;
+    size_t audio_in_blk_len;
+    size_t audio_out_blk_len;
+    int xfr_audio_in_data_len;
+    int xfr_audio_out_data_len;
+    //MIDI
     struct libusb_transfer *xfr_midi_out;
     struct libusb_transfer *xfr_midi_in;
-    char *data_in;
-    char *data_out;
-    size_t data_in_blk_len;
-    size_t data_out_blk_len;
-    int data_in_len;
-    int data_out_len;
-    uint16_t frames;
+    unsigned char *xfr_midi_out_data;
+    unsigned char *xfr_midi_in_data;
   } usb;
   //j2o resampler
   float *p2o_resampler_buf;
   SRC_DATA p2o_data;
   //MIDI
-  unsigned char *p2o_midi_data;
-  unsigned char *o2p_midi_data;
   int reading_at_p2o_end;
   pthread_spinlock_t p2o_midi_lock;
   int p2o_midi_ready;
