@@ -454,6 +454,9 @@ prepare_cycle_out_midi (struct ow_engine *engine)
 static void
 usb_shutdown (struct ow_engine *engine)
 {
+  libusb_release_interface (engine->usb.device_handle, 1);
+  libusb_release_interface (engine->usb.device_handle, 2);
+  libusb_release_interface (engine->usb.device_handle, 3);
   libusb_close (engine->usb.device_handle);
   libusb_exit (engine->usb.context);
 }
@@ -1034,7 +1037,6 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
       context->set_rt_priority (&engine->audio_o2p_midi_thread,
 				engine->context->priority);
     }
-
 
   return OW_OK;
 }
