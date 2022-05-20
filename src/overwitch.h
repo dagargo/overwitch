@@ -239,8 +239,6 @@ void ow_resampler_set_buffer_size (struct ow_resampler *, uint32_t);
 
 void ow_resampler_set_samplerate (struct ow_resampler *, uint32_t);
 
-ow_resampler_status_t ow_resampler_get_status (struct ow_resampler *);
-
 size_t ow_resampler_get_o2p_frame_size (struct ow_resampler *);
 
 size_t ow_resampler_get_p2o_frame_size (struct ow_resampler *);
