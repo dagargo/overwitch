@@ -62,7 +62,6 @@ enum list_store_columns
 struct overwitch_instance
 {
   pthread_t thread;
-  const char *status;
   gdouble o2j_latency;
   gdouble j2o_latency;
   gdouble o2j_latency_max;
@@ -138,6 +137,7 @@ set_overwitch_instance_status (struct overwitch_instance *instance)
 {
   static char o2j_latency_s[OW_LABEL_MAX_LEN];
   static char j2o_latency_s[OW_LABEL_MAX_LEN];
+  const char *status;
   GtkTreeIter iter;
   gint bus, address;
   gboolean valid =
@@ -174,9 +174,15 @@ set_overwitch_instance_status (struct overwitch_instance *instance)
 	      j2o_latency_s[0] = '\0';
 	    }
 
+	  status =
+	    get_status_string (ow_resampler_get_status
+			       (instance->jclient.resampler));
+
 	  gtk_list_store_set (status_list_store, &iter,
 			      STATUS_LIST_STORE_STATUS,
-			      instance->status,
+			      status,
+			      STATUS_LIST_STORE_NAME,
+			      instance->jclient.name,
 			      STATUS_LIST_STORE_O2J_LATENCY,
 			      o2j_latency_s,
 			      STATUS_LIST_STORE_J2O_LATENCY,
@@ -202,8 +208,6 @@ set_report_data (struct overwitch_instance *instance,
 		 double o2j_latency_max, double j2o_latency_max,
 		 double o2j_ratio, double j2o_ratio)
 {
-  instance->status =
-    get_status_string (ow_resampler_get_status (instance->jclient.resampler));
   instance->o2j_latency = o2j_latency;
   instance->j2o_latency = j2o_latency;
   instance->o2j_latency_max = o2j_latency_max;
@@ -443,7 +447,7 @@ is_device_at_bus_address_running (uint8_t bus, uint8_t address,
   while (valid)
     {
       gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
-			  STATUS_LIST_STORE_DEVICE, name,
+			  STATUS_LIST_STORE_NAME, name,
 			  STATUS_LIST_STORE_BUS, &dev_bus,
 			  STATUS_LIST_STORE_ADDRESS, &dev_address, -1);
 
@@ -575,7 +579,7 @@ refresh_devices ()
   struct ow_usb_device *devices, *device;
   struct overwitch_instance *instance;
   size_t devices_count;
-  const char *name, *overbridge_name, *status;
+  const char *name, *status;
   ow_err_t err;
 
   err = ow_get_devices (&devices, &devices_count);
@@ -631,8 +635,6 @@ refresh_devices ()
 		   ow_resampler_get_overbridge_name (instance->
 						     jclient.resampler));
 
-      overbridge_name =
-	ow_resampler_get_overbridge_name (instance->jclient.resampler);
       status =
 	get_status_string (ow_resampler_get_status
 			   (instance->jclient.resampler));
@@ -641,7 +643,7 @@ refresh_devices ()
 					 STATUS_LIST_STORE_STATUS,
 					 status,
 					 STATUS_LIST_STORE_NAME,
-					 overbridge_name,
+					 instance->jclient.name,
 					 STATUS_LIST_STORE_DEVICE,
 					 device->desc->name,
 					 STATUS_LIST_STORE_BUS,

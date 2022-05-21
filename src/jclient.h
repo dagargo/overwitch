@@ -27,6 +27,7 @@ typedef void (*jclient_end_notifier_t) (uint8_t, uint8_t);
 struct jclient
 {
   //JACK stuff
+  const char *name;
   jack_client_t *client;
   jack_port_t **output_ports;
   jack_port_t **input_ports;

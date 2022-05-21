@@ -396,6 +396,7 @@ jclient_init (struct jclient *jclient)
     }
 
   jclient->resampler = resampler;
+  jclient->name = ow_resampler_get_overbridge_name (jclient->resampler);
 
   return 0;
 }
@@ -422,8 +423,7 @@ jclient_run (struct jclient *jclient)
   desc = ow_engine_get_device_desc (engine);
 
   jclient->client =
-    jack_client_open (ow_resampler_get_overbridge_name (jclient->resampler),
-		      JackNoStartServer, &status, NULL);
+    jack_client_open (jclient->name, JackNoStartServer, &status, NULL);
   if (jclient->client == NULL)
     {
       error_print ("jack_client_open() failed, status = 0x%2.0x\n", status);
