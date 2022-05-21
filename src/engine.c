@@ -37,9 +37,9 @@
 #define MIDI_OUT_EP  0x01
 
 #define MIDI_BUF_EVENTS 64
-#define MIDI_BUF_SIZE (MIDI_BUF_EVENTS * OB_MIDI_EVENT_SIZE)
+#define MIDI_BUF_LEN (MIDI_BUF_EVENTS * OB_MIDI_EVENT_SIZE)
 
-#define USB_BULK_MIDI_SIZE 512
+#define USB_BULK_MIDI_LEN 512
 
 #define SAMPLE_TIME_NS (1e9 / ((int)OB_SAMPLE_RATE))
 
@@ -424,7 +424,7 @@ prepare_cycle_in_midi (struct ow_engine *engine)
   libusb_fill_bulk_transfer (engine->usb.xfr_midi_in,
 			     engine->usb.device_handle, MIDI_IN_EP,
 			     (void *) engine->usb.xfr_midi_in_data,
-			     USB_BULK_MIDI_SIZE, cb_xfr_midi_in, engine, 0);
+			     USB_BULK_MIDI_LEN, cb_xfr_midi_in, engine, 0);
 
   int err = libusb_submit_transfer (engine->usb.xfr_midi_in);
   if (err)
@@ -441,7 +441,7 @@ prepare_cycle_out_midi (struct ow_engine *engine)
   libusb_fill_bulk_transfer (engine->usb.xfr_midi_out,
 			     engine->usb.device_handle, MIDI_OUT_EP,
 			     (void *) engine->usb.xfr_midi_out_data,
-			     USB_BULK_MIDI_SIZE, cb_xfr_midi_out, engine, 0);
+			     USB_BULK_MIDI_LEN, cb_xfr_midi_out, engine, 0);
 
   int err = libusb_submit_transfer (engine->usb.xfr_midi_out);
   if (err)
@@ -521,10 +521,10 @@ ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
   engine->p2o_data.output_frames = engine->frames_per_transfer;
 
   //MIDI
-  engine->usb.xfr_midi_out_data = malloc (USB_BULK_MIDI_SIZE);
-  engine->usb.xfr_midi_in_data = malloc (USB_BULK_MIDI_SIZE);
-  memset (engine->usb.xfr_midi_out_data, 0, USB_BULK_MIDI_SIZE);
-  memset (engine->usb.xfr_midi_in_data, 0, USB_BULK_MIDI_SIZE);
+  engine->usb.xfr_midi_out_data = malloc (USB_BULK_MIDI_LEN);
+  engine->usb.xfr_midi_in_data = malloc (USB_BULK_MIDI_LEN);
+  memset (engine->usb.xfr_midi_out_data, 0, USB_BULK_MIDI_LEN);
+  memset (engine->usb.xfr_midi_in_data, 0, USB_BULK_MIDI_LEN);
   pthread_spin_init (&engine->p2o_midi_lock, PTHREAD_PROCESS_SHARED);
 }
 
@@ -797,11 +797,11 @@ run_p2o_midi (void *data)
     {
 
       while (engine->context->read_space (engine->context->p2o_midi) >=
-	     sizeof (struct ow_midi_event) && pos < USB_BULK_MIDI_SIZE)
+	     sizeof (struct ow_midi_event) && pos < USB_BULK_MIDI_LEN)
 	{
 	  if (!pos)
 	    {
-	      memset (engine->usb.xfr_midi_out_data, 0, USB_BULK_MIDI_SIZE);
+	      memset (engine->usb.xfr_midi_out_data, 0, USB_BULK_MIDI_LEN);
 	      diff = 0;
 	    }
 

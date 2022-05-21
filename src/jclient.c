@@ -34,7 +34,7 @@
 #define MSG_ERROR_PORT_REGISTER "Error while registering JACK port\n"
 
 #define MIDI_BUF_EVENTS 64
-#define MIDI_BUF_SIZE (MIDI_BUF_EVENTS * OB_MIDI_EVENT_SIZE * 8)
+#define MIDI_BUF_LEN (MIDI_BUF_EVENTS * OB_MIDI_EVENT_SIZE * 8)
 
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
@@ -550,10 +550,10 @@ jclient_run (struct jclient *jclient)
 			    (jclient->resampler));
   jack_ringbuffer_mlock (jclient->context.p2o_audio);
 
-  jclient->context.o2p_midi = jack_ringbuffer_create (MIDI_BUF_SIZE);
+  jclient->context.o2p_midi = jack_ringbuffer_create (MIDI_BUF_LEN);
   jack_ringbuffer_mlock (jclient->context.o2p_midi);
 
-  jclient->context.p2o_midi = jack_ringbuffer_create (MIDI_BUF_SIZE);
+  jclient->context.p2o_midi = jack_ringbuffer_create (MIDI_BUF_LEN);
   jack_ringbuffer_mlock (jclient->context.p2o_midi);
 
   jclient->context.read_space =
