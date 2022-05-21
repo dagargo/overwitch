@@ -41,7 +41,7 @@
 #define CONF_FILE "/preferences.json"
 
 #define CONF_REFRESH_AT_STARTUP "refreshAtStartup"
-#define CONF_SHOW_ALL_METRICS "showAllColumns"
+#define CONF_SHOW_ALL_COLUMNS "showAllColumns"
 #define CONF_BLOCKS "blocks"
 #define CONF_QUALITY "quality"
 
@@ -78,11 +78,14 @@ static GtkWidget *main_window;
 static GtkAboutDialog *about_dialog;
 static GtkWidget *about_button;
 static GtkWidget *refresh_at_startup_button;
-static GtkWidget *show_all_metrics_button;
+static GtkWidget *show_all_columns_button;
 static GtkWidget *refresh_button;
 static GtkWidget *stop_button;
 static GtkSpinButton *blocks_spin_button;
 static GtkComboBox *quality_combo_box;
+static GtkTreeViewColumn *device_column;
+static GtkTreeViewColumn *bus_column;
+static GtkTreeViewColumn *address_column;
 static GtkTreeViewColumn *o2j_ratio_column;
 static GtkTreeViewColumn *j2o_ratio_column;
 static GtkListStore *status_list_store;
@@ -227,6 +230,9 @@ overwitch_cleanup_jack (GtkWidget * object, gpointer data)
 static void
 update_all_metrics (gboolean active)
 {
+  gtk_tree_view_column_set_visible (device_column, active);
+  gtk_tree_view_column_set_visible (bus_column, active);
+  gtk_tree_view_column_set_visible (address_column, active);
   gtk_tree_view_column_set_visible (o2j_ratio_column, active);
   gtk_tree_view_column_set_visible (j2o_ratio_column, active);
 }
@@ -244,13 +250,13 @@ refresh_at_startup (GtkWidget * object, gpointer data)
 }
 
 static void
-show_all_metrics (GtkWidget * object, gpointer data)
+show_all_columns (GtkWidget * object, gpointer data)
 {
   gboolean active;
 
-  g_object_get (G_OBJECT (show_all_metrics_button), "active", &active, NULL);
+  g_object_get (G_OBJECT (show_all_columns_button), "active", &active, NULL);
   active = !active;
-  g_object_set (G_OBJECT (show_all_metrics_button), "active", active, NULL);
+  g_object_set (G_OBJECT (show_all_columns_button), "active", active, NULL);
   update_all_metrics (active);
 
   gtk_widget_hide (GTK_WIDGET (main_popover));
@@ -314,7 +320,7 @@ save_preferences ()
   JsonGenerator *gen;
   JsonNode *root;
   gchar *json;
-  gboolean show_all_metrics, refresh_at_startup;
+  gboolean show_all_columns, refresh_at_startup;
 
   preferences_path = get_expanded_dir (CONF_DIR);
   if (g_mkdir_with_parents (preferences_path,
@@ -340,10 +346,10 @@ save_preferences ()
 		&refresh_at_startup, NULL);
   json_builder_add_boolean_value (builder, refresh_at_startup);
 
-  json_builder_set_member_name (builder, CONF_SHOW_ALL_METRICS);
-  g_object_get (G_OBJECT (show_all_metrics_button), "active",
-		&show_all_metrics, NULL);
-  json_builder_add_boolean_value (builder, show_all_metrics);
+  json_builder_set_member_name (builder, CONF_SHOW_ALL_COLUMNS);
+  g_object_get (G_OBJECT (show_all_columns_button), "active",
+		&show_all_columns, NULL);
+  json_builder_add_boolean_value (builder, show_all_columns);
 
   json_builder_set_member_name (builder, CONF_BLOCKS);
   json_builder_add_int_value (builder,
@@ -378,7 +384,7 @@ load_preferences ()
   JsonReader *reader;
   JsonParser *parser = json_parser_new ();
   gchar *preferences_file = get_expanded_dir (CONF_DIR CONF_FILE);
-  gboolean show_all_metrics = FALSE;
+  gboolean show_all_columns = FALSE;
   gboolean refresh_at_startup = FALSE;
   gint64 blocks = 24;
   gint64 quality = 2;
@@ -402,9 +408,9 @@ load_preferences ()
     }
   json_reader_end_member (reader);
 
-  if (json_reader_read_member (reader, CONF_SHOW_ALL_METRICS))
+  if (json_reader_read_member (reader, CONF_SHOW_ALL_COLUMNS))
     {
-      show_all_metrics = json_reader_get_boolean_value (reader);
+      show_all_columns = json_reader_get_boolean_value (reader);
     }
   json_reader_end_member (reader);
 
@@ -428,11 +434,11 @@ load_preferences ()
 end:
   g_object_set (G_OBJECT (refresh_at_startup_button), "active",
 		refresh_at_startup, NULL);
-  g_object_set (G_OBJECT (show_all_metrics_button), "active",
-		show_all_metrics, NULL);
+  g_object_set (G_OBJECT (show_all_columns_button), "active",
+		show_all_columns, NULL);
   gtk_spin_button_set_value (blocks_spin_button, blocks);
   gtk_combo_box_set_active (quality_combo_box, quality);
-  update_all_metrics (show_all_metrics);
+  update_all_metrics (show_all_columns);
 }
 
 static gboolean
@@ -757,8 +763,8 @@ main (int argc, char *argv[])
   refresh_at_startup_button =
     GTK_WIDGET (gtk_builder_get_object
 		(builder, "refresh_at_startup_button"));
-  show_all_metrics_button =
-    GTK_WIDGET (gtk_builder_get_object (builder, "show_all_metrics_button"));
+  show_all_columns_button =
+    GTK_WIDGET (gtk_builder_get_object (builder, "show_all_columns_button"));
   about_button =
     GTK_WIDGET (gtk_builder_get_object (builder, "about_button"));
 
@@ -774,6 +780,12 @@ main (int argc, char *argv[])
   status_list_store =
     GTK_LIST_STORE (gtk_builder_get_object (builder, "status_list_store"));
 
+  device_column =
+    GTK_TREE_VIEW_COLUMN (gtk_builder_get_object (builder, "device_column"));
+  bus_column =
+    GTK_TREE_VIEW_COLUMN (gtk_builder_get_object (builder, "bus_column"));
+  address_column =
+    GTK_TREE_VIEW_COLUMN (gtk_builder_get_object (builder, "address_column"));
   o2j_ratio_column =
     GTK_TREE_VIEW_COLUMN (gtk_builder_get_object
 			  (builder, "o2j_ratio_column"));
@@ -790,7 +802,7 @@ main (int argc, char *argv[])
 
   g_object_set (G_OBJECT (refresh_at_startup_button), "role",
 		GTK_BUTTON_ROLE_CHECK, NULL);
-  g_object_set (G_OBJECT (show_all_metrics_button), "role",
+  g_object_set (G_OBJECT (show_all_columns_button), "role",
 		GTK_BUTTON_ROLE_CHECK, NULL);
 
   g_signal_connect (about_button, "clicked",
@@ -799,8 +811,8 @@ main (int argc, char *argv[])
   g_signal_connect (refresh_at_startup_button, "clicked",
 		    G_CALLBACK (refresh_at_startup), NULL);
 
-  g_signal_connect (show_all_metrics_button, "clicked",
-		    G_CALLBACK (show_all_metrics), NULL);
+  g_signal_connect (show_all_columns_button, "clicked",
+		    G_CALLBACK (show_all_columns), NULL);
 
   g_signal_connect (refresh_button, "clicked",
 		    G_CALLBACK (refresh_devices_click), NULL);

@@ -123,11 +123,11 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
           </packing>
         </child>
         <child>
-          <object class="GtkModelButton" id="show_all_metrics_button">
+          <object class="GtkModelButton" id="show_all_columns_button">
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
-            <property name="text" translatable="yes">Show All Metrics</property>
+            <property name="text" translatable="yes">Show All Columns</property>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -303,7 +303,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkTreeViewColumn">
+                  <object class="GtkTreeViewColumn" id="device_column">
                     <property name="title" translatable="yes">Device</property>
                     <child>
                       <object class="GtkCellRendererText"/>
@@ -314,7 +314,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkTreeViewColumn">
+                  <object class="GtkTreeViewColumn" id="bus_column">
                     <property name="title" translatable="yes">Bus</property>
                     <child>
                       <object class="GtkCellRendererText"/>
@@ -325,7 +325,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkTreeViewColumn">
+                  <object class="GtkTreeViewColumn" id="address_column">
                     <property name="title" translatable="yes">Address</property>
                     <child>
                       <object class="GtkCellRendererText"/>
