@@ -619,8 +619,6 @@ refresh_devices ()
       instance = g_malloc (sizeof (struct overwitch_instance));
       instance->jclient.bus = device->bus;
       instance->jclient.address = device->address;
-      instance->jclient.blocks_per_transfer = 4;
-      instance->jclient.quality = 2;
       instance->jclient.priority = -1;
       instance->jclient.reporter.callback =
 	(ow_resampler_report_t) set_report_data;
