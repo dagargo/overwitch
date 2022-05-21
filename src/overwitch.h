@@ -205,6 +205,8 @@ const struct ow_device_desc *ow_engine_get_device_desc (struct ow_engine *);
 
 void ow_engine_stop (struct ow_engine *);
 
+void ow_engine_set_overbridge_name (struct ow_engine *, const char *);
+
 //Resampler
 ow_err_t ow_resampler_init_from_bus_address (struct ow_resampler **, uint8_t,
 					     uint8_t, int, int);

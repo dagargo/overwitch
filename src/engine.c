@@ -31,15 +31,18 @@
 #include <unistd.h>
 #include "engine.h"
 
-#define AUDIO_IN_EP  0x83
 #define AUDIO_OUT_EP 0x03
-#define MIDI_IN_EP   0x81
-#define MIDI_OUT_EP  0x01
+#define AUDIO_IN_EP  (AUDIO_OUT_EP | 0x80)
+
+#define MIDI_OUT_EP 0x01
+#define MIDI_IN_EP  (MIDI_OUT_EP | 0x80)
 
 #define MIDI_BUF_EVENTS 64
 #define MIDI_BUF_LEN (MIDI_BUF_EVENTS * OB_MIDI_EVENT_SIZE)
 
 #define USB_BULK_MIDI_LEN 512
+
+#define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
 #define SAMPLE_TIME_NS (1e9 / ((int)OB_SAMPLE_RATE))
 
@@ -48,20 +51,14 @@
 static void prepare_cycle_in_audio ();
 static void prepare_cycle_out_audio ();
 static void prepare_cycle_in_midi ();
+static void ow_engine_get_overbridge_name (struct ow_engine *);
 
 static void
-ow_engine_set_name (struct ow_engine *engine, uint8_t bus, uint8_t address)
+ow_engine_init_name (struct ow_engine *engine, uint8_t bus, uint8_t address)
 {
   snprintf (engine->name, OW_LABEL_MAX_LEN, "%s@%03d,%03d",
 	    engine->device_desc->name, bus, address);
-}
-
-static void
-ow_engine_set_overbridge_name (struct ow_engine *engine)
-{
-  strncpy (engine->overbridge_name, engine->device_desc->name,
-	   OB_NAME_MAX_LEN);
-  engine->overbridge_name[OB_NAME_MAX_LEN - 1] = '\0';
+  ow_engine_get_overbridge_name (engine);
 }
 
 static int
@@ -91,6 +88,18 @@ prepare_transfers (struct ow_engine *engine)
       return -ENOMEM;
     }
 
+  engine->usb.xfr_control_in = libusb_alloc_transfer (0);
+  if (!engine->usb.xfr_control_in)
+    {
+      return -ENOMEM;
+    }
+
+  engine->usb.xfr_control_out = libusb_alloc_transfer (0);
+  if (!engine->usb.xfr_control_out)
+    {
+      return -ENOMEM;
+    }
+
   return LIBUSB_SUCCESS;
 }
 
@@ -101,6 +110,8 @@ free_transfers (struct ow_engine *engine)
   libusb_free_transfer (engine->usb.xfr_audio_out);
   libusb_free_transfer (engine->usb.xfr_midi_in);
   libusb_free_transfer (engine->usb.xfr_midi_out);
+  libusb_free_transfer (engine->usb.xfr_control_in);
+  libusb_free_transfer (engine->usb.xfr_control_out);
 }
 
 inline void
@@ -387,7 +398,7 @@ prepare_cycle_out_audio (struct ow_engine *engine)
 {
   libusb_fill_interrupt_transfer (engine->usb.xfr_audio_out,
 				  engine->usb.device_handle, AUDIO_OUT_EP,
-				  (void *) engine->usb.xfr_audio_out_data,
+				  engine->usb.xfr_audio_out_data,
 				  engine->usb.xfr_audio_out_data_len,
 				  cb_xfr_audio_out, engine, 0);
 
@@ -405,7 +416,7 @@ prepare_cycle_in_audio (struct ow_engine *engine)
 {
   libusb_fill_interrupt_transfer (engine->usb.xfr_audio_in,
 				  engine->usb.device_handle, AUDIO_IN_EP,
-				  (void *) engine->usb.xfr_audio_in_data,
+				  engine->usb.xfr_audio_in_data,
 				  engine->usb.xfr_audio_in_data_len,
 				  cb_xfr_audio_in, engine, 0);
 
@@ -423,7 +434,7 @@ prepare_cycle_in_midi (struct ow_engine *engine)
 {
   libusb_fill_bulk_transfer (engine->usb.xfr_midi_in,
 			     engine->usb.device_handle, MIDI_IN_EP,
-			     (void *) engine->usb.xfr_midi_in_data,
+			     engine->usb.xfr_midi_in_data,
 			     USB_BULK_MIDI_LEN, cb_xfr_midi_in, engine, 0);
 
   int err = libusb_submit_transfer (engine->usb.xfr_midi_in);
@@ -440,7 +451,7 @@ prepare_cycle_out_midi (struct ow_engine *engine)
 {
   libusb_fill_bulk_transfer (engine->usb.xfr_midi_out,
 			     engine->usb.device_handle, MIDI_OUT_EP,
-			     (void *) engine->usb.xfr_midi_out_data,
+			     engine->usb.xfr_midi_out_data,
 			     USB_BULK_MIDI_LEN, cb_xfr_midi_out, engine, 0);
 
   int err = libusb_submit_transfer (engine->usb.xfr_midi_out);
@@ -526,6 +537,10 @@ ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
   memset (engine->usb.xfr_midi_out_data, 0, USB_BULK_MIDI_LEN);
   memset (engine->usb.xfr_midi_in_data, 0, USB_BULK_MIDI_LEN);
   pthread_spin_init (&engine->p2o_midi_lock, PTHREAD_PROCESS_SHARED);
+
+  //Control
+  engine->usb.xfr_control_out_data = malloc (USB_CONTROL_LEN);
+  engine->usb.xfr_control_in_data = malloc (OB_NAME_MAX_LEN);
 }
 
 // initialization taken from sniffed session
@@ -667,8 +682,7 @@ ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
     {
       bus = libusb_get_bus_number (device);
       address = libusb_get_device_address (device);
-      ow_engine_set_name (engine, bus, address);
-      ow_engine_set_overbridge_name (engine);
+      ow_engine_init_name (engine, bus, address);
       return err;
     }
 
@@ -728,11 +742,6 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
 	      error_print ("Error while opening device: %s\n",
 			   libusb_error_name (err));
 	    }
-	  else
-	    {
-	      ow_engine_set_name (engine, bus, address);
-	      ow_engine_set_overbridge_name (engine);
-	    }
 
 	  break;
 	}
@@ -747,7 +756,9 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
     }
 
   *engine_ = engine;
-  return ow_engine_init (engine, blocks_per_transfer);
+  ret = ow_engine_init (engine, blocks_per_transfer);
+  ow_engine_init_name (engine, bus, address);
+  return ret;
 
 error:
   free (engine);
@@ -1080,6 +1091,8 @@ ow_engine_free_mem (struct ow_engine *engine)
   free (engine->usb.xfr_audio_out_data);
   free (engine->usb.xfr_midi_out_data);
   free (engine->usb.xfr_midi_in_data);
+  free (engine->usb.xfr_control_out_data);
+  free (engine->usb.xfr_control_in_data);
   pthread_spin_destroy (&engine->lock);
   pthread_spin_destroy (&engine->p2o_midi_lock);
 }
@@ -1166,5 +1179,83 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
 	      s++;
 	    }
 	}
+    }
+}
+
+static void
+ow_engine_get_overbridge_name (struct ow_engine *engine)
+{
+  int res = libusb_control_transfer (engine->usb.device_handle,
+				     LIBUSB_ENDPOINT_IN |
+				     LIBUSB_REQUEST_TYPE_VENDOR |
+				     LIBUSB_RECIPIENT_DEVICE, 1, 0, 0,
+				     engine->usb.xfr_control_in_data,
+				     OB_NAME_MAX_LEN, 0);
+
+  if (res >= 0)
+    {
+      debug_print (1, "USB control in data (%d B): %s\n", res,
+		   engine->usb.xfr_control_in_data);
+      memcpy (engine->overbridge_name, engine->usb.xfr_control_in_data,
+	      OB_NAME_MAX_LEN);
+    }
+  else
+    {
+      error_print ("Error on USB control in transfer: %s\n",
+		   libusb_strerror (res));
+    }
+
+  res = libusb_control_transfer (engine->usb.device_handle,
+				 LIBUSB_ENDPOINT_IN |
+				 LIBUSB_REQUEST_TYPE_VENDOR |
+				 LIBUSB_RECIPIENT_DEVICE, 2, 0, 0,
+				 engine->usb.xfr_control_in_data,
+				 OB_NAME_MAX_LEN, 0);
+
+  if (res >= 0)
+    {
+      debug_print (1, "USB control in data (%d B): %s\n", res,
+		   engine->usb.xfr_control_in_data);
+    }
+  else
+    {
+      error_print ("Error on USB control in transfer: %s\n",
+		   libusb_strerror (res));
+    }
+}
+
+static void LIBUSB_CALL
+cb_xfr_control_out (struct libusb_transfer *xfr)
+{
+  if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
+    {
+      error_print ("Error on USB control out transfer: %s\n",
+		   libusb_strerror (xfr->status));
+    }
+}
+
+void
+ow_engine_set_overbridge_name (struct ow_engine *engine, const char *name)
+{
+  libusb_fill_control_setup (engine->usb.xfr_control_out_data,
+			     LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR
+			     | LIBUSB_RECIPIENT_DEVICE, 1, 0, 0,
+			     OB_NAME_MAX_LEN);
+
+  memcpy ((char *) &engine->
+	  usb.xfr_control_out_data[sizeof (struct libusb_control_setup)],
+	  name, OB_NAME_MAX_LEN);
+
+  libusb_fill_control_transfer (engine->usb.xfr_control_out,
+				engine->usb.device_handle,
+				engine->usb.xfr_control_out_data,
+				cb_xfr_control_out, engine, 0);
+
+  int err = libusb_submit_transfer (engine->usb.xfr_control_out);
+  if (err)
+    {
+      error_print ("Error when submitting USB control transfer: %s\n",
+		   libusb_strerror (err));
+      ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
     }
 }

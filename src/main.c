@@ -449,7 +449,7 @@ end:
 
 static gboolean
 is_device_at_bus_address_running (uint8_t bus, uint8_t address,
-				  const char **name)
+				  struct overwitch_instance **instance)
 {
   guint dev_bus, dev_address;
   GtkTreeIter iter;
@@ -459,7 +459,7 @@ is_device_at_bus_address_running (uint8_t bus, uint8_t address,
   while (valid)
     {
       gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
-			  STATUS_LIST_STORE_NAME, name,
+			  STATUS_LIST_STORE_INSTANCE, instance,
 			  STATUS_LIST_STORE_BUS, &dev_bus,
 			  STATUS_LIST_STORE_ADDRESS, &dev_address, -1);
 
@@ -591,7 +591,7 @@ refresh_devices ()
   struct ow_usb_device *devices, *device;
   struct overwitch_instance *instance;
   size_t devices_count;
-  const char *name, *status;
+  const char *status;
   ow_err_t err;
 
   err = ow_get_devices (&devices, &devices_count);
@@ -610,9 +610,10 @@ refresh_devices ()
   for (int i = 0; i < devices_count; i++, device++)
     {
       if (is_device_at_bus_address_running
-	  (device->bus, device->address, &name))
+	  (device->bus, device->address, &instance))
 	{
-	  debug_print (2, "%s already running. Skipping...\n", name);
+	  debug_print (2, "%s already running. Skipping...\n",
+		       instance->jclient.name);
 	  continue;
 	}
 
@@ -641,9 +642,7 @@ refresh_devices ()
 	  continue;
 	}
 
-      debug_print (1, "Adding %s...\n",
-		   ow_resampler_get_overbridge_name (instance->
-						     jclient.resampler));
+      debug_print (1, "Adding %s...\n", instance->jclient.name);
 
       status =
 	get_status_string (ow_resampler_get_status
@@ -739,8 +738,7 @@ main (int argc, char *argv[])
   gboolean refresh;
   char *glade_file = malloc (PATH_MAX);
 
-  while ((opt = getopt_long (argc, argv, "vh",
-			     options, &long_index)) != -1)
+  while ((opt = getopt_long (argc, argv, "vh", options, &long_index)) != -1)
     {
       switch (opt)
 	{

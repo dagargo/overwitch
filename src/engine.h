@@ -199,6 +199,11 @@ struct ow_engine
     struct libusb_transfer *xfr_midi_in;
     unsigned char *xfr_midi_out_data;
     unsigned char *xfr_midi_in_data;
+    //Control
+    struct libusb_transfer *xfr_control_out;
+    struct libusb_transfer *xfr_control_in;
+    unsigned char *xfr_control_out_data;
+    unsigned char *xfr_control_in_data;
   } usb;
   //j2o resampler
   float *p2o_resampler_buf;
