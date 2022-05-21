@@ -43,6 +43,8 @@
 
 #define SAMPLE_TIME_NS (1e9 / ((int)OB_SAMPLE_RATE))
 
+#define INT32_TO_FLOAT32_SCALE ((float) (1.0f / INT_MAX))
+
 static void prepare_cycle_in_audio ();
 static void prepare_cycle_out_audio ();
 static void prepare_cycle_in_midi ();
@@ -115,11 +117,10 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine)
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  const float *scale = engine->device_desc->output_track_scales;
-	  for (int k = 0; k < engine->device_desc->outputs; k++, scale++)
+	  for (int k = 0; k < engine->device_desc->outputs; k++)
 	    {
 	      hv = be32toh (*s);
-	      *f = hv * (*scale);
+	      *f = INT32_TO_FLOAT32_SCALE * hv;
 	      f++;
 	      s++;
 	    }
@@ -1155,8 +1156,7 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  const float *scale = engine->device_desc->output_track_scales;
-	  for (int k = 0; k < engine->device_desc->outputs; k++, scale++)
+	  for (int k = 0; k < engine->device_desc->outputs; k++)
 	    {
 	      v = be32toh (*s);
 	      printf ("Frame %2d, track %2d: %d\n", j, k, v);
