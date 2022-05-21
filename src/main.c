@@ -164,7 +164,7 @@ set_overwitch_instance_status (struct overwitch_instance *instance)
 	  if (instance->o2j_latency >= 0)
 	    {
 	      g_snprintf (o2j_latency_s, OW_LABEL_MAX_LEN,
-			  "%.2f ms (max. %.2f ms)", instance->o2j_latency,
+			  "%.1f ms (max. %.1f ms)", instance->o2j_latency,
 			  instance->o2j_latency_max);
 	    }
 	  else
@@ -175,7 +175,7 @@ set_overwitch_instance_status (struct overwitch_instance *instance)
 	  if (instance->j2o_latency >= 0)
 	    {
 	      g_snprintf (j2o_latency_s, OW_LABEL_MAX_LEN,
-			  "%.2f ms (max. %.2f ms)", instance->j2o_latency,
+			  "%.1f ms (max. %.1f ms)", instance->j2o_latency,
 			  instance->j2o_latency_max);
 	    }
 	  else
