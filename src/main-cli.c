@@ -135,7 +135,7 @@ run_all (int blocks_per_transfer, int quality, int priority)
       instance->jclient.quality = quality;
       instance->jclient.priority = priority;
       instance->jclient.reporter.callback = NULL;
-      instances->jclient.reporter.period = 2;
+      instance->jclient.reporter.period = 2;
       instance->jclient.end_notifier = NULL;
 
       if (jclient_init (&instance->jclient))
