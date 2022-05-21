@@ -94,6 +94,12 @@ static GtkPopover *main_popover;
 
 static GThread *jack_control_client_thread;
 
+static struct option options[] = {
+  {"verbose", 0, NULL, 'v'},
+  {"help", 0, NULL, 'h'},
+  {NULL, 0, NULL, 0}
+};
+
 static const char *
 get_status_string (ow_resampler_status_t status)
 {
@@ -728,10 +734,39 @@ overwitch_delete_window (GtkWidget * widget, GdkEvent * event, gpointer data)
 int
 main (int argc, char *argv[])
 {
+  int opt, long_index = 0;
+  int vflg = 0, errflg = 0;
   GtkBuilder *builder;
   struct sigaction action;
   gboolean refresh;
   char *glade_file = malloc (PATH_MAX);
+
+  while ((opt = getopt_long (argc, argv, "vh",
+			     options, &long_index)) != -1)
+    {
+      switch (opt)
+	{
+	case 'v':
+	  vflg++;
+	  break;
+	case 'h':
+	  print_help (argv[0], PACKAGE_STRING, options);
+	  exit (EXIT_SUCCESS);
+	case '?':
+	  errflg++;
+	}
+    }
+
+  if (errflg > 0)
+    {
+      print_help (argv[0], PACKAGE_STRING, options);
+      exit (EXIT_FAILURE);
+    }
+
+  if (vflg)
+    {
+      debug_level = vflg;
+    }
 
   action.sa_handler = quit;
   sigemptyset (&action.sa_mask);
