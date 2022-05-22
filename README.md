@@ -39,9 +39,14 @@ As this will install `jackd2`, you would be asked to configure it to be run with
 
 ## Usage
 
-This are the usage instructions for the 3 different binaries.
+Overwitch contains two JACK clients, one for the desktop and one for the command line, and a simple recording utility for the command line.
 
-## overwitch
+Regarding the JACK clients, latency needs to be under control and it can be tuned with the following parameters.
+
+- Blocks, which controls the amount of data sent in a single USB operation. The higher, the higher latency but the lower CPU usage. 4 blocks keeps the latency quite low and does not impact on the CPU.
+- Quality, which controls the resampler accuracy. The higher, the more CPU consuming. A medium value is recommended. Notice that in `overwitch-cli`, a value of 0 means the highest quality while a value of 4 means the lowest.
+
+### overwitch
 
 The GUI is self explanatory and does not requiere any parameter passed from the command line.
 
@@ -58,7 +63,7 @@ Notice that once an Overbridge device is running, neither the blocks nor the res
 
 It is possible to rename Overbridge devices by simply editing its name on the list. Still, as JACK devices can not be renamed while running, the device will be restarted.
 
-## overwitch-cli
+### overwitch-cli
 
 First, list the available devices. The first element is an internal ID that allows to identify the devices.
 
@@ -112,7 +117,7 @@ Options:
   --help, -h
 ```
 
-## overwitch-dump
+### overwitch-dump
 
 This small utility let the user record the audio output from the Overbridge devices into a WAVE file with the following command. To stop, just press `Ctrl+C`.
 
@@ -176,9 +181,11 @@ Options:
 
 ## Latency
 
-Device to JACK latency is different from JACK to device latency though they are very close. These latencies are the transferred frames to and from the device and, by default, these are performed in 24 groups (blocks) of 7 frames (168 frames).
+Device to JACK latency is different from JACK to device latency though they are very close. These latencies are the transferred frames to and from the device and, by default, these are performed in 24 blocks of 7 frames (168 frames).
 
 Thus, the minimum theoretical latency is the device frames plus the JACK buffer frames plus some additional buffer frames are used in the resamplers but it is unknown how many.
+
+To keep latency as low as possible, the amount of blocks can be configured in the JACK clients. Values between 2 and 32 can be used.
 
 ## Tuning
 
