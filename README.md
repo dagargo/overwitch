@@ -43,9 +43,20 @@ This are the usage instructions for the 3 different binaries.
 
 ## overwitch
 
-The GUI is self explanatory and does not use any parameter passed from the command line.
+The GUI is self explanatory and does not requiere any parameter passed from the command line.
+
+```
+$ overwitch -h
+overwitch 1.0
+Usage: overwitch [options]
+Options:
+  --verbose, -v
+  --help, -h
+```
 
 Notice that once an Overbridge device is running, neither the blocks nor the resampling quality can be changed so you will need to stop the running instances and refresh the list.
+
+It is possible to rename Overbridge devices by simply editing its name on the list. Still, as JACK devices can not be renamed while running, the device will be restarted.
 
 ## overwitch-cli
 
@@ -169,11 +180,9 @@ Device to JACK latency is different from JACK to device latency though they are 
 
 Thus, the minimum theoretical latency is the device frames plus the JACK buffer frames plus some additional buffer frames are used in the resamplers but it is unknown how many.
 
-But looks like this block amount can be changed. With the option `-b` we can override this value indicating how many blocks are processed at a time. The default value is 24 but values between 2 and 32 can be used.
-
 ## Tuning
 
-Although this is a matter of JACK, Ardour and OS tuning, I'm leaving here some tips I use.
+Although this is a matter of JACK, Ardour and OS tuning, Here you have some tips.
 
 First and foremost, real time applications work much better without SMT/HyperThreading activated. This script might be handy. It also changes the CPU governor to performance.
 
