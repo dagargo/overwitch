@@ -152,10 +152,10 @@ buffer_write (void *data, const char *buf, size_t size)
   dst = &buffer.mem[pos];
   for (int i = 0; i < frames; i++)
     {
-      for (int j = 0; j < OB_MAX_TRACKS; j++)
+      for (int j = 0; j < desc->outputs; j++)
 	{
 	  if (!track_mask
-	      || (j < buffer.outputs_mask_len && (track_mask[i] != '0')))
+	      || (j < buffer.outputs_mask_len && (track_mask[j] != '0')))
 	    {
 	      memcpy (dst, buf, OB_BYTES_PER_SAMPLE);
 	      dst += OB_BYTES_PER_SAMPLE;
@@ -199,10 +199,10 @@ signal_handler (int signo)
   print_status ();
   if (debug_level)
     {
-      const char *c = track_mask;
-      for (int i = 0; i < buffer.outputs_mask_len; i++, c++)
+      for (int i = 0; i < desc->outputs; i++)
 	{
-	  if (*c != '0')
+	  if (!track_mask
+	      || (i < buffer.outputs_mask_len && (track_mask[i] != '0')))
 	    {
 	      fprintf (stderr, "%s: max: %f; min: %f\n",
 		       desc->output_track_names[i], max[i], min[i]);
@@ -241,14 +241,21 @@ run_dump (int device_num, const char *device_name)
 
   desc = ow_engine_get_device_desc (engine);
 
-  buffer.outputs = 0;
-  const char *c = track_mask;
-  for (int i = 0; i < strlen (track_mask); i++, c++)
+  if (track_mask)
     {
-      if (*c != '0')
+      buffer.outputs = 0;
+      const char *c = track_mask;
+      for (int i = 0; i < strlen (track_mask); i++, c++)
 	{
-	  buffer.outputs++;
+	  if (*c != '0')
+	    {
+	      buffer.outputs++;
+	    }
 	}
+    }
+  else
+    {
+      buffer.outputs = desc->outputs;
     }
 
   if (buffer.outputs == 0)
@@ -287,9 +294,9 @@ run_dump (int device_num, const char *device_name)
   buffer.len = track_buf_kb * 1000 * buffer.outputs;
   buffer.mem = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
   buffer.disk = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
-  buffer.outputs_mask_len = strlen (track_mask);
+  buffer.outputs_mask_len = track_mask ? strlen (track_mask) : 0;
 
-  for (int i = 0; i < OB_MAX_TRACKS; i++)
+  for (int i = 0; i < desc->outputs; i++)
     {
       max[i] = 0.0f;
       min[i] = 0.0f;
