@@ -51,14 +51,14 @@
 static void prepare_cycle_in_audio ();
 static void prepare_cycle_out_audio ();
 static void prepare_cycle_in_midi ();
-static void ow_engine_get_overbridge_name (struct ow_engine *);
+static void ow_engine_load_overbridge_name (struct ow_engine *);
 
 static void
 ow_engine_init_name (struct ow_engine *engine, uint8_t bus, uint8_t address)
 {
   snprintf (engine->name, OW_LABEL_MAX_LEN, "%s@%03d,%03d",
 	    engine->device_desc->name, bus, address);
-  ow_engine_get_overbridge_name (engine);
+  ow_engine_load_overbridge_name (engine);
 }
 
 static int
@@ -1183,7 +1183,7 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
 }
 
 static void
-ow_engine_get_overbridge_name (struct ow_engine *engine)
+ow_engine_load_overbridge_name (struct ow_engine *engine)
 {
   int res = libusb_control_transfer (engine->usb.device_handle,
 				     LIBUSB_ENDPOINT_IN |
@@ -1258,4 +1258,10 @@ ow_engine_set_overbridge_name (struct ow_engine *engine, const char *name)
 		   libusb_strerror (err));
       ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
     }
+}
+
+const char *
+ow_engine_get_overbridge_name (struct ow_engine *engine)
+{
+  return engine->overbridge_name;
 }

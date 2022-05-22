@@ -384,6 +384,7 @@ int
 jclient_init (struct jclient *jclient)
 {
   struct ow_resampler *resampler;
+  struct ow_engine *engine;
   ow_err_t err = ow_resampler_init_from_bus_address (&resampler, jclient->bus,
 						     jclient->address,
 						     jclient->blocks_per_transfer,
@@ -396,7 +397,8 @@ jclient_init (struct jclient *jclient)
     }
 
   jclient->resampler = resampler;
-  jclient->name = ow_resampler_get_overbridge_name (jclient->resampler);
+  engine = ow_resampler_get_engine (jclient->resampler);
+  jclient->name = ow_engine_get_overbridge_name (engine);
 
   return 0;
 }

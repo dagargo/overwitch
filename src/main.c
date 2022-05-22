@@ -83,6 +83,7 @@ static GtkWidget *refresh_button;
 static GtkWidget *stop_button;
 static GtkSpinButton *blocks_spin_button;
 static GtkComboBox *quality_combo_box;
+static GtkCellRendererText *name_cell_renderer;
 static GtkTreeViewColumn *device_column;
 static GtkTreeViewColumn *bus_column;
 static GtkTreeViewColumn *address_column;
@@ -124,9 +125,9 @@ get_status_string (ow_resampler_status_t status)
 static void
 start_instance (struct overwitch_instance *instance)
 {
-  debug_print (1, "Starting %s...\n",
-	       ow_resampler_get_overbridge_name (instance->
-						 jclient.resampler));
+  struct ow_engine *engine =
+    ow_resampler_get_engine (instance->jclient.resampler);
+  debug_print (1, "Starting %s...\n", ow_engine_get_overbridge_name (engine));
   pthread_create (&instance->thread, NULL, jclient_run_thread,
 		  &instance->jclient);
 }
@@ -134,9 +135,9 @@ start_instance (struct overwitch_instance *instance)
 static void
 stop_instance (struct overwitch_instance *instance)
 {
-  debug_print (1, "Stopping %s...\n",
-	       ow_resampler_get_overbridge_name (instance->
-						 jclient.resampler));
+  struct ow_engine *engine =
+    ow_resampler_get_engine (instance->jclient.resampler);
+  debug_print (1, "Stopping %s...\n", ow_engine_get_overbridge_name (engine));
   jclient_exit (&instance->jclient);
   pthread_join (instance->thread, NULL);
 }
@@ -149,7 +150,16 @@ set_overwitch_instance_status (struct overwitch_instance *instance)
   const char *status;
   GtkTreeIter iter;
   gint bus, address;
-  gboolean valid =
+  gboolean valid, editing;
+
+  g_object_get (G_OBJECT (name_cell_renderer), "editing", &editing, NULL);
+
+  if (editing)
+    {
+      return FALSE;
+    }
+
+  valid =
     gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store), &iter);
 
   while (valid)
@@ -190,8 +200,6 @@ set_overwitch_instance_status (struct overwitch_instance *instance)
 	  gtk_list_store_set (status_list_store, &iter,
 			      STATUS_LIST_STORE_STATUS,
 			      status,
-			      STATUS_LIST_STORE_NAME,
-			      instance->jclient.name,
 			      STATUS_LIST_STORE_O2J_LATENCY,
 			      o2j_latency_s,
 			      STATUS_LIST_STORE_J2O_LATENCY,
@@ -713,6 +721,49 @@ stop_all (GtkWidget * object, gpointer data)
 }
 
 static void
+set_overbridge_name (GtkCellRendererText * self,
+		     gchar * path, gchar * name, gpointer user_data)
+{
+  struct overwitch_instance *instance;
+  struct ow_engine *engine;
+  GtkTreeIter iter;
+  gint row = atoi (path);
+  gboolean valid =
+    gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store), &iter);
+  gint i = 0;
+
+  while (valid && i < row)
+    {
+      valid =
+	gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store), &iter);
+      i++;
+    }
+
+  if (valid)
+    {
+      gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
+			  STATUS_LIST_STORE_INSTANCE, &instance, -1);
+
+      engine = ow_resampler_get_engine (instance->jclient.resampler);
+      ow_engine_set_overbridge_name (engine, name);
+
+      stop_instance (instance);
+      gtk_list_store_remove (status_list_store, &iter);
+      g_free (instance);
+
+      if (!gtk_tree_model_iter_n_children
+	  (GTK_TREE_MODEL (status_list_store), NULL))
+	{
+	  gtk_widget_set_sensitive (stop_button, FALSE);
+	  gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), TRUE);
+	  gtk_widget_set_sensitive (GTK_WIDGET (quality_combo_box), TRUE);
+	}
+
+      refresh_devices_click (NULL, NULL);
+    }
+}
+
+static void
 quit (int signo)
 {
   stop_all (NULL, NULL);
@@ -811,6 +862,9 @@ main (int argc, char *argv[])
   status_list_store =
     GTK_LIST_STORE (gtk_builder_get_object (builder, "status_list_store"));
 
+  name_cell_renderer =
+    GTK_CELL_RENDERER_TEXT (gtk_builder_get_object
+			    (builder, "name_cell_renderer"));
   device_column =
     GTK_TREE_VIEW_COLUMN (gtk_builder_get_object (builder, "device_column"));
   bus_column =
@@ -849,6 +903,9 @@ main (int argc, char *argv[])
 		    G_CALLBACK (refresh_devices_click), NULL);
 
   g_signal_connect (stop_button, "clicked", G_CALLBACK (stop_all), NULL);
+
+  g_signal_connect (name_cell_renderer, "edited",
+		    G_CALLBACK (set_overbridge_name), NULL);
 
   g_signal_connect (main_window, "delete-event",
 		    G_CALLBACK (overwitch_delete_window), NULL);

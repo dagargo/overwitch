@@ -207,6 +207,8 @@ void ow_engine_stop (struct ow_engine *);
 
 void ow_engine_set_overbridge_name (struct ow_engine *, const char *);
 
+const char *ow_engine_get_overbridge_name (struct ow_engine *);
+
 //Resampler
 ow_err_t ow_resampler_init_from_bus_address (struct ow_resampler **, uint8_t,
 					     uint8_t, int, int);
@@ -251,7 +253,5 @@ float *ow_resampler_get_p2o_audio_buffer (struct ow_resampler *);
 
 void ow_resampler_set_report_callback (struct ow_resampler *,
 				       const struct ow_resampler_reporter *);
-
-const char *ow_resampler_get_overbridge_name (struct ow_resampler *);
 
 #endif

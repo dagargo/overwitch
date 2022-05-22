@@ -27,12 +27,6 @@
 #define STARTUP_TIME 5
 #define DEFAULT_REPORT_PERIOD 2
 
-const char *
-ow_resampler_get_overbridge_name (struct ow_resampler *resampler)
-{
-  return resampler->engine->overbridge_name;
-}
-
 inline void
 ow_resampler_report_status (struct ow_resampler *resampler)
 {
