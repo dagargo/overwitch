@@ -424,6 +424,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <property name="sensitive">False</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
+                <property name="tooltip-text" translatable="yes">Stop All Devices</property>
                 <child>
                   <object class="GtkImage">
                     <property name="visible">True</property>
