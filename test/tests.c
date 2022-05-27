@@ -16,10 +16,7 @@ static const struct ow_device_desc TESTDEV_DESC = {
   .inputs = TRACKS,
   .outputs = TRACKS,
   .input_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"},
-  .output_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"},
-  .output_track_scales =
-    {OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32, OW_CONV_SCALE_32,
-     OW_CONV_SCALE_32, OW_CONV_SCALE_32}
+  .output_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"}
 };
 
 void
@@ -38,8 +35,8 @@ test_usb_blocks ()
     sizeof (struct ow_engine_usb_blk) +
     OB_FRAMES_PER_BLOCK * TRACKS * sizeof (float);
 
-  CU_ASSERT_EQUAL (engine.usb.data_out_blk_len, blk_size);
-  CU_ASSERT_EQUAL (engine.usb.data_in_blk_len, blk_size);
+  CU_ASSERT_EQUAL (engine.usb.audio_out_blk_len, blk_size);
+  CU_ASSERT_EQUAL (engine.usb.audio_in_blk_len, blk_size);
 
   a = engine.p2o_transfer_buf;
   for (int i = 0; i < BLOCKS; i++)
@@ -64,10 +61,11 @@ test_usb_blocks ()
 		       be16toh (GET_NTH_OUTPUT_USB_BLK (&engine, i)->frames));
     }
 
-  ow_engine_print_blocks (&engine, engine.usb.data_out,
-			  engine.usb.data_out_blk_len);
+  ow_engine_print_blocks (&engine, engine.usb.xfr_audio_out_data,
+			  engine.usb.audio_out_blk_len);
 
-  memcpy (engine.usb.data_in, engine.usb.data_out, engine.usb.data_in_len);
+  memcpy (engine.usb.xfr_audio_in_data, engine.usb.xfr_audio_out_data,
+	  engine.usb.xfr_audio_in_data_len);
 
   ow_engine_read_usb_input_blocks (&engine);
 
