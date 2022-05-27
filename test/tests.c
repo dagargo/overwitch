@@ -20,6 +20,29 @@ static const struct ow_device_desc TESTDEV_DESC = {
 };
 
 void
+test_sizes ()
+{
+
+  struct ow_engine engine;
+
+  printf ("\n");
+
+  engine.device_desc = &TESTDEV_DESC;
+  ow_engine_init_mem (&engine, BLOCKS);
+
+  printf ("\n");
+
+  CU_ASSERT_EQUAL (engine.usb.audio_out_blk_len,
+		   TRACKS * OB_FRAMES_PER_BLOCK * OB_BYTES_PER_SAMPLE + 32);
+  CU_ASSERT_EQUAL (engine.usb.audio_in_blk_len,
+		   TRACKS * OB_FRAMES_PER_BLOCK * OB_BYTES_PER_SAMPLE + 32);
+
+
+
+  ow_engine_free_mem (&engine);
+}
+
+void
 test_usb_blocks ()
 {
   float *a, *b;
@@ -141,6 +164,11 @@ main (int argc, char *argv[])
     }
   CU_pSuite suite = CU_add_suite ("Overwitch USB blocks tests", 0, 0);
   if (!suite)
+    {
+      goto cleanup;
+    }
+
+  if (!CU_add_test (suite, "test_sizes", test_sizes))
     {
       goto cleanup;
     }
