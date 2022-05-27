@@ -237,7 +237,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
   else
     {
       engine->reading_at_p2o_end = 0;
-      debug_print (2, "p2o: Clearing buffer and stopping...\n");
+      debug_print (3, "p2o: Clearing buffer and stopping...\n");
       memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
       goto set_blocks;
     }
@@ -273,7 +273,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
 			engine->device_desc->inputs);
       if (res)
 	{
-	  debug_print (2, "p2o: Error while resampling: %s\n",
+	  error_print ("p2o: Error while resampling: %s\n",
 		       src_strerror (res));
 	}
       else if (engine->p2o_data.output_frames_gen !=
@@ -490,6 +490,10 @@ ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
   engine->usb.audio_out_blk_len =
     sizeof (struct ow_engine_usb_blk) +
     sizeof (int32_t) * OB_FRAMES_PER_BLOCK * engine->device_desc->inputs;
+
+  debug_print (2, "USB in block size: %zu B\n", engine->usb.audio_in_blk_len);
+  debug_print (2, "USB out block size: %zu B\n",
+	       engine->usb.audio_out_blk_len);
 
   engine->usb.audio_frames_counter = 0;
   engine->usb.xfr_audio_in_data_len =
