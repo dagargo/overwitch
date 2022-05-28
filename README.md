@@ -187,7 +187,7 @@ Thus, the minimum theoretical latency is the device frames plus the JACK buffer 
 
 To keep latency as low as possible, the amount of blocks can be configured in the JACK clients. Values between 2 and 32 can be used.
 
-## Tuning
+## Tunning
 
 Although this is a matter of JACK, Ardour and OS tuning, Here you have some tips.
 
