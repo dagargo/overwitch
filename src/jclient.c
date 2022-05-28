@@ -435,7 +435,7 @@ jclient_run (struct jclient *jclient)
 	  error_print ("Unable to connect to JACK server\n");
 	}
       err = OW_GENERIC_ERROR;
-      goto end;
+      goto cleanup_resampler;
     }
 
   if (status & JackServerStarted)
@@ -605,7 +605,7 @@ cleanup_jack:
   jack_client_close (jclient->client);
   free (jclient->output_ports);
   free (jclient->input_ports);
-end:
+cleanup_resampler:
   ow_resampler_destroy (jclient->resampler);
   return err;
 }

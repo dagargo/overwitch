@@ -466,12 +466,15 @@ ow_resampler_destroy (struct ow_resampler *resampler)
 {
   src_delete (resampler->p2o_state);
   src_delete (resampler->o2p_state);
-  free (resampler->p2o_aux);
-  free (resampler->p2o_buf_out);
-  free (resampler->p2o_buf_in);
-  free (resampler->p2o_queue);
-  free (resampler->o2p_buf_in);
-  free (resampler->o2p_buf_out);
+  if (resampler->p2o_aux)
+    {
+      free (resampler->p2o_aux);
+      free (resampler->p2o_buf_out);
+      free (resampler->p2o_buf_in);
+      free (resampler->p2o_queue);
+      free (resampler->o2p_buf_in);
+      free (resampler->o2p_buf_out);
+    }
   pthread_spin_destroy (&resampler->lock);
   ow_engine_destroy (resampler->engine);
   free (resampler);
