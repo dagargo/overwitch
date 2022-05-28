@@ -224,17 +224,13 @@ set_usb_output_data_blks (struct ow_engine *engine)
       rsp2o = engine->context->read_space (engine->context->p2o_audio);
       if (!engine->reading_at_p2o_end)
 	{
-	  if (p2o_enabled && rsp2o >= engine->p2o_transfer_size)
+	  if (rsp2o >= engine->p2o_transfer_size &&
+	      ow_engine_get_status (engine) == OW_ENGINE_STATUS_RUN)
 	    {
-	      if (ow_engine_get_status (engine) == OW_ENGINE_STATUS_RUN)
-		{
-		  debug_print (2, "p2o: Emptying buffer and running...\n");
-		  bytes =
-		    ow_bytes_to_frame_bytes (rsp2o, engine->p2o_frame_size);
-		  engine->context->read (engine->context->p2o_audio, NULL,
-					 bytes);
-		  engine->reading_at_p2o_end = 1;
-		}
+	      debug_print (2, "p2o: Emptying buffer and running...\n");
+	      bytes = ow_bytes_to_frame_bytes (rsp2o, engine->p2o_frame_size);
+	      engine->context->read (engine->context->p2o_audio, NULL, bytes);
+	      engine->reading_at_p2o_end = 1;
 	    }
 	  goto set_blocks;
 	}
