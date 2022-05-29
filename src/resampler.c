@@ -96,7 +96,6 @@ void
 ow_resampler_reset_buffers (struct ow_resampler *resampler)
 {
   size_t rso2p, bytes;
-  size_t frame_size = resampler->engine->o2p_frame_size;
   struct ow_context *context = resampler->engine->context;
 
   resampler->o2p_bufsize =
@@ -130,7 +129,7 @@ ow_resampler_reset_buffers (struct ow_resampler *resampler)
   resampler->reading_at_o2p_end = 0;
 
   rso2p = context->read_space (context->o2p_audio);
-  bytes = ow_bytes_to_frame_bytes (rso2p, frame_size);
+  bytes = ow_bytes_to_frame_bytes (rso2p, resampler->engine->o2p_frame_size);
   context->read (context->o2p_audio, NULL, bytes);
 }
 
