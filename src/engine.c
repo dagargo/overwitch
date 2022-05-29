@@ -486,16 +486,33 @@ ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
   engine->frames_per_transfer =
     OB_FRAMES_PER_BLOCK * engine->blocks_per_transfer;
 
+  engine->o2p_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc->outputs;
+  engine->p2o_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc->inputs;
+
+  debug_print (2, "o2p: USB in frame size: %zu B\n", engine->o2p_frame_size);
+  debug_print (2, "p2o: USB out frame size: %zu B\n", engine->p2o_frame_size);
+
   engine->usb.audio_in_blk_len =
     sizeof (struct ow_engine_usb_blk) +
-    sizeof (int32_t) * OB_FRAMES_PER_BLOCK * engine->device_desc->outputs;
+    OB_FRAMES_PER_BLOCK * engine->o2p_frame_size;
   engine->usb.audio_out_blk_len =
     sizeof (struct ow_engine_usb_blk) +
-    sizeof (int32_t) * OB_FRAMES_PER_BLOCK * engine->device_desc->inputs;
+    OB_FRAMES_PER_BLOCK * engine->p2o_frame_size;
 
-  debug_print (2, "USB in block size: %zu B\n", engine->usb.audio_in_blk_len);
-  debug_print (2, "USB out block size: %zu B\n",
+  debug_print (2, "o2p: USB in block size: %zu B\n",
+	       engine->usb.audio_in_blk_len);
+  debug_print (2, "p2o: USB out block size: %zu B\n",
 	       engine->usb.audio_out_blk_len);
+
+  engine->o2p_transfer_size =
+    engine->frames_per_transfer * engine->o2p_frame_size;
+  engine->p2o_transfer_size =
+    engine->frames_per_transfer * engine->p2o_frame_size;
+
+  debug_print (2, "o2p: audio transfer size: %zu B\n",
+	       engine->o2p_transfer_size);
+  debug_print (2, "p2o: audio transfer size: %zu B\n",
+	       engine->p2o_transfer_size);
 
   engine->usb.audio_frames_counter = 0;
   engine->usb.xfr_audio_in_data_len =
@@ -516,13 +533,6 @@ ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
       blk->header = htobe16 (0x07ff);
     }
 
-  engine->p2o_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc->inputs;
-  engine->o2p_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc->outputs;
-
-  engine->p2o_transfer_size =
-    engine->frames_per_transfer * engine->p2o_frame_size;
-  engine->o2p_transfer_size =
-    engine->frames_per_transfer * engine->o2p_frame_size;
   engine->p2o_transfer_buf = malloc (engine->p2o_transfer_size);
   engine->o2p_transfer_buf = malloc (engine->o2p_transfer_size);
   memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
