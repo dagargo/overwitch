@@ -258,7 +258,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
 			     (void *) engine->p2o_transfer_buf,
 			     engine->p2o_transfer_size);
     }
-  else
+  else if (rsp2o > engine->p2o_frame_size)	//At least 2 frames to apply resampling to
     {
       debug_print (2,
 		   "p2o: Audio ring buffer underflow (%zu < %zu). Resampling...\n",
@@ -275,8 +275,9 @@ set_usb_output_data_blks (struct ow_engine *engine)
 			engine->device_desc->inputs);
       if (res)
 	{
-	  error_print ("p2o: Error while resampling: %s\n",
-		       src_strerror (res));
+	  error_print
+	    ("p2o: Error while resampling %zu frames (%zu B, ratio %f): %s\n",
+	     frames, bytes, engine->p2o_data.src_ratio, src_strerror (res));
 	}
       else if (engine->p2o_data.output_frames_gen !=
 	       engine->frames_per_transfer)
