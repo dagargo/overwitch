@@ -230,8 +230,9 @@ resampler_o2p_reader (void *cb_data, float **data)
     {
       if (rso2p >= resampler->o2p_bufsize)
 	{
-	  debug_print (2, "o2p: Emptying buffer and running...\n");
 	  bytes = ow_bytes_to_frame_bytes (rso2p, resampler->o2p_bufsize);
+	  debug_print (2, "o2p: Emptying buffer (%zu B) and running...\n",
+		       bytes);
 	  resampler->engine->context->read (resampler->engine->
 					    context->o2p_audio, NULL, bytes);
 	  resampler->reading_at_o2p_end = 1;

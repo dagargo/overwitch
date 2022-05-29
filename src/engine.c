@@ -227,8 +227,9 @@ set_usb_output_data_blks (struct ow_engine *engine)
 	  if (rsp2o >= engine->p2o_transfer_size &&
 	      ow_engine_get_status (engine) == OW_ENGINE_STATUS_RUN)
 	    {
-	      debug_print (2, "p2o: Emptying buffer and running...\n");
 	      bytes = ow_bytes_to_frame_bytes (rsp2o, engine->p2o_frame_size);
+	      debug_print (2, "p2o: Emptying buffer (%zu B) and running...\n",
+			   bytes);
 	      engine->context->read (engine->context->p2o_audio, NULL, bytes);
 	      engine->reading_at_p2o_end = 1;
 	    }
