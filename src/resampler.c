@@ -59,7 +59,7 @@ ow_resampler_report_status (struct ow_resampler *resampler)
       o2p_max_latency_d = -1.0;
     }
 
-  if (p2o_audio_enabled)
+  if (status == OW_ENGINE_STATUS_RUN && p2o_audio_enabled)
     {
       p2o_latency_d =
 	p2o_latency_s * 1000.0 / (resampler->engine->p2o_frame_size *
