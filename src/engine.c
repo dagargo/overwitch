@@ -1077,7 +1077,7 @@ inline void
 ow_engine_wait (struct ow_engine *engine)
 {
   pthread_join (engine->audio_o2p_midi_thread, NULL);
-  if (engine->options.o2p_midi)
+  if (engine->options.p2o_midi)
     {
       pthread_join (engine->p2o_midi_thread, NULL);
     }
