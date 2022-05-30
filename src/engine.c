@@ -905,7 +905,7 @@ run_audio_o2p_midi (void *data)
 
   prepare_cycle_in_audio (engine);
   prepare_cycle_out_audio (engine);
-  if (engine->options.o2p_midi)
+  if (engine->context->options & OW_ENGINE_OPTION_O2P_MIDI)
     {
       prepare_cycle_in_midi (engine);
     }
@@ -956,6 +956,9 @@ run_audio_o2p_midi (void *data)
 ow_err_t
 ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 {
+  int audio_o2p_midi_thread = 0;
+  int p2o_midi_thread = 0;
+
   engine->context = context;
 
   if (!context->options)
@@ -963,9 +966,9 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
       return OW_GENERIC_ERROR;
     }
 
-  engine->options.o2p_audio = context->options & OW_ENGINE_OPTION_O2P_AUDIO;
-  if (engine->options.o2p_audio)
+  if (context->options & OW_ENGINE_OPTION_O2P_AUDIO)
     {
+      audio_o2p_midi_thread = 1;
       if (!context->write_space)
 	{
 	  return OW_INIT_ERROR_NO_WRITE_SPACE;
@@ -980,9 +983,9 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 	}
     }
 
-  engine->options.p2o_audio = context->options & OW_ENGINE_OPTION_P2O_AUDIO;
-  if (engine->options.p2o_audio)
+  if (context->options & OW_ENGINE_OPTION_P2O_AUDIO)
     {
+      audio_o2p_midi_thread = 1;
       if (!context->read_space)
 	{
 	  return OW_INIT_ERROR_NO_READ_SPACE;
@@ -997,9 +1000,9 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 	}
     }
 
-  engine->options.o2p_midi = context->options & OW_ENGINE_OPTION_O2P_MIDI;
-  if (engine->options.o2p_midi)
+  if (context->options & OW_ENGINE_OPTION_O2P_MIDI)
     {
+      audio_o2p_midi_thread = 1;
       if (!context->get_time)
 	{
 	  return OW_INIT_ERROR_NO_GET_TIME;
@@ -1010,9 +1013,9 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 	}
     }
 
-  engine->options.p2o_midi = context->options & OW_ENGINE_OPTION_P2O_MIDI;
-  if (engine->options.p2o_midi)
+  if (context->options & OW_ENGINE_OPTION_P2O_MIDI)
     {
+      p2o_midi_thread = 1;
       if (!context->get_time)
 	{
 	  return OW_INIT_ERROR_NO_GET_TIME;
@@ -1023,8 +1026,7 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 	}
     }
 
-  engine->options.dll = context->options & OW_ENGINE_OPTION_DLL;
-  if (engine->options.dll)
+  if (context->options & OW_ENGINE_OPTION_DLL)
     {
       if (!context->get_time)
 	{
@@ -1043,7 +1045,7 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
       context->priority = OW_DEFAULT_RT_PROPERTY;
     }
 
-  if (engine->options.p2o_midi)
+  if (p2o_midi_thread)
     {
       debug_print (1, "Starting p2o MIDI thread...\n");
       if (pthread_create (&engine->p2o_midi_thread, NULL, run_p2o_midi,
@@ -1056,8 +1058,7 @@ ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
 				engine->context->priority);
     }
 
-  if (engine->options.o2p_midi || engine->options.o2p_audio
-      || engine->options.p2o_audio)
+  if (audio_o2p_midi_thread)
     {
       debug_print (1, "Starting audio and o2p MIDI thread...\n");
       if (pthread_create (&engine->audio_o2p_midi_thread, NULL,
@@ -1077,7 +1078,7 @@ inline void
 ow_engine_wait (struct ow_engine *engine)
 {
   pthread_join (engine->audio_o2p_midi_thread, NULL);
-  if (engine->options.p2o_midi)
+  if (engine->context->options & OW_ENGINE_OPTION_P2O_MIDI)
     {
       pthread_join (engine->p2o_midi_thread, NULL);
     }
@@ -1137,7 +1138,7 @@ ow_engine_is_p2o_audio_enabled (struct ow_engine *engine)
 {
   int enabled;
   pthread_spin_lock (&engine->lock);
-  enabled = engine->options.p2o_audio;
+  enabled = (engine->context->options & OW_ENGINE_OPTION_P2O_AUDIO) != 0;
   pthread_spin_unlock (&engine->lock);
   return enabled;
 }
@@ -1149,7 +1150,7 @@ ow_engine_set_p2o_audio_enabled (struct ow_engine *engine, int enabled)
   if (last != enabled)
     {
       pthread_spin_lock (&engine->lock);
-      engine->options.p2o_audio = enabled;
+      engine->context->options |= OW_ENGINE_OPTION_P2O_AUDIO;
       pthread_spin_unlock (&engine->lock);
       debug_print (1, "Setting p2o audio to %d...\n", enabled);
     }

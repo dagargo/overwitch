@@ -213,14 +213,6 @@ struct ow_engine
   pthread_spinlock_t p2o_midi_lock;
   int p2o_midi_ready;
   struct ow_context *context;
-  struct
-  {
-    int o2p_audio;
-    int p2o_audio;
-    int o2p_midi;
-    int p2o_midi;
-    int dll;
-  } options;
 };
 
 struct ow_engine_usb_blk
