@@ -263,6 +263,11 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
   size_t wsp2o;
   static double p2o_acc = .0;
 
+  if (resampler->status < OW_RESAMPLER_STATUS_RUN)
+    {
+      return;
+    }
+
   memcpy (&resampler->p2o_queue
 	  [resampler->p2o_queue_len *
 	   resampler->engine->p2o_frame_size], resampler->p2o_buf_in,
@@ -282,11 +287,6 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
       error_print
 	("p2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
 	 resampler->p2o_ratio, gen_frames, frames);
-    }
-
-  if (resampler->status < OW_RESAMPLER_STATUS_RUN)
-    {
-      return;
     }
 
   bytes = gen_frames * resampler->engine->p2o_frame_size;

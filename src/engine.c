@@ -217,30 +217,19 @@ set_usb_output_data_blks (struct ow_engine *engine)
   size_t bytes;
   long frames;
   int res;
-  int p2o_enabled = ow_engine_is_p2o_audio_enabled (engine);
 
-  if (p2o_enabled)
+  rsp2o = engine->context->read_space (engine->context->p2o_audio);
+  if (!engine->reading_at_p2o_end)
     {
-      rsp2o = engine->context->read_space (engine->context->p2o_audio);
-      if (!engine->reading_at_p2o_end)
+      if (rsp2o >= engine->p2o_transfer_size &&
+	  ow_engine_get_status (engine) == OW_ENGINE_STATUS_RUN)
 	{
-	  if (rsp2o >= engine->p2o_transfer_size &&
-	      ow_engine_get_status (engine) == OW_ENGINE_STATUS_RUN)
-	    {
-	      bytes = ow_bytes_to_frame_bytes (rsp2o, engine->p2o_frame_size);
-	      debug_print (2, "p2o: Emptying buffer (%zu B) and running...\n",
-			   bytes);
-	      engine->context->read (engine->context->p2o_audio, NULL, bytes);
-	      engine->reading_at_p2o_end = 1;
-	    }
-	  goto set_blocks;
+	  bytes = ow_bytes_to_frame_bytes (rsp2o, engine->p2o_frame_size);
+	  debug_print (2, "p2o: Emptying buffer (%zu B) and running...\n",
+		       bytes);
+	  engine->context->read (engine->context->p2o_audio, NULL, bytes);
+	  engine->reading_at_p2o_end = 1;
 	}
-    }
-  else
-    {
-      engine->reading_at_p2o_end = 0;
-      debug_print (3, "p2o: Clearing buffer and stopping...\n");
-      memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
       goto set_blocks;
     }
 
@@ -1131,29 +1120,6 @@ ow_engine_set_status (struct ow_engine *engine, ow_engine_status_t status)
   pthread_spin_lock (&engine->lock);
   engine->status = status;
   pthread_spin_unlock (&engine->lock);
-}
-
-inline int
-ow_engine_is_p2o_audio_enabled (struct ow_engine *engine)
-{
-  int enabled;
-  pthread_spin_lock (&engine->lock);
-  enabled = (engine->context->options & OW_ENGINE_OPTION_P2O_AUDIO) != 0;
-  pthread_spin_unlock (&engine->lock);
-  return enabled;
-}
-
-inline void
-ow_engine_set_p2o_audio_enabled (struct ow_engine *engine, int enabled)
-{
-  int last = ow_engine_is_p2o_audio_enabled (engine);
-  if (last != enabled)
-    {
-      pthread_spin_lock (&engine->lock);
-      engine->context->options |= OW_ENGINE_OPTION_P2O_AUDIO;
-      pthread_spin_unlock (&engine->lock);
-      debug_print (1, "Setting p2o audio to %d...\n", enabled);
-    }
 }
 
 inline int
