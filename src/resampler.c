@@ -478,14 +478,14 @@ ow_resampler_destroy (struct ow_resampler *resampler)
 }
 
 ow_err_t
-ow_resampler_activate (struct ow_resampler *resampler,
-		       struct ow_context *context)
+ow_resampler_start (struct ow_resampler *resampler,
+		    struct ow_context *context)
 {
   context->dll = &resampler->dll.dll_ow;
   context->dll_init = (ow_dll_overwitch_init_t) ow_dll_overwitch_init;
   context->dll_inc = (ow_dll_overwitch_inc_t) ow_dll_overwitch_inc;
   context->options |= OW_ENGINE_OPTION_DLL;
-  return ow_engine_activate (resampler->engine, context);
+  return ow_engine_start (resampler->engine, context);
 }
 
 void

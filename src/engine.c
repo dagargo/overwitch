@@ -952,7 +952,7 @@ run_audio_o2p_midi (void *data)
 }
 
 ow_err_t
-ow_engine_activate (struct ow_engine *engine, struct ow_context *context)
+ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 {
   int audio_o2p_midi_thread = 0;
   int p2o_midi_thread = 0;

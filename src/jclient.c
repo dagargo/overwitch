@@ -547,7 +547,7 @@ jclient_run (struct jclient *jclient)
     OW_ENGINE_OPTION_O2P_AUDIO | OW_ENGINE_OPTION_P2O_AUDIO |
     OW_ENGINE_OPTION_O2P_MIDI | OW_ENGINE_OPTION_P2O_MIDI;
 
-  err = ow_resampler_activate (jclient->resampler, &jclient->context);
+  err = ow_resampler_start (jclient->resampler, &jclient->context);
   if (err)
     {
       goto cleanup_jack;
