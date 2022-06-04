@@ -403,11 +403,13 @@ jclient_run (struct jclient *jclient)
     jack_client_open (jclient->name, JackNoStartServer, &status, NULL);
   if (jclient->client == NULL)
     {
-      error_print ("jack_client_open() failed, status = 0x%2.0x\n", status);
-
       if (status & JackServerFailed)
 	{
 	  error_print ("Unable to connect to JACK server\n");
+	}
+      else
+	{
+	  error_print ("Unable to open client. Error 0x%2.0x\n", status);
 	}
       err = OW_GENERIC_ERROR;
       goto cleanup_resampler;
