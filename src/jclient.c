@@ -440,14 +440,20 @@ jclient_run (struct jclient *jclient)
 
   jack_on_info_shutdown (jclient->client, jclient_jack_shutdown_cb, jclient);
 
-  if (jack_set_sample_rate_callback
-      (jclient->client, jclient_set_sample_rate_cb, jclient))
+  //Sometimes these callbacks are not called when setting them so
+  jclient_set_buffer_size_cb (jack_get_buffer_size (jclient->client),
+			      jclient);
+  jclient_set_sample_rate_cb (jack_get_sample_rate (jclient->client),
+			      jclient);
+
+  if (jack_set_buffer_size_callback
+      (jclient->client, jclient_set_buffer_size_cb, jclient))
     {
       goto cleanup_jack;
     }
 
-  if (jack_set_buffer_size_callback
-      (jclient->client, jclient_set_buffer_size_cb, jclient))
+  if (jack_set_sample_rate_callback
+      (jclient->client, jclient_set_sample_rate_cb, jclient))
     {
       goto cleanup_jack;
     }
@@ -548,12 +554,6 @@ jclient_run (struct jclient *jclient)
     {
       goto cleanup_jack;
     }
-
-  //Sometimes these callbacks are not called so we need to do it.
-  jclient_set_sample_rate_cb (jack_get_sample_rate (jclient->client),
-			      jclient);
-  jclient_set_buffer_size_cb (jack_get_buffer_size (jclient->client),
-			      jclient);
 
   if (jack_activate (jclient->client))
     {

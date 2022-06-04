@@ -121,9 +121,13 @@ ow_resampler_reset_buffers (struct ow_resampler *resampler)
 
   resampler->reading_at_o2p_end = 0;
 
-  rso2p = context->read_space (context->o2p_audio);
-  bytes = ow_bytes_to_frame_bytes (rso2p, resampler->engine->o2p_frame_size);
-  context->read (context->o2p_audio, NULL, bytes);
+  if (context && context->o2p_audio)
+    {
+      rso2p = context->read_space (context->o2p_audio);
+      bytes =
+	ow_bytes_to_frame_bytes (rso2p, resampler->engine->o2p_frame_size);
+      context->read (context->o2p_audio, NULL, bytes);
+    }
 }
 
 void
@@ -534,7 +538,7 @@ ow_resampler_set_samplerate (struct ow_resampler *resampler,
 {
   if (resampler->samplerate != samplerate)
     {
-      if (resampler->p2o_buf_in)	//This means that ow_resampler_reset_buffers has been called and thus bufsize has been set.
+      if (resampler->p2o_aux)	//This means that ow_resampler_reset_buffers has been called and thus bufsize has been set.
 	{
 	  ow_resampler_reset_dll (resampler, samplerate);
 	}

@@ -475,6 +475,8 @@ ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
 {
   struct ow_engine_usb_blk *blk;
 
+  engine->context = NULL;
+
   pthread_spin_init (&engine->lock, PTHREAD_PROCESS_SHARED);
 
   engine->blocks_per_transfer = blocks_per_transfer;
