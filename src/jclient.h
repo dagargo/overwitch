@@ -43,15 +43,16 @@ struct jclient
   // Overwitch stuff
   struct ow_resampler *resampler;
   struct ow_context context;
-  // Thread end notifier
+  // Thread stuff
+  pthread_t thread;
   jclient_end_notifier_t end_notifier;
 };
 
 int jclient_init (struct jclient *);
 
-int jclient_run (struct jclient *);
+int jclient_activate (struct jclient *);
 
-void *jclient_run_thread (void *);
+void jclient_wait (struct jclient *);
 
 void jclient_stop (struct jclient *);
 

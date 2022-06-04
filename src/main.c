@@ -128,8 +128,7 @@ start_instance (struct overwitch_instance *instance)
   struct ow_engine *engine =
     ow_resampler_get_engine (instance->jclient.resampler);
   debug_print (1, "Starting %s...\n", ow_engine_get_overbridge_name (engine));
-  pthread_create (&instance->thread, NULL, jclient_run_thread,
-		  &instance->jclient);
+  jclient_activate (&instance->jclient);
 }
 
 static void
@@ -139,7 +138,7 @@ stop_instance (struct overwitch_instance *instance)
     ow_resampler_get_engine (instance->jclient.resampler);
   debug_print (1, "Stopping %s...\n", ow_engine_get_overbridge_name (engine));
   jclient_stop (&instance->jclient);
-  pthread_join (instance->thread, NULL);
+  jclient_wait (&instance->jclient);
 }
 
 static gboolean

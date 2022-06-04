@@ -578,8 +578,8 @@ cleanup_resampler:
   return err;
 }
 
-void *
-jclient_run_thread (void *data)
+static void *
+jclient_thread_runner (void *data)
 {
   struct jclient *jclient = data;
   jclient_run (jclient);
@@ -588,4 +588,17 @@ jclient_run_thread (void *data)
       jclient->end_notifier (jclient->bus, jclient->address);
     }
   return NULL;
+}
+
+int
+jclient_activate (struct jclient *jclient)
+{
+  return pthread_create (&jclient->thread, NULL, jclient_thread_runner,
+			 jclient);
+}
+
+void
+jclient_wait (struct jclient *jclient)
+{
+  pthread_join (jclient->thread, NULL);
 }

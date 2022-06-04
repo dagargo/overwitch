@@ -29,14 +29,8 @@
 #define DEFAULT_BLOCKS 24
 #define DEFAULT_PRIORITY -1	//With this value the default priority will be used.
 
-struct overwitch_instance
-{
-  pthread_t thread;
-  struct jclient jclient;
-};
-
-static size_t instance_count;
-static struct overwitch_instance *instances;
+static size_t jclient_count;
+static struct jclient *jclients;
 
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
@@ -55,18 +49,18 @@ signal_handler (int signo)
 {
   if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
     {
-      struct overwitch_instance *instance = instances;
-      for (int i = 0; i < instance_count; i++, instance++)
+      struct jclient *jclient = jclients;
+      for (int i = 0; i < jclient_count; i++, jclient++)
 	{
-	  jclient_stop (&instance->jclient);
+	  jclient_stop (jclient);
 	}
     }
   else if (signo == SIGUSR1)
     {
-      struct overwitch_instance *instance = instances;
-      for (int i = 0; i < instance_count; i++, instance++)
+      struct jclient *jclient = jclients;
+      for (int i = 0; i < jclient_count; i++, jclient++)
 	{
-	  ow_resampler_report_status (instance->jclient.resampler);
+	  ow_resampler_report_status (jclient->resampler);
 	}
     }
 }
@@ -83,29 +77,28 @@ run_single (int device_num, const char *device_name,
       return OW_GENERIC_ERROR;
     }
 
-  instance_count = 1;
-  instances = malloc (sizeof (struct overwitch_instance));
-  instances->jclient.bus = device->bus;
-  instances->jclient.address = device->address;
-  instances->jclient.blocks_per_transfer = blocks_per_transfer;
-  instances->jclient.quality = quality;
-  instances->jclient.priority = priority;
-  instances->jclient.end_notifier = NULL;
+  jclient_count = 1;
+  jclients = malloc (sizeof (struct jclient));
+  jclients->bus = device->bus;
+  jclients->address = device->address;
+  jclients->blocks_per_transfer = blocks_per_transfer;
+  jclients->quality = quality;
+  jclients->priority = priority;
+  jclients->end_notifier = NULL;
 
   free (device);
 
-  if (jclient_init (&instances->jclient))
+  if (jclient_init (jclients))
     {
       err = OW_GENERIC_ERROR;
       goto end;
     }
 
-  pthread_create (&instances->thread, NULL, jclient_run_thread,
-		  &instances->jclient);
-  pthread_join (instances->thread, NULL);
+  jclient_activate (jclients);
+  jclient_wait (jclients);
 
 end:
-  free (instances);
+  free (jclients);
   return err;
 }
 
@@ -114,45 +107,44 @@ run_all (int blocks_per_transfer, int quality, int priority)
 {
   struct ow_usb_device *devices;
   struct ow_usb_device *device;
-  struct overwitch_instance *instance;
-  ow_err_t err = ow_get_devices (&devices, &instance_count);
+  struct jclient *jclient;
+  ow_err_t err = ow_get_devices (&devices, &jclient_count);
 
   if (err)
     {
       return err;
     }
 
-  instances = malloc (sizeof (struct overwitch_instance) * instance_count);
+  jclients = malloc (sizeof (struct jclient) * jclient_count);
 
   device = devices;
-  instance = instances;
-  for (int i = 0; i < instance_count; i++, instance++, device++)
+  jclient = jclients;
+  for (int i = 0; i < jclient_count; i++, jclient++, device++)
     {
-      instance->jclient.bus = device->bus;
-      instance->jclient.address = device->address;
-      instance->jclient.blocks_per_transfer = blocks_per_transfer;
-      instance->jclient.quality = quality;
-      instance->jclient.priority = priority;
-      instance->jclient.end_notifier = NULL;
+      jclient->bus = device->bus;
+      jclient->address = device->address;
+      jclient->blocks_per_transfer = blocks_per_transfer;
+      jclient->quality = quality;
+      jclient->priority = priority;
+      jclient->end_notifier = NULL;
 
-      if (jclient_init (&instance->jclient))
+      if (jclient_init (jclient))
 	{
 	  continue;
 	}
 
-      pthread_create (&instance->thread, NULL, jclient_run_thread,
-		      &instance->jclient);
+      jclient_activate (jclient);
     }
 
-  ow_free_usb_device_list (devices, instance_count);
+  ow_free_usb_device_list (devices, jclient_count);
 
-  instance = instances;
-  for (int i = 0; i < instance_count; i++, instance++)
+  jclient = jclients;
+  for (int i = 0; i < jclient_count; i++, jclient++)
     {
-      pthread_join (instance->thread, NULL);
+      jclient_wait (jclient);
     }
 
-  free (instances);
+  free (jclients);
 
   return OW_OK;
 }
