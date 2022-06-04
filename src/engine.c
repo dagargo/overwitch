@@ -250,7 +250,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
   else if (rsp2o > engine->p2o_frame_size)	//At least 2 frames to apply resampling to
     {
       debug_print (2,
-		   "p2o: Audio ring buffer underflow (%zu < %zu). Resampling...\n",
+		   "p2o: Audio ring buffer underflow (%zu B < %zu B). Resampling...\n",
 		   rsp2o, engine->p2o_transfer_size);
       frames = rsp2o / engine->p2o_frame_size;
       bytes = frames * engine->p2o_frame_size;
@@ -276,6 +276,11 @@ set_usb_output_data_blks (struct ow_engine *engine)
 	     engine->p2o_data.src_ratio, engine->p2o_data.output_frames_gen,
 	     engine->frames_per_transfer);
 	}
+    }
+  else
+    {
+      debug_print (2, "p2o: Not enough data (%zu B). Waiting...\n", rsp2o);
+      memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
     }
 
 set_blocks:
@@ -932,6 +937,8 @@ run_audio_o2p_midi (void *data)
 	{
 	  break;
 	}
+
+      debug_print (1, "Rebooting engine...\n");
 
       rsp2o = engine->context->read_space (engine->context->p2o_audio);
       bytes = ow_bytes_to_frame_bytes (rsp2o, engine->p2o_frame_size);
