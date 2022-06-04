@@ -597,6 +597,7 @@ static void
 refresh_devices ()
 {
   struct ow_usb_device *devices, *device;
+  struct ow_resampler_reporter *reporter;
   struct overwitch_instance *instance;
   size_t devices_count;
   const char *status;
@@ -629,15 +630,12 @@ refresh_devices ()
       instance->jclient.bus = device->bus;
       instance->jclient.address = device->address;
       instance->jclient.priority = -1;
-      instance->jclient.reporter.callback =
-	(ow_resampler_report_t) set_report_data;
-      instance->jclient.reporter.data = instance;
-      instance->jclient.reporter.period = -1;
       instance->jclient.end_notifier = remove_jclient;
       instance->jclient.blocks_per_transfer =
 	gtk_spin_button_get_value_as_int (blocks_spin_button);
       instance->jclient.quality =
 	gtk_combo_box_get_active (quality_combo_box);
+
       instance->o2j_latency = 0.0;
       instance->j2o_latency = 0.0;
       instance->o2j_ratio = 1.0;
@@ -649,6 +647,10 @@ refresh_devices ()
 	  g_free (instance);
 	  continue;
 	}
+
+      reporter = ow_resampler_get_reporter (instance->jclient.resampler);
+      reporter->callback = (ow_resampler_report_t) set_report_data;
+      reporter->data = instance;
 
       debug_print (1, "Adding %s...\n", instance->jclient.name);
 

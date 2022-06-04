@@ -246,7 +246,7 @@ float *ow_resampler_get_o2p_audio_buffer (struct ow_resampler *);
 
 float *ow_resampler_get_p2o_audio_buffer (struct ow_resampler *);
 
-void ow_resampler_set_report_callback (struct ow_resampler *,
-				       const struct ow_resampler_reporter *);
+struct ow_resampler_reporter *ow_resampler_get_reporter (struct ow_resampler
+							 *);
 
 #endif

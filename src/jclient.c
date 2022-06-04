@@ -396,8 +396,6 @@ jclient_run (struct jclient *jclient)
   jclient->context.p2o_midi = NULL;
   jclient->context.o2p_midi = NULL;
 
-  ow_resampler_set_report_callback (jclient->resampler, &jclient->reporter);
-
   engine = ow_resampler_get_engine (jclient->resampler);
   desc = ow_engine_get_device_desc (engine);
 

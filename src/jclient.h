@@ -43,7 +43,6 @@ struct jclient
   // Overwitch stuff
   struct ow_resampler *resampler;
   struct ow_context context;
-  struct ow_resampler_reporter reporter;
   // Thread end notifier
   jclient_end_notifier_t end_notifier;
 };

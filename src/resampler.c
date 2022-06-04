@@ -575,13 +575,8 @@ ow_resampler_get_p2o_audio_buffer (struct ow_resampler *resampler)
   return resampler->p2o_buf_in;
 }
 
-void
-ow_resampler_set_report_callback (struct ow_resampler *resampler,
-				  const struct ow_resampler_reporter
-				  *reporter)
+struct ow_resampler_reporter *
+ow_resampler_get_reporter (struct ow_resampler *resampler)
 {
-  resampler->reporter.callback = reporter->callback;
-  resampler->reporter.data = reporter->data;
-  resampler->reporter.period =
-    reporter->period > 0 ? reporter->period : DEFAULT_REPORT_PERIOD;
+  return &resampler->reporter;
 }
