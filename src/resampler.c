@@ -526,6 +526,7 @@ ow_resampler_set_buffer_size (struct ow_resampler *resampler,
 {
   if (resampler->bufsize != bufsize)
     {
+      debug_print (1, "resampler buffer size: %d\n", bufsize);
       resampler->bufsize = bufsize;
       ow_resampler_reset_buffers (resampler);
       ow_resampler_reset_dll (resampler, resampler->samplerate);
@@ -538,6 +539,7 @@ ow_resampler_set_samplerate (struct ow_resampler *resampler,
 {
   if (resampler->samplerate != samplerate)
     {
+      debug_print (1, "resampler sample rate: %d\n", samplerate);
       if (resampler->p2o_aux)	//This means that ow_resampler_reset_buffers has been called and thus bufsize has been set.
 	{
 	  ow_resampler_reset_dll (resampler, samplerate);
