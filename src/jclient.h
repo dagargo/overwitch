@@ -53,7 +53,7 @@ int jclient_run (struct jclient *);
 
 void *jclient_run_thread (void *);
 
-void jclient_exit (struct jclient *);
+void jclient_stop (struct jclient *);
 
 void jclient_print_latencies (struct ow_resampler *, const char *);
 

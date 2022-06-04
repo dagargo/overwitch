@@ -58,7 +58,7 @@ signal_handler (int signo)
       struct overwitch_instance *instance = instances;
       for (int i = 0; i < instance_count; i++, instance++)
 	{
-	  jclient_exit (&instance->jclient);
+	  jclient_stop (&instance->jclient);
 	}
     }
   else if (signo == SIGUSR1)

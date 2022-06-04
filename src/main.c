@@ -138,7 +138,7 @@ stop_instance (struct overwitch_instance *instance)
   struct ow_engine *engine =
     ow_resampler_get_engine (instance->jclient.resampler);
   debug_print (1, "Stopping %s...\n", ow_engine_get_overbridge_name (engine));
-  jclient_exit (&instance->jclient);
+  jclient_stop (&instance->jclient);
   pthread_join (instance->thread, NULL);
 }
 

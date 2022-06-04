@@ -72,7 +72,7 @@ jclient_jack_shutdown_cb (jack_status_t code, const char *reason,
 			  void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  jclient_exit (jclient);
+  jclient_stop (jclient);
 }
 
 static int
@@ -348,7 +348,7 @@ set_rt_priority (pthread_t * thread, int priority)
 }
 
 void
-jclient_exit (struct jclient *jclient)
+jclient_stop (struct jclient *jclient)
 {
   if (jclient->client)
     {
