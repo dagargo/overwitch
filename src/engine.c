@@ -292,7 +292,11 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
 {
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
-      set_usb_input_data_blks (xfr->user_data);
+      struct ow_engine *engine = xfr->user_data;
+      if (engine->context->options & OW_ENGINE_OPTION_O2P_AUDIO)
+	{
+	  set_usb_input_data_blks (engine);
+	}
     }
   else
     {
@@ -311,7 +315,13 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
       error_print ("p2o: Error on USB audio transfer: %s\n",
 		   libusb_strerror (xfr->status));
     }
-  set_usb_output_data_blks (xfr->user_data);
+
+  struct ow_engine *engine = xfr->user_data;
+  if (engine->context->options & OW_ENGINE_OPTION_P2O_AUDIO)
+    {
+      set_usb_output_data_blks (engine);
+    }
+
   // We have to make sure that the out cycle is always started after its callback
   // Race condition on slower systems!
   prepare_cycle_out_audio (xfr->user_data);
@@ -899,6 +909,7 @@ run_audio_o2p_midi (void *data)
 
   //status == OW_ENGINE_STATUS_BOOT
 
+  //Both these calls always need to be called and can not be skipped.
   prepare_cycle_in_audio (engine);
   prepare_cycle_out_audio (engine);
   if (engine->context->options & OW_ENGINE_OPTION_O2P_MIDI)
@@ -967,6 +978,10 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
   if (context->options & OW_ENGINE_OPTION_O2P_AUDIO)
     {
       audio_o2p_midi_thread = 1;
+      if (!context->read_space)
+	{
+	  return OW_INIT_ERROR_NO_READ_SPACE;
+	}
       if (!context->write_space)
 	{
 	  return OW_INIT_ERROR_NO_WRITE_SPACE;
