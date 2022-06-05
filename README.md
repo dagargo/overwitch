@@ -8,7 +8,7 @@ The papers [Controlling adaptive resampling](https://kokkinizita.linuxaudio.org/
 
 At the moment, it provides support for all Overbridge 2 devices, which are Analog Four MKII, Analog Rytm MKII, Digitakt, Digitone, Digitone Keys, Analog Heat and Analog Heat MKII.
 
-Overwitch consists of 3 different binaries: `overwitch`, which is a GUI application, `overwitch-cli` which offers the same functionality for the command line; and `overwitch-dump` which  does not integrate with JACK at all but streams all the tracks to a WAVE file.
+Overwitch consists of 3 different binaries: `overwitch`, which is a GUI application, `overwitch-cli` which offers the same functionality for the command line; and `overwitch-record` which  does not integrate with JACK at all but streams all the tracks to a WAVE file.
 
 ## Installation
 
@@ -117,12 +117,12 @@ Options:
   --help, -h
 ```
 
-### overwitch-dump
+### overwitch-record
 
 This small utility let the user record the audio output from the Overbridge devices into a WAVE file with the following command. To stop, just press `Ctrl+C`.
 
 ```
-$ overwitch-dump -d Digitakt
+$ overwitch-record -d Digitakt
 ^C
 2106720 frames written
 Digitakt_dump_2022-04-20T19:20:19.wav file created
@@ -131,7 +131,7 @@ Digitakt_dump_2022-04-20T19:20:19.wav file created
 By default, it records all the output tracks from the Overbridge device but it is possible to select which ones to record. First, list the devices in verbose mode to see all the available tracks.
 
 ```
-$ overwitch-dump -l -v
+$ overwitch-record -l -v
 DEBUG:overwitch.c:206:(ow_get_devices): Found Digitakt (bus 001, address 005, ID 1935:000c)
 0: Digitakt (ID 1935:000c) at bus 001, address 005
   Inputs:
@@ -155,7 +155,7 @@ DEBUG:overwitch.c:206:(ow_get_devices): Found Digitakt (bus 001, address 005, ID
 Then, just select the output tracks to record as this. `0` means that the track is not recorded while any other character means it will. In this example, we are recording tracks 1, 2, 5 and 6.
 
 ```
-$ overwitch-dump -d Digitakt -m 001100110000
+$ overwitch-record -d Digitakt -m 001100110000
 ^C
 829920 frames written
 Digitakt_dump_2022-04-20T19:33:30.wav file created
@@ -166,9 +166,9 @@ It is not neccessary to provide all tracks, meaning that using `00110011` as the
 You can list all the available options with `-h`.
 
 ```
-$ overwitch-dump -h
+$ overwitch-record -h
 overwitch 1.0
-Usage: overwitch-dump [options]
+Usage: overwitch-record [options]
 Options:
   --use-device-number, -n value
   --use-device, -d value

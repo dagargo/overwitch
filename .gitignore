@@ -34,8 +34,7 @@ test-driver
 *.gcda
 *.dirstamp
 src/overwitch
-src/overwitch-cli
-src/overwitch-dump
+src/overwitch-*
 test/tests
 test/*.trs
 config.guess

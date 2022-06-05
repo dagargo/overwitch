@@ -23,14 +23,15 @@
 
 void
 print_help (const char *executable_path, const char *package_string,
-	    struct option *option)
+	    struct option *option, const char *fixed_params)
 {
   char *exec_name;
   char *executable_path_copy = strdup (executable_path);
 
   fprintf (stderr, "%s\n", package_string);
   exec_name = basename (executable_path_copy);
-  fprintf (stderr, "Usage: %s [options]\n", exec_name);
+  fprintf (stderr, "Usage: %s [options]%s%s\n", exec_name,
+	   fixed_params ? " " : "", fixed_params ? fixed_params : "");
   fprintf (stderr, "Options:\n");
   while (option->name)
     {

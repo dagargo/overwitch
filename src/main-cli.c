@@ -226,7 +226,7 @@ main (int argc, char *argv[])
 	  vflg++;
 	  break;
 	case 'h':
-	  print_help (argv[0], PACKAGE_STRING, options);
+	  print_help (argv[0], PACKAGE_STRING, options, NULL);
 	  exit (EXIT_SUCCESS);
 	case '?':
 	  errflg++;
@@ -235,7 +235,7 @@ main (int argc, char *argv[])
 
   if (errflg > 0)
     {
-      print_help (argv[0], PACKAGE_STRING, options);
+      print_help (argv[0], PACKAGE_STRING, options, NULL);
       exit (EXIT_FAILURE);
     }
 

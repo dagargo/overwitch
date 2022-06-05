@@ -26,6 +26,6 @@
 #include <getopt.h>
 #include "overwitch.h"
 
-void print_help (const char *, const char *, struct option *);
+void print_help (const char *, const char *, struct option *, const char *);
 
 ow_err_t print_devices ();

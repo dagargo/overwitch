@@ -1,5 +1,5 @@
 /*
- *   main-dump.c
+ *   main-record.c
  *   Copyright (C) 2022 David García Goñi <dagargo@gmail.com>
  *
  *   This file is part of Overwitch.
@@ -217,7 +217,7 @@ signal_handler (int signo)
 }
 
 static int
-run_dump (int device_num, const char *device_name)
+run_record (int device_num, const char *device_name)
 {
   char curr_time_string[MAX_FILENAME_LEN >> 1];
   time_t curr_time;
@@ -273,7 +273,7 @@ run_dump (int device_num, const char *device_name)
   localtime_r (&curr_time, &tm);
   strftime (curr_time_string, MAX_FILENAME_LEN, "%FT%T", &tm);
 
-  snprintf (filename, MAX_FILENAME_LEN, "%s_dump_%s.wav", desc->name,
+  snprintf (filename, MAX_FILENAME_LEN, "%s_%s.wav", desc->name,
 	    curr_time_string);
 
   debug_print (1, "Creating sample (%d channels)...\n", buffer.outputs);
@@ -306,7 +306,7 @@ run_dump (int device_num, const char *device_name)
   pthread_spin_init (&buffer.lock, PTHREAD_PROCESS_SHARED);
   if (pthread_create (&buffer.pthread, NULL, dump_buffer, NULL))
     {
-      error_print ("Could not start dump thread\n");
+      error_print ("Could not start recording thread\n");
       goto cleanup;
     }
   ow_set_thread_rt_priority (buffer.pthread, OW_DEFAULT_RT_PROPERTY);
@@ -381,7 +381,7 @@ main (int argc, char *argv[])
 	  vflg++;
 	  break;
 	case 'h':
-	  print_help (argv[0], PACKAGE_STRING, options);
+	  print_help (argv[0], PACKAGE_STRING, options, NULL);
 	  exit (EXIT_SUCCESS);
 	case '?':
 	  errflg++;
@@ -390,7 +390,7 @@ main (int argc, char *argv[])
 
   if (errflg > 0)
     {
-      print_help (argv[0], PACKAGE_STRING, options);
+      print_help (argv[0], PACKAGE_STRING, options, NULL);
       exit (EXIT_FAILURE);
     }
 
@@ -418,7 +418,7 @@ main (int argc, char *argv[])
 
   if (nflg + dflg == 1)
     {
-      return run_dump (device_num, device_name);
+      return run_record (device_num, device_name);
     }
   else
     {
