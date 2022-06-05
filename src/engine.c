@@ -803,10 +803,10 @@ static const char *ob_err_strgs[] = {
   "'write_space' not set in context",
   "'read' not set in context",
   "'write' not set in context",
-  "'p2o_audio_buf' not set in context",
-  "'o2p_audio_buf' not set in context",
-  "'p2o_midi_buf' not set in context",
-  "'o2p_midi_buf' not set in context",
+  "'o2p_audio' not set in context",
+  "'p2o_audio' not set in context",
+  "'o2p_midi' not set in context",
+  "'p2o_midi' not set in context",
   "'get_time' not set in context",
   "'dll' not set in context"
 };
@@ -921,7 +921,8 @@ run_audio_o2p_midi (void *data)
     {
       engine->p2o_latency = 0;
       engine->p2o_max_latency = 0;
-      engine->reading_at_p2o_end = 0;
+      engine->reading_at_p2o_end =
+	engine->context->options & OW_ENGINE_OPTION_DLL ? 0 : 1;
       engine->o2p_latency = 0;
       engine->o2p_max_latency = 0;
 

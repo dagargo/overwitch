@@ -8,7 +8,7 @@ The papers [Controlling adaptive resampling](https://kokkinizita.linuxaudio.org/
 
 At the moment, it provides support for all Overbridge 2 devices, which are Analog Four MKII, Analog Rytm MKII, Digitakt, Digitone, Digitone Keys, Analog Heat and Analog Heat MKII.
 
-Overwitch consists of 3 different binaries: `overwitch`, which is a GUI application, `overwitch-cli` which offers the same functionality for the command line; and `overwitch-record` which  does not integrate with JACK at all but streams all the tracks to a WAVE file.
+Overwitch consists of 4 different binaries: `overwitch`, which is a GUI application, `overwitch-cli` which offers the same functionality for the command line; and `overwitch-play` and `overwitch-record` which do not integrate with JACK at all but stream the audio from and to a WAVE file.
 
 ## Installation
 
@@ -39,7 +39,7 @@ As this will install `jackd2`, you would be asked to configure it to be run with
 
 ## Usage
 
-Overwitch contains two JACK clients, one for the desktop and one for the command line, and a simple recording utility for the command line.
+Overwitch contains two JACK clients, one for the desktop and one for the command line and a recording and playing utility for the command line.
 
 Regarding the JACK clients, latency needs to be under control and it can be tuned with the following parameters.
 
@@ -115,6 +115,14 @@ Options:
   --list-devices, -l
   --verbose, -v
   --help, -h
+```
+
+### overwitch-play
+
+This small utility let the user play an audio file thru the Overbridge devices.
+
+```
+$ overwitch-play -d Digitakt audio_file
 ```
 
 ### overwitch-record
