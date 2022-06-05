@@ -94,7 +94,7 @@ run_single (int device_num, const char *device_name,
       goto end;
     }
 
-  jclient_activate (jclients);
+  jclient_start (jclients);
   jclient_wait (jclients);
 
 end:
@@ -133,7 +133,7 @@ run_all (int blocks_per_transfer, int quality, int priority)
 	  continue;
 	}
 
-      jclient_activate (jclient);
+      jclient_start (jclient);
     }
 
   ow_free_usb_device_list (devices, jclient_count);

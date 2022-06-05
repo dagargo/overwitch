@@ -380,6 +380,12 @@ jclient_init (struct jclient *jclient)
   return 0;
 }
 
+void
+jclient_destroy (struct jclient *jclient)
+{
+  ow_resampler_destroy (jclient->resampler);
+}
+
 int
 jclient_run (struct jclient *jclient)
 {
@@ -411,8 +417,7 @@ jclient_run (struct jclient *jclient)
 	{
 	  error_print ("Unable to open client. Error 0x%2.0x\n", status);
 	}
-      err = OW_GENERIC_ERROR;
-      goto cleanup_resampler;
+      return OW_GENERIC_ERROR;
     }
 
   if (status & JackServerStarted)
@@ -575,8 +580,6 @@ cleanup_jack:
   jack_client_close (jclient->client);
   free (jclient->output_ports);
   free (jclient->input_ports);
-cleanup_resampler:
-  ow_resampler_destroy (jclient->resampler);
   return err;
 }
 
@@ -593,7 +596,7 @@ jclient_thread_runner (void *data)
 }
 
 int
-jclient_activate (struct jclient *jclient)
+jclient_start (struct jclient *jclient)
 {
   return pthread_create (&jclient->thread, NULL, jclient_thread_runner,
 			 jclient);

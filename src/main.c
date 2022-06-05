@@ -61,7 +61,6 @@ enum list_store_columns
 
 struct overwitch_instance
 {
-  pthread_t thread;
   gdouble o2j_latency;
   gdouble j2o_latency;
   gdouble o2j_latency_max;
@@ -128,7 +127,7 @@ start_instance (struct overwitch_instance *instance)
   struct ow_engine *engine =
     ow_resampler_get_engine (instance->jclient.resampler);
   debug_print (1, "Starting %s...\n", ow_engine_get_overbridge_name (engine));
-  jclient_activate (&instance->jclient);
+  jclient_start (&instance->jclient);
 }
 
 static void
@@ -139,6 +138,7 @@ stop_instance (struct overwitch_instance *instance)
   debug_print (1, "Stopping %s...\n", ow_engine_get_overbridge_name (engine));
   jclient_stop (&instance->jclient);
   jclient_wait (&instance->jclient);
+  jclient_destroy (&instance->jclient);
 }
 
 static gboolean
@@ -570,7 +570,9 @@ remove_jclient_bg (guint * id)
       if (instance->jclient.bus == bus
 	  && instance->jclient.address == address)
 	{
-	  pthread_join (instance->thread, NULL);
+	  jclient_wait (&instance->jclient);
+	  jclient_destroy (&instance->jclient);
+	  free (instance);
 	  gtk_list_store_remove (status_list_store, &iter);
 	  break;
 	}

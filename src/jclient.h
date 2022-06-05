@@ -50,7 +50,9 @@ struct jclient
 
 int jclient_init (struct jclient *);
 
-int jclient_activate (struct jclient *);
+int jclient_start (struct jclient *);
+
+void jclient_destroy (struct jclient *);
 
 void jclient_wait (struct jclient *);
 
