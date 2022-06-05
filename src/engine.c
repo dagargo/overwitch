@@ -1052,7 +1052,7 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 	  error_print ("Could not start MIDI thread\n");
 	  return OW_GENERIC_ERROR;
 	}
-      context->set_rt_priority (&engine->p2o_midi_thread,
+      context->set_rt_priority (engine->p2o_midi_thread,
 				engine->context->priority);
     }
 
@@ -1065,7 +1065,7 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 	  error_print ("Could not start device thread\n");
 	  return OW_GENERIC_ERROR;
 	}
-      context->set_rt_priority (&engine->audio_o2p_midi_thread,
+      context->set_rt_priority (engine->audio_o2p_midi_thread,
 				engine->context->priority);
     }
 

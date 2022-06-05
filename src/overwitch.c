@@ -283,10 +283,10 @@ ow_get_usb_device_from_device_attrs (int device_num, const char *device_name,
 }
 
 void
-ow_set_thread_rt_priority (pthread_t * thread, int p)
+ow_set_thread_rt_priority (pthread_t thread, int p)
 {
   struct sched_param default_rt_param = {
     .sched_priority = p
   };
-  pthread_setschedparam (*thread, SCHED_FIFO, &default_rt_param);
+  pthread_setschedparam (thread, SCHED_FIFO, &default_rt_param);
 }

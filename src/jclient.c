@@ -338,9 +338,9 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 }
 
 static void
-set_rt_priority (pthread_t * thread, int priority)
+set_rt_priority (pthread_t thread, int priority)
 {
-  int err = jack_acquire_real_time_scheduling (*thread, priority);
+  int err = jack_acquire_real_time_scheduling (thread, priority);
   if (err)
     {
       error_print ("Could not set real time priority\n");

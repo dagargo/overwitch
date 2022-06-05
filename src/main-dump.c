@@ -309,7 +309,7 @@ run_dump (int device_num, const char *device_name)
       error_print ("Could not start dump thread\n");
       goto cleanup;
     }
-  ow_set_thread_rt_priority (&buffer.pthread, OW_DEFAULT_RT_PROPERTY);
+  ow_set_thread_rt_priority (buffer.pthread, OW_DEFAULT_RT_PROPERTY);
 
   ow_engine_wait (engine);
 

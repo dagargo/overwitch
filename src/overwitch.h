@@ -44,7 +44,7 @@ typedef double (*ow_get_time_t) ();	//Time in seconds
 typedef size_t (*ow_dll_overwitch_init_t) (void *, double, int, double);
 typedef size_t (*ow_dll_overwitch_inc_t) (void *, int, double);
 
-typedef void (*ow_set_rt_priority_t) (pthread_t *, int);
+typedef void (*ow_set_rt_priority_t) (pthread_t, int);
 
 typedef void (*ow_resampler_report_t) (void *, double, double, double, double,
 				       double, double);
@@ -177,7 +177,7 @@ int ow_get_device_desc_from_vid_pid (uint16_t, uint16_t,
 int ow_get_usb_device_from_device_attrs (int, const char *,
 					 struct ow_usb_device **);
 
-void ow_set_thread_rt_priority (pthread_t *, int);
+void ow_set_thread_rt_priority (pthread_t, int);
 
 //Engine
 ow_err_t ow_engine_init_from_bus_address (struct ow_engine **, uint8_t,
