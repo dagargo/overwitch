@@ -310,7 +310,16 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
 static void LIBUSB_CALL
 cb_xfr_audio_out (struct libusb_transfer *xfr)
 {
-  if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
+  if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
+    {
+      if (xfr->length < xfr->actual_length)
+	{
+	  error_print
+	    ("p2o: incomplete USB audio transfer (%d B < %d B)\n",
+	     xfr->length, xfr->actual_length);
+	}
+    }
+  else
     {
       error_print ("p2o: Error on USB audio transfer: %s\n",
 		   libusb_strerror (xfr->status));
