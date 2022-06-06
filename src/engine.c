@@ -294,6 +294,13 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
 {
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
+      if (xfr->length < xfr->actual_length)
+	{
+	  error_print
+	    ("o2p: incomplete USB audio transfer (%d B < %d B)\n",
+	     xfr->length, xfr->actual_length);
+	}
+
       struct ow_engine *engine = xfr->user_data;
       if (engine->context->options & OW_ENGINE_OPTION_O2P_AUDIO)
 	{
