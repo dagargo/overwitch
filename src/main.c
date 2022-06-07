@@ -824,6 +824,7 @@ main (int argc, char *argv[])
   sigaction (SIGHUP, &action, NULL);
   sigaction (SIGINT, &action, NULL);
   sigaction (SIGTERM, &action, NULL);
+  sigaction (SIGTSTP, &action, NULL);
 
   if (snprintf
       (glade_file, PATH_MAX, "%s/%s/res/gui.glade", DATADIR,

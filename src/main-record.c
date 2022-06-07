@@ -209,7 +209,8 @@ signal_handler (int signo)
 	    }
 	}
     }
-  if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
+  if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM
+      || signo == SIGTSTP)
     {
       ow_engine_stop (engine);
       fprintf (stderr, "%s file created\n", filename);
@@ -352,6 +353,7 @@ main (int argc, char *argv[])
   sigaction (SIGINT, &action, NULL);
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGUSR1, &action, NULL);
+  sigaction (SIGTSTP, &action, NULL);
 
   while ((opt = getopt_long (argc, argv, "n:d:m:b:lvh",
 			     options, &long_index)) != -1)

@@ -47,7 +47,8 @@ static struct option options[] = {
 static void
 signal_handler (int signo)
 {
-  if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
+  if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM
+      || signo == SIGTSTP)
     {
       struct jclient *jclient = jclients;
       for (int i = 0; i < jclient_count; i++, jclient++)
@@ -171,6 +172,7 @@ main (int argc, char *argv[])
   sigaction (SIGINT, &action, NULL);
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGUSR1, &action, NULL);
+  sigaction (SIGTSTP, &action, NULL);
 
   while ((opt = getopt_long (argc, argv, "n:d:q:b:p:lvh",
 			     options, &long_index)) != -1)

@@ -123,7 +123,8 @@ signal_handler (int signo)
 		   desc->input_track_names[i], max[i], min[i]);
 	}
     }
-  if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM)
+  if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM
+      || signo == SIGTSTP)
     {
       ow_engine_stop (engine);
     }
@@ -217,6 +218,7 @@ main (int argc, char *argv[])
   sigaction (SIGINT, &action, NULL);
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGUSR1, &action, NULL);
+  sigaction (SIGTSTP, &action, NULL);
 
   while ((opt = getopt_long (argc, argv, "n:d:lvh",
 			     options, &long_index)) != -1)
