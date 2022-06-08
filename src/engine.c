@@ -309,9 +309,8 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
     }
   else
     {
-      error_print ("o2p: Error on USB audio transfer (%d, %s): %s\n",
-		   xfr->status, libusb_error_name (xfr->status),
-		   libusb_strerror (xfr->status));
+      error_print ("o2p: Error on USB audio transfer: %s\n",
+		   libusb_error_name (xfr->status));
     }
   // start new cycle even if this one did not succeed
   prepare_cycle_in_audio (xfr->user_data);
@@ -331,9 +330,8 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
     }
   else
     {
-      error_print ("p2o: Error on USB audio transfer (%d, %s): %s\n",
-		   xfr->status, libusb_error_name (xfr->status),
-		   libusb_strerror (xfr->status));
+      error_print ("p2o: Error on USB audio transfer: %s\n",
+		   libusb_error_name (xfr->status));
     }
 
   struct ow_engine *engine = xfr->user_data;
