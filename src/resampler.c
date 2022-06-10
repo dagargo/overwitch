@@ -393,7 +393,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
 
       if (resampler->status == OW_RESAMPLER_STATUS_BOOT)
 	{
-	  debug_print (2, "Tunning resampler...\n");
+	  debug_print (2, "Tuning resampler...\n");
 	  ow_dll_primary_set_loop_filter (dll, 0.05, resampler->bufsize,
 					  resampler->samplerate);
 	  resampler->status = OW_RESAMPLER_STATUS_TUNE;

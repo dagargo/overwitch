@@ -114,7 +114,7 @@ get_status_string (ow_resampler_status_t status)
     case OW_RESAMPLER_STATUS_BOOT:
       return "Booting";
     case OW_RESAMPLER_STATUS_TUNE:
-      return "Tunning";
+      return "Tuning";
     case OW_RESAMPLER_STATUS_RUN:
       return "Running";
     }
