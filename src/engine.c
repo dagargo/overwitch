@@ -219,20 +219,36 @@ set_usb_output_data_blks (struct ow_engine *engine)
   size_t bytes;
   long frames;
   int res;
+  int p2o_enabled = ow_engine_is_option (engine, OW_ENGINE_OPTION_P2O_AUDIO);
 
-  rsp2o = engine->context->read_space (engine->context->p2o_audio);
-  if (!engine->reading_at_p2o_end)
+  if (p2o_enabled)
     {
-      if (rsp2o >= engine->p2o_transfer_size &&
-	  ow_engine_get_status (engine) == OW_ENGINE_STATUS_RUN)
+      rsp2o = engine->context->read_space (engine->context->p2o_audio);
+      if (!engine->reading_at_p2o_end)
 	{
-	  bytes = ow_bytes_to_frame_bytes (rsp2o, engine->p2o_frame_size);
-	  debug_print (2, "p2o: Emptying buffer (%zu B) and running...\n",
-		       bytes);
-	  engine->context->read (engine->context->p2o_audio, NULL, bytes);
-	  engine->reading_at_p2o_end = 1;
+	  if (rsp2o >= engine->p2o_transfer_size &&
+	      ow_engine_get_status (engine) == OW_ENGINE_STATUS_RUN)
+	    {
+	      bytes = ow_bytes_to_frame_bytes (rsp2o, engine->p2o_frame_size);
+	      debug_print (2, "p2o: Emptying buffer (%zu B) and running...\n",
+			   bytes);
+	      engine->context->read (engine->context->p2o_audio, NULL, bytes);
+	      engine->reading_at_p2o_end = 1;
+	    }
+	  goto set_blocks;
 	}
-      goto set_blocks;
+    }
+  else
+    {
+      if (engine->reading_at_p2o_end)
+	{
+	  debug_print (3, "p2o: Clearing buffer and stopping...\n");
+	  memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
+	  engine->reading_at_p2o_end = 0;
+	  engine->p2o_max_latency = 0;
+	  goto set_blocks;
+	}
+      return;
     }
 
   pthread_spin_lock (&engine->lock);
@@ -334,11 +350,7 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
 		   libusb_error_name (xfr->status));
     }
 
-  struct ow_engine *engine = xfr->user_data;
-  if (engine->context->options & OW_ENGINE_OPTION_P2O_AUDIO)
-    {
-      set_usb_output_data_blks (engine);
-    }
+  set_usb_output_data_blks (xfr->user_data);
 
   // We have to make sure that the out cycle is always started after its callback
   // Race condition on slower systems!
@@ -1165,6 +1177,37 @@ ow_engine_set_status (struct ow_engine *engine, ow_engine_status_t status)
   pthread_spin_lock (&engine->lock);
   engine->status = status;
   pthread_spin_unlock (&engine->lock);
+}
+
+inline int
+ow_engine_is_option (struct ow_engine *engine, ow_engine_option_t option)
+{
+  int enabled;
+  pthread_spin_lock (&engine->lock);
+  enabled = (engine->context->options & option) != 0;
+  pthread_spin_unlock (&engine->lock);
+  return enabled;
+}
+
+inline void
+ow_engine_set_option (struct ow_engine *engine, ow_engine_option_t option,
+		      int enabled)
+{
+  int last = ow_engine_is_option (engine, option);
+  if (last != enabled)
+    {
+      pthread_spin_lock (&engine->lock);
+      if (enabled)
+	{
+	  engine->context->options |= option;
+	}
+      else
+	{
+	  engine->context->options &= ~option;
+	}
+      pthread_spin_unlock (&engine->lock);
+      debug_print (1, "Setting option %d to %d...\n", option, enabled);
+    }
 }
 
 inline int

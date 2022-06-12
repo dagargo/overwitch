@@ -68,6 +68,26 @@ jclient_thread_xrun_cb (void *cb_data)
 }
 
 static void
+jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
+			 void *cb_data)
+{
+  struct jclient *jclient = cb_data;
+  int p2o_enabled = 0;
+  struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
+  const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
+  //We only check for j2o (input) ports as o2j must always be running.
+  for (int i = 0; i < desc->inputs; i++)
+    {
+      if (jack_port_connected (jclient->input_ports[i]))
+	{
+	  p2o_enabled = 1;
+	  break;
+	}
+    }
+  ow_engine_set_option (engine, OW_ENGINE_OPTION_P2O_AUDIO, p2o_enabled);
+}
+
+static void
 jclient_jack_shutdown_cb (jack_status_t code, const char *reason,
 			  void *cb_data)
 {
@@ -321,14 +341,17 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 
   //p2o
 
-  for (int i = 0; i < desc->inputs; i++)
+  if (ow_engine_is_option (engine, OW_ENGINE_OPTION_P2O_AUDIO))
     {
-      buffer[i] = jack_port_get_buffer (jclient->input_ports[i], nframes);
-    }
+      for (int i = 0; i < desc->inputs; i++)
+	{
+	  buffer[i] = jack_port_get_buffer (jclient->input_ports[i], nframes);
+	}
 
-  f = ow_resampler_get_p2o_audio_buffer (jclient->resampler);
-  jclient_copy_j2o_audio (f, nframes, buffer, desc);
-  ow_resampler_write_audio (jclient->resampler);
+      f = ow_resampler_get_p2o_audio_buffer (jclient->resampler);
+      jclient_copy_j2o_audio (f, nframes, buffer, desc);
+      ow_resampler_write_audio (jclient->resampler);
+    }
 
   jclient_o2j_midi (jclient, nframes);
 
@@ -443,6 +466,13 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
+  if (jack_set_port_connect_callback (jclient->client,
+				      jclient_port_connect_cb, jclient))
+    {
+      error_print
+	("Cannot set port connect callback so j2o audio will not be possible\n");
+    }
+
   jack_on_info_shutdown (jclient->client, jclient_jack_shutdown_cb, jclient);
 
   //Sometimes these callbacks are not called when setting them so
@@ -551,8 +581,8 @@ jclient_run (struct jclient *jclient)
   jclient->context.priority = jclient->priority;
 
   jclient->context.options =
-    OW_ENGINE_OPTION_O2P_AUDIO | OW_ENGINE_OPTION_P2O_AUDIO |
-    OW_ENGINE_OPTION_O2P_MIDI | OW_ENGINE_OPTION_P2O_MIDI;
+    OW_ENGINE_OPTION_O2P_AUDIO | OW_ENGINE_OPTION_O2P_MIDI |
+    OW_ENGINE_OPTION_P2O_MIDI;
 
   err = ow_resampler_start (jclient->resampler, &jclient->context);
   if (err)

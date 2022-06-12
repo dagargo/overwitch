@@ -196,6 +196,10 @@ ow_engine_status_t ow_engine_get_status (struct ow_engine *);
 
 void ow_engine_set_status (struct ow_engine *, ow_engine_status_t);
 
+int ow_engine_is_option (struct ow_engine *, ow_engine_option_t);
+
+void ow_engine_set_option (struct ow_engine *, ow_engine_option_t, int);
+
 const struct ow_device_desc *ow_engine_get_device_desc (struct ow_engine *);
 
 void ow_engine_stop (struct ow_engine *);

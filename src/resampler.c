@@ -42,6 +42,9 @@ ow_resampler_report_status (struct ow_resampler *resampler)
   status = resampler->engine->status;
   pthread_spin_unlock (&resampler->engine->lock);
 
+  int p2o_enabled =
+    ow_engine_is_option (resampler->engine, OW_ENGINE_OPTION_P2O_AUDIO);
+
   if (status == OW_ENGINE_STATUS_RUN)
     {
       o2p_latency_d =
@@ -51,12 +54,20 @@ ow_resampler_report_status (struct ow_resampler *resampler)
 	o2p_max_latency_s * 1000.0 / (resampler->engine->o2p_frame_size *
 				      OB_SAMPLE_RATE);
 
-      p2o_latency_d =
-	p2o_latency_s * 1000.0 / (resampler->engine->p2o_frame_size *
-				  OB_SAMPLE_RATE);
-      p2o_max_latency_d =
-	p2o_max_latency_s * 1000.0 / (resampler->engine->p2o_frame_size *
+      if (p2o_enabled)
+	{
+	  p2o_latency_d =
+	    p2o_latency_s * 1000.0 / (resampler->engine->p2o_frame_size *
 				      OB_SAMPLE_RATE);
+	  p2o_max_latency_d =
+	    p2o_max_latency_s * 1000.0 / (resampler->engine->p2o_frame_size *
+					  OB_SAMPLE_RATE);
+	}
+      else
+	{
+	  p2o_latency_d = -1.0;
+	  p2o_max_latency_d = -1.0;
+	}
     }
   else
     {
@@ -210,7 +221,7 @@ resampler_o2p_reader (void *cb_data, float **data)
       else
 	{
 	  debug_print (2,
-		       "o2p: Audio ring buffer underflow (%zu < %zu). Replicating last sample...\n",
+		       "o2p: Audio ring buffer underflow (%zu < %zu). Replicating last samples...\n",
 		       rso2p, resampler->engine->o2p_transfer_size);
 	  if (last_frames > 1)
 	    {
