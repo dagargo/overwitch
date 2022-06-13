@@ -187,7 +187,8 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="label" translatable="yes">Blocks</property>
+                <property name="tooltip-text" translatable="yes">USB buffer length in blocks of 7 samples</property>
+                <property name="label" translatable="yes">USB Buffer Length</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -225,7 +226,8 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="label" translatable="yes">Quality</property>
+                <property name="tooltip-text" translatable="yes">Resampler quality to balance out the CPU usage</property>
+                <property name="label" translatable="yes">Resampler Quality</property>
               </object>
               <packing>
                 <property name="expand">False</property>
