@@ -152,7 +152,6 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
       resampler->dll.ratio =
 	resampler->dll.last_ratio_avg * new_samplerate /
 	resampler->samplerate;
-      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_READY);
       resampler->log_cycles = 0;
       resampler->log_control_cycles =
 	STARTUP_TIME * new_samplerate / resampler->bufsize;
@@ -163,9 +162,10 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
       ow_dll_primary_reset (&resampler->dll, new_samplerate, OB_SAMPLE_RATE,
 			    resampler->bufsize,
 			    resampler->engine->frames_per_transfer);
-      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_READY);
     }
 
+  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_BOOT);
+  resampler->status = OW_RESAMPLER_STATUS_READY;
   resampler->o2p_ratio = resampler->dll.ratio;
   resampler->samplerate = new_samplerate;
 }

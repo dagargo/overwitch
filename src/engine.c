@@ -979,10 +979,12 @@ run_audio_o2p_midi (void *data)
 	  libusb_handle_events_completed (engine->usb.context, NULL);
 	}
 
-      if (ow_engine_get_status (engine) <= OW_ENGINE_STATUS_STOP)
+      if (ow_engine_get_status (engine) < OW_ENGINE_STATUS_BOOT)
 	{
 	  break;
 	}
+
+      //status == OW_ENGINE_STATUS_BOOT
 
       debug_print (1, "Rebooting engine...\n");
 
