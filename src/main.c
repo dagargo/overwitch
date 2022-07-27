@@ -68,7 +68,6 @@ struct overwitch_instance
   gdouble o2j_ratio;
   gdouble j2o_ratio;
   struct jclient jclient;
-  const struct ow_device_desc *device_desc;
 };
 
 typedef void (*check_jack_server_callback_t) ();
@@ -641,7 +640,6 @@ refresh_devices ()
       instance->j2o_latency = 0.0;
       instance->o2j_ratio = 1.0;
       instance->j2o_ratio = 1.0;
-      instance->device_desc = device->desc;
 
       if (jclient_init (&instance->jclient))
 	{
