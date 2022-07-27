@@ -604,7 +604,7 @@ refresh_devices ()
   const char *status;
   ow_err_t err;
 
-  err = ow_get_devices (&devices, &devices_count);
+  err = ow_get_usb_device_list (&devices, &devices_count);
   if (err)
     {
       return;

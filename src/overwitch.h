@@ -167,7 +167,7 @@ extern const struct ow_device_desc *OB_DEVICE_DESCS[];
 //Common
 const char *ow_get_err_str (ow_err_t);
 
-int ow_get_devices (struct ow_usb_device **, size_t *);
+int ow_get_usb_device_list (struct ow_usb_device **, size_t *);
 
 void ow_free_usb_device_list (struct ow_usb_device *, size_t);
 

@@ -109,7 +109,7 @@ run_all (int blocks_per_transfer, int quality, int priority)
   struct ow_usb_device *devices;
   struct ow_usb_device *device;
   struct jclient *jclient;
-  ow_err_t err = ow_get_devices (&devices, &jclient_count);
+  ow_err_t err = ow_get_usb_device_list (&devices, &jclient_count);
 
   if (err)
     {
