@@ -195,7 +195,7 @@ ow_get_usb_device_list (struct ow_usb_device **devices, size_t *size)
 	  debug_print (1, "Found %s (bus %03d, address %03d, ID %04x:%04x)\n",
 		       device_desc->name, bus, address, desc.idVendor,
 		       desc.idProduct);
-	  device->desc = device_desc;
+	  memcpy (&device->desc, device_desc, sizeof (struct ow_device_desc));
 	  device->vid = desc.idVendor;
 	  device->pid = desc.idProduct;
 	  device->bus = bus;
@@ -262,7 +262,7 @@ ow_get_usb_device_from_device_attrs (int device_num, const char *device_name,
 	}
       else
 	{
-	  if (strcmp (usb_device->desc->name, device_name) == 0)
+	  if (strcmp (usb_device->desc.name, device_name) == 0)
 	    {
 	      break;
 	    }

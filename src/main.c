@@ -663,7 +663,7 @@ refresh_devices ()
 					 STATUS_LIST_STORE_NAME,
 					 instance->jclient.name,
 					 STATUS_LIST_STORE_DEVICE,
-					 device->desc->name,
+					 device->desc.name,
 					 STATUS_LIST_STORE_BUS,
 					 instance->jclient.bus,
 					 STATUS_LIST_STORE_ADDRESS,

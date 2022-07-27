@@ -63,21 +63,20 @@ print_devices ()
   for (int i = 0; i < total; i++, device++)
     {
       fprintf (stderr, "%d: %s (ID %04x:%04x) at bus %03d, address %03d\n", i,
-	       device->desc->name, device->vid, device->pid, device->bus,
+	       device->desc.name, device->vid, device->pid, device->bus,
 	       device->address);
       if (debug_level)
 	{
 	  fprintf (stderr, "  Inputs:\n");
-	  for (int j = 0; j < device->desc->inputs; j++)
+	  for (int j = 0; j < device->desc.inputs; j++)
 	    {
-	      fprintf (stderr, "    %s\n",
-		       device->desc->input_track_names[j]);
+	      fprintf (stderr, "    %s\n", device->desc.input_track_names[j]);
 	    }
 	  fprintf (stderr, "  Outputs:\n");
-	  for (int j = 0; j < device->desc->outputs; j++)
+	  for (int j = 0; j < device->desc.outputs; j++)
 	    {
 	      fprintf (stderr, "    %s\n",
-		       device->desc->output_track_names[j]);
+		       device->desc.output_track_names[j]);
 	    }
 	}
 

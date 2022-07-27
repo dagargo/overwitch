@@ -139,7 +139,7 @@ struct ow_device_desc
 
 struct ow_usb_device
 {
-  const struct ow_device_desc *desc;
+  struct ow_device_desc desc;
   uint16_t vid;
   uint16_t pid;
   uint8_t bus;
