@@ -279,6 +279,8 @@ ow_get_usb_device_from_device_attrs (int device_num, const char *device_name,
       memcpy (*device, usb_device, sizeof (struct ow_usb_device));
     }
 
+  ow_free_usb_device_list (usb_devices, total);
+
   return err;
 }
 
