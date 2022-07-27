@@ -173,7 +173,7 @@ struct ow_engine
   size_t p2o_max_latency;
   pthread_t audio_o2p_midi_thread;
   pthread_t p2o_midi_thread;
-  const struct ow_device_desc *device_desc;
+  struct ow_device_desc device_desc;
   size_t p2o_transfer_size;
   size_t o2p_transfer_size;
   float *p2o_transfer_buf;

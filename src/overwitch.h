@@ -172,7 +172,7 @@ int ow_get_usb_device_list (struct ow_usb_device **, size_t *);
 void ow_free_usb_device_list (struct ow_usb_device *, size_t);
 
 int ow_get_device_desc_from_vid_pid (uint16_t, uint16_t,
-				     const struct ow_device_desc **);
+				     struct ow_device_desc *);
 
 int ow_get_usb_device_from_device_attrs (int, const char *,
 					 struct ow_usb_device **);
@@ -200,7 +200,7 @@ int ow_engine_is_option (struct ow_engine *, ow_engine_option_t);
 
 void ow_engine_set_option (struct ow_engine *, ow_engine_option_t, int);
 
-const struct ow_device_desc *ow_engine_get_device_desc (struct ow_engine *);
+struct ow_device_desc *ow_engine_get_device_desc (struct ow_engine *);
 
 void ow_engine_stop (struct ow_engine *);
 

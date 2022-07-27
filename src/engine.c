@@ -59,7 +59,7 @@ static void
 ow_engine_init_name (struct ow_engine *engine, uint8_t bus, uint8_t address)
 {
   snprintf (engine->name, OW_LABEL_MAX_LEN, "%s@%03d,%03d",
-	    engine->device_desc->name, bus, address);
+	    engine->device_desc.name, bus, address);
   ow_engine_load_overbridge_name (engine);
 }
 
@@ -130,7 +130,7 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine)
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < engine->device_desc->outputs; k++)
+	  for (int k = 0; k < engine->device_desc.outputs; k++)
 	    {
 	      hv = be32toh (*s);
 	      *f = INT32_TO_FLOAT32_SCALE * hv;
@@ -201,7 +201,7 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine)
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < engine->device_desc->inputs; k++)
+	  for (int k = 0; k < engine->device_desc.inputs; k++)
 	    {
 	      ov = htobe32 ((int32_t) (*f * INT_MAX));
 	      *s = ov;
@@ -279,7 +279,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
 	(double) engine->frames_per_transfer / frames;
       //We should NOT use the simple API but since this only happens very occasionally and mostly at startup, this has very low impact on audio quality.
       res = src_simple (&engine->p2o_data, SRC_SINC_FASTEST,
-			engine->device_desc->inputs);
+			engine->device_desc.inputs);
       if (res)
 	{
 	  error_print
@@ -525,8 +525,8 @@ ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
   engine->frames_per_transfer =
     OB_FRAMES_PER_BLOCK * engine->blocks_per_transfer;
 
-  engine->o2p_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc->outputs;
-  engine->p2o_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc->inputs;
+  engine->o2p_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc.outputs;
+  engine->p2o_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc.inputs;
 
   debug_print (2, "o2p: USB in frame size: %zu B\n", engine->o2p_frame_size);
   debug_print (2, "p2o: USB out frame size: %zu B\n", engine->p2o_frame_size);
@@ -1219,10 +1219,10 @@ ow_bytes_to_frame_bytes (int bytes, int bytes_per_frame)
   return frames * bytes_per_frame;
 }
 
-const struct ow_device_desc *
+struct ow_device_desc *
 ow_engine_get_device_desc (struct ow_engine *engine)
 {
-  return engine->device_desc;
+  return &engine->device_desc;
 }
 
 inline void
@@ -1246,7 +1246,7 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
       s = blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < engine->device_desc->outputs; k++)
+	  for (int k = 0; k < engine->device_desc.outputs; k++)
 	    {
 	      v = be32toh (*s);
 	      printf ("Frame %2d, track %2d: %d\n", j, k, v);

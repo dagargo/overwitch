@@ -155,7 +155,6 @@ ow_get_usb_device_list (struct ow_usb_device **devices, size_t *size)
   libusb_device **usb_device;
   struct libusb_device_descriptor desc;
   struct ow_usb_device *device;
-  const struct ow_device_desc *device_desc;
   ssize_t total = 0;
   libusb_context *context = NULL;
   libusb_device **usb_devices = NULL;
@@ -187,15 +186,14 @@ ow_get_usb_device_list (struct ow_usb_device **devices, size_t *size)
 	  continue;
 	}
 
-      if (ow_get_device_desc_from_vid_pid
-	  (desc.idVendor, desc.idProduct, &device_desc))
+      if (ow_get_device_desc_from_vid_pid (desc.idVendor, desc.idProduct,
+					   &device->desc))
 	{
 	  bus = libusb_get_bus_number (*usb_device);
 	  address = libusb_get_device_address (*usb_device);
 	  debug_print (1, "Found %s (bus %03d, address %03d, ID %04x:%04x)\n",
-		       device_desc->name, bus, address, desc.idVendor,
+		       device->desc.name, bus, address, desc.idVendor,
 		       desc.idProduct);
-	  memcpy (&device->desc, device_desc, sizeof (struct ow_device_desc));
 	  device->vid = desc.idVendor;
 	  device->pid = desc.idProduct;
 	  device->bus = bus;
@@ -218,7 +216,7 @@ ow_get_usb_device_list (struct ow_usb_device **devices, size_t *size)
 
 int
 ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
-				 const struct ow_device_desc **device_desc)
+				 struct ow_device_desc *device_desc)
 {
   if (vid != ELEKTRON_VID)
     {
@@ -228,7 +226,7 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
     {
       if ((*d)->pid == pid)
 	{
-	  *device_desc = *d;
+	  memcpy(device_desc, *d, sizeof(struct ow_device_desc));
 	  return 1;
 	}
     }

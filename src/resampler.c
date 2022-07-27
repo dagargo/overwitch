@@ -226,7 +226,7 @@ resampler_o2p_reader (void *cb_data, float **data)
 	  if (last_frames > 1)
 	    {
 	      uint64_t pos =
-		(last_frames - 1) * resampler->engine->device_desc->outputs;
+		(last_frames - 1) * resampler->engine->device_desc.outputs;
 	      memcpy (resampler->o2p_buf_in, &resampler->o2p_buf_in[pos],
 		      resampler->engine->o2p_frame_size);
 	    }
@@ -451,11 +451,10 @@ ow_resampler_init_from_bus_address (struct ow_resampler **resampler_,
 
   resampler->p2o_state =
     src_callback_new (resampler_p2o_reader, quality,
-		      resampler->engine->device_desc->inputs, NULL,
-		      resampler);
+		      resampler->engine->device_desc.inputs, NULL, resampler);
   resampler->o2p_state =
     src_callback_new (resampler_o2p_reader, quality,
-		      resampler->engine->device_desc->outputs, NULL,
+		      resampler->engine->device_desc.outputs, NULL,
 		      resampler);
 
   pthread_spin_init (&resampler->lock, PTHREAD_PROCESS_SHARED);
