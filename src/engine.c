@@ -728,8 +728,12 @@ ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
 
   device = libusb_get_device (engine->usb.device_handle);
   libusb_get_device_descriptor (device, &desc);
-  ow_get_device_desc_from_vid_pid (desc.idVendor, desc.idProduct,
-				   &engine->device_desc);
+  if (ow_get_device_desc_from_vid_pid (desc.idVendor, desc.idProduct,
+				       &engine->device_desc))
+    {
+      err = OW_USB_ERROR_LIBUSB_INIT_FAILED;
+      goto error;
+    }
 
   *engine_ = engine;
   err = ow_engine_init (engine, blocks_per_transfer);
@@ -786,8 +790,8 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
 	  continue;
 	}
 
-      if (ow_get_device_desc_from_vid_pid
-	  (desc.idVendor, desc.idProduct, &engine->device_desc)
+      if (!ow_get_device_desc_from_vid_pid (desc.idVendor, desc.idProduct,
+					    &engine->device_desc)
 	  && libusb_get_bus_number (*device) == bus
 	  && libusb_get_device_address (*device) == address)
 	{

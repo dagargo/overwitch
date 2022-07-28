@@ -186,8 +186,8 @@ ow_get_usb_device_list (struct ow_usb_device **devices, size_t *size)
 	  continue;
 	}
 
-      if (ow_get_device_desc_from_vid_pid (desc.idVendor, desc.idProduct,
-					   &device->desc))
+      if (!ow_get_device_desc_from_vid_pid (desc.idVendor, desc.idProduct,
+					    &device->desc))
 	{
 	  bus = libusb_get_bus_number (*usb_device);
 	  address = libusb_get_device_address (*usb_device);
@@ -220,17 +220,18 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 {
   if (vid != ELEKTRON_VID)
     {
-      return 0;
+      return 1;
     }
+
   for (const struct ow_device_desc ** d = OB_DEVICE_DESCS; *d != NULL; d++)
     {
       if ((*d)->pid == pid)
 	{
-	  memcpy(device_desc, *d, sizeof(struct ow_device_desc));
-	  return 1;
+	  memcpy (device_desc, *d, sizeof (struct ow_device_desc));
+	  return 0;
 	}
     }
-  return 0;
+  return 1;
 }
 
 int
