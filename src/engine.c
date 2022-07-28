@@ -1165,6 +1165,7 @@ ow_engine_free_mem (struct ow_engine *engine)
   free (engine->usb.xfr_control_in_data);
   pthread_spin_destroy (&engine->lock);
   pthread_spin_destroy (&engine->p2o_midi_lock);
+  ow_free_device_desc (&engine->device_desc);
 }
 
 inline ow_engine_status_t
@@ -1235,6 +1236,7 @@ ow_engine_stop (struct ow_engine *engine)
   ow_engine_set_status (engine, OW_ENGINE_STATUS_STOP);
 }
 
+//This function is for development purpouses only. It is not used but it is in the internal API.
 void
 ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
 {

@@ -24,6 +24,8 @@
 #include "overwitch.h"
 #include "utils.h"
 
+#define DEVICES_FILE "/devices.json"
+
 #define ELEKTRON_VID 0x1935
 
 #define AFMK1_PID 0x0004
@@ -38,7 +40,22 @@
 #define DKEYS_PID 0x001c
 #define STAKT_PID 0x001e
 
-static const struct ow_device_desc DIGITAKT_DESC = {
+#define DEV_TAG_PID "pid"
+#define DEV_TAG_NAME "name"
+#define DEV_TAG_INPUT_TRACK_NAMES "input_track_names"
+#define DEV_TAG_OUTPUT_TRACK_NAMES "output_track_names"
+
+struct ow_device_desc_static
+{
+  uint16_t pid;
+  char *name;
+  int inputs;
+  int outputs;
+  char *input_track_names[OB_MAX_TRACKS];
+  char *output_track_names[OB_MAX_TRACKS];
+};
+
+static const struct ow_device_desc_static DIGITAKT_DESC = {
   .pid = DTAKT_PID,
   .name = "Digitakt",
   .inputs = 2,
@@ -50,7 +67,7 @@ static const struct ow_device_desc DIGITAKT_DESC = {
      "Input R"}
 };
 
-static const struct ow_device_desc DIGITONE_DESC = {
+static const struct ow_device_desc_static DIGITONE_DESC = {
   .pid = DTONE_PID,
   .name = "Digitone",
   .inputs = 2,
@@ -62,7 +79,7 @@ static const struct ow_device_desc DIGITONE_DESC = {
      "Input L", "Input R"}
 };
 
-static const struct ow_device_desc AFMK2_DESC = {
+static const struct ow_device_desc_static AFMK2_DESC = {
   .pid = AFMK2_PID,
   .name = "Analog Four MKII",
   .inputs = 6,
@@ -75,7 +92,7 @@ static const struct ow_device_desc AFMK2_DESC = {
      "Synth Track 4", "Input L", "Input R"}
 };
 
-static const struct ow_device_desc ARMK2_DESC = {
+static const struct ow_device_desc_static ARMK2_DESC = {
   .pid = ARMK2_PID,
   .name = "Analog Rytm MKII",
   .inputs = 12,
@@ -89,7 +106,7 @@ static const struct ow_device_desc ARMK2_DESC = {
 			 "Input R"}
 };
 
-static const struct ow_device_desc DKEYS_DESC = {
+static const struct ow_device_desc_static DKEYS_DESC = {
   .pid = DKEYS_PID,
   .name = "Digitone Keys",
   .inputs = 2,
@@ -101,7 +118,7 @@ static const struct ow_device_desc DKEYS_DESC = {
      "Input L", "Input R"}
 };
 
-static const struct ow_device_desc AHMK1_DESC = {
+static const struct ow_device_desc_static AHMK1_DESC = {
   .pid = AHMK1_PID,
   .name = "Analog Heat",
   .inputs = 4,
@@ -111,7 +128,7 @@ static const struct ow_device_desc AHMK1_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct ow_device_desc AHMK2_DESC = {
+static const struct ow_device_desc_static AHMK2_DESC = {
   .pid = AHMK2_PID,
   .name = "Analog Heat MKII",
   .inputs = 4,
@@ -121,7 +138,7 @@ static const struct ow_device_desc AHMK2_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct ow_device_desc STAKT_DESC = {
+static const struct ow_device_desc_static STAKT_DESC = {
   .pid = STAKT_PID,
   .name = "Syntakt",
   .inputs = 8,
@@ -136,14 +153,39 @@ static const struct ow_device_desc STAKT_DESC = {
      "Delay/Reverb L", "Delay/Reverb R", "Input L", "Input R"}
 };
 
-const struct ow_device_desc *OB_DEVICE_DESCS[] = {
+const struct ow_device_desc_static *OB_DEVICE_DESCS[] = {
   &DIGITAKT_DESC, &DIGITONE_DESC, &AFMK2_DESC, &ARMK2_DESC, &DKEYS_DESC,
   &AHMK1_DESC, &AHMK2_DESC, &STAKT_DESC, NULL
 };
 
 void
+ow_free_device_desc (struct ow_device_desc *desc)
+{
+  char **names;
+
+  free (desc->name);
+  names = desc->input_track_names;
+  for (int i = 0; i < desc->inputs; i++, names++)
+    {
+      free (*names);
+    }
+  free (desc->input_track_names);
+  names = desc->output_track_names;
+  for (int i = 0; i < desc->outputs; i++, names++)
+    {
+      free (*names);
+    }
+  free (desc->output_track_names);
+}
+
+void
 ow_free_usb_device_list (struct ow_usb_device *devices, size_t size)
 {
+  struct ow_usb_device *d = devices;
+  for (int i = 0; i < size; i++, d++)
+    {
+      ow_free_device_desc (&d->desc);
+    }
   free (devices);
 }
 
@@ -223,15 +265,230 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
       return 1;
     }
 
-  for (const struct ow_device_desc ** d = OB_DEVICE_DESCS; *d != NULL; d++)
+#ifdef JSON_DEVS_FILE
+  gint dpid, err, devices;
+  JsonParser *parser;
+  JsonReader *reader;
+  gchar *devices_filename;
+  GError *error = NULL;
+
+  device_desc->inputs = 0;
+  device_desc->outputs = 0;
+  device_desc->input_track_names = NULL;
+  device_desc->output_track_names = NULL;
+
+  parser = json_parser_new ();
+
+  devices_filename = get_expanded_dir (CONF_DIR DEVICES_FILE);
+
+  if (!json_parser_load_from_file (parser, devices_filename, &error))
+    {
+      debug_print (1, "%s\n", error->message);
+      g_clear_error (&error);
+
+      g_free (devices_filename);
+      devices_filename = strdup (DATADIR DEVICES_FILE);
+
+      debug_print (1, "Falling back to %s...\n", devices_filename);
+
+      if (!json_parser_load_from_file (parser, devices_filename, &error))
+	{
+	  error_print ("%s", error->message);
+	  g_clear_error (&error);
+	  err = -ENODEV;
+	  goto cleanup_parser;
+	}
+    }
+
+  reader = json_reader_new (json_parser_get_root (parser));
+  if (!reader)
+    {
+      error_print ("Unable to read from parser");
+      err = -ENODEV;
+      goto cleanup_parser;
+    }
+
+  if (!json_reader_is_array (reader))
+    {
+      error_print ("Not an array\n");
+      err = -ENODEV;
+      goto cleanup_reader;
+    }
+
+  devices = json_reader_count_elements (reader);
+  if (!devices)
+    {
+      debug_print (1, "No devices found\n");
+      err = -ENODEV;
+      goto cleanup_reader;
+    }
+
+  err = -ENODEV;
+  for (int i = 0; i < devices; i++)
+    {
+      if (!json_reader_read_element (reader, i))
+	{
+	  error_print ("Cannot read element %d. Continuing...\n", i);
+	  continue;
+	}
+
+      if (!json_reader_read_member (reader, DEV_TAG_PID))
+	{
+	  error_print ("Cannot read member '%s'. Continuing...\n",
+		       DEV_TAG_PID);
+	  continue;
+	}
+      dpid = json_reader_get_int_value (reader);
+      json_reader_end_member (reader);
+      if (dpid != pid)
+	{
+	  json_reader_end_element (reader);
+	  continue;
+	}
+      device_desc->pid = dpid;
+
+      err = 0;
+      debug_print (1, "Device with PID %d found\n", dpid);
+
+      if (!json_reader_read_member (reader, DEV_TAG_NAME))
+	{
+	  error_print ("Cannot read member '%s'. Stopping...\n",
+		       DEV_TAG_NAME);
+	  json_reader_end_element (reader);
+	  err = -ENODEV;
+	  break;
+	}
+      device_desc->name = strdup (json_reader_get_string_value (reader));
+      json_reader_end_member (reader);
+
+      if (!json_reader_read_member (reader, DEV_TAG_INPUT_TRACK_NAMES))
+	{
+	  error_print ("Cannot read member '%s'. Stopping...\n",
+		       DEV_TAG_INPUT_TRACK_NAMES);
+	  json_reader_end_element (reader);
+	  err = -ENODEV;
+	  break;
+	}
+      if (!json_reader_is_array (reader))
+	{
+	  error_print ("Not an array\n");
+	  err = -ENODEV;
+	  goto cleanup_reader;
+	}
+      device_desc->inputs = json_reader_count_elements (reader);
+      if (!device_desc->inputs)
+	{
+	  debug_print (1, "No tracks found\n");
+	  err = -ENODEV;
+	  goto cleanup_reader;
+	}
+      device_desc->input_track_names =
+	malloc (sizeof (char *) * device_desc->inputs);
+      for (int j = 0; j < device_desc->inputs; j++)
+	{
+	  device_desc->input_track_names[j] = NULL;
+	}
+      for (int j = 0; j < device_desc->inputs; j++)
+	{
+	  if (json_reader_read_element (reader, j))
+	    {
+	      device_desc->input_track_names[j] =
+		strdup (json_reader_get_string_value (reader));
+	      json_reader_end_element (reader);
+	    }
+	  else
+	    {
+	      error_print ("Cannot read input track name %d\n", j);
+	      ow_free_device_desc (device_desc);
+	      err = -ENODEV;
+	      goto cleanup_reader;
+	    }
+	}
+      json_reader_end_member (reader);
+
+      if (!json_reader_read_member (reader, DEV_TAG_OUTPUT_TRACK_NAMES))
+	{
+	  error_print ("Cannot read member '%s'. Stopping...\n",
+		       DEV_TAG_OUTPUT_TRACK_NAMES);
+	  json_reader_end_element (reader);
+	  err = -ENODEV;
+	  break;
+	}
+      if (!json_reader_is_array (reader))
+	{
+	  error_print ("Not an array\n");
+	  err = -ENODEV;
+	  goto cleanup_reader;
+	}
+      device_desc->outputs = json_reader_count_elements (reader);
+      if (!device_desc->outputs)
+	{
+	  debug_print (1, "No tracks found\n");
+	  err = -ENODEV;
+	  goto cleanup_reader;
+	}
+      device_desc->output_track_names =
+	malloc (sizeof (char *) * device_desc->outputs);
+      for (int j = 0; j < device_desc->outputs; j++)
+	{
+	  device_desc->output_track_names[j] = NULL;
+	}
+      for (int j = 0; j < device_desc->outputs; j++)
+	{
+	  if (json_reader_read_element (reader, j))
+	    {
+	      device_desc->output_track_names[j] =
+		strdup (json_reader_get_string_value (reader));
+	      json_reader_end_element (reader);
+	    }
+	  else
+	    {
+	      error_print ("Cannot read output track name %d\n", j);
+	      ow_free_device_desc (device_desc);
+	      err = -ENODEV;
+	      goto cleanup_reader;
+	    }
+	}
+      break;
+    }
+
+cleanup_reader:
+  g_object_unref (reader);
+cleanup_parser:
+  g_object_unref (parser);
+  g_free (devices_filename);
+  return err;
+#else
+  for (const struct ow_device_desc_static ** d = OB_DEVICE_DESCS; *d != NULL;
+       d++)
     {
       if ((*d)->pid == pid)
 	{
-	  memcpy (device_desc, *d, sizeof (struct ow_device_desc));
+	  device_desc->pid = (*d)->pid;
+	  device_desc->name = strdup ((*d)->name);
+	  device_desc->inputs = (*d)->inputs;
+	  device_desc->outputs = (*d)->outputs;
+	  device_desc->input_track_names =
+	    malloc (sizeof (char *) * device_desc->inputs);
+	  device_desc->output_track_names =
+	    malloc (sizeof (char *) * device_desc->outputs);
+
+	  for (int i = 0; i < device_desc->inputs; i++)
+	    {
+	      device_desc->input_track_names[i] =
+		strdup ((*d)->input_track_names[i]);
+	    }
+	  for (int i = 0; i < device_desc->outputs; i++)
+	    {
+	      device_desc->output_track_names[i] =
+		strdup ((*d)->output_track_names[i]);
+	    }
+
 	  return 0;
 	}
     }
   return 1;
+#endif
 }
 
 int

@@ -1,5 +1,9 @@
-resdir = $(datadir)/overwitch/res
+resdir = $(datadir)/overwitch
 res_DATA = gui.glade
+
+if JSON_DEVS_FILE
+res_DATA += devices.json
+endif
 
 desktopdir = $(datadir)/applications
 desktop_DATA = overwitch.desktop

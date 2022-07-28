@@ -18,6 +18,26 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>
+#include <string.h>
+#include <wordexp.h>
+#define _GNU_SOURCE
 #include "utils.h"
 
 int debug_level = 0;
+
+char *
+get_expanded_dir (const char *exp)
+{
+  wordexp_t exp_result;
+  size_t n;
+  char *exp_dir = malloc (PATH_MAX);
+
+  wordexp (exp, &exp_result, 0);
+  n = PATH_MAX - 1;
+  strncpy (exp_dir, exp_result.we_wordv[0], n);
+  exp_dir[PATH_MAX - 1] = 0;
+  wordfree (&exp_result);
+
+  return exp_dir;
+}

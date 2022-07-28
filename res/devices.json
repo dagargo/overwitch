@@ -1,0 +1,181 @@
+[{
+	"pid": 12,
+	"name": "Digitakt",
+	"input_track_names": [
+		"Main L Input",
+		"Main R Input"
+	],
+	"output_track_names": [
+		"Main L",
+		"Main R",
+		"Track 1",
+		"Track 2",
+		"Track 3",
+		"Track 4",
+		"Track 5",
+		"Track 6",
+		"Track 7",
+		"Track 8",
+		"Input L",
+		"Input R"
+	]
+}, {
+	"pid": 20,
+	"name": "Digitone",
+	"input_track_names": [
+		"Main L Input",
+		"Main R Input"
+	],
+	"output_track_names": [
+		"Main L",
+		"Main R",
+		"Track 1 L",
+		"Track 1 R",
+		"Track 2 L",
+		"Track 2 R",
+		"Track 3 L",
+		"Track 3 R",
+		"Track 4 L",
+		"Track 4 R",
+		"Input L",
+		"Input R"
+	]
+}, {
+	"pid": 14,
+	"name": "Analog Four MKII",
+	"input_track_names": [
+		"Main L Input",
+		"Main R Input",
+		"Synth Track 1 Input",
+		"Synth Track 2 Input",
+		"Synth Track 3 Input",
+		"Synth Track 4 Input"
+	],
+	"output_track_names": [
+		"Main L",
+		"Main R",
+		"Synth Track 1",
+		"Synth Track 2",
+		"Synth Track 3",
+		"Synth Track 4",
+		"Input L",
+		"Input R"
+	]
+}, {
+	"pid": 16,
+	"name": "Analog Rytm MKII",
+	"input_track_names": [
+		"Main L Input",
+		"Main R Input",
+		"Main FX L Input",
+		"Main FX R Input",
+		"BD Input",
+		"SD Input",
+		"RS/CP Input",
+		"BT Input",
+		"LT Input",
+		"MT/HT Input",
+		"CH/OH Input",
+		"CY/CB Input"
+	],
+	"output_track_names": [
+		"Main L",
+		"Main R",
+		"BD",
+		"SD",
+		"RS/CP",
+		"BT",
+		"LT",
+		"MT/HT",
+		"CH/OH",
+		"CY/CB",
+		"Input L",
+		"Input R"
+	]
+}, {
+	"pid": 28,
+	"name": "Digitone Keys",
+	"input_track_names": [
+		"Main L Input",
+		"Main R Input"
+	],
+	"output_track_names": [
+		"Main L",
+		"Main R",
+		"Track 1 L",
+		"Track 1 R",
+		"Track 2 L",
+		"Track 2 R",
+		"Track 3 L",
+		"Track 3 R",
+		"Track 4 L",
+		"Track 4 R",
+		"Input L",
+		"Input R"
+	]
+}, {
+	"pid": 10,
+	"name": "Analog Heat",
+	"input_track_names": [
+		"Main L Input",
+		"Main R Input",
+		"FX Send L",
+		"FX Send R"
+	],
+	"output_track_names": [
+		"Main L",
+		"Main R",
+		"FX Return L",
+		"FX Return R"
+	]
+}, {
+	"pid": 22,
+	"name": "Analog Heat MKII",
+	"input_track_names": [
+		"Main L Input",
+		"Main R Input",
+		"FX Send L",
+		"FX Send R"
+	],
+	"output_track_names": [
+		"Main L",
+		"Main R",
+		"FX Return L",
+		"FX Return R"
+	]
+}, {
+	"pid": 30,
+	"name": "Syntakt",
+	"input_track_names": [
+		"Main L Input",
+		"Main R Input",
+		"Analog FX L Input",
+		"Analog FX R Input",
+		"Track 9 Input",
+		"Track 10 Input",
+		"Track 11 Input",
+		"Track 12 Input"
+	],
+	"output_track_names": [
+		"Main L",
+		"Main R",
+		"Track  1",
+		"Track  2",
+		"Track  3",
+		"Track  4",
+		"Track  5",
+		"Track  6",
+		"Track  7",
+		"Track  8",
+		"Track  9",
+		"Track 10",
+		"Track 11",
+		"Track 12",
+		"Analog FX L",
+		"Analog FX R",
+		"Delay/Reverb L",
+		"Delay/Reverb R",
+		"Input L",
+		"Input R"
+	]
+}]

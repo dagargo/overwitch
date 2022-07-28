@@ -1,30 +1,53 @@
 PKG_CONFIG ?= pkg-config
 
-CLI_LIBS = jack libusb-1.0 json-glib-1.0
-GUI_LIBS = gtk+-3.0
+LIB_LIBS = libusb-1.0
 
-overwitch_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(CLI_LIBS) $(GUI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
-overwitch_LDFLAGS = `$(PKG_CONFIG) --libs $(CLI_LIBS) $(GUI_LIBS)` $(SAMPLERATE_LIBS)
+if JSON_DEVS_FILE
+LIB_LIBS += json-glib-1.0
+endif
+
+CLI_LIBS = jack $(LIB_LIBS)
+GUI_LIBS = gtk+-3.0 $(CLI_LIBS)
+
+if ! JSON_DEVS_FILE
+GUI_LIBS += json-glib-1.0
+endif
+
+overwitch_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(GUI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
+overwitch_LDFLAGS = `$(PKG_CONFIG) --libs $(GUI_LIBS)` $(SAMPLERATE_LIBS)
 
 overwitch_cli_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(CLI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
 overwitch_cli_LDFLAGS = `$(PKG_CONFIG) --libs $(CLI_LIBS)` $(SAMPLERATE_LIBS)
 
-overwitch_play_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags libusb-1.0` -pthread $(SAMPLERATE_CFLAGS) $(SNDFILE_CFLAGS)
-overwitch_play_LDFLAGS = `$(PKG_CONFIG) --libs libusb-1.0` $(SAMPLERATE_LIBS) $(SNDFILE_LIBS)
+overwitch_play_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(LIB_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(SNDFILE_CFLAGS)
+overwitch_play_LDFLAGS = `$(PKG_CONFIG) --libs $(CLI_LIBS)` $(SAMPLERATE_LIBS) $(SNDFILE_LIBS)
 
-overwitch_record_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags libusb-1.0` -pthread $(SAMPLERATE_CFLAGS) $(SNDFILE_CFLAGS)
-overwitch_record_LDFLAGS = `$(PKG_CONFIG) --libs libusb-1.0` $(SAMPLERATE_LIBS) $(SNDFILE_LIBS)
+overwitch_record_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(LIB_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(SNDFILE_CFLAGS)
+overwitch_record_LDFLAGS = `$(PKG_CONFIG) --libs $(CLI_LIBS)` $(SAMPLERATE_LIBS) $(SNDFILE_LIBS)
+
+CLI_UTILS = overwitch-cli overwitch-record overwitch-play
 
 if CLI_ONLY
-bin_PROGRAMS = overwitch-cli overwitch-record overwitch-play
+bin_PROGRAMS = $(CLI_UTILS)
 else
-bin_PROGRAMS = overwitch overwitch-cli overwitch-record overwitch-play
+bin_PROGRAMS = overwitch $(CLI_UTILS)
 endif
 
-overwitch_SOURCES = main.c jclient.c jclient.h engine.c engine.h utils.c utils.h dll.c dll.h resampler.c resampler.h overwitch.c overwitch.h common.c common.h
-overwitch_cli_SOURCES = main-cli.c jclient.c jclient.h engine.c engine.h utils.c utils.h dll.c dll.h resampler.c resampler.h overwitch.c overwitch.h common.c common.h
-overwitch_play_SOURCES = main-play.c engine.c engine.h dll.c dll.h utils.c utils.h overwitch.c overwitch.h common.c common.h
-overwitch_record_SOURCES = main-record.c engine.c engine.h dll.c dll.h utils.c utils.h overwitch.c overwitch.h common.c common.h
+lib_LTLIBRARIES = liboverwitch.la
+liboverwitch_la_SOURCES = engine.c engine.h dll.c dll.h utils.c utils.h overwitch.c overwitch.h common.c common.h resampler.c resampler.h
+liboverwitch_la_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(LIB_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(SNDFILE_CFLAGS)
+liboverwitch_la_LDFLAGS = `$(PKG_CONFIG) --libs $(LIB_LIBS)` $(SAMPLERATE_LIBS)
+include_HEADERS = overwitch.h
+
+overwitch_SOURCES = main.c jclient.c jclient.h
+overwitch_cli_SOURCES = main-cli.c jclient.c jclient.h
+overwitch_play_SOURCES = main-play.c
+overwitch_record_SOURCES = main-record.c
+
+overwitch_LDADD = liboverwitch.la
+overwitch_cli_LDADD = liboverwitch.la
+overwitch_play_LDADD = liboverwitch.la
+overwitch_record_LDADD = liboverwitch.la
 
 SAMPLERATE_CFLAGS = @SAMPLERATE_CFLAGS@
 SAMPLERATE_LIBS = @SAMPLERATE_LIBS@
@@ -32,4 +55,4 @@ SAMPLERATE_LIBS = @SAMPLERATE_LIBS@
 SNDFILE_CFLAGS = @SNDFILE_CFLAGS@
 SNDFILE_LIBS = @SNDFILE_LIBS@
 
-AM_CPPFLAGS = -Wall -O3 -DDATADIR='"$(datadir)"'
+AM_CPPFLAGS = -Wall -O3 -DDATADIR='"$(datadir)/$(PACKAGE)"'

@@ -28,7 +28,7 @@
 #define OB_SAMPLE_RATE 48000.0
 #define OB_FRAMES_PER_BLOCK 7
 #define OB_BYTES_PER_SAMPLE sizeof(float)
-#define OB_MAX_TRACKS 32
+#define OB_MAX_TRACKS 64
 #define OB_MIDI_EVENT_SIZE 4
 
 #define OW_DEFAULT_RT_PROPERTY 20
@@ -133,8 +133,8 @@ struct ow_device_desc
   char *name;
   int inputs;
   int outputs;
-  char *input_track_names[OB_MAX_TRACKS];
-  char *output_track_names[OB_MAX_TRACKS];
+  char **input_track_names;
+  char **output_track_names;
 };
 
 struct ow_usb_device
@@ -162,14 +162,14 @@ struct ow_resampler_reporter
 struct ow_engine;
 struct ow_resampler;
 
-extern const struct ow_device_desc *OB_DEVICE_DESCS[];
-
 //Common
 const char *ow_get_err_str (ow_err_t);
 
 int ow_get_usb_device_list (struct ow_usb_device **, size_t *);
 
 void ow_free_usb_device_list (struct ow_usb_device *, size_t);
+
+void ow_free_device_desc (struct ow_device_desc *);
 
 int ow_get_device_desc_from_vid_pid (uint16_t, uint16_t,
 				     struct ow_device_desc *);

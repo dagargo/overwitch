@@ -1,6 +1,6 @@
 # Overwitch
 
-Overwitch is an Overbridge 2 device client for JACK (JACK Audio Connection Kit).
+Overwitch is an Overbridge 2 device client for JACK (JACK Audio Connection Kit). It has been reported to work with PipeWire.
 
 This project is based on the Overbridge USB reverse engineering done by Stefan Rehm in [dtdump](https://github.com/droelfdroelf/dtdump).
 
@@ -8,17 +8,23 @@ The papers [Controlling adaptive resampling](https://kokkinizita.linuxaudio.org/
 
 At the moment, it provides support for all Overbridge 2 devices, which are Analog Four MKII, Analog Rytm MKII, Digitakt, Digitone, Digitone Keys, Analog Heat and Analog Heat MKII.
 
+Overbridge 1 devices, which are Analog Four MKI, Analog Keys and Analog Rytm MKI, are not supported yet.
+
 Overwitch consists of 4 different binaries: `overwitch`, which is a GUI application, `overwitch-cli` which offers the same functionality for the command line; and `overwitch-play` and `overwitch-record` which do not integrate with JACK at all but stream the audio from and to a WAVE file.
 
 ## Installation
 
-As with other autotools project, you need to run the following commands. If you just want to compile the command line applications, pass `CLI_ONLY=yes` to `/configure`.
+As with other autotools project, you need to run the commands below. There are a few options available.
+
+* If you just want to compile the command line applications, pass `CLI_ONLY=yes` to `/configure`.
+* If you do not want to use the JSON devices files, pass `JSON_DEVS_FILE=no` to `/configure`. This is useful to eliminate GLIB dependencies when building the library. In this case, the devices configuration used are the ones in the source code. See [`Adding devices`](#Adding devices) section for more information.
 
 ```
 autoreconf --install
 ./configure
 make
 sudo make install
+sudo ldconfig
 ```
 
 Some udev rules might need to be installed manually with `sudo make install` from the `udev` directory as they are not part of the `install` target. This is not needed when packaging or when distributions already provide them.
@@ -261,6 +267,44 @@ Although you can run Overwitch with verbose output this is **not recommended** u
 
 ## Adding devices
 
+Devices can be specified in two ways.
+
+* Outside the library, in `JSON` files. Useful for a typical desktop usage as devices can be user-defined, so no need to recompile the code or wait for new releases.
+* Inside the library, in `C` code. Useful when using the `liboverwitch` library and `GLib` dependencies are unwanted. Notice that the library is compiled with `JSON` support by default. See [`Installation`](#Installation) section.
+
+### Outside the library
+
+This is a self-explanatory device definition from `res/devices.json`. The file is an array of definitions.
+
+```
+{
+  "pid": 12,
+  "name": "Digitakt",
+  "input_track_names": [
+    "Main L Input",
+    "Main R Input"
+  ],
+  "output_track_names": [
+    "Main L",
+    "Main R",
+    "Track 1",
+    "Track 2",
+    "Track 3",
+    "Track 4",
+    "Track 5",
+    "Track 6",
+    "Track 7",
+    "Track 8",
+    "Input L",
+    "Input R"
+  ]
+}
+```
+
+If the file `~/.config/elektroid/elektron-devices.json` is found, it will take precedence over the installed one.
+
+### Inside the library
+
 New Overbridge 2 devices could be easily added in the `overbridge.c` file as they all share the same protocol.
 
 To define a new device, just add a new struct like this and add the new constant to the array. USB PIDs are already defined just above. For instance, if you were adding the Analog Rytm MKII, you could do it like in the example below.
@@ -268,7 +312,7 @@ To define a new device, just add a new struct like this and add the new constant
 Notice that the definition of the device must match the device itself, so outputs and inputs must match the ones the device has and must be in the same order. As this struct defines the device, an input is a port the device will read data from and an output is a port the device will write data to.
 
 ```
-static const struct overbridge_device_desc ARMK2_DESC = {
+static const struct overbridge_device_desc_static ARMK2_DESC = {
   .pid = ARMK2_PID,
   .name = "Analog Rytm MKII",
   .inputs = 12,
@@ -286,5 +330,3 @@ static const struct overbridge_device_desc OB_DEVICE_DESCS[] = {
   DIGITAKT_DESC, DIGITONE_DESC, ARMK2_DESC, NULL
 };
 ```
-
-Overbridge 1 devices, which are Analog Four MKI, Analog Keys and Analog Rytm MKI, are not supported yet.

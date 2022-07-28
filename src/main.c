@@ -26,9 +26,6 @@
 #include <jack/jack.h>
 #include <sys/stat.h>
 #include <json-glib/json-glib.h>
-#include <wordexp.h>
-#define _GNU_SOURCE
-#include "../config.h"
 #include "common.h"
 #include "overwitch.h"
 #include "jclient.h"
@@ -37,7 +34,6 @@
 #define MSG_JACK_SERVER_FOUND "JACK server found"
 #define MSG_NO_JACK_SERVER_FOUND "No JACK server found"
 
-#define CONF_DIR "~/.config/overwitch"
 #define CONF_FILE "/preferences.json"
 
 #define CONF_REFRESH_AT_STARTUP "refreshAtStartup"
@@ -272,22 +268,6 @@ show_all_columns (GtkWidget * object, gpointer data)
   update_all_metrics (active);
 
   gtk_widget_hide (GTK_WIDGET (main_popover));
-}
-
-gchar *
-get_expanded_dir (const char *exp)
-{
-  wordexp_t exp_result;
-  size_t n;
-  gchar *exp_dir = malloc (PATH_MAX);
-
-  wordexp (exp, &exp_result, 0);
-  n = PATH_MAX - 1;
-  strncpy (exp_dir, exp_result.we_wordv[0], n);
-  exp_dir[PATH_MAX - 1] = 0;
-  wordfree (&exp_result);
-
-  return exp_dir;
 }
 
 gint
@@ -788,7 +768,6 @@ main (int argc, char *argv[])
   GtkBuilder *builder;
   struct sigaction action;
   gboolean refresh;
-  char *glade_file = malloc (PATH_MAX);
 
   while ((opt = getopt_long (argc, argv, "vh", options, &long_index)) != -1)
     {
@@ -824,18 +803,9 @@ main (int argc, char *argv[])
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGTSTP, &action, NULL);
 
-  if (snprintf
-      (glade_file, PATH_MAX, "%s/%s/res/gui.glade", DATADIR,
-       PACKAGE) >= PATH_MAX)
-    {
-      error_print ("Path too long\n");
-      return -1;
-    }
-
   gtk_init (&argc, &argv);
   builder = gtk_builder_new ();
-  gtk_builder_add_from_file (builder, glade_file, NULL);
-  free (glade_file);
+  gtk_builder_add_from_file (builder, DATADIR "/gui.glade", NULL);
 
   main_window = GTK_WIDGET (gtk_builder_get_object (builder, "main_window"));
   gtk_window_resize (GTK_WINDOW (main_window), 1, 1);	//Compact window

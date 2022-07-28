@@ -19,6 +19,9 @@ AM_CONDITIONAL([GUI], [test "${CLI_ONLY}" != yes])
 
 AM_COND_IF(GUI, [PKG_CHECK_MODULES([GTK], [gtk+-3.0])])
 
+AM_CONDITIONAL([JSON_DEVS_FILE], [test "${JSON_DEVS_FILE}" != no])
+AS_IF([test "${JSON_DEVS_FILE}" != "no"], [AC_DEFINE([JSON_DEVS_FILE], [1], ["Use JSON devices file"])])
+
 # Checks for libraries.
 PKG_CHECK_MODULES(libusb, libusb, HAVE_LIBUSB=1, HAVE_LIBUSB=0)
 PKG_CHECK_MODULES(JACK, jack >= 0.100.0)
