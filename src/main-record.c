@@ -23,7 +23,6 @@
 #include <unistd.h>
 #include <time.h>
 #include "../config.h"
-#include "overwitch.h"
 #include "utils.h"
 #include "common.h"
 

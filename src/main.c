@@ -27,7 +27,6 @@
 #include <sys/stat.h>
 #include <json-glib/json-glib.h>
 #include "common.h"
-#include "overwitch.h"
 #include "jclient.h"
 #include "utils.h"
 
