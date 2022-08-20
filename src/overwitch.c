@@ -45,16 +45,7 @@
 #define DEV_TAG_INPUT_TRACK_NAMES "input_track_names"
 #define DEV_TAG_OUTPUT_TRACK_NAMES "output_track_names"
 
-struct ow_device_desc_static
-{
-  uint16_t pid;
-  char *name;
-  int inputs;
-  int outputs;
-  char *input_track_names[OB_MAX_TRACKS];
-  char *output_track_names[OB_MAX_TRACKS];
-};
-
+#if !defined(JSON_DEVS_FILE) || defined(OW_TESTING)
 static const struct ow_device_desc_static DIGITAKT_DESC = {
   .pid = DTAKT_PID,
   .name = "Digitakt",
@@ -153,10 +144,11 @@ static const struct ow_device_desc_static STAKT_DESC = {
      "Delay/Reverb L", "Delay/Reverb R", "Input L", "Input R"}
 };
 
-const struct ow_device_desc_static *OB_DEVICE_DESCS[] = {
+static const struct ow_device_desc_static *OB_DEVICE_DESCS[] = {
   &DIGITAKT_DESC, &DIGITONE_DESC, &AFMK2_DESC, &ARMK2_DESC, &DKEYS_DESC,
   &AHMK1_DESC, &AHMK2_DESC, &STAKT_DESC, NULL
 };
+#endif
 
 void
 ow_free_device_desc (struct ow_device_desc *desc)
@@ -256,6 +248,30 @@ ow_get_usb_device_list (struct ow_usb_device **devices, size_t *size)
   return 0;
 }
 
+void
+ow_copy_device_desc_static (struct ow_device_desc *device_desc,
+			    const struct ow_device_desc_static *d)
+{
+  device_desc->pid = d->pid;
+  device_desc->name = strdup (d->name);
+  device_desc->inputs = d->inputs;
+  device_desc->outputs = d->outputs;
+  device_desc->input_track_names =
+    malloc (sizeof (char *) * device_desc->inputs);
+  device_desc->output_track_names =
+    malloc (sizeof (char *) * device_desc->outputs);
+
+  for (int i = 0; i < device_desc->inputs; i++)
+    {
+      device_desc->input_track_names[i] = strdup (d->input_track_names[i]);
+    }
+
+  for (int i = 0; i < device_desc->outputs; i++)
+    {
+      device_desc->output_track_names[i] = strdup (d->output_track_names[i]);
+    }
+}
+
 int
 ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 				 struct ow_device_desc *device_desc)
@@ -265,7 +281,7 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
       return 1;
     }
 
-#ifdef JSON_DEVS_FILE
+#if defined(JSON_DEVS_FILE) && !defined(OW_TESTING)
   gint dpid, err, devices;
   JsonParser *parser;
   JsonReader *reader;
@@ -464,26 +480,7 @@ cleanup_parser:
     {
       if ((*d)->pid == pid)
 	{
-	  device_desc->pid = (*d)->pid;
-	  device_desc->name = strdup ((*d)->name);
-	  device_desc->inputs = (*d)->inputs;
-	  device_desc->outputs = (*d)->outputs;
-	  device_desc->input_track_names =
-	    malloc (sizeof (char *) * device_desc->inputs);
-	  device_desc->output_track_names =
-	    malloc (sizeof (char *) * device_desc->outputs);
-
-	  for (int i = 0; i < device_desc->inputs; i++)
-	    {
-	      device_desc->input_track_names[i] =
-		strdup ((*d)->input_track_names[i]);
-	    }
-	  for (int i = 0; i < device_desc->outputs; i++)
-	    {
-	      device_desc->output_track_names[i] =
-		strdup ((*d)->output_track_names[i]);
-	    }
-
+	  ow_copy_device_desc_static (device_desc, *d);
 	  return 0;
 	}
     }

@@ -10,7 +10,7 @@
 #define TRACKS 6
 #define NFRAMES 64
 
-static const struct ow_device_desc TESTDEV_DESC = {
+static const struct ow_device_desc_static TESTDEV_DESC = {
   .pid = 0,
   .name = "Test",
   .inputs = TRACKS,
@@ -22,12 +22,11 @@ static const struct ow_device_desc TESTDEV_DESC = {
 void
 test_sizes ()
 {
-
   struct ow_engine engine;
 
   printf ("\n");
 
-  engine.device_desc = &TESTDEV_DESC;
+  ow_copy_device_desc_static (&engine.device_desc, &TESTDEV_DESC);
   ow_engine_init_mem (&engine, BLOCKS);
 
   printf ("\n");
@@ -36,8 +35,6 @@ test_sizes ()
 		   TRACKS * OB_FRAMES_PER_BLOCK * OB_BYTES_PER_SAMPLE + 32);
   CU_ASSERT_EQUAL (engine.usb.audio_in_blk_len,
 		   TRACKS * OB_FRAMES_PER_BLOCK * OB_BYTES_PER_SAMPLE + 32);
-
-
 
   ow_engine_free_mem (&engine);
 }
@@ -51,7 +48,7 @@ test_usb_blocks ()
 
   printf ("\n");
 
-  engine.device_desc = &TESTDEV_DESC;
+  ow_copy_device_desc_static (&engine.device_desc, &TESTDEV_DESC);
   ow_engine_init_mem (&engine, BLOCKS);
 
   blk_size =
@@ -66,7 +63,7 @@ test_usb_blocks ()
     {
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < engine.device_desc->outputs; k++)
+	  for (int k = 0; k < engine.device_desc.outputs; k++)
 	    {
 	      *a = 1e-8 * (i + 1) * (k + 1);
 	      a++;
@@ -98,7 +95,7 @@ test_usb_blocks ()
     {
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < engine.device_desc->outputs; k++)
+	  for (int k = 0; k < engine.device_desc.outputs; k++)
 	    {
 	      float error = fabsf (*a - *b);
 	      CU_ASSERT_TRUE (error < 1e-8);
@@ -119,8 +116,11 @@ test_jack_buffers ()
   jack_default_audio_sample_t *jack_output[TRACKS];
   float input[TRACKS * NFRAMES];
   float output[TRACKS * NFRAMES];
+  struct ow_engine engine;
 
   printf ("\n");
+
+  ow_copy_device_desc_static (&engine.device_desc, &TESTDEV_DESC);
 
   for (int i = 0; i < TRACKS; i++)
     {
@@ -133,12 +133,12 @@ test_jack_buffers ()
 	}
     }
 
-  jclient_copy_j2o_audio (output, NFRAMES, jack_input, &TESTDEV_DESC);
+  jclient_copy_j2o_audio (output, NFRAMES, jack_input, &engine.device_desc);
 
   memcpy (input, output,
 	  TRACKS * NFRAMES * sizeof (jack_default_audio_sample_t));
 
-  jclient_copy_o2j_audio (input, NFRAMES, jack_output, &TESTDEV_DESC);
+  jclient_copy_o2j_audio (input, NFRAMES, jack_output, &engine.device_desc);
 
   for (int i = 0; i < TRACKS; i++)
     {

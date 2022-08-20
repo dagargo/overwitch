@@ -137,6 +137,16 @@ struct ow_device_desc
   char **output_track_names;
 };
 
+struct ow_device_desc_static
+{
+  uint16_t pid;
+  char *name;
+  int inputs;
+  int outputs;
+  char *input_track_names[OB_MAX_TRACKS];
+  char *output_track_names[OB_MAX_TRACKS];
+};
+
 struct ow_usb_device
 {
   struct ow_device_desc desc;
@@ -178,6 +188,9 @@ int ow_get_usb_device_from_device_attrs (int, const char *,
 					 struct ow_usb_device **);
 
 void ow_set_thread_rt_priority (pthread_t, int);
+
+void ow_copy_device_desc_static (struct ow_device_desc *,
+				 const struct ow_device_desc_static *);
 
 //Engine
 ow_err_t ow_engine_init_from_bus_address (struct ow_engine **, uint8_t,

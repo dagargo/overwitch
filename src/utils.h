@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "../config.h"
-#ifdef JSON_DEVS_FILE
+#if defined(JSON_DEVS_FILE) && !defined(OW_TESTING)
 #include <json-glib/json-glib.h>
 #else
 //This is used for PATH_MAX
