@@ -121,11 +121,12 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   void *midi_port_buf;
   jack_midi_data_t *jmidi;
   struct ow_midi_event event;
-  jack_nframes_t last_frames, frames, last_frame_time, event_frames;
+  jack_nframes_t first_frames, frames, event_frames;
 
   midi_port_buf = jack_port_get_buffer (jclient->midi_output_port, nframes);
   jack_midi_clear_buffer (midi_port_buf);
-  last_frames = 0;
+
+  first_frames = jack_last_frame_time (jclient->client);
 
   while (jack_ringbuffer_read_space (jclient->context.o2p_midi) >=
 	 sizeof (struct ow_midi_event))
@@ -133,29 +134,30 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
       jack_ringbuffer_peek (jclient->context.o2p_midi, (void *) &event,
 			    sizeof (struct ow_midi_event));
 
-      event_frames = jack_time_to_frames (jclient->client, event.time);
-      last_frame_time = jack_time_to_frames (jclient->client, event.time);
-
-      if (last_frame_time < event_frames)
+      // We add 1 JACK cycle because it's the maximum delay we want to achieve
+      // as everyting generated during the previous cycle will always be played.
+      // If we tried to adjust it automatically we'd get 1 cycle delay.
+      event_frames = jack_time_to_frames (jclient->client, event.time * 1.0e6)
+	+ nframes;
+      if (event_frames >= first_frames + nframes)
 	{
-	  debug_print (2, "Event delayed: %u frames\n",
-		       event_frames - last_frame_time);
+	  debug_print (2,
+		       "Skipping until the next cycle (event frames %d)...\n",
+		       event_frames);
+	  break;
+	}
+
+      if (event_frames < first_frames)
+	{
+	  jack_nframes_t delay = first_frames - event_frames;
+	  debug_print (2, "Event delayed %u frames\n", delay);
 	  frames = 0;
 	}
       else
 	{
-	  frames = (last_frame_time - event_frames) % jclient->bufsize;
+	  frames = (event_frames - first_frames) % nframes;
 	}
-
       debug_print (2, "Event frames: %u\n", frames);
-
-      if (frames < last_frames)
-	{
-	  debug_print (2, "Skipping until the next cycle...\n");
-	  last_frames = 0;
-	  break;
-	}
-      last_frames = frames;
 
       jack_ringbuffer_read_advance (jclient->context.o2p_midi,
 				    sizeof (struct ow_midi_event));
