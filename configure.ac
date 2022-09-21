@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([overwitch],[1.0],[dagargo@gmail.com])
+AC_INIT([overwitch],[1.1],[dagargo@gmail.com])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
 # AC_PROG_LIBTOOL is deprecated, use LT_INIT. SD 10/2
@@ -43,6 +43,11 @@ AC_DEFINE_UNQUOTED([HAVE_SAMPLERATE],${ac_cv_samplerate}, [Set to 1 if you have 
 AC_SUBST(SAMPLERATE_CFLAGS)
 AC_SUBST(SAMPLERATE_LIBS)
 
+AM_COND_IF(GUI, [
+AM_GNU_GETTEXT([external])
+AM_GNU_GETTEXT_VERSION([0.19])
+])
+
 # Checks for typedefs, structures, and compiler characteristics.
 
 # Checks for library functions.
@@ -50,5 +55,5 @@ AC_FUNC_MALLOC
 
 AM_CONDITIONAL([UDEV_AVAIL], [test "`pkg-config --variable=udevdir udev`" != ""])
 
-AC_CONFIG_FILES([Makefile src/Makefile udev/Makefile res/Makefile test/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile udev/Makefile res/Makefile test/Makefile po/Makefile.in po/Makefile])
 AC_OUTPUT
