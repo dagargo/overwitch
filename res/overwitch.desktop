@@ -2,6 +2,8 @@
 Type=Application
 Name=Overwitch
 Comment=Overbridge 2 device client for JACK
+Comment[ca]=Client JACK per a dispositius Overbridge 2
+Comment[es]=Cliente JACK para dispositivos Overbridge 2
 Categories=Music;AudioVideo;X-Sound;Audio;X-Alsa
 Keywords=music;alsa;realtime;standalone;
 Exec=overwitch

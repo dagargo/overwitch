@@ -26,12 +26,10 @@
 #include <jack/jack.h>
 #include <sys/stat.h>
 #include <json-glib/json-glib.h>
+#include <glib/gi18n.h>
 #include "common.h"
 #include "jclient.h"
 #include "utils.h"
-
-#define MSG_JACK_SERVER_FOUND "JACK server found"
-#define MSG_NO_JACK_SERVER_FOUND "No JACK server found"
 
 #define CONF_FILE "/preferences.json"
 
@@ -472,7 +470,7 @@ check_jack_server_free (gpointer data)
 
   if (*status)
     {
-      msg = MSG_JACK_SERVER_FOUND;
+      msg = _("JACK server found");
       if (callback)
 	{
 	  callback ();
@@ -480,7 +478,7 @@ check_jack_server_free (gpointer data)
     }
   else
     {
-      msg = MSG_NO_JACK_SERVER_FOUND;
+      msg = _("No JACK server found");
       gtk_widget_set_sensitive (stop_button, FALSE);
       gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), TRUE);
       gtk_widget_set_sensitive (GTK_WIDGET (quality_combo_box), TRUE);
@@ -802,6 +800,10 @@ main (int argc, char *argv[])
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGTSTP, &action, NULL);
 
+  setlocale (LC_ALL, "");
+  bindtextdomain (PACKAGE, LOCALEDIR);
+  textdomain (PACKAGE);
+
   gtk_init (&argc, &argv);
   builder = gtk_builder_new ();
   gtk_builder_add_from_file (builder, DATADIR "/gui.glade", NULL);
@@ -850,7 +852,7 @@ main (int argc, char *argv[])
 			  (builder, "j2o_ratio_column"));
 
   status_bar = GTK_STATUSBAR (gtk_builder_get_object (builder, "status_bar"));
-  gtk_statusbar_push (status_bar, 0, MSG_NO_JACK_SERVER_FOUND);
+  gtk_statusbar_push (status_bar, 0, _("No JACK server found"));
 
   main_popover =
     GTK_POPOVER (gtk_builder_get_object (builder, "main_popover"));
