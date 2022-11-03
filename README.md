@@ -38,6 +38,7 @@ The package dependencies for Debian based distributions are:
 - libjson-glib-dev
 - libgtk-3-dev
 - libsndfile1-dev
+- libjson-glib-dev (only if `JSON_DEVS_FILE=no` is not used)
 
 You can easily install them by running `sudo apt install automake libtool libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev libjson-glib-dev libgtk-3-dev libsndfile1-dev`.
 
