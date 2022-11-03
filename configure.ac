@@ -5,12 +5,10 @@ AC_PREREQ([2.69])
 AC_INIT([overwitch],[1.1],[dagargo@gmail.com])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
-# AC_PROG_LIBTOOL is deprecated, use LT_INIT. SD 10/2
-#AC_PROG_LIBTOOL
 LT_INIT
 AC_SEARCH_LIBS([sqrt], [m])
 AC_CONFIG_MACRO_DIRS([m4])
-AM_INIT_AUTOMAKE([1.12 subdir-objects])
+AM_INIT_AUTOMAKE([subdir-objects])
 
 # Checks for programs.
 AC_PROG_CC
