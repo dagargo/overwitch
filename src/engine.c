@@ -816,7 +816,10 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
 
   *engine_ = engine;
   ret = ow_engine_init (engine, blocks_per_transfer);
-  ow_engine_init_name (engine, bus, address);
+  if (!ret)
+    {
+      ow_engine_init_name (engine, bus, address);
+    }
   return ret;
 
 error:
