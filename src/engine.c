@@ -688,7 +688,7 @@ end:
       usb_shutdown (engine);
       free (engine);
       error_print ("Error while initializing device: %s\n",
-		   libusb_error_name (ret));
+		   libusb_error_name (err));
     }
   return ret;
 }
