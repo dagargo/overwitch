@@ -44,6 +44,7 @@ struct jclient
   struct ow_resampler *resampler;
   struct ow_context context;
   // Thread stuff
+  int running;
   pthread_t thread;
   jclient_end_notifier_t end_notifier;
 };

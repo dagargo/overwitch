@@ -630,12 +630,18 @@ jclient_thread_runner (void *data)
 int
 jclient_start (struct jclient *jclient)
 {
-  return pthread_create (&jclient->thread, NULL, jclient_thread_runner,
-			 jclient);
+  int err = pthread_create (&jclient->thread, NULL, jclient_thread_runner,
+			     jclient);
+  jclient->running = err ? 0 : 1;
+  return err;
 }
 
 void
 jclient_wait (struct jclient *jclient)
 {
-  pthread_join (jclient->thread, NULL);
+  if (jclient->running)
+    {
+      pthread_join (jclient->thread, NULL);
+      jclient->running = 0;
+    }
 }
