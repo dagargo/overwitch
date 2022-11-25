@@ -188,6 +188,7 @@ main (int argc, char *argv[])
 	  dflg++;
 	  break;
 	case 'q':
+	  errno = 0;
 	  quality = (int) strtol (optarg, &endstr, 10);
 	  if (errno || endstr == optarg || *endstr != '\0' || quality > 4
 	      || quality < 0)
@@ -199,6 +200,7 @@ main (int argc, char *argv[])
 	    }
 	  break;
 	case 'b':
+	  errno = 0;
 	  blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
 	  if (errno || endstr == optarg || *endstr != '\0'
 	      || blocks_per_transfer < 2 || blocks_per_transfer > 32)
@@ -211,6 +213,7 @@ main (int argc, char *argv[])
 	  bflg++;
 	  break;
 	case 'p':
+	  errno = 0;
 	  priority = (int) strtol (optarg, &endstr, 10);
 	  if (errno || endstr == optarg || *endstr != '\0' || priority < 0
 	      || priority > 99)
