@@ -21,6 +21,7 @@
 #include <libusb.h>
 #include <string.h>
 #include <sched.h>
+#include <errno.h>
 #include "overwitch.h"
 #include "utils.h"
 
