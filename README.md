@@ -83,8 +83,8 @@ $ overwitch-cli -l
 Then, you can choose which device you want to use by using one of these options. Notice that the second option will only work for the first device found with that name.
 
 ```
-$ overwitch -n 0
-$ overwitch -d Digitakt
+$ overwitch-cli -n 0
+$ overwitch-cli -d Digitakt
 ```
 
 To stop, just press `Ctrl+C`. You'll see an oputput like the one below. Notice that we are using the verbose option here but it is **not recommended** to use it and it is showed here for illustrative purposes only.
