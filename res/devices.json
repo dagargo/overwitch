@@ -144,6 +144,21 @@
 		"FX Return R"
 	]
 }, {
+	"pid": 32,
+	"name": "Analog Heat +FX",
+	"input_track_names": [
+		"Main L Input",
+		"Main R Input",
+		"FX Send L",
+		"FX Send R"
+	],
+	"output_track_names": [
+		"Main L",
+		"Main R",
+		"FX Return L",
+		"FX Return R"
+	]
+}, {
 	"pid": 30,
 	"name": "Syntakt",
 	"input_track_names": [
