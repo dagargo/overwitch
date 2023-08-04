@@ -40,6 +40,7 @@
 #define AHMK2_PID 0x0016
 #define DKEYS_PID 0x001c
 #define STAKT_PID 0x001e
+#define AHFX_PID 0x0020
 
 #define DEV_TAG_PID "pid"
 #define DEV_TAG_NAME "name"
@@ -130,6 +131,16 @@ static const struct ow_device_desc_static AHMK2_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
+static const struct ow_device_desc_static AHFX_DESC = {
+  .pid = AHFX_PID,
+  .name = "Analog Heat +FX",
+  .inputs = 4,
+  .outputs = 4,
+  .input_track_names =
+    {"Main L Input", "Main R Input", "FX Send L", "FX Send R"},
+  .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
+};
+
 static const struct ow_device_desc_static STAKT_DESC = {
   .pid = STAKT_PID,
   .name = "Syntakt",
@@ -147,7 +158,7 @@ static const struct ow_device_desc_static STAKT_DESC = {
 
 static const struct ow_device_desc_static *OB_DEVICE_DESCS[] = {
   &DIGITAKT_DESC, &DIGITONE_DESC, &AFMK2_DESC, &ARMK2_DESC, &DKEYS_DESC,
-  &AHMK1_DESC, &AHMK2_DESC, &STAKT_DESC, NULL
+  &AHMK1_DESC, &AHMK2_DESC, &AHFX_DESC, &STAKT_DESC, NULL
 };
 #endif
 
