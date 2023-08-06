@@ -458,6 +458,14 @@ is_device_at_bus_address_running (uint8_t bus, uint8_t address,
   return FALSE;
 }
 
+static void
+set_widgets_to_running_state (gboolean running)
+{
+  gtk_widget_set_sensitive (stop_button, running);
+  gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), !running);
+  gtk_widget_set_sensitive (GTK_WIDGET (quality_combo_box), !running);
+}
+
 static gboolean
 check_jack_server_free (gpointer data)
 {
@@ -479,9 +487,7 @@ check_jack_server_free (gpointer data)
   else
     {
       msg = _("No JACK server found");
-      gtk_widget_set_sensitive (stop_button, FALSE);
-      gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), TRUE);
-      gtk_widget_set_sensitive (GTK_WIDGET (quality_combo_box), TRUE);
+      set_widgets_to_running_state (FALSE);
     }
   gtk_statusbar_push (status_bar, 0, msg);
 
@@ -533,6 +539,7 @@ remove_jclient_bg (guint * id)
   GtkTreeIter iter;
   uint8_t bus = *id >> 8;
   uint8_t address = 0xff & *id;
+  gint remaining = 0;
   gboolean valid =
     gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store), &iter);
 
@@ -550,11 +557,19 @@ remove_jclient_bg (guint * id)
 	  jclient_destroy (&instance->jclient);
 	  free (instance);
 	  gtk_list_store_remove (status_list_store, &iter);
-	  break;
+	}
+      else
+	{
+	  remaining++;
 	}
 
-      valid =
-	gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store), &iter);
+      valid = gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store),
+					&iter);
+    }
+
+  if (!remaining)
+    {
+      set_widgets_to_running_state (FALSE);
     }
 
   check_jack_server_bg (NULL);
@@ -657,9 +672,7 @@ refresh_devices ()
       set_report_data (instance, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0);
 
       start_instance (instance);
-      gtk_widget_set_sensitive (stop_button, TRUE);
-      gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), FALSE);
-      gtk_widget_set_sensitive (GTK_WIDGET (quality_combo_box), FALSE);
+      set_widgets_to_running_state (TRUE);
     }
 
   ow_free_usb_device_list (devices, devices_count);
@@ -693,9 +706,7 @@ stop_all (GtkWidget * object, gpointer data)
 				       &iter);
     }
 
-  gtk_widget_set_sensitive (stop_button, FALSE);
-  gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), TRUE);
-  gtk_widget_set_sensitive (GTK_WIDGET (quality_combo_box), TRUE);
+  set_widgets_to_running_state (FALSE);
 }
 
 static void
