@@ -251,7 +251,8 @@ void ow_resampler_read_audio (struct ow_resampler *);
 
 void ow_resampler_write_audio (struct ow_resampler *);
 
-int ow_resampler_compute_ratios (struct ow_resampler *, double);
+int ow_resampler_compute_ratios (struct ow_resampler *, double,
+				 void (*)(void *), void *);
 
 void ow_resampler_inc_xruns (struct ow_resampler *);
 
@@ -275,5 +276,9 @@ float *ow_resampler_get_p2o_audio_buffer (struct ow_resampler *);
 
 struct ow_resampler_reporter *ow_resampler_get_reporter (struct ow_resampler
 							 *);
+
+void ow_resampler_get_p2o_latency (struct ow_resampler *, size_t *, size_t *);
+
+void ow_resampler_get_o2p_latency (struct ow_resampler *, size_t *, size_t *);
 
 #endif

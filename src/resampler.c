@@ -335,7 +335,8 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
 }
 
 int
-ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
+ow_resampler_compute_ratios (struct ow_resampler *resampler, double time,
+			     void (*audio_running_cb) (void *), void *cb_data)
 {
   int xruns;
   ow_engine_status_t engine_status;
@@ -432,6 +433,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time)
 					  resampler->samplerate);
 	  resampler->status = OW_RESAMPLER_STATUS_RUN;
 	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_RUN);
+	  audio_running_cb (cb_data);
 	}
     }
 
@@ -610,4 +612,20 @@ struct ow_resampler_reporter *
 ow_resampler_get_reporter (struct ow_resampler *resampler)
 {
   return &resampler->reporter;
+}
+
+inline void
+ow_resampler_get_p2o_latency (struct ow_resampler *resampler,
+			      size_t *p2o_latency, size_t *p2o_max_latency)
+{
+  *p2o_latency = resampler->engine->p2o_latency;
+  *p2o_max_latency = resampler->engine->p2o_max_latency;
+}
+
+inline void
+ow_resampler_get_o2p_latency (struct ow_resampler *resampler,
+			      size_t *o2p_latency, size_t *o2p_max_latency)
+{
+  *o2p_latency = resampler->engine->o2p_latency;
+  *o2p_max_latency = resampler->engine->o2p_max_latency;
 }

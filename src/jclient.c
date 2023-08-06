@@ -68,6 +68,47 @@ jclient_thread_xrun_cb (void *cb_data)
 }
 
 static void
+jclient_thread_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
+{
+  jack_latency_range_t range;
+  struct jclient *jclient = cb_data;
+  size_t latency, max_latency;
+  struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
+  const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
+
+  debug_print (2, "JACK latency request\n");
+
+  if (mode == JackPlaybackLatency)
+    {
+      debug_print (2, "Recalculating input to output latency...\n");
+      for (int i = 0; i < desc->outputs; i++)
+	{
+	  jack_port_get_latency_range (jclient->input_ports[0], mode, &range);
+	  ow_resampler_get_o2p_latency (jclient->resampler, &latency,
+					&max_latency);
+	  range.min += latency;
+	  range.max += max_latency;
+	  jack_port_set_latency_range (jclient->output_ports[i], mode,
+				       &range);
+	}
+    }
+  else if (mode == JackCaptureLatency)
+    {
+      debug_print (2, "Recalculating output to input latency...\n");
+      for (int i = 0; i < desc->inputs; i++)
+	{
+	  jack_port_get_latency_range (jclient->output_ports[0], mode,
+				       &range);
+	  ow_resampler_get_p2o_latency (jclient->resampler, &latency,
+					&max_latency);
+	  range.min += latency;
+	  range.max += max_latency;
+	  jack_port_set_latency_range (jclient->input_ports[i], mode, &range);
+	}
+    }
+}
+
+static void
 jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
 			 void *cb_data)
 {
@@ -336,13 +377,18 @@ jclient_copy_j2o_audio (float *f, jack_nframes_t nframes,
     }
 }
 
+static void
+jclient_audio_running (void *data)
+{
+  jack_recompute_total_latencies (data);
+}
+
 static inline int
 jclient_process_cb (jack_nframes_t nframes, void *arg)
 {
   float *f;
   jack_default_audio_sample_t *buffer[OB_MAX_TRACKS];
   struct jclient *jclient = arg;
-
   jack_nframes_t current_frames;
   jack_time_t current_usecs;
   jack_time_t next_usecs;
@@ -360,7 +406,8 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 
   time = current_usecs * 1.0e-6;
 
-  if (ow_resampler_compute_ratios (jclient->resampler, time))
+  if (ow_resampler_compute_ratios (jclient->resampler, time,
+				   jclient_audio_running, jclient->client))
     {
       return 0;
     }
@@ -506,6 +553,12 @@ jclient_run (struct jclient *jclient)
 
   if (jack_set_xrun_callback
       (jclient->client, jclient_thread_xrun_cb, jclient->resampler))
+    {
+      goto cleanup_jack;
+    }
+
+  if (jack_set_latency_callback
+      (jclient->client, jclient_thread_latency_cb, jclient))
     {
       goto cleanup_jack;
     }
