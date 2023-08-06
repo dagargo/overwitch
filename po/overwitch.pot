@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2022-09-21 20:10+0200\n"
+"POT-Creation-Date: 2023-08-06 12:36+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,30 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+#: src/main.c:101
+msgid "Error"
+msgstr ""
+
+#: src/main.c:103
+msgid "Stopped"
+msgstr ""
+
+#: src/main.c:105
+msgid "Ready"
+msgstr ""
+
+#: src/main.c:107
+msgid "Booting"
+msgstr ""
+
+#: src/main.c:109
+msgid "Tuning"
+msgstr ""
+
+#: src/main.c:111
+msgid "Running"
+msgstr ""
 
 #: src/main.c:473
 msgid "JACK server found"

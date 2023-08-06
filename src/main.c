@@ -98,17 +98,17 @@ get_status_string (ow_resampler_status_t status)
   switch (status)
     {
     case OW_RESAMPLER_STATUS_ERROR:
-      return "Error";
+      return _("Error");
     case OW_RESAMPLER_STATUS_STOP:
-      return "Stopped";
+      return _("Stopped");
     case OW_RESAMPLER_STATUS_READY:
-      return "Ready";
+      return _("Ready");
     case OW_RESAMPLER_STATUS_BOOT:
-      return "Booting";
+      return _("Booting");
     case OW_RESAMPLER_STATUS_TUNE:
-      return "Tuning";
+      return _("Tuning");
     case OW_RESAMPLER_STATUS_RUN:
-      return "Running";
+      return _("Running");
     }
   return NULL;
 }
