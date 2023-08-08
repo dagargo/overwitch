@@ -168,6 +168,10 @@ set_usb_input_data_blks (struct ow_engine *engine)
     {
       engine->o2p_max_latency = engine->o2p_latency;
     }
+  if (engine->o2p_latency < engine->o2p_min_latency)
+    {
+      engine->o2p_min_latency = engine->o2p_latency;
+    }
   pthread_spin_unlock (&engine->lock);
 
   wso2p = engine->context->write_space (engine->context->o2p_audio);
@@ -254,6 +258,10 @@ set_usb_output_data_blks (struct ow_engine *engine)
   if (engine->p2o_latency > engine->p2o_max_latency)
     {
       engine->p2o_max_latency = engine->p2o_latency;
+    }
+  if (engine->p2o_latency < engine->p2o_max_latency)
+    {
+      engine->p2o_min_latency = engine->p2o_latency;
     }
   pthread_spin_unlock (&engine->lock);
 

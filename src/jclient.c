@@ -72,7 +72,7 @@ jclient_thread_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
 {
   jack_latency_range_t range;
   struct jclient *jclient = cb_data;
-  size_t latency, max_latency;
+  size_t latency, min_latency, max_latency;
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
   const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
 
@@ -85,8 +85,8 @@ jclient_thread_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
 	{
 	  jack_port_get_latency_range (jclient->input_ports[0], mode, &range);
 	  ow_resampler_get_o2p_latency (jclient->resampler, &latency,
-					&max_latency);
-	  range.min += latency;
+					&min_latency, &max_latency);
+	  range.min += min_latency;
 	  range.max += max_latency;
 	  jack_port_set_latency_range (jclient->output_ports[i], mode,
 				       &range);
@@ -100,8 +100,8 @@ jclient_thread_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
 	  jack_port_get_latency_range (jclient->output_ports[0], mode,
 				       &range);
 	  ow_resampler_get_p2o_latency (jclient->resampler, &latency,
-					&max_latency);
-	  range.min += latency;
+					&min_latency, &max_latency);
+	  range.min += min_latency;
 	  range.max += max_latency;
 	  jack_port_set_latency_range (jclient->input_ports[i], mode, &range);
 	}

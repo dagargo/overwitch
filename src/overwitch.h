@@ -51,7 +51,7 @@ typedef size_t (*ow_dll_overwitch_inc_t) (void *, int, double);
 typedef void (*ow_set_rt_priority_t) (pthread_t, int);
 
 typedef void (*ow_resampler_report_t) (void *, double, double, double, double,
-				       double, double);
+				       double, double, double, double);
 
 typedef enum
 {
@@ -277,8 +277,10 @@ float *ow_resampler_get_p2o_audio_buffer (struct ow_resampler *);
 struct ow_resampler_reporter *ow_resampler_get_reporter (struct ow_resampler
 							 *);
 
-void ow_resampler_get_p2o_latency (struct ow_resampler *, size_t *, size_t *);
+void ow_resampler_get_p2o_latency (struct ow_resampler *, size_t *, size_t *,
+				   size_t *);
 
-void ow_resampler_get_o2p_latency (struct ow_resampler *, size_t *, size_t *);
+void ow_resampler_get_o2p_latency (struct ow_resampler *, size_t *, size_t *,
+				   size_t *);
 
 #endif

@@ -61,9 +61,11 @@ enum list_store_columns
 struct overwitch_instance
 {
   gdouble o2j_latency;
+  gdouble o2j_min_latency;
+  gdouble o2j_max_latency;
   gdouble j2o_latency;
-  gdouble o2j_latency_max;
-  gdouble j2o_latency_max;
+  gdouble j2o_min_latency;
+  gdouble j2o_max_latency;
   gdouble o2j_ratio;
   gdouble j2o_ratio;
   struct jclient jclient;
@@ -175,8 +177,9 @@ set_overwitch_instance_status (struct overwitch_instance *instance)
 	  if (instance->o2j_latency >= 0)
 	    {
 	      g_snprintf (o2j_latency_s, OW_LABEL_MAX_LEN,
-			  "%.1f ms (max. %.1f ms)", instance->o2j_latency,
-			  instance->o2j_latency_max);
+			  "%.1f [%.1f, %.1f] ms", instance->o2j_latency,
+			  instance->o2j_min_latency,
+			  instance->o2j_max_latency);
 	    }
 	  else
 	    {
@@ -186,8 +189,9 @@ set_overwitch_instance_status (struct overwitch_instance *instance)
 	  if (instance->j2o_latency >= 0)
 	    {
 	      g_snprintf (j2o_latency_s, OW_LABEL_MAX_LEN,
-			  "%.1f ms (max. %.1f ms)", instance->j2o_latency,
-			  instance->j2o_latency_max);
+			  "%.1f [%.1f, %.1f] ms", instance->j2o_latency,
+			  instance->j2o_min_latency,
+			  instance->j2o_max_latency);
 	    }
 	  else
 	    {
@@ -222,14 +226,17 @@ set_overwitch_instance_status (struct overwitch_instance *instance)
 
 static void
 set_report_data (struct overwitch_instance *instance,
-		 double o2j_latency, double j2o_latency,
-		 double o2j_latency_max, double j2o_latency_max,
+		 double o2j_latency, double o2j_min_latency,
+		 double o2j_max_latency, double j2o_latency,
+		 double j2o_min_latency, double j2o_max_latency,
 		 double o2j_ratio, double j2o_ratio)
 {
   instance->o2j_latency = o2j_latency;
+  instance->o2j_min_latency = o2j_min_latency;
+  instance->o2j_max_latency = o2j_max_latency;
   instance->j2o_latency = j2o_latency;
-  instance->o2j_latency_max = o2j_latency_max;
-  instance->j2o_latency_max = j2o_latency_max;
+  instance->j2o_min_latency = j2o_min_latency;
+  instance->j2o_max_latency = j2o_max_latency;
   instance->o2j_ratio = o2j_ratio;
   instance->j2o_ratio = j2o_ratio;
   g_idle_add ((GSourceFunc) set_overwitch_instance_status, instance);
@@ -728,7 +735,8 @@ refresh_all (GtkWidget * object, gpointer data)
 					 STATUS_LIST_STORE_INSTANCE, instance,
 					 -1);
 
-      set_report_data (instance, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0);
+      set_report_data (instance, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0,
+		       1.0);
 
       start_instance (instance);
       set_widgets_to_running_state (TRUE);

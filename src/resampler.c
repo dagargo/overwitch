@@ -30,14 +30,18 @@
 inline void
 ow_resampler_report_status (struct ow_resampler *resampler)
 {
-  size_t o2p_latency_s, o2p_max_latency_s, p2o_latency_s, p2o_max_latency_s;
-  double o2p_latency_d, o2p_max_latency_d, p2o_latency_d, p2o_max_latency_d;
+  size_t o2p_latency_s, o2p_min_latency_s, o2p_max_latency_s, p2o_latency_s,
+    p2o_min_latency_s, p2o_max_latency_s;
+  double o2p_latency_d, o2p_min_latency_d, o2p_max_latency_d, p2o_latency_d,
+    p2o_min_latency_d, p2o_max_latency_d;
   ow_engine_status_t status;
 
   pthread_spin_lock (&resampler->engine->lock);
   o2p_latency_s = resampler->engine->o2p_latency;
+  o2p_min_latency_s = resampler->engine->o2p_min_latency;
   o2p_max_latency_s = resampler->engine->o2p_max_latency;
   p2o_latency_s = resampler->engine->p2o_latency;
+  p2o_min_latency_s = resampler->engine->p2o_min_latency;
   p2o_max_latency_s = resampler->engine->p2o_max_latency;
   status = resampler->engine->status;
   pthread_spin_unlock (&resampler->engine->lock);
@@ -47,50 +51,54 @@ ow_resampler_report_status (struct ow_resampler *resampler)
 
   if (status == OW_ENGINE_STATUS_RUN)
     {
-      o2p_latency_d =
-	o2p_latency_s * 1000.0 / (resampler->engine->o2p_frame_size *
-				  OB_SAMPLE_RATE);
-      o2p_max_latency_d =
-	o2p_max_latency_s * 1000.0 / (resampler->engine->o2p_frame_size *
-				      OB_SAMPLE_RATE);
+      o2p_latency_d = o2p_latency_s * 1000.0 /
+	(resampler->engine->o2p_frame_size * OB_SAMPLE_RATE);
+      o2p_max_latency_d = o2p_max_latency_s * 1000.0 /
+	(resampler->engine->o2p_frame_size * OB_SAMPLE_RATE);
+      o2p_min_latency_d = o2p_min_latency_s * 1000.0 /
+	(resampler->engine->o2p_frame_size * OB_SAMPLE_RATE);
 
       if (p2o_enabled)
 	{
-	  p2o_latency_d =
-	    p2o_latency_s * 1000.0 / (resampler->engine->p2o_frame_size *
-				      OB_SAMPLE_RATE);
-	  p2o_max_latency_d =
-	    p2o_max_latency_s * 1000.0 / (resampler->engine->p2o_frame_size *
-					  OB_SAMPLE_RATE);
+	  p2o_latency_d = p2o_latency_s * 1000.0 /
+	    (resampler->engine->p2o_frame_size * OB_SAMPLE_RATE);
+	  p2o_max_latency_d = p2o_max_latency_s * 1000.0 /
+	    (resampler->engine->p2o_frame_size * OB_SAMPLE_RATE);
+	  p2o_min_latency_d = p2o_min_latency_s * 1000.0 /
+	    (resampler->engine->p2o_frame_size * OB_SAMPLE_RATE);
 	}
       else
 	{
 	  p2o_latency_d = -1.0;
 	  p2o_max_latency_d = -1.0;
+	  p2o_min_latency_d = -1.0;
 	}
     }
   else
     {
       o2p_latency_d = -1.0;
       o2p_max_latency_d = -1.0;
+      o2p_min_latency_d = -1.0;
 
       p2o_latency_d = -1.0;
       p2o_max_latency_d = -1.0;
+      p2o_min_latency_d = -1.0;
     }
 
   if (debug_level)
     {
       printf
-	("%s: o2p latency: %4.1f ms, max. %4.1f ms; p2o latency: %4.1f ms, max. %4.1f ms, o2p ratio: %f, avg. %f\n",
-	 resampler->engine->name, o2p_latency_d, o2p_max_latency_d,
-	 p2o_latency_d, p2o_max_latency_d, resampler->dll.ratio,
-	 resampler->dll.ratio_avg);
+	("%s: o2p latency: %4.1f [%4.1f, %4.1f] ms; p2o latency: %4.1f [%4.1f, %4.1f] ms, o2p ratio: %f, avg. %f\n",
+	 resampler->engine->name, o2p_latency_d, o2p_min_latency_d,
+	 o2p_max_latency_d, p2o_latency_d, p2o_min_latency_d,
+	 p2o_max_latency_d, resampler->dll.ratio, resampler->dll.ratio_avg);
     }
 
   if (resampler->reporter.callback)
     {
       resampler->reporter.callback (resampler->reporter.data, o2p_latency_d,
-				    p2o_latency_d, o2p_max_latency_d,
+				    o2p_min_latency_d, o2p_max_latency_d,
+				    p2o_latency_d, p2o_min_latency_d,
 				    p2o_max_latency_d, resampler->o2p_ratio,
 				    resampler->p2o_ratio);
     }
@@ -616,16 +624,20 @@ ow_resampler_get_reporter (struct ow_resampler *resampler)
 
 inline void
 ow_resampler_get_p2o_latency (struct ow_resampler *resampler,
-			      size_t *p2o_latency, size_t *p2o_max_latency)
+			      size_t *p2o_latency, size_t *p2o_min_latency,
+			      size_t *p2o_max_latency)
 {
   *p2o_latency = resampler->engine->p2o_latency;
+  *p2o_min_latency = resampler->engine->p2o_min_latency;
   *p2o_max_latency = resampler->engine->p2o_max_latency;
 }
 
 inline void
 ow_resampler_get_o2p_latency (struct ow_resampler *resampler,
-			      size_t *o2p_latency, size_t *o2p_max_latency)
+			      size_t *o2p_latency, size_t *o2p_min_latency,
+			      size_t *o2p_max_latency)
 {
   *o2p_latency = resampler->engine->o2p_latency;
+  *o2p_min_latency = resampler->engine->o2p_min_latency;
   *o2p_max_latency = resampler->engine->o2p_max_latency;
 }

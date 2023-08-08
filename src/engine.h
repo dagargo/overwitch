@@ -168,8 +168,10 @@ struct ow_engine
   unsigned int frames_per_transfer;
   pthread_spinlock_t lock;
   size_t o2p_latency;
+  size_t o2p_min_latency;
   size_t o2p_max_latency;
   size_t p2o_latency;
+  size_t p2o_min_latency;
   size_t p2o_max_latency;
   pthread_t audio_o2p_midi_thread;
   pthread_t p2o_midi_thread;
