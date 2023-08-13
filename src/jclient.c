@@ -38,6 +38,31 @@
 
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
+void
+jclient_check_jack_server (jclient_notify_status_t notify_f)
+{
+  jack_client_t *client;
+  gboolean status;
+  jack_nframes_t jack_sample_rate = 0;
+  jack_nframes_t jack_buffer_size = 0;
+
+  client = jack_client_open ("Overwitch control client", JackNoStartServer,
+			     NULL, NULL);
+  if (client)
+    {
+      status = TRUE;
+      jack_sample_rate = jack_get_sample_rate (client);
+      jack_buffer_size = jack_get_buffer_size (client);
+      jack_client_close (client);
+    }
+  else
+    {
+      status = FALSE;
+    }
+
+  notify_f (status, jack_sample_rate, jack_buffer_size);
+}
+
 double
 jclient_get_time ()
 {
@@ -631,7 +656,7 @@ int
 jclient_start (struct jclient *jclient)
 {
   int err = pthread_create (&jclient->thread, NULL, jclient_thread_runner,
-			     jclient);
+			    jclient);
   jclient->running = err ? 0 : 1;
   return err;
 }

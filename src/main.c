@@ -65,6 +65,10 @@ struct overwitch_instance
 
 typedef void (*check_jack_server_callback_t) ();
 
+static gboolean jack_status;
+static jack_nframes_t jack_sample_rate;
+static jack_nframes_t jack_buffer_size;
+
 static GtkWidget *main_window;
 static GtkAboutDialog *about_dialog;
 static GtkWidget *about_button;
@@ -467,59 +471,49 @@ set_widgets_to_running_state (gboolean running)
 }
 
 static gboolean
-check_jack_server_free (gpointer data)
+set_status (gpointer data)
 {
-  const char *msg;
-  gboolean *status;
-  check_jack_server_callback_t callback = data;
-
-  status = g_thread_join (jack_control_client_thread);
-  jack_control_client_thread = NULL;
-
-  if (*status)
+  static char msg[OW_LABEL_MAX_LEN];
+  if (jack_status)
     {
-      msg = _("JACK server found");
-      if (callback)
-	{
-	  callback ();
-	}
+      snprintf (msg, OW_LABEL_MAX_LEN,
+		_("JACK at %.5g kHz, %d period"),
+		jack_sample_rate / 1000.f, jack_buffer_size);
     }
   else
     {
-      msg = _("No JACK server found");
-      set_widgets_to_running_state (FALSE);
+      snprintf (msg, OW_LABEL_MAX_LEN, _("JACK not found"));
     }
+  gtk_statusbar_pop (status_bar, 0);
   gtk_statusbar_push (status_bar, 0, msg);
 
-  g_free (status);
+  g_thread_join (jack_control_client_thread);
+  jack_control_client_thread = NULL;
 
   return G_SOURCE_REMOVE;
 }
 
-static gpointer
-check_jack_server (gpointer callback)
+static void
+set_status_cb (int status, jack_nframes_t sample_rate,
+	       jack_nframes_t buffer_size)
 {
-  jack_status_t foo;
-  jack_client_t *client;
-  gboolean *status = g_malloc (sizeof (gboolean));
+  jack_status = status;
+  jack_sample_rate = sample_rate;
+  jack_buffer_size = buffer_size;
+  g_idle_add (set_status, NULL);
+}
 
-  gtk_statusbar_pop (status_bar, 0);
 
-  client = jack_client_open ("Overwitch control client", JackNoStartServer,
-			     &foo, NULL);
-  if (client)
+static gpointer
+set_status_task_thread (gpointer data)
+{
+  check_jack_server_callback_t cb = data;
+  jclient_check_jack_server (set_status_cb);
+  if (cb)
     {
-      *status = TRUE;
-      jack_client_close (client);
+      cb ();
     }
-  else
-    {
-      *status = FALSE;
-    }
-
-  g_idle_add (check_jack_server_free, callback);
-
-  return status;
+  return NULL;
 }
 
 static void
@@ -528,7 +522,8 @@ check_jack_server_bg (check_jack_server_callback_t callback)
   if (!jack_control_client_thread)
     {
       jack_control_client_thread = g_thread_new ("Overwitch control client",
-						 check_jack_server, callback);
+						 set_status_task_thread,
+						 callback);
     }
 }
 
@@ -863,7 +858,7 @@ main (int argc, char *argv[])
 			  (builder, "j2o_ratio_column"));
 
   status_bar = GTK_STATUSBAR (gtk_builder_get_object (builder, "status_bar"));
-  gtk_statusbar_push (status_bar, 0, _("No JACK server found"));
+  gtk_statusbar_push (status_bar, 0, _("JACK not found"));
 
   main_popover =
     GTK_POPOVER (gtk_builder_get_object (builder, "main_popover"));

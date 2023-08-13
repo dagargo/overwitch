@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2023-08-06 12:36+0200\n"
+"POT-Creation-Date: 2023-08-29 18:23+0200\n"
 "PO-Revision-Date: 2022-09-21 19:03+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: English\n"
@@ -17,61 +17,63 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/main.c:101
+#: src/main.c:105
 msgid "Error"
 msgstr ""
 
-#: src/main.c:103
+#: src/main.c:107
 msgid "Stopped"
 msgstr ""
 
-#: src/main.c:105
+#: src/main.c:109
 msgid "Ready"
 msgstr ""
 
-#: src/main.c:107
+#: src/main.c:111
 msgid "Booting"
 msgstr ""
 
-#: src/main.c:109
+#: src/main.c:113
 msgid "Tuning"
 msgstr ""
 
-#: src/main.c:111
+#: src/main.c:115
 msgid "Running"
 msgstr ""
 
-#: src/main.c:473
-msgid "JACK server found"
-msgstr "JACK server found"
+#: src/main.c:480
+#, c-format
+msgid "JACK at %.5g kHz, %d period"
+msgstr ""
 
-#: src/main.c:481 src/main.c:855
-msgid "No JACK server found"
-msgstr "No JACK server found"
+#: src/main.c:485 src/main.c:862
+#, c-format
+msgid "JACK not found"
+msgstr ""
 
 #: res/gui.glade:19
 msgid "Highest"
-msgstr "Highest"
+msgstr ""
 
 #: res/gui.glade:22
 msgid "High"
-msgstr "High"
+msgstr ""
 
 #: res/gui.glade:25
 msgid "Medium"
-msgstr "Medium"
+msgstr ""
 
 #: res/gui.glade:28
 msgid "Low"
-msgstr "Low"
+msgstr ""
 
 #: res/gui.glade:31
 msgid "Lowest"
-msgstr "Lowest"
+msgstr ""
 
 #: res/gui.glade:66
 msgid "Overbridge 2 device client for JACK"
-msgstr "Overbridge 2 device client for JACK"
+msgstr ""
 
 #: res/gui.glade:70
 msgid "translator-credits"
@@ -79,72 +81,72 @@ msgstr "David García Goñi <dagargo@gmail.com>"
 
 #: res/gui.glade:118
 msgid "Refresh At Startup"
-msgstr "Refresh At Startup"
+msgstr ""
 
 #: res/gui.glade:131
 msgid "Show All Columns"
-msgstr "Show All Columns"
+msgstr ""
 
 #: res/gui.glade:155
 msgid "About"
-msgstr "About"
+msgstr ""
 
 #: res/gui.glade:191
 msgid "USB buffer length in blocks of 7 samples"
-msgstr "USB buffer length in blocks of 7 samples"
+msgstr ""
 
 #: res/gui.glade:192
 msgid "USB Buffer Length"
-msgstr "USB Buffer Length"
+msgstr ""
 
 #: res/gui.glade:230
 msgid "Resampler quality to balance out the CPU usage"
-msgstr "Resampler quality to balance out the CPU usage"
+msgstr ""
 
 #: res/gui.glade:231
 msgid "Resampler Quality"
-msgstr "Resampler Quality"
+msgstr ""
 
 #: res/gui.glade:288
 msgid "Status"
-msgstr "Status"
+msgstr ""
 
 #: res/gui.glade:299
 msgid "Name"
-msgstr "Name"
+msgstr ""
 
 #: res/gui.glade:312
 msgid "Device"
-msgstr "Device"
+msgstr ""
 
 #: res/gui.glade:323
 msgid "Bus"
-msgstr "Bus"
+msgstr ""
 
 #: res/gui.glade:334
 msgid "Address"
-msgstr "Address"
+msgstr ""
 
 #: res/gui.glade:345
 msgid "Overbridge to JACK latency"
-msgstr "Overbridge to JACK latency"
+msgstr ""
 
 #: res/gui.glade:356
 msgid "JACK to Overbridge latency"
-msgstr "JACK to Overbridge latency"
+msgstr ""
 
 #: res/gui.glade:367
 msgid "Overbridge to JACK ratio"
-msgstr "Overbridge to JACK ratio"
+msgstr ""
 
 #: res/gui.glade:378
 msgid "JACK to Overbridge ratio"
-msgstr "JACK to Overbridge ratio"
+msgstr ""
 
 #: res/gui.glade:430
 msgid "Stop All Devices"
-msgstr "Stop All Devices"
+msgstr ""
 
 #: res/gui.glade:450
 msgid "Refresh Devices"
-msgstr "Refresh Devices"
+msgstr ""
