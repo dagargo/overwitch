@@ -37,8 +37,6 @@
 #define MIDI_OUT_EP 0x01
 #define MIDI_IN_EP  (MIDI_OUT_EP | 0x80)
 
-#define XFR_TIMEOUT 5
-
 #define MIDI_BUF_EVENTS 64
 #define MIDI_BUF_LEN (MIDI_BUF_EVENTS * OB_MIDI_EVENT_SIZE)
 
@@ -437,7 +435,8 @@ prepare_cycle_out_audio (struct ow_engine *engine)
 				  engine->usb.device_handle, AUDIO_OUT_EP,
 				  engine->usb.xfr_audio_out_data,
 				  engine->usb.xfr_audio_out_data_len,
-				  cb_xfr_audio_out, engine, XFR_TIMEOUT);
+				  cb_xfr_audio_out, engine,
+				  engine->usb.xfr_timeout);
 
   int err = libusb_submit_transfer (engine->usb.xfr_audio_out);
   if (err)
@@ -455,7 +454,8 @@ prepare_cycle_in_audio (struct ow_engine *engine)
 				  engine->usb.device_handle, AUDIO_IN_EP,
 				  engine->usb.xfr_audio_in_data,
 				  engine->usb.xfr_audio_in_data_len,
-				  cb_xfr_audio_in, engine, XFR_TIMEOUT);
+				  cb_xfr_audio_in, engine,
+				  engine->usb.xfr_timeout);
 
   int err = libusb_submit_transfer (engine->usb.xfr_audio_in);
   if (err)
@@ -473,7 +473,7 @@ prepare_cycle_in_midi (struct ow_engine *engine)
 			     engine->usb.device_handle, MIDI_IN_EP,
 			     engine->usb.xfr_midi_in_data,
 			     USB_BULK_MIDI_LEN, cb_xfr_midi_in, engine,
-			     XFR_TIMEOUT);
+			     engine->usb.xfr_timeout);
 
   int err = libusb_submit_transfer (engine->usb.xfr_midi_in);
   if (err)
@@ -491,7 +491,7 @@ prepare_cycle_out_midi (struct ow_engine *engine)
 			     engine->usb.device_handle, MIDI_OUT_EP,
 			     engine->usb.xfr_midi_out_data,
 			     USB_BULK_MIDI_LEN, cb_xfr_midi_out, engine,
-			     XFR_TIMEOUT);
+			     engine->usb.xfr_timeout);
 
   int err = libusb_submit_transfer (engine->usb.xfr_midi_out);
   if (err)
@@ -602,10 +602,13 @@ ow_engine_init_mem (struct ow_engine *engine,
 // initialization taken from sniffed session
 
 static ow_err_t
-ow_engine_init (struct ow_engine *engine, unsigned int blocks_per_transfer)
+ow_engine_init (struct ow_engine *engine, unsigned int blocks_per_transfer,
+		unsigned int xfr_timeout)
 {
   int err;
   ow_err_t ret = OW_OK;
+
+  engine->usb.xfr_timeout = xfr_timeout;
 
   err = libusb_set_configuration (engine->usb.device_handle, 1);
   if (LIBUSB_SUCCESS != err)
@@ -697,7 +700,8 @@ end:
 ow_err_t
 ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
 					      int libusb_device_descriptor,
-					      unsigned int blks_per_transfer)
+					      unsigned int blks_per_transfer,
+					      unsigned int xfr_timeout)
 {
 #ifdef LIBUSB_OPTION_WEAK_AUTHORITY
   ow_err_t err;
@@ -737,7 +741,7 @@ ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
     }
 
   *engine_ = engine;
-  err = ow_engine_init (engine, blks_per_transfer);
+  err = ow_engine_init (engine, blks_per_transfer, xfr_timeout);
   if (!err)
     {
       bus = libusb_get_bus_number (device);
@@ -760,7 +764,8 @@ error:
 ow_err_t
 ow_engine_init_from_bus_address (struct ow_engine **engine_,
 				 uint8_t bus, uint8_t address,
-				 unsigned int blocks_per_transfer)
+				 unsigned int blocks_per_transfer,
+				 unsigned int xfr_timeout)
 {
   int err;
   ow_err_t ret;
@@ -816,7 +821,7 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
     }
 
   *engine_ = engine;
-  ret = ow_engine_init (engine, blocks_per_transfer);
+  ret = ow_engine_init (engine, blocks_per_transfer, xfr_timeout);
   if (!ret)
     {
       ow_engine_init_name (engine, bus, address);
@@ -1333,7 +1338,8 @@ ow_engine_set_overbridge_name (struct ow_engine *engine, const char *name)
   libusb_fill_control_transfer (engine->usb.xfr_control_out,
 				engine->usb.device_handle,
 				engine->usb.xfr_control_out_data,
-				cb_xfr_control_out, engine, XFR_TIMEOUT);
+				cb_xfr_control_out, engine,
+				engine->usb.xfr_timeout);
 
   int err = libusb_submit_transfer (engine->usb.xfr_control_out);
   if (err)

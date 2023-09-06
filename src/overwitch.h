@@ -35,6 +35,8 @@
 
 #define OW_LABEL_MAX_LEN 64
 
+#define OW_DEFAULT_XFR_TIMEOUT 5
+
 typedef size_t (*ow_buffer_rw_space_t) (void *);
 typedef size_t (*ow_buffer_read_t) (void *, char *, size_t);
 typedef size_t (*ow_buffer_write_t) (void *, const char *, size_t);
@@ -194,10 +196,12 @@ void ow_copy_device_desc_static (struct ow_device_desc *,
 
 //Engine
 ow_err_t ow_engine_init_from_bus_address (struct ow_engine **, uint8_t,
-					  uint8_t, unsigned int);
+					  uint8_t, unsigned int,
+					  unsigned int);
 
 ow_err_t ow_engine_init_from_libusb_device_descriptor (struct ow_engine **,
-						       int, unsigned int);
+						       int, unsigned int,
+						       unsigned int);
 
 ow_err_t ow_engine_start (struct ow_engine *, struct ow_context *);
 
@@ -223,7 +227,8 @@ const char *ow_engine_get_overbridge_name (struct ow_engine *);
 
 //Resampler
 ow_err_t ow_resampler_init_from_bus_address (struct ow_resampler **, uint8_t,
-					     uint8_t, unsigned int, int);
+					     uint8_t, unsigned int,
+					     unsigned int, int);
 
 ow_err_t ow_resampler_start (struct ow_resampler *, struct ow_context *);
 

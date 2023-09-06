@@ -430,12 +430,13 @@ ow_err_t
 ow_resampler_init_from_bus_address (struct ow_resampler **resampler_,
 				    uint8_t bus, uint8_t address,
 				    unsigned int blocks_per_transfer,
-				    int quality)
+				    unsigned int xfr_timeout, int quality)
 {
   struct ow_resampler *resampler = malloc (sizeof (struct ow_resampler));
   ow_err_t err = ow_engine_init_from_bus_address (&resampler->engine, bus,
 						  address,
-						  blocks_per_transfer);
+						  blocks_per_transfer,
+						  xfr_timeout);
   if (err)
     {
       free (resampler);

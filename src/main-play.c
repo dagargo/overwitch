@@ -141,7 +141,8 @@ run_play (int device_num, const char *device_name, const char *file)
     }
 
   err = ow_engine_init_from_bus_address (&engine, device->bus,
-					 device->address, DEFAULT_BLOCKS);
+					 device->address, DEFAULT_BLOCKS,
+					 OW_DEFAULT_XFR_TIMEOUT);
   free (device);
   if (err)
     {

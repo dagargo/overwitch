@@ -231,7 +231,8 @@ run_record (int device_num, const char *device_name)
     }
 
   err = ow_engine_init_from_bus_address (&engine, device->bus,
-					 device->address, DEFAULT_BLOCKS);
+					 device->address, DEFAULT_BLOCKS,
+					 OW_DEFAULT_XFR_TIMEOUT);
   free (device);
   if (err)
     {
