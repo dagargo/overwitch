@@ -25,8 +25,6 @@
 #include "utils.h"
 #include "common.h"
 
-#define DEFAULT_BLOCKS 24
-
 static struct ow_context context;
 static struct ow_engine *engine;
 static SF_INFO sfinfo;
@@ -141,7 +139,7 @@ run_play (int device_num, const char *device_name, const char *file)
     }
 
   err = ow_engine_init_from_bus_address (&engine, device->bus,
-					 device->address, DEFAULT_BLOCKS,
+					 device->address, OW_DEFAULT_BLOCKS,
 					 OW_DEFAULT_XFR_TIMEOUT);
   free (device);
   if (err)

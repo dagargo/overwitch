@@ -35,7 +35,9 @@
 
 #define OW_LABEL_MAX_LEN 64
 
-#define OW_DEFAULT_XFR_TIMEOUT 5
+#define OW_DEFAULT_XFR_TIMEOUT 10
+
+#define OW_DEFAULT_BLOCKS 24
 
 typedef size_t (*ow_buffer_rw_space_t) (void *);
 typedef size_t (*ow_buffer_read_t) (void *, char *, size_t);

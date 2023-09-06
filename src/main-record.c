@@ -26,7 +26,6 @@
 #include "utils.h"
 #include "common.h"
 
-#define DEFAULT_BLOCKS 24
 #define TRACK_BUF_KB 256
 #define MAX_FILENAME_LEN 64
 
@@ -82,7 +81,7 @@ print_status ()
 static size_t
 buffer_dummy_rw_space (void *data)
 {
-  return DEFAULT_BLOCKS * OB_FRAMES_PER_BLOCK * OB_MAX_TRACKS *
+  return OW_DEFAULT_BLOCKS * OB_FRAMES_PER_BLOCK * OB_MAX_TRACKS *
     OB_BYTES_PER_SAMPLE;
 }
 
@@ -231,7 +230,7 @@ run_record (int device_num, const char *device_name)
     }
 
   err = ow_engine_init_from_bus_address (&engine, device->bus,
-					 device->address, DEFAULT_BLOCKS,
+					 device->address, OW_DEFAULT_BLOCKS,
 					 OW_DEFAULT_XFR_TIMEOUT);
   free (device);
   if (err)

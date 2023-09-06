@@ -26,7 +26,6 @@
 #include "common.h"
 
 #define DEFAULT_QUALITY 2
-#define DEFAULT_BLOCKS 24
 #define DEFAULT_PRIORITY -1	//With this value the default priority will be used.
 
 static size_t jclient_count;
@@ -161,7 +160,7 @@ main (int argc, char *argv[])
   ow_err_t ow_err;
   struct sigaction action;
   int device_num = -1;
-  int blocks_per_transfer = DEFAULT_BLOCKS;
+  int blocks_per_transfer = OW_DEFAULT_BLOCKS;
   int quality = DEFAULT_QUALITY;
   int priority = DEFAULT_PRIORITY;
 
@@ -205,7 +204,7 @@ main (int argc, char *argv[])
 	  if (errno || endstr == optarg || *endstr != '\0'
 	      || blocks_per_transfer < 2 || blocks_per_transfer > 32)
 	    {
-	      blocks_per_transfer = DEFAULT_BLOCKS;
+	      blocks_per_transfer = OW_DEFAULT_BLOCKS;
 	      fprintf (stderr,
 		       "Blocks value must be in [2..32]. Using value %d...\n",
 		       blocks_per_transfer);
