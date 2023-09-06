@@ -140,9 +140,8 @@ run_play (int device_num, const char *device_name, const char *file)
       return OW_GENERIC_ERROR;
     }
 
-  err =
-    ow_engine_init_from_bus_address (&engine, device->bus, device->address,
-				     DEFAULT_BLOCKS);
+  err = ow_engine_init_from_bus_address (&engine, device->bus,
+					 device->address, DEFAULT_BLOCKS);
   free (device);
   if (err)
     {

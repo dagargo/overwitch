@@ -513,7 +513,8 @@ usb_shutdown (struct ow_engine *engine)
 }
 
 void
-ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
+ow_engine_init_mem (struct ow_engine *engine,
+		    unsigned int blocks_per_transfer)
 {
   struct ow_engine_usb_blk *blk;
 
@@ -601,7 +602,7 @@ ow_engine_init_mem (struct ow_engine *engine, int blocks_per_transfer)
 // initialization taken from sniffed session
 
 static ow_err_t
-ow_engine_init (struct ow_engine *engine, int blocks_per_transfer)
+ow_engine_init (struct ow_engine *engine, unsigned int blocks_per_transfer)
 {
   int err;
   ow_err_t ret = OW_OK;
@@ -696,7 +697,7 @@ end:
 ow_err_t
 ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
 					      int libusb_device_descriptor,
-					      int blocks_per_transfer)
+					      unsigned int blks_per_transfer)
 {
 #ifdef LIBUSB_OPTION_WEAK_AUTHORITY
   ow_err_t err;
@@ -736,7 +737,7 @@ ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
     }
 
   *engine_ = engine;
-  err = ow_engine_init (engine, blocks_per_transfer);
+  err = ow_engine_init (engine, blks_per_transfer);
   if (!err)
     {
       bus = libusb_get_bus_number (device);
@@ -759,7 +760,7 @@ error:
 ow_err_t
 ow_engine_init_from_bus_address (struct ow_engine **engine_,
 				 uint8_t bus, uint8_t address,
-				 int blocks_per_transfer)
+				 unsigned int blocks_per_transfer)
 {
   int err;
   ow_err_t ret;

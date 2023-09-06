@@ -194,10 +194,10 @@ void ow_copy_device_desc_static (struct ow_device_desc *,
 
 //Engine
 ow_err_t ow_engine_init_from_bus_address (struct ow_engine **, uint8_t,
-					  uint8_t, int);
+					  uint8_t, unsigned int);
 
 ow_err_t ow_engine_init_from_libusb_device_descriptor (struct ow_engine **,
-						       int, int);
+						       int, unsigned int);
 
 ow_err_t ow_engine_start (struct ow_engine *, struct ow_context *);
 
@@ -223,7 +223,7 @@ const char *ow_engine_get_overbridge_name (struct ow_engine *);
 
 //Resampler
 ow_err_t ow_resampler_init_from_bus_address (struct ow_resampler **, uint8_t,
-					     uint8_t, int, int);
+					     uint8_t, unsigned int, int);
 
 ow_err_t ow_resampler_start (struct ow_resampler *, struct ow_context *);
 

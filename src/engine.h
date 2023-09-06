@@ -164,8 +164,8 @@ struct ow_engine
   char name[OW_LABEL_MAX_LEN];
   char overbridge_name[OB_NAME_MAX_LEN];
   ow_engine_status_t status;
-  int blocks_per_transfer;
-  int frames_per_transfer;
+  unsigned int blocks_per_transfer;
+  unsigned int frames_per_transfer;
   pthread_spinlock_t lock;
   size_t o2p_latency;
   size_t o2p_max_latency;
@@ -229,7 +229,7 @@ void ow_engine_read_usb_input_blocks (struct ow_engine *);
 
 void ow_engine_write_usb_output_blocks (struct ow_engine *);
 
-void ow_engine_init_mem (struct ow_engine *, int);
+void ow_engine_init_mem (struct ow_engine *, unsigned int);
 
 void ow_engine_free_mem (struct ow_engine *);
 
