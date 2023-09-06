@@ -112,13 +112,14 @@ You can list all the available options with `-h`.
 
 ```
 $ overwitch-cli -h
-overwitch 1.0
+overwitch 1.1
 Usage: overwitch-cli [options]
 Options:
   --use-device-number, -n value
   --use-device, -d value
   --resampling-quality, -q value
-  --transfer-blocks, -b value
+  --blocks-per-transfer, -b value
+  --usb-transfer-timeout, -t value
   --rt-priority, -p value
   --list-devices, -l
   --verbose, -v

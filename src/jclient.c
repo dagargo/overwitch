@@ -415,7 +415,7 @@ jclient_init (struct jclient *jclient)
   ow_err_t err = ow_resampler_init_from_bus_address (&resampler, jclient->bus,
 						     jclient->address,
 						     jclient->blocks_per_transfer,
-						     OW_DEFAULT_XFR_TIMEOUT,
+						     jclient->xfr_timeout,
 						     jclient->quality);
 
   if (err)

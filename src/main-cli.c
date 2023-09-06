@@ -36,6 +36,7 @@ static struct option options[] = {
   {"use-device", 1, NULL, 'd'},
   {"resampling-quality", 1, NULL, 'q'},
   {"transfer-blocks", 1, NULL, 'b'},
+  {"usb-transfer-timeout", 1, NULL, 't'},
   {"rt-priority", 1, NULL, 'p'},
   {"list-devices", 0, NULL, 'l'},
   {"verbose", 0, NULL, 'v'},
@@ -67,7 +68,8 @@ signal_handler (int signo)
 
 static int
 run_single (int device_num, const char *device_name,
-	    int blocks_per_transfer, int quality, int priority)
+	    unsigned int blocks_per_transfer, unsigned int xfr_timeout,
+	    int quality, int priority)
 {
   struct ow_usb_device *device;
   ow_err_t err = OW_OK;
@@ -82,6 +84,7 @@ run_single (int device_num, const char *device_name,
   jclients->bus = device->bus;
   jclients->address = device->address;
   jclients->blocks_per_transfer = blocks_per_transfer;
+  jclients->xfr_timeout = xfr_timeout;
   jclients->quality = quality;
   jclients->priority = priority;
   jclients->end_notifier = NULL;
@@ -103,7 +106,8 @@ end:
 }
 
 static int
-run_all (int blocks_per_transfer, int quality, int priority)
+run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
+	 int quality, int priority)
 {
   struct ow_usb_device *devices;
   struct ow_usb_device *device;
@@ -124,6 +128,7 @@ run_all (int blocks_per_transfer, int quality, int priority)
       jclient->bus = device->bus;
       jclient->address = device->address;
       jclient->blocks_per_transfer = blocks_per_transfer;
+      jclient->xfr_timeout = xfr_timeout;
       jclient->quality = quality;
       jclient->priority = priority;
       jclient->end_notifier = NULL;
@@ -153,7 +158,8 @@ int
 main (int argc, char *argv[])
 {
   int opt;
-  int vflg = 0, lflg = 0, dflg = 0, bflg = 0, pflg = 0, nflg = 0, errflg = 0;
+  int vflg = 0, lflg = 0, dflg = 0, bflg = 0, pflg = 0, tflg = 0, nflg =
+    0, errflg = 0;
   char *endstr;
   char *device_name = NULL;
   int long_index = 0;
@@ -163,6 +169,7 @@ main (int argc, char *argv[])
   int blocks_per_transfer = OW_DEFAULT_BLOCKS;
   int quality = DEFAULT_QUALITY;
   int priority = DEFAULT_PRIORITY;
+  int timeout = OW_DEFAULT_XFR_TIMEOUT;
 
   action.sa_handler = signal_handler;
   sigemptyset (&action.sa_mask);
@@ -173,7 +180,7 @@ main (int argc, char *argv[])
   sigaction (SIGUSR1, &action, NULL);
   sigaction (SIGTSTP, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "n:d:q:b:p:lvh",
+  while ((opt = getopt_long (argc, argv, "n:d:q:b:t:p:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
@@ -210,6 +217,19 @@ main (int argc, char *argv[])
 		       blocks_per_transfer);
 	    }
 	  bflg++;
+	  break;
+	case 't':
+	  tflg++;
+	  errno = 0;
+	  timeout = (int) strtol (optarg, &endstr, 10);
+	  if (errno || endstr == optarg || *endstr != '\0' || timeout < 0
+	      || timeout > 25)
+	    {
+	      timeout = OW_DEFAULT_XFR_TIMEOUT;
+	      fprintf (stderr,
+		       "Timeout value must be in [0..25]. Using value %d...\n",
+		       timeout);
+	    }
 	  break;
 	case 'p':
 	  errno = 0;
@@ -271,14 +291,20 @@ main (int argc, char *argv[])
       exit (EXIT_FAILURE);
     }
 
+  if (tflg > 1)
+    {
+      fprintf (stderr, "Undetermined timeout\n");
+      exit (EXIT_FAILURE);
+    }
+
   if (nflg + dflg == 0)
     {
-      return run_all (blocks_per_transfer, quality, priority);
+      return run_all (blocks_per_transfer, timeout, quality, priority);
     }
   else if (nflg + dflg == 1)
     {
-      return run_single (device_num, device_name,
-			 blocks_per_transfer, quality, priority);
+      return run_single (device_num, device_name, blocks_per_transfer,
+			 timeout, quality, priority);
     }
   else
     {

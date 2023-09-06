@@ -616,12 +616,13 @@ refresh_devices ()
       instance = g_malloc (sizeof (struct overwitch_instance));
       instance->jclient.bus = device->bus;
       instance->jclient.address = device->address;
-      instance->jclient.priority = -1;
-      instance->jclient.end_notifier = remove_jclient;
       instance->jclient.blocks_per_transfer =
 	gtk_spin_button_get_value_as_int (blocks_spin_button);
+      instance->jclient.xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
       instance->jclient.quality =
 	gtk_combo_box_get_active (quality_combo_box);
+      instance->jclient.priority = -1;
+      instance->jclient.end_notifier = remove_jclient;
 
       instance->o2j_latency = 0.0;
       instance->j2o_latency = 0.0;

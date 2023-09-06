@@ -37,7 +37,8 @@ struct jclient
   //Parameters
   uint8_t bus;
   uint8_t address;
-  int blocks_per_transfer;
+  unsigned int blocks_per_transfer;
+  unsigned int xfr_timeout;
   int quality;
   int priority;
   jack_nframes_t bufsize;
