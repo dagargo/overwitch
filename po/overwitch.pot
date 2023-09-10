@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2023-09-10 20:05+0200\n"
+"POT-Creation-Date: 2023-09-10 20:34+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,36 +17,36 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/main.c:105
+#: src/main.c:107
 msgid "Error"
 msgstr ""
 
-#: src/main.c:107
+#: src/main.c:109
 msgid "Stopped"
 msgstr ""
 
-#: src/main.c:109
+#: src/main.c:111
 msgid "Ready"
 msgstr ""
 
-#: src/main.c:111
+#: src/main.c:113
 msgid "Booting"
 msgstr ""
 
-#: src/main.c:113
+#: src/main.c:115
 msgid "Tuning"
 msgstr ""
 
-#: src/main.c:115
+#: src/main.c:117
 msgid "Running"
 msgstr ""
 
-#: src/main.c:480
+#: src/main.c:496
 #, c-format
 msgid "JACK at %.5g kHz, %d period"
 msgstr ""
 
-#: src/main.c:485 src/main.c:862
+#: src/main.c:501 src/main.c:882
 #, c-format
 msgid "JACK not found"
 msgstr ""
@@ -71,82 +71,90 @@ msgstr ""
 msgid "Lowest"
 msgstr ""
 
-#: res/gui.glade:66
+#: res/gui.glade:71
 msgid "Overbridge 2 device client for JACK"
 msgstr ""
 
-#: res/gui.glade:70
+#: res/gui.glade:75
 msgid "translator-credits"
 msgstr ""
 
-#: res/gui.glade:118
+#: res/gui.glade:123
 msgid "Refresh At Startup"
 msgstr ""
 
-#: res/gui.glade:131
+#: res/gui.glade:136
 msgid "Show All Columns"
 msgstr ""
 
-#: res/gui.glade:155
+#: res/gui.glade:160
 msgid "About"
 msgstr ""
 
-#: res/gui.glade:191
+#: res/gui.glade:196
 msgid "Overbridge Blocks (7 frames) per USB Transfer"
 msgstr ""
 
-#: res/gui.glade:192
+#: res/gui.glade:197
 msgid "Blocks per Transfer"
 msgstr ""
 
-#: res/gui.glade:230
+#: res/gui.glade:235
+msgid "USB Transfer Timeout"
+msgstr ""
+
+#: res/gui.glade:236
+msgid "Transfer Timeout"
+msgstr ""
+
+#: res/gui.glade:274
 msgid "Resampler quality to balance out the CPU usage"
 msgstr ""
 
-#: res/gui.glade:231
+#: res/gui.glade:275
 msgid "Resampler Quality"
 msgstr ""
 
-#: res/gui.glade:288
+#: res/gui.glade:332
 msgid "Status"
 msgstr ""
 
-#: res/gui.glade:299
+#: res/gui.glade:343
 msgid "Name"
 msgstr ""
 
-#: res/gui.glade:312
+#: res/gui.glade:356
 msgid "Device"
 msgstr ""
 
-#: res/gui.glade:323
+#: res/gui.glade:367
 msgid "Bus"
 msgstr ""
 
-#: res/gui.glade:334
+#: res/gui.glade:378
 msgid "Address"
 msgstr ""
 
-#: res/gui.glade:345
+#: res/gui.glade:389
 msgid "Overbridge to JACK latency"
 msgstr ""
 
-#: res/gui.glade:356
+#: res/gui.glade:400
 msgid "JACK to Overbridge latency"
 msgstr ""
 
-#: res/gui.glade:367
+#: res/gui.glade:411
 msgid "Overbridge to JACK ratio"
 msgstr ""
 
-#: res/gui.glade:378
+#: res/gui.glade:422
 msgid "JACK to Overbridge ratio"
 msgstr ""
 
-#: res/gui.glade:430
+#: res/gui.glade:474
 msgid "Stop All Devices"
 msgstr ""
 
-#: res/gui.glade:450
+#: res/gui.glade:494
 msgid "Refresh Devices"
 msgstr ""
