@@ -38,6 +38,8 @@ static sf_count_t frames;
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
   {"use-device", 1, NULL, 'd'},
+  {"blocks-per-transfer", 1, NULL, 'b'},
+  {"usb-transfer-timeout", 1, NULL, 't'},
   {"list-devices", 0, NULL, 'l'},
   {"verbose", 0, NULL, 'v'},
   {"help", 0, NULL, 'h'},
@@ -128,7 +130,9 @@ signal_handler (int signo)
 }
 
 static int
-run_play (int device_num, const char *device_name, const char *file)
+run_play (int device_num, const char *device_name,
+	  unsigned int blocks_per_transfer, unsigned int xfr_timeout,
+	  const char *file)
 {
   ow_err_t err;
   struct ow_usb_device *device;
@@ -139,8 +143,8 @@ run_play (int device_num, const char *device_name, const char *file)
     }
 
   err = ow_engine_init_from_bus_address (&engine, device->bus,
-					 device->address, OW_DEFAULT_BLOCKS,
-					 OW_DEFAULT_XFR_TIMEOUT);
+					 device->address, blocks_per_transfer,
+					 xfr_timeout);
   free (device);
   if (err)
     {
@@ -200,13 +204,16 @@ int
 main (int argc, char *argv[])
 {
   int opt;
-  int vflg = 0, lflg = 0, dflg = 0, nflg = 0, errflg = 0;
+  int lflg = 0, vflg = 0, errflg = 0;
+  int nflg = 0, dflg = 0, bflg = 0, tflg = 0;
   char *endstr;
   const char *device_name = NULL;
   int long_index = 0;
   ow_err_t ow_err;
   struct sigaction action;
   int device_num = -1;
+  unsigned int blocks_per_transfer = OW_DEFAULT_BLOCKS;
+  unsigned int xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
 
   action.sa_handler = signal_handler;
   sigemptyset (&action.sa_mask);
@@ -217,7 +224,7 @@ main (int argc, char *argv[])
   sigaction (SIGUSR1, &action, NULL);
   sigaction (SIGTSTP, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "n:d:lvh",
+  while ((opt = getopt_long (argc, argv, "n:d:b:t:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
@@ -229,6 +236,14 @@ main (int argc, char *argv[])
 	case 'd':
 	  device_name = optarg;
 	  dflg++;
+	  break;
+	case 'b':
+	  blocks_per_transfer = get_ow_blocks_per_transfer_argument (optarg);
+	  bflg++;
+	  break;
+	case 't':
+	  xfr_timeout = get_ow_xfr_timeout_argument (optarg);
+	  tflg++;
 	  break;
 	case 'l':
 	  lflg++;
@@ -275,9 +290,22 @@ main (int argc, char *argv[])
       exit (EXIT_SUCCESS);
     }
 
+  if (bflg > 1)
+    {
+      fprintf (stderr, "Undetermined blocks\n");
+      exit (EXIT_FAILURE);
+    }
+
+  if (tflg > 1)
+    {
+      fprintf (stderr, "Undetermined timeout\n");
+      exit (EXIT_FAILURE);
+    }
+
   if (nflg + dflg == 1)
     {
-      return run_play (device_num, device_name, file);
+      return run_play (device_num, device_name, blocks_per_transfer,
+		       xfr_timeout, file);
     }
   else
     {

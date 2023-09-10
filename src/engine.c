@@ -523,6 +523,8 @@ ow_engine_init_mem (struct ow_engine *engine,
   pthread_spin_init (&engine->lock, PTHREAD_PROCESS_SHARED);
 
   engine->blocks_per_transfer = blocks_per_transfer;
+  debug_print (1, "Blocks per transfer: %u\n", engine->blocks_per_transfer);
+
   engine->frames_per_transfer =
     OB_FRAMES_PER_BLOCK * engine->blocks_per_transfer;
 

@@ -35,7 +35,7 @@ static SF_INFO sfinfo;
 static SNDFILE *sf;
 static const struct ow_device_desc *desc;
 static const char *track_mask;
-static size_t track_buf_kb = TRACK_BUF_KB;
+static size_t track_buf_size_kb = TRACK_BUF_KB;
 static float max[OB_MAX_TRACKS];
 static float min[OB_MAX_TRACKS];
 static char filename[MAX_FILENAME_LEN];
@@ -64,9 +64,11 @@ static struct
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
   {"use-device", 1, NULL, 'd'},
-  {"list-devices", 0, NULL, 'l'},
   {"track-mask", 1, NULL, 'm'},
-  {"track-buffer-kilobytes", 1, NULL, 'b'},
+  {"track-buffer-size-kilobytes", 1, NULL, 's'},
+  {"blocks-per-transfer", 1, NULL, 'b'},
+  {"usb-transfer-timeout", 1, NULL, 't'},
+  {"list-devices", 0, NULL, 'l'},
   {"verbose", 0, NULL, 'v'},
   {"help", 0, NULL, 'h'},
   {NULL, 0, NULL, 0}
@@ -216,7 +218,8 @@ signal_handler (int signo)
 }
 
 static int
-run_record (int device_num, const char *device_name)
+run_record (int device_num, const char *device_name,
+	    unsigned int blocks_per_transfer, unsigned int xfr_timeout)
 {
   char curr_time_string[MAX_FILENAME_LEN >> 1];
   time_t curr_time;
@@ -230,8 +233,8 @@ run_record (int device_num, const char *device_name)
     }
 
   err = ow_engine_init_from_bus_address (&engine, device->bus,
-					 device->address, OW_DEFAULT_BLOCKS,
-					 OW_DEFAULT_XFR_TIMEOUT);
+					 device->address, blocks_per_transfer,
+					 xfr_timeout);
   free (device);
   if (err)
     {
@@ -290,7 +293,7 @@ run_record (int device_num, const char *device_name)
       goto cleanup;
     }
 
-  buffer.len = track_buf_kb * 1000 * buffer.outputs;
+  buffer.len = track_buf_size_kb * 1000 * buffer.outputs;
   buffer.mem = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
   buffer.disk = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
   buffer.outputs_mask_len = track_mask ? strlen (track_mask) : 0;
@@ -336,13 +339,16 @@ int
 main (int argc, char *argv[])
 {
   int opt;
-  int vflg = 0, lflg = 0, dflg = 0, nflg = 0, mflg = 0, bflg = 0, errflg = 0;
+  int lflg = 0, vflg = 0, errflg = 0;
+  int nflg = 0, dflg = 0, mflg = 0, sflg = 0, bflg = 0, tflg = 0;
   char *endstr;
   const char *device_name = NULL;
   int long_index = 0;
   ow_err_t ow_err;
   struct sigaction action;
   int device_num = -1;
+  unsigned int blocks_per_transfer = OW_DEFAULT_BLOCKS;
+  unsigned int xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
 
   action.sa_handler = signal_handler;
   sigemptyset (&action.sa_mask);
@@ -353,7 +359,7 @@ main (int argc, char *argv[])
   sigaction (SIGUSR1, &action, NULL);
   sigaction (SIGTSTP, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "n:d:m:b:lvh",
+  while ((opt = getopt_long (argc, argv, "n:d:m:s:b:t:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
@@ -370,9 +376,17 @@ main (int argc, char *argv[])
 	  track_mask = optarg;
 	  mflg++;
 	  break;
+	case 's':
+	  track_buf_size_kb = atoi (optarg);
+	  sflg++;
+	  break;
 	case 'b':
-	  track_buf_kb = atoi (optarg);
+	  blocks_per_transfer = get_ow_blocks_per_transfer_argument (optarg);
 	  bflg++;
+	  break;
+	case 't':
+	  xfr_timeout = get_ow_xfr_timeout_argument (optarg);
+	  tflg++;
 	  break;
 	case 'l':
 	  lflg++;
@@ -416,9 +430,22 @@ main (int argc, char *argv[])
       exit (EXIT_FAILURE);
     }
 
+  if (bflg > 1)
+    {
+      fprintf (stderr, "Undetermined blocks\n");
+      exit (EXIT_FAILURE);
+    }
+
+  if (tflg > 1)
+    {
+      fprintf (stderr, "Undetermined timeout\n");
+      exit (EXIT_FAILURE);
+    }
+
   if (nflg + dflg == 1)
     {
-      return run_record (device_num, device_name);
+      return run_record (device_num, device_name, blocks_per_transfer,
+			 xfr_timeout);
     }
   else
     {

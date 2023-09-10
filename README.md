@@ -134,6 +134,22 @@ This small utility let the user play an audio file thru the Overbridge devices.
 $ overwitch-play -d Digitakt audio_file
 ```
 
+You can list all the available options with `-h`.
+
+```
+$ overwitch-play -h
+overwitch 1.1
+Usage: overwitch-play [options] file
+Options:
+  --use-device-number, -n value
+  --use-device, -d value
+  --blocks-per-transfer, -b value
+  --usb-transfer-timeout, -t value
+  --list-devices, -l
+  --verbose, -v
+  --help, -h
+```
+
 ### overwitch-record
 
 This small utility let the user record the audio output from the Overbridge devices into a WAVE file with the following command. To stop, just press `Ctrl+C`.
@@ -184,14 +200,16 @@ You can list all the available options with `-h`.
 
 ```
 $ overwitch-record -h
-overwitch 1.0
+overwitch 1.1
 Usage: overwitch-record [options]
 Options:
   --use-device-number, -n value
   --use-device, -d value
-  --list-devices, -l
   --track-mask, -m value
-  --track-buffer-kilobytes, -b value
+  --track-buffer-size-kilobytes, -s value
+  --blocks-per-transfer, -b value
+  --usb-transfer-timeout, -t value
+  --list-devices, -l
   --verbose, -v
   --help, -h
 ```
