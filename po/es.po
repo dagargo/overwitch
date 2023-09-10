@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2023-08-29 18:23+0200\n"
+"POT-Creation-Date: 2023-09-10 20:05+0200\n"
 "PO-Revision-Date: 2022-09-21 19:06+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: Spanish\n"
@@ -92,12 +92,12 @@ msgid "About"
 msgstr "Acerca de"
 
 #: res/gui.glade:191
-msgid "USB buffer length in blocks of 7 samples"
-msgstr "Tamaño del bufer en bloques de 7 muestras"
+msgid "Overbridge Blocks (7 frames) per USB Transfer"
+msgstr "Bloques Overbridge (7 muestras) por transferencia USB"
 
 #: res/gui.glade:192
-msgid "USB Buffer Length"
-msgstr "Tamaño del búfer USB"
+msgid "Blocks per Transfer"
+msgstr "Bloques por transferencia"
 
 #: res/gui.glade:230
 msgid "Resampler quality to balance out the CPU usage"
