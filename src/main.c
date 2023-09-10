@@ -87,7 +87,7 @@ static GtkTreeViewColumn *address_column;
 static GtkTreeViewColumn *o2j_ratio_column;
 static GtkTreeViewColumn *j2o_ratio_column;
 static GtkListStore *status_list_store;
-static GtkStatusbar *status_bar;
+static GtkLabel *jack_status_label;
 static GtkPopover *main_popover;
 
 static GThread *jack_control_client_thread;
@@ -500,8 +500,7 @@ set_status (gpointer data)
     {
       snprintf (msg, OW_LABEL_MAX_LEN, _("JACK not found"));
     }
-  gtk_statusbar_pop (status_bar, 0);
-  gtk_statusbar_push (status_bar, 0, msg);
+  gtk_label_set_text (jack_status_label, msg);
 
   g_thread_join (jack_control_client_thread);
   jack_control_client_thread = NULL;
@@ -878,8 +877,9 @@ main (int argc, char *argv[])
     GTK_TREE_VIEW_COLUMN (gtk_builder_get_object
 			  (builder, "j2o_ratio_column"));
 
-  status_bar = GTK_STATUSBAR (gtk_builder_get_object (builder, "status_bar"));
-  gtk_statusbar_push (status_bar, 0, _("JACK not found"));
+  jack_status_label =
+    GTK_LABEL (gtk_builder_get_object (builder, "jack_status_label"));
+  gtk_label_set_text (jack_status_label, _("JACK not found"));
 
   main_popover =
     GTK_POPOVER (gtk_builder_get_object (builder, "main_popover"));
