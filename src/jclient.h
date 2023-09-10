@@ -22,6 +22,8 @@
 #include <jack/midiport.h>
 #include "overwitch.h"
 
+#define JCLIENT_DEFAULT_PRIORITY -1
+
 typedef void (*jclient_end_notifier_t) (uint8_t, uint8_t);
 typedef void (*jclient_notify_status_t) (int, jack_nframes_t, jack_nframes_t);
 

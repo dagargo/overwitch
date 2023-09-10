@@ -29,3 +29,7 @@
 void print_help (const char *, const char *, struct option *, const char *);
 
 ow_err_t print_devices ();
+
+int get_ow_xfr_timeout_argument (const char *);
+
+int get_ow_blocks_per_transfer_argument (const char *);

@@ -85,3 +85,41 @@ print_devices ()
   ow_free_usb_device_list (devices, total);
   return OW_OK;
 }
+
+int
+get_ow_xfr_timeout_argument (const char *optarg)
+{
+  char *endstr;
+  int xfr_timeout;
+
+  errno = 0;
+  xfr_timeout = (int) strtol (optarg, &endstr, 10);
+  if (errno || endstr == optarg || *endstr != '\0' || xfr_timeout < 0
+      || xfr_timeout > 25)
+    {
+      xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
+      fprintf (stderr,
+	       "Timeout value must be in [0..25]. Using value %d...\n",
+	       xfr_timeout);
+    }
+  return xfr_timeout;
+}
+
+int
+get_ow_blocks_per_transfer_argument (const char *optarg)
+{
+  char *endstr;
+  int blocks_per_transfer;
+
+  errno = 0;
+  blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
+  if (errno || endstr == optarg || *endstr != '\0' || blocks_per_transfer < 2
+      || blocks_per_transfer > 32)
+    {
+      blocks_per_transfer = OW_DEFAULT_BLOCKS;
+      fprintf (stderr,
+	       "Blocks value must be in [2..32]. Using value %d...\n",
+	       blocks_per_transfer);
+    }
+  return blocks_per_transfer;
+}

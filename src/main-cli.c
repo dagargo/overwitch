@@ -26,7 +26,6 @@
 #include "common.h"
 
 #define DEFAULT_QUALITY 2
-#define DEFAULT_PRIORITY -1	//With this value the default priority will be used.
 
 static size_t jclient_count;
 static struct jclient *jclients;
@@ -35,7 +34,7 @@ static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
   {"use-device", 1, NULL, 'd'},
   {"resampling-quality", 1, NULL, 'q'},
-  {"transfer-blocks", 1, NULL, 'b'},
+  {"blocks-per-transfer", 1, NULL, 'b'},
   {"usb-transfer-timeout", 1, NULL, 't'},
   {"rt-priority", 1, NULL, 'p'},
   {"list-devices", 0, NULL, 'l'},
@@ -168,8 +167,8 @@ main (int argc, char *argv[])
   int device_num = -1;
   int blocks_per_transfer = OW_DEFAULT_BLOCKS;
   int quality = DEFAULT_QUALITY;
-  int priority = DEFAULT_PRIORITY;
-  int timeout = OW_DEFAULT_XFR_TIMEOUT;
+  int priority = JCLIENT_DEFAULT_PRIORITY;
+  int xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
 
   action.sa_handler = signal_handler;
   sigemptyset (&action.sa_mask);
@@ -206,30 +205,12 @@ main (int argc, char *argv[])
 	    }
 	  break;
 	case 'b':
-	  errno = 0;
-	  blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
-	  if (errno || endstr == optarg || *endstr != '\0'
-	      || blocks_per_transfer < 2 || blocks_per_transfer > 32)
-	    {
-	      blocks_per_transfer = OW_DEFAULT_BLOCKS;
-	      fprintf (stderr,
-		       "Blocks value must be in [2..32]. Using value %d...\n",
-		       blocks_per_transfer);
-	    }
+	  blocks_per_transfer = get_ow_blocks_per_transfer_argument (optarg);
 	  bflg++;
 	  break;
 	case 't':
+	  xfr_timeout = get_ow_xfr_timeout_argument (optarg);
 	  tflg++;
-	  errno = 0;
-	  timeout = (int) strtol (optarg, &endstr, 10);
-	  if (errno || endstr == optarg || *endstr != '\0' || timeout < 0
-	      || timeout > 25)
-	    {
-	      timeout = OW_DEFAULT_XFR_TIMEOUT;
-	      fprintf (stderr,
-		       "Timeout value must be in [0..25]. Using value %d...\n",
-		       timeout);
-	    }
 	  break;
 	case 'p':
 	  errno = 0;
@@ -237,7 +218,7 @@ main (int argc, char *argv[])
 	  if (errno || endstr == optarg || *endstr != '\0' || priority < 0
 	      || priority > 99)
 	    {
-	      priority = -1;
+	      priority = JCLIENT_DEFAULT_PRIORITY;
 	      fprintf (stderr,
 		       "Priority value must be in [0..99]. Using default JACK value...\n");
 	    }
@@ -299,12 +280,12 @@ main (int argc, char *argv[])
 
   if (nflg + dflg == 0)
     {
-      return run_all (blocks_per_transfer, timeout, quality, priority);
+      return run_all (blocks_per_transfer, xfr_timeout, quality, priority);
     }
   else if (nflg + dflg == 1)
     {
       return run_single (device_num, device_name, blocks_per_transfer,
-			 timeout, quality, priority);
+			 xfr_timeout, quality, priority);
     }
   else
     {
