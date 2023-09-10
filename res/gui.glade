@@ -332,18 +332,8 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn">
-                    <property name="title" translatable="yes">Status</property>
-                    <child>
-                      <object class="GtkCellRendererText"/>
-                      <attributes>
-                        <attribute name="text">0</attribute>
-                      </attributes>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkTreeViewColumn">
                     <property name="title" translatable="yes">Name</property>
+                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText" id="name_cell_renderer">
                         <property name="editable">True</property>
@@ -355,8 +345,21 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                   </object>
                 </child>
                 <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title" translatable="yes">Status</property>
+                    <property name="expand">True</property>
+                    <child>
+                      <object class="GtkCellRendererText"/>
+                      <attributes>
+                        <attribute name="text">0</attribute>
+                      </attributes>
+                    </child>
+                  </object>
+                </child>
+                <child>
                   <object class="GtkTreeViewColumn" id="device_column">
                     <property name="title" translatable="yes">Device</property>
+                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
                       <attributes>
@@ -368,6 +371,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <child>
                   <object class="GtkTreeViewColumn" id="bus_column">
                     <property name="title" translatable="yes">Bus</property>
+                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
                       <attributes>
@@ -379,6 +383,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <child>
                   <object class="GtkTreeViewColumn" id="address_column">
                     <property name="title" translatable="yes">Address</property>
+                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
                       <attributes>
@@ -390,6 +395,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <child>
                   <object class="GtkTreeViewColumn">
                     <property name="title" translatable="yes">Overbridge to JACK latency</property>
+                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
                       <attributes>
@@ -401,6 +407,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <child>
                   <object class="GtkTreeViewColumn">
                     <property name="title" translatable="yes">JACK to Overbridge latency</property>
+                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
                       <attributes>
@@ -412,6 +419,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <child>
                   <object class="GtkTreeViewColumn" id="o2j_ratio_column">
                     <property name="title" translatable="yes">Overbridge to JACK ratio</property>
+                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
                       <attributes>
@@ -423,6 +431,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <child>
                   <object class="GtkTreeViewColumn" id="j2o_ratio_column">
                     <property name="title" translatable="yes">JACK to Overbridge ratio</property>
+                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
                       <attributes>
