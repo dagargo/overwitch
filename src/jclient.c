@@ -118,7 +118,21 @@ jclient_jack_shutdown_cb (jack_status_t code, const char *reason,
 			  void *cb_data)
 {
   struct jclient *jclient = cb_data;
+  error_print ("JACK is shutting down: %s\n", reason);
   jclient_stop (jclient);
+}
+
+static void
+jclient_jack_freewheel (int starting, void *cb_data)
+{
+  debug_print (2, "JACK in freewheel mode: %d\n", starting);
+}
+
+static int
+jclient_jack_graph_order_cb (void *arg)
+{
+  debug_print (2, "JACK calling graph order...\n");
+  return 0;
 }
 
 static int
@@ -401,6 +415,7 @@ set_rt_priority (pthread_t thread, int priority)
 void
 jclient_stop (struct jclient *jclient)
 {
+  debug_print (1, "Stopping client...\n");
   if (jclient->client)
     {
       ow_resampler_report_status (jclient->resampler);
@@ -508,6 +523,18 @@ jclient_run (struct jclient *jclient)
 
   jack_on_info_shutdown (jclient->client, jclient_jack_shutdown_cb, jclient);
 
+  if (jack_set_freewheel_callback (jclient->client, jclient_jack_freewheel,
+				   jclient))
+    {
+      error_print ("Cannot set JACK freewheel callback\n");
+    }
+
+  if (jack_set_graph_order_callback (jclient->client,
+				     jclient_jack_graph_order_cb, jclient))
+    {
+      error_print ("Cannot set JACK graph order callback\n");
+    }
+
   //Sometimes these callbacks are not called when setting them so
   jclient_set_buffer_size_cb (jack_get_buffer_size (jclient->client),
 			      jclient);
@@ -532,10 +559,12 @@ jclient_run (struct jclient *jclient)
     }
   debug_print (1, "Using RT priority %d...\n", jclient->priority);
 
+  debug_print (1, "Registering ports...\n");
   jclient->output_ports = malloc (sizeof (jack_port_t *) * desc->outputs);
   for (int i = 0; i < desc->outputs; i++)
     {
       const char *name = desc->output_track_names[i];
+      debug_print (2, "Registering output port %s...\n", name);
       jclient->output_ports[i] = jack_port_register (jclient->client,
 						     name,
 						     JACK_DEFAULT_AUDIO_TYPE,
@@ -554,6 +583,7 @@ jclient_run (struct jclient *jclient)
   for (int i = 0; i < desc->inputs; i++)
     {
       const char *name = desc->input_track_names[i];
+      debug_print (2, "Registering input port %s...\n", name);
       jclient->input_ports[i] = jack_port_register (jclient->client,
 						    name,
 						    JACK_DEFAULT_AUDIO_TYPE,
