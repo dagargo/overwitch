@@ -563,6 +563,13 @@ ow_resampler_set_samplerate (struct ow_resampler *resampler,
     }
 }
 
+inline void
+ow_resampler_reset (struct ow_resampler *resampler)
+{
+  ow_resampler_reset_buffers (resampler);
+  ow_resampler_reset_dll (resampler, resampler->samplerate);
+}
+
 inline size_t
 ow_resampler_get_o2p_frame_size (struct ow_resampler *resampler)
 {

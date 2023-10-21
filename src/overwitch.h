@@ -244,6 +244,8 @@ void ow_resampler_reset_buffers (struct ow_resampler *);
 
 void ow_resampler_reset_dll (struct ow_resampler *, uint32_t);
 
+void ow_resampler_reset (struct ow_resampler *);
+
 void ow_resampler_read_audio (struct ow_resampler *);
 
 void ow_resampler_write_audio (struct ow_resampler *);

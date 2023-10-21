@@ -135,6 +135,18 @@ jclient_jack_graph_order_cb (void *cb_data)
   return 0;
 }
 
+static void
+jclient_jack_client_registration_cb (const char *name, int op, void *cb_data)
+{
+  struct jclient *jclient = cb_data;
+  debug_print (1, "JACK client %s is being %s...\n", name,
+	       op ? "registered" : "unregistered");
+  if (!op)
+    {
+      ow_resampler_reset (jclient->resampler);
+    }
+}
+
 static int
 jclient_set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
 {
@@ -533,6 +545,13 @@ jclient_run (struct jclient *jclient)
 				     jclient_jack_graph_order_cb, jclient))
     {
       error_print ("Cannot set JACK graph order callback\n");
+    }
+
+  if (jack_set_client_registration_callback (jclient->client,
+					     jclient_jack_client_registration_cb,
+					     jclient))
+    {
+      error_print ("Cannot set JACK client registration callback\n");
     }
 
   //Sometimes these callbacks are not called when setting them so
