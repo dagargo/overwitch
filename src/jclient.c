@@ -118,20 +118,20 @@ jclient_jack_shutdown_cb (jack_status_t code, const char *reason,
 			  void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  error_print ("JACK is shutting down: %s\n", reason);
+  debug_print (1, "JACK is shutting down: %s\n", reason);
   jclient_stop (jclient);
 }
 
 static void
 jclient_jack_freewheel (int starting, void *cb_data)
 {
-  debug_print (2, "JACK in freewheel mode: %d\n", starting);
+  debug_print (1, "JACK in freewheel mode: %d\n", starting);
 }
 
 static int
-jclient_jack_graph_order_cb (void *arg)
+jclient_jack_graph_order_cb (void *cb_data)
 {
-  debug_print (2, "JACK calling graph order...\n");
+  debug_print (1, "JACK calling graph order...\n");
   return 0;
 }
 
@@ -139,7 +139,7 @@ static int
 jclient_set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  debug_print (2, "JACK buffer size: %d\n", nframes);
+  debug_print (1, "JACK buffer size: %d\n", nframes);
   jclient->bufsize = nframes;
   ow_resampler_set_buffer_size (jclient->resampler, nframes);
   return 0;
@@ -149,7 +149,7 @@ static int
 jclient_set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  debug_print (2, "JACK sample rate: %d\n", nframes);
+  debug_print (1, "JACK sample rate: %d\n", nframes);
   ow_resampler_set_samplerate (jclient->resampler, nframes);
   return 0;
 }
