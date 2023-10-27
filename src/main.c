@@ -566,15 +566,15 @@ remove_jclient_bg (guint * id)
 	  jclient_wait (&instance->jclient);
 	  jclient_destroy (&instance->jclient);
 	  free (instance);
-	  gtk_list_store_remove (status_list_store, &iter);
+	  valid = gtk_list_store_remove (status_list_store, &iter);
 	}
       else
 	{
 	  remaining++;
+	  valid =
+	    gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store),
+				      &iter);
 	}
-
-      valid = gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store),
-					&iter);
     }
 
   if (!remaining)
