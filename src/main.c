@@ -64,9 +64,7 @@ struct overwitch_instance
   struct jclient jclient;
 };
 
-typedef void (*check_jack_server_callback_t) ();
-
-static gboolean jack_status;
+static jack_client_t *control_client;
 static jack_nframes_t jack_sample_rate;
 static jack_nframes_t jack_buffer_size;
 
@@ -89,8 +87,6 @@ static GtkTreeViewColumn *j2o_ratio_column;
 static GtkListStore *status_list_store;
 static GtkLabel *jack_status_label;
 static GtkPopover *main_popover;
-
-static GThread *jack_control_client_thread;
 
 static struct option options[] = {
   {"verbose", 0, NULL, 'v'},
@@ -490,10 +486,9 @@ static gboolean
 set_status (gpointer data)
 {
   static char msg[OW_LABEL_MAX_LEN];
-  if (jack_status)
+  if (control_client)
     {
-      snprintf (msg, OW_LABEL_MAX_LEN,
-		_("JACK at %.5g kHz, %d period"),
+      snprintf (msg, OW_LABEL_MAX_LEN, _("JACK at %.5g kHz, %d period"),
 		jack_sample_rate / 1000.f, jack_buffer_size);
     }
   else
@@ -502,44 +497,57 @@ set_status (gpointer data)
     }
   gtk_label_set_text (jack_status_label, msg);
 
-  g_thread_join (jack_control_client_thread);
-  jack_control_client_thread = NULL;
-
   return G_SOURCE_REMOVE;
 }
 
-static void
-set_status_cb (int status, jack_nframes_t sample_rate,
-	       jack_nframes_t buffer_size)
+static int
+set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
 {
-  jack_status = status;
-  jack_sample_rate = sample_rate;
-  jack_buffer_size = buffer_size;
+  debug_print (1, "JACK sample rate: %d\n", nframes);
+  jack_sample_rate = nframes;
   g_idle_add (set_status, NULL);
+  return 0;
 }
 
-
-static gpointer
-set_status_task_thread (gpointer data)
+static int
+set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
 {
-  check_jack_server_callback_t cb = data;
-  jclient_check_jack_server (set_status_cb);
-  if (cb)
-    {
-      cb ();
-    }
-  return NULL;
+  debug_print (1, "JACK buffer size: %d\n", nframes);
+  jack_buffer_size = nframes;
+  g_idle_add (set_status, NULL);
+  return 0;
 }
 
 static void
-check_jack_server_bg (check_jack_server_callback_t callback)
+start_control_client ()
 {
-  if (!jack_control_client_thread)
+  control_client = jack_client_open ("Overwitch control client",
+				     JackNoStartServer, NULL, NULL);
+  if (control_client)
     {
-      jack_control_client_thread = g_thread_new ("Overwitch control client",
-						 set_status_task_thread,
-						 callback);
+      jack_sample_rate = jack_get_sample_rate (control_client);
+      jack_buffer_size = jack_get_buffer_size (control_client);
+      if (jack_set_sample_rate_callback (control_client, set_sample_rate_cb,
+					 NULL))
+	{
+	  error_print
+	    ("Cannot set JACK control client sample rate callback\n");
+	}
+      if (jack_set_buffer_size_callback (control_client, set_buffer_size_cb,
+					 NULL))
+	{
+	  error_print
+	    ("Cannot set JACK control client set buffer size callback\n");
+	}
+
+      if (jack_activate (control_client))
+	{
+	  error_print ("Cannot activate control client\n");
+	  jack_client_close (control_client);
+	}
     }
+
+  g_idle_add (set_status, NULL);
 }
 
 static gboolean
@@ -581,8 +589,6 @@ remove_jclient_bg (guint * id)
     {
       set_widgets_to_running_state (FALSE);
     }
-
-  check_jack_server_bg (NULL);
 
   return FALSE;
 }
@@ -693,7 +699,11 @@ refresh_devices ()
 static void
 refresh_devices_click (GtkWidget * object, gpointer data)
 {
-  check_jack_server_bg (refresh_devices);
+  if (!control_client)
+    {
+      start_control_client ();
+    }
+  refresh_devices ();
 }
 
 static void
@@ -772,6 +782,11 @@ quit (int signo)
   save_preferences ();
   debug_print (1, "Quitting GTK+...\n");
   gtk_main_quit ();
+  if (control_client)
+    {
+      jack_deactivate (control_client);
+      jack_client_close (control_client);
+    }
 }
 
 static gboolean
@@ -879,7 +894,6 @@ main (int argc, char *argv[])
 
   jack_status_label =
     GTK_LABEL (gtk_builder_get_object (builder, "jack_status_label"));
-  gtk_label_set_text (jack_status_label, _("JACK not found"));
 
   main_popover =
     GTK_POPOVER (gtk_builder_get_object (builder, "main_popover"));
@@ -914,7 +928,7 @@ main (int argc, char *argv[])
 
   g_object_get (G_OBJECT (refresh_at_startup_button), "active", &refresh,
 		NULL);
-  check_jack_server_bg (refresh ? refresh_devices : NULL);
+  refresh_devices_click (NULL, NULL);
 
   gtk_widget_show (main_window);
   gtk_main ();
