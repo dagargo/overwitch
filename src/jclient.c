@@ -563,7 +563,6 @@ jclient_run (struct jclient *jclient)
 						     name,
 						     JACK_DEFAULT_AUDIO_TYPE,
 						     JackPortIsOutput |
-						     JackPortIsPhysical |
 						     JackPortIsTerminal, 0);
 
       if (jclient->output_ports[i] == NULL)
@@ -582,7 +581,6 @@ jclient_run (struct jclient *jclient)
 						    name,
 						    JACK_DEFAULT_AUDIO_TYPE,
 						    JackPortIsInput |
-						    JackPortIsPhysical |
 						    JackPortIsTerminal, 0);
 
       if (jclient->input_ports[i] == NULL)
