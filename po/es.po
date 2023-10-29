@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2023-09-10 20:34+0200\n"
+"POT-Creation-Date: 2023-11-01 12:28+0100\n"
 "PO-Revision-Date: 2022-09-21 19:06+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: Spanish\n"
@@ -17,36 +17,36 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/main.c:107
+#: src/main.c:108
 msgid "Error"
 msgstr "Error"
 
-#: src/main.c:109
+#: src/main.c:110
 msgid "Stopped"
 msgstr "Parado"
 
-#: src/main.c:111
+#: src/main.c:112
 msgid "Ready"
 msgstr "Preparado"
 
-#: src/main.c:113
+#: src/main.c:114
 msgid "Booting"
 msgstr "Arrancando"
 
-#: src/main.c:115
+#: src/main.c:116
 msgid "Tuning"
 msgstr "Ajustando"
 
-#: src/main.c:117
+#: src/main.c:118
 msgid "Running"
 msgstr "Ejecutando"
 
-#: src/main.c:496
+#: src/main.c:512
 #, c-format
 msgid "JACK at %.5g kHz, %d period"
 msgstr "JACK a %.5g kHz, periodo de %d"
 
-#: src/main.c:501 src/main.c:882
+#: src/main.c:517
 #, c-format
 msgid "JACK not found"
 msgstr "JACK no encontrado"
@@ -87,74 +87,94 @@ msgstr "Recargar al arrancar"
 msgid "Show All Columns"
 msgstr "Mostrar todas las columnas"
 
-#: res/gui.glade:160
+#: res/gui.glade:160 res/gui.glade:598
+msgid "Preferences"
+msgstr "Preferencias"
+
+#: res/gui.glade:184
 msgid "About"
 msgstr "Acerca de"
 
-#: res/gui.glade:196
+#: res/gui.glade:225
 msgid "Overbridge Blocks (7 frames) per USB Transfer"
 msgstr "Bloques Overbridge (7 muestras) por transferencia USB"
 
-#: res/gui.glade:197
+#: res/gui.glade:226
 msgid "Blocks per Transfer"
 msgstr "Bloques por transferencia"
 
-#: res/gui.glade:235
-msgid "USB Transfer Timeout"
-msgstr "Tiempo de expiración de la transferencia USB"
-
-#: res/gui.glade:236
-msgid "Transfer Timeout"
-msgstr "Tiempo de expiración"
-
-#: res/gui.glade:274
+#: res/gui.glade:264
 msgid "Resampler quality to balance out the CPU usage"
 msgstr "Calidad de remuestreo para equilibrar el uso de CPU"
 
-#: res/gui.glade:275
+#: res/gui.glade:265
 msgid "Resampler Quality"
 msgstr "Calidad de remuestreo"
 
-#: res/gui.glade:332
-msgid "Status"
-msgstr "Estado"
+#: res/gui.glade:308
+msgid "USB Transfer Timeout"
+msgstr "Tiempo de expiración de la transferencia USB"
 
-#: res/gui.glade:343
+#: res/gui.glade:309
+msgid "Transfer Timeout"
+msgstr "Tiempo de expiración"
+
+#: res/gui.glade:359
 msgid "Name"
 msgstr "Nombre"
 
-#: res/gui.glade:356
+#: res/gui.glade:373
+msgid "Status"
+msgstr "Estado"
+
+#: res/gui.glade:385
 msgid "Device"
 msgstr "Dispositivo"
 
-#: res/gui.glade:367
+#: res/gui.glade:397
 msgid "Bus"
 msgstr "Bus"
 
-#: res/gui.glade:378
+#: res/gui.glade:409
 msgid "Address"
 msgstr "Dirección"
 
-#: res/gui.glade:389
+#: res/gui.glade:421
 msgid "Overbridge to JACK latency"
 msgstr "Latencia de Overbridge a JACK"
 
-#: res/gui.glade:400
+#: res/gui.glade:433
 msgid "JACK to Overbridge latency"
 msgstr "Latencia de JACK a Overbridge"
 
-#: res/gui.glade:411
+#: res/gui.glade:445
 msgid "Overbridge to JACK ratio"
 msgstr "Ratio entre Overbridge y JACK"
 
-#: res/gui.glade:422
+#: res/gui.glade:457
 msgid "JACK to Overbridge ratio"
 msgstr "Ratio entre JACK y Overbridge"
 
-#: res/gui.glade:474
+#: res/gui.glade:535
 msgid "Stop All Devices"
 msgstr "Parar todos los dispositivos"
 
-#: res/gui.glade:494
+#: res/gui.glade:555
 msgid "Refresh Devices"
 msgstr "Actualizar dispositivos"
+
+#: res/gui.glade:619
+msgid "_Cancel"
+msgstr "Cancelar"
+
+#: res/gui.glade:633
+msgid "_Save"
+msgstr "Guardar"
+
+#: res/gui.glade:664
+msgid "Value of the \"PIPEWIRE_PROPS\" environment variable"
+msgstr "Valor de la variable de entorno «PIPEWIRE_PROPS»"
+
+#: res/gui.glade:665
+msgid "PipeWire Properties"
+msgstr "Propiedades de PipeWire"

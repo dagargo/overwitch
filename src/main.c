@@ -38,6 +38,9 @@
 #define CONF_BLOCKS "blocks"
 #define CONF_QUALITY "quality"
 #define CONF_TIMEOUT "timeout"
+#define CONF_PIPEWIRE_PROPS "pipewireProps"
+
+#define PIPEWIRE_PROPS_ENVV "PIPEWIRE_PROPS"
 
 enum list_store_columns
 {
@@ -67,12 +70,17 @@ struct overwitch_instance
 static jack_client_t *control_client;
 static jack_nframes_t jack_sample_rate;
 static jack_nframes_t jack_buffer_size;
+static gchar *pipewire_props;
+static gboolean pipewire_venv_set;
 
 static GtkWidget *main_window;
 static GtkAboutDialog *about_dialog;
+static GtkDialog *preferences_dialog;
+static GtkWidget *pipewire_props_dialog_entry;
 static GtkWidget *about_button;
 static GtkWidget *refresh_at_startup_button;
 static GtkWidget *show_all_columns_button;
+static GtkWidget *preferences_button;
 static GtkWidget *refresh_button;
 static GtkWidget *stop_button;
 static GtkSpinButton *blocks_spin_button;
@@ -356,6 +364,12 @@ save_preferences ()
   json_builder_add_int_value (builder,
 			      gtk_combo_box_get_active (quality_combo_box));
 
+  json_builder_set_member_name (builder, CONF_QUALITY);
+  json_builder_add_int_value (builder,
+			      gtk_combo_box_get_active (quality_combo_box));
+
+  json_builder_set_member_name (builder, CONF_PIPEWIRE_PROPS);
+  json_builder_add_string_value (builder, pipewire_props);
 
   json_builder_end_object (builder);
 
@@ -426,6 +440,16 @@ load_preferences ()
   if (json_reader_read_member (reader, CONF_QUALITY))
     {
       quality = json_reader_get_int_value (reader);
+    }
+  json_reader_end_member (reader);
+
+  if (json_reader_read_member (reader, CONF_PIPEWIRE_PROPS))
+    {
+      const gchar *v = json_reader_get_string_value (reader);
+      if (v && strlen (v))
+	{
+	  pipewire_props = strdup (v);
+	}
     }
   json_reader_end_member (reader);
 
@@ -516,6 +540,17 @@ set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
   jack_buffer_size = nframes;
   g_idle_add (set_status, NULL);
   return 0;
+}
+
+static void
+stop_control_client ()
+{
+  if (control_client)
+    {
+      jack_deactivate (control_client);
+      jack_client_close (control_client);
+      control_client = NULL;
+    }
 }
 
 static void
@@ -697,7 +732,7 @@ refresh_devices ()
 }
 
 static void
-refresh_devices_click (GtkWidget * object, gpointer data)
+refresh_all (GtkWidget * object, gpointer data)
 {
   if (!control_client)
     {
@@ -771,8 +806,59 @@ set_overbridge_name (GtkCellRendererText * self,
 	  gtk_widget_set_sensitive (GTK_WIDGET (quality_combo_box), TRUE);
 	}
 
-      refresh_devices_click (NULL, NULL);
+      refresh_all (NULL, NULL);
     }
+}
+
+// When under PipeWire, it is desirable to run Overwitch as a follower of the hardware driver.
+// This could be achieved by setting the node.group property to the same value the hardware has but there are other ways.
+// See https://gitlab.freedesktop.org/pipewire/pipewire/-/issues/3612 for a thorough explanation of the need of this.
+// As setting an environment variable does not need additional libraries, this is backwards compatible.
+
+static void
+set_pipewire_props ()
+{
+  if (pipewire_venv_set)
+    {
+      debug_print (1, "%s was '%s' at launch. Ignoring user value '%s'...\n",
+		   PIPEWIRE_PROPS_ENVV, getenv (PIPEWIRE_PROPS_ENVV), pipewire_venv_set);
+      return;
+    }
+
+  if (pipewire_props)
+    {
+      debug_print (1, "Setting %s to '%s'...\n", PIPEWIRE_PROPS_ENVV,
+		   pipewire_props);
+      setenv (PIPEWIRE_PROPS_ENVV, pipewire_props, TRUE);
+    }
+  else
+    {
+      unsetenv (PIPEWIRE_PROPS_ENVV);
+    }
+}
+
+static void
+open_preferences (GtkWidget * object, gpointer data)
+{
+  const gchar *props;
+  gint res;
+  gtk_widget_hide (GTK_WIDGET (main_popover));
+
+  gtk_entry_set_text (GTK_ENTRY (pipewire_props_dialog_entry),
+		      pipewire_props ? pipewire_props : "");
+  res = gtk_dialog_run (GTK_DIALOG (preferences_dialog));
+  if (res == GTK_RESPONSE_ACCEPT)
+    {
+      props = gtk_entry_get_text (GTK_ENTRY (pipewire_props_dialog_entry));
+      g_free (pipewire_props);
+      pipewire_props = strlen (props) ? strdup (props) : NULL;
+      set_pipewire_props ();
+      stop_all (NULL, NULL);
+      stop_control_client ();
+      start_control_client ();
+      refresh_all (NULL, NULL);
+    }
+  gtk_widget_hide (GTK_WIDGET (preferences_dialog));
 }
 
 static void
@@ -782,11 +868,7 @@ quit (int signo)
   save_preferences ();
   debug_print (1, "Quitting GTK+...\n");
   gtk_main_quit ();
-  if (control_client)
-    {
-      jack_deactivate (control_client);
-      jack_client_close (control_client);
-    }
+  stop_control_client ();
 }
 
 static gboolean
@@ -850,6 +932,12 @@ main (int argc, char *argv[])
   main_window = GTK_WIDGET (gtk_builder_get_object (builder, "main_window"));
   gtk_window_resize (GTK_WINDOW (main_window), 1, 1);	//Compact window
 
+  preferences_dialog =
+    GTK_DIALOG (gtk_builder_get_object (builder, "preferences_dialog"));
+  pipewire_props_dialog_entry =
+    GTK_WIDGET (gtk_builder_get_object
+		(builder, "pipewire_props_dialog_entry"));
+
   about_dialog =
     GTK_ABOUT_DIALOG (gtk_builder_get_object (builder, "about_dialog"));
   gtk_about_dialog_set_version (about_dialog, PACKAGE_VERSION);
@@ -859,6 +947,8 @@ main (int argc, char *argv[])
 		(builder, "refresh_at_startup_button"));
   show_all_columns_button =
     GTK_WIDGET (gtk_builder_get_object (builder, "show_all_columns_button"));
+  preferences_button =
+    GTK_WIDGET (gtk_builder_get_object (builder, "preferences_button"));
   about_button =
     GTK_WIDGET (gtk_builder_get_object (builder, "about_button"));
 
@@ -913,8 +1003,11 @@ main (int argc, char *argv[])
   g_signal_connect (show_all_columns_button, "clicked",
 		    G_CALLBACK (show_all_columns), NULL);
 
-  g_signal_connect (refresh_button, "clicked",
-		    G_CALLBACK (refresh_devices_click), NULL);
+  g_signal_connect (preferences_button, "clicked",
+		    G_CALLBACK (open_preferences), NULL);
+
+  g_signal_connect (refresh_button, "clicked", G_CALLBACK (refresh_all),
+		    NULL);
 
   g_signal_connect (stop_button, "clicked", G_CALLBACK (stop_all), NULL);
 
@@ -926,9 +1019,12 @@ main (int argc, char *argv[])
 
   load_preferences ();
 
+  pipewire_venv_set = getenv (PIPEWIRE_PROPS_ENVV) != NULL;
+  set_pipewire_props ();
+
   g_object_get (G_OBJECT (refresh_at_startup_button), "active", &refresh,
 		NULL);
-  refresh_devices_click (NULL, NULL);
+  refresh_all (NULL, NULL);
 
   gtk_widget_show (main_window);
   gtk_main ();

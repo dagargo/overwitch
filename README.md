@@ -1,6 +1,6 @@
 # Overwitch
 
-Overwitch is an Overbridge 2 device client for JACK (JACK Audio Connection Kit). It has been reported to work with PipeWire.
+Overwitch is an Overbridge 2 device client for JACK (JACK Audio Connection Kit).
 
 This project is based on the Overbridge USB reverse engineering done by Stefan Rehm in [dtdump](https://github.com/droelfdroelf/dtdump).
 
@@ -67,7 +67,9 @@ Options:
   --help, -h
 ```
 
-Notice that once an Overbridge device is running, neither the blocks nor the resampling quality can be changed so you will need to stop the running instances and refresh the list.
+If you are running PipeWire, go to the [PipeWire section](##PipeWire) for additional information.
+
+Notice that once an Overbridge device is running the options can not be changed so you will need to stop the running instances and refresh the list.
 
 It is possible to rename Overbridge devices by simply editing its name on the list. Still, as JACK devices can not be renamed while running, the device will be restarted.
 
@@ -124,6 +126,12 @@ Options:
   --list-devices, -l
   --verbose, -v
   --help, -h
+```
+
+If you are running PipeWire, you might want to pass the `PIPEWIRE_PROPS` environment variable with the `node.group` property set to same value the hardware has. Go to the [PipeWire section](##PipeWire) for additional information.
+
+```
+$ PIPEWIRE_PROPS='{ node.group = hardware_node_group }' overwitch
 ```
 
 ### overwitch-play
@@ -213,6 +221,18 @@ Options:
   --verbose, -v
   --help, -h
 ```
+
+## PipeWire
+
+Depending on your PipeWire configuration, you might want to pass some additional information to Overwitch by setting the `PIPEWIRE_PROPS` environment variable. This value can be set in the GUI settings directly but any value passed at command launch will always take precedence over that configuration.
+
+Under PipeWire, a JACK client always follows a driver and when no connections are created it follows the "Dummy-Driver". This might cause some latency issues when making connections as the clients will transit to a new driver, making the timing measurements to wobble for a moment and ultimately increasing the latency.
+
+To avoid that, here are some recommendations. Still, always try to follow the official PipeWire documentation.
+
+* Use the Pro audio profile.
+* Schedule Overwitch (both CLI and GUI) under the hardware driver. This can be achieved by using the properties `node.link-group` or `node.group`.
+* Do not have passive PipeWire nodes (`node.passive` set to `true`) to avoid driver changes.
 
 ## Latency
 
