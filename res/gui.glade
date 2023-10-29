@@ -237,8 +237,8 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="tooltip-text" translatable="yes">USB Transfer Timeout</property>
-                <property name="label" translatable="yes">Transfer Timeout</property>
+                <property name="tooltip-text" translatable="yes">Resampler quality to balance out the CPU usage</property>
+                <property name="label" translatable="yes">Resampler Quality</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -247,13 +247,18 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
               </packing>
             </child>
             <child>
-              <object class="GtkSpinButton" id="timeout_spin_button">
+              <object class="GtkComboBox" id="quality_combo_box">
                 <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="text">24</property>
-                <property name="adjustment">transfer_timeout_adjustment</property>
-                <property name="climb-rate">1</property>
-                <property name="value">10</property>
+                <property name="can-focus">False</property>
+                <property name="model">quality_list_store</property>
+                <property name="active">0</property>
+                <property name="id-column">0</property>
+                <child>
+                  <object class="GtkCellRendererText"/>
+                  <attributes>
+                    <attribute name="text">0</attribute>
+                  </attributes>
+                </child>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -276,8 +281,8 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="tooltip-text" translatable="yes">Resampler quality to balance out the CPU usage</property>
-                <property name="label" translatable="yes">Resampler Quality</property>
+                <property name="tooltip-text" translatable="yes">USB Transfer Timeout</property>
+                <property name="label" translatable="yes">Transfer Timeout</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -286,18 +291,13 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
               </packing>
             </child>
             <child>
-              <object class="GtkComboBox" id="quality_combo_box">
+              <object class="GtkSpinButton" id="timeout_spin_button">
                 <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="model">quality_list_store</property>
-                <property name="active">0</property>
-                <property name="id-column">0</property>
-                <child>
-                  <object class="GtkCellRendererText"/>
-                  <attributes>
-                    <attribute name="text">0</attribute>
-                  </attributes>
-                </child>
+                <property name="can-focus">True</property>
+                <property name="text">24</property>
+                <property name="adjustment">transfer_timeout_adjustment</property>
+                <property name="climb-rate">1</property>
+                <property name="value">10</property>
               </object>
               <packing>
                 <property name="expand">False</property>
