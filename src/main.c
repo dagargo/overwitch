@@ -42,6 +42,8 @@
 
 #define PIPEWIRE_PROPS_ENVV "PIPEWIRE_PROPS"
 
+#define PAUSE_TO_BE_NOTIFIED_USECS (jack_sample_rate ? jack_buffer_size * 10 * 1000000 / (gdouble) jack_sample_rate : 0)
+
 enum list_store_columns
 {
   STATUS_LIST_STORE_STATUS,
@@ -139,8 +141,6 @@ stop_instance (struct overwitch_instance *instance)
     ow_resampler_get_engine (instance->jclient.resampler);
   debug_print (1, "Stopping %s...\n", ow_engine_get_overbridge_name (engine));
   jclient_stop (&instance->jclient);
-  jclient_wait (&instance->jclient);
-  jclient_destroy (&instance->jclient);
 }
 
 static gboolean
@@ -490,8 +490,8 @@ is_device_at_bus_address_running (uint8_t bus, uint8_t address,
 	  return TRUE;
 	}
 
-      valid =
-	gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store), &iter);
+      valid = gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store),
+					&iter);
     }
 
   return FALSE;
@@ -556,6 +556,11 @@ stop_control_client ()
 static void
 start_control_client ()
 {
+  if (control_client)
+    {
+      return;
+    }
+
   control_client = jack_client_open ("Overwitch control client",
 				     JackNoStartServer, NULL, NULL);
   if (control_client)
@@ -606,9 +611,10 @@ remove_jclient_bg (guint * id)
       if (instance->jclient.bus == bus
 	  && instance->jclient.address == address)
 	{
+	  debug_print (2, "Freeing instance...\n");
 	  jclient_wait (&instance->jclient);
 	  jclient_destroy (&instance->jclient);
-	  free (instance);
+	  g_free (instance);
 	  valid = gtk_list_store_remove (status_list_store, &iter);
 	}
       else
@@ -637,7 +643,7 @@ remove_jclient (uint8_t bus, uint8_t address)
 }
 
 static void
-refresh_devices ()
+refresh_all (GtkWidget * object, gpointer data)
 {
   struct ow_usb_device *devices, *device;
   struct ow_resampler_reporter *reporter;
@@ -659,7 +665,7 @@ refresh_devices ()
 
   device = devices;
 
-  for (int i = 0; i < devices_count; i++, device++)
+  for (gint i = 0; i < devices_count; i++, device++)
     {
       if (is_device_at_bus_address_running
 	  (device->bus, device->address, &instance))
@@ -731,14 +737,11 @@ refresh_devices ()
   ow_free_usb_device_list (devices, devices_count);
 }
 
-static void
-refresh_all (GtkWidget * object, gpointer data)
+static gboolean
+refresh_all_sourcefunc (gpointer data)
 {
-  if (!control_client)
-    {
-      start_control_client ();
-    }
-  refresh_devices ();
+  refresh_all (NULL, NULL);
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -755,12 +758,9 @@ stop_all (GtkWidget * object, gpointer data)
 			  STATUS_LIST_STORE_INSTANCE, &instance, -1);
 
       stop_instance (instance);
-      g_free (instance);
-      gtk_list_store_remove (status_list_store, &iter);
 
-      valid =
-	gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store),
-				       &iter);
+      valid = gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store),
+					&iter);
     }
 
   set_widgets_to_running_state (FALSE);
@@ -794,19 +794,15 @@ set_overbridge_name (GtkCellRendererText * self,
       ow_engine_set_overbridge_name (engine, name);
 
       stop_instance (instance);
-      gtk_list_store_remove (status_list_store, &iter);
-      g_free (instance);
 
-      if (!gtk_tree_model_iter_n_children
-	  (GTK_TREE_MODEL (status_list_store), NULL))
+      if (!gtk_tree_model_iter_n_children (GTK_TREE_MODEL (status_list_store),
+					   NULL))
 	{
-	  gtk_widget_set_sensitive (stop_button, FALSE);
-	  gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), TRUE);
-	  gtk_widget_set_sensitive (GTK_WIDGET (timeout_spin_button), TRUE);
-	  gtk_widget_set_sensitive (GTK_WIDGET (quality_combo_box), TRUE);
+	  set_widgets_to_running_state (FALSE);
 	}
 
-      refresh_all (NULL, NULL);
+      usleep (PAUSE_TO_BE_NOTIFIED_USECS);	//Time to let the device notify us.
+      g_idle_add (refresh_all_sourcefunc, NULL);
     }
 }
 
@@ -821,7 +817,8 @@ set_pipewire_props ()
   if (pipewire_venv_set)
     {
       debug_print (1, "%s was '%s' at launch. Ignoring user value '%s'...\n",
-		   PIPEWIRE_PROPS_ENVV, getenv (PIPEWIRE_PROPS_ENVV), pipewire_venv_set);
+		   PIPEWIRE_PROPS_ENVV, getenv (PIPEWIRE_PROPS_ENVV),
+		   pipewire_props);
       return;
     }
 
@@ -854,9 +851,10 @@ open_preferences (GtkWidget * object, gpointer data)
       pipewire_props = strlen (props) ? strdup (props) : NULL;
       set_pipewire_props ();
       stop_all (NULL, NULL);
+      usleep (PAUSE_TO_BE_NOTIFIED_USECS);	//Time to let the devices notify us.
       stop_control_client ();
       start_control_client ();
-      refresh_all (NULL, NULL);
+      g_idle_add (refresh_all_sourcefunc, NULL);
     }
   gtk_widget_hide (GTK_WIDGET (preferences_dialog));
 }
@@ -865,10 +863,15 @@ static void
 quit (int signo)
 {
   stop_all (NULL, NULL);
+  usleep (PAUSE_TO_BE_NOTIFIED_USECS);	//Time to let the devices notify us.
+  while (gtk_events_pending ())
+    {
+      gtk_main_iteration ();
+    }
+  stop_control_client ();
   save_preferences ();
   debug_print (1, "Quitting GTK+...\n");
   gtk_main_quit ();
-  stop_control_client ();
 }
 
 static gboolean
@@ -1019,12 +1022,17 @@ main (int argc, char *argv[])
 
   load_preferences ();
 
+  g_object_get (G_OBJECT (refresh_at_startup_button), "active", &refresh,
+		NULL);
+
   pipewire_venv_set = getenv (PIPEWIRE_PROPS_ENVV) != NULL;
   set_pipewire_props ();
 
-  g_object_get (G_OBJECT (refresh_at_startup_button), "active", &refresh,
-		NULL);
-  refresh_all (NULL, NULL);
+  start_control_client ();
+  if (refresh)
+    {
+      refresh_all (NULL, NULL);
+    }
 
   gtk_widget_show (main_window);
   gtk_main ();
