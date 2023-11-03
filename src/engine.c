@@ -168,10 +168,6 @@ set_usb_input_data_blks (struct ow_engine *engine)
     {
       engine->o2p_max_latency = engine->o2p_latency;
     }
-  if (engine->o2p_latency < engine->o2p_min_latency)
-    {
-      engine->o2p_min_latency = engine->o2p_latency;
-    }
   pthread_spin_unlock (&engine->lock);
 
   wso2p = engine->context->write_space (engine->context->o2p_audio);
@@ -258,10 +254,6 @@ set_usb_output_data_blks (struct ow_engine *engine)
   if (engine->p2o_latency > engine->p2o_max_latency)
     {
       engine->p2o_max_latency = engine->p2o_latency;
-    }
-  if (engine->p2o_latency < engine->p2o_max_latency)
-    {
-      engine->p2o_min_latency = engine->p2o_latency;
     }
   pthread_spin_unlock (&engine->lock);
 
@@ -538,6 +530,11 @@ ow_engine_init_mem (struct ow_engine *engine,
 
   engine->o2p_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc.outputs;
   engine->p2o_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc.inputs;
+
+  engine->o2p_min_latency =
+    engine->frames_per_transfer * engine->o2p_frame_size;
+  engine->p2o_min_latency =
+    engine->frames_per_transfer * engine->p2o_frame_size;
 
   debug_print (2, "o2p: USB in frame size: %zu B\n", engine->o2p_frame_size);
   debug_print (2, "p2o: USB out frame size: %zu B\n", engine->p2o_frame_size);

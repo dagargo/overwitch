@@ -36,15 +36,12 @@ ow_resampler_report_status (struct ow_resampler *resampler)
     p2o_min_latency_d, p2o_max_latency_d;
   ow_engine_status_t status;
 
-  pthread_spin_lock (&resampler->engine->lock);
-  o2p_latency_s = resampler->engine->o2p_latency;
-  o2p_min_latency_s = resampler->engine->o2p_min_latency;
-  o2p_max_latency_s = resampler->engine->o2p_max_latency;
-  p2o_latency_s = resampler->engine->p2o_latency;
-  p2o_min_latency_s = resampler->engine->p2o_min_latency;
-  p2o_max_latency_s = resampler->engine->p2o_max_latency;
+  ow_resampler_get_o2p_latency (resampler, &o2p_latency_s, &o2p_min_latency_s,
+				&o2p_max_latency_s);
+  ow_resampler_get_p2o_latency (resampler, &p2o_latency_s, &p2o_min_latency_s,
+				&p2o_max_latency_s);
+
   status = resampler->engine->status;
-  pthread_spin_unlock (&resampler->engine->lock);
 
   int p2o_enabled =
     ow_engine_is_option (resampler->engine, OW_ENGINE_OPTION_P2O_AUDIO);
@@ -560,7 +557,7 @@ ow_resampler_set_buffer_size (struct ow_resampler *resampler,
 {
   if (resampler->bufsize != bufsize)
     {
-      debug_print (1, "resampler buffer size: %d\n", bufsize);
+      debug_print (1, "Setting resampler buffer size to %d\n", bufsize);
       resampler->bufsize = bufsize;
       ow_resampler_reset_buffers (resampler);
       ow_resampler_reset_dll (resampler, resampler->samplerate);
@@ -573,7 +570,7 @@ ow_resampler_set_samplerate (struct ow_resampler *resampler,
 {
   if (resampler->samplerate != samplerate)
     {
-      debug_print (1, "resampler sample rate: %d\n", samplerate);
+      debug_print (1, "Setting resampler sample rate to %d\n", samplerate);
       if (resampler->p2o_aux)	//This means that ow_resampler_reset_buffers has been called and thus bufsize has been set.
 	{
 	  ow_resampler_reset_dll (resampler, samplerate);
@@ -627,9 +624,12 @@ ow_resampler_get_p2o_latency (struct ow_resampler *resampler,
 			      size_t *p2o_latency, size_t *p2o_min_latency,
 			      size_t *p2o_max_latency)
 {
+  pthread_spin_lock (&resampler->engine->lock);
   *p2o_latency = resampler->engine->p2o_latency;
-  *p2o_min_latency = resampler->engine->p2o_min_latency;
+  *p2o_min_latency = MAX (resampler->engine->p2o_min_latency,
+			  resampler->p2o_bufsize);
   *p2o_max_latency = resampler->engine->p2o_max_latency;
+  pthread_spin_unlock (&resampler->engine->lock);
 }
 
 inline void
@@ -637,7 +637,10 @@ ow_resampler_get_o2p_latency (struct ow_resampler *resampler,
 			      size_t *o2p_latency, size_t *o2p_min_latency,
 			      size_t *o2p_max_latency)
 {
+  pthread_spin_lock (&resampler->engine->lock);
   *o2p_latency = resampler->engine->o2p_latency;
-  *o2p_min_latency = resampler->engine->o2p_min_latency;
+  *o2p_min_latency = MAX (resampler->engine->o2p_min_latency,
+			  resampler->o2p_bufsize);
   *o2p_max_latency = resampler->engine->o2p_max_latency;
+  pthread_spin_unlock (&resampler->engine->lock);
 }
