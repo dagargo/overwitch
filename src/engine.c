@@ -974,10 +974,10 @@ run_audio_o2p_midi (void *data)
       engine->o2p_latency = 0;
       engine->o2p_max_latency = 0;
 
-      //status == OW_ENGINE_STATUS_BOOT
+      //status == OW_ENGINE_STATUS_BOOT || status == OW_ENGINE_STATUS_CLEAR
 
       pthread_spin_lock (&engine->lock);
-      if (engine->context->dll)
+      if (engine->context->dll && engine->status == OW_ENGINE_STATUS_BOOT)
 	{
 	  ow_dll_overwitch_init (engine->context->dll, OB_SAMPLE_RATE,
 				 engine->frames_per_transfer,
@@ -1000,9 +1000,9 @@ run_audio_o2p_midi (void *data)
 	  break;
 	}
 
-      //status == OW_ENGINE_STATUS_BOOT
+      //status == OW_ENGINE_STATUS_BOOT || status == OW_ENGINE_STATUS_CLEAR
 
-      debug_print (1, "Rebooting engine...\n");
+      debug_print (1, "Clearing buffers...\n");
 
       rsp2o = engine->context->read_space (engine->context->p2o_audio);
       bytes = ow_bytes_to_frame_bytes (rsp2o, engine->p2o_frame_size);
@@ -1011,6 +1011,17 @@ run_audio_o2p_midi (void *data)
     }
 
   return NULL;
+}
+
+void
+ow_engine_clear_buffers (struct ow_engine *engine)
+{
+  pthread_spin_lock (&engine->lock);
+  if (engine->status == OW_ENGINE_STATUS_RUN)
+    {
+      engine->status = OW_ENGINE_STATUS_CLEAR;
+    }
+  pthread_spin_unlock (&engine->lock);
 }
 
 ow_err_t

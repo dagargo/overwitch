@@ -74,7 +74,7 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
   struct jclient *jclient = cb_data;
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
   const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
-  //We only check for j2o (input) ports as o2j must always be running.
+
   int total_connections = 0;
   for (int i = 0; i < desc->inputs; i++)
     {
@@ -86,6 +86,19 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
     }
   ow_engine_set_option (engine, OW_ENGINE_OPTION_P2O_AUDIO,
 			total_connections != 0);
+
+  for (int i = 0; i < desc->outputs; i++)
+    {
+      if (jclient->output_ports[i] == jack_port_by_id (jclient->client, a))
+	{
+	  jclient->o2j_port_connections[i] += connect ? 1 : -1;
+	}
+      total_connections += jclient->o2j_port_connections[i];
+    }
+  if (!total_connections)
+    {
+      ow_resampler_clear_buffers (jclient->resampler);
+    }
 }
 
 static void
@@ -113,13 +126,8 @@ jclient_jack_graph_order_cb (void *cb_data)
 static void
 jclient_jack_client_registration_cb (const char *name, int op, void *cb_data)
 {
-  struct jclient *jclient = cb_data;
   debug_print (1, "JACK client %s is being %s...\n", name,
 	       op ? "registered" : "unregistered");
-  if (!op)
-    {
-      ow_resampler_reset (jclient->resampler);
-    }
 }
 
 static int
@@ -457,6 +465,7 @@ jclient_run (struct jclient *jclient)
   jclient->context.o2p_midi = NULL;
   for (int i = 0; i < OB_MAX_TRACKS; i++)
     {
+      jclient->o2j_port_connections[i] = 0;
       jclient->j2o_port_connections[i] = 0;
     }
 

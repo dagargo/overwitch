@@ -83,6 +83,7 @@ typedef enum
   OW_ENGINE_STATUS_STOP,
   OW_ENGINE_STATUS_READY,
   OW_ENGINE_STATUS_BOOT,
+  OW_ENGINE_STATUS_CLEAR,
   OW_ENGINE_STATUS_WAIT,
   OW_ENGINE_STATUS_RUN
 } ow_engine_status_t;
@@ -207,6 +208,8 @@ ow_err_t ow_engine_init_from_libusb_device_descriptor (struct ow_engine **,
 
 ow_err_t ow_engine_start (struct ow_engine *, struct ow_context *);
 
+void ow_engine_clear_buffers (struct ow_engine *);
+
 void ow_engine_destroy (struct ow_engine *);
 
 void ow_engine_wait (struct ow_engine *);
@@ -240,9 +243,7 @@ void ow_resampler_destroy (struct ow_resampler *);
 
 void ow_resampler_report_status (struct ow_resampler *);
 
-void ow_resampler_reset_buffers (struct ow_resampler *);
-
-void ow_resampler_reset_dll (struct ow_resampler *, uint32_t);
+void ow_resampler_clear_buffers (struct ow_resampler *);
 
 void ow_resampler_reset (struct ow_resampler *);
 

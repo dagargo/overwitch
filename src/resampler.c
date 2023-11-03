@@ -97,10 +97,31 @@ ow_resampler_report_status (struct ow_resampler *resampler)
 }
 
 void
-ow_resampler_reset_buffers (struct ow_resampler *resampler)
+ow_resampler_clear_buffers (struct ow_resampler *resampler)
 {
   size_t rso2p, bytes;
   struct ow_context *context = resampler->engine->context;
+
+  debug_print (2, "Clearing buffers...\n");
+
+  resampler->p2o_queue_len = 0;
+  resampler->reading_at_o2p_end = 0;
+
+  if (context && context->o2p_audio)
+    {
+      rso2p = context->read_space (context->o2p_audio);
+      bytes = ow_bytes_to_frame_bytes (rso2p,
+				       resampler->engine->o2p_frame_size);
+      context->read (context->o2p_audio, NULL, bytes);
+    }
+
+  ow_engine_clear_buffers (resampler->engine);
+}
+
+static void
+ow_resampler_reset_buffers (struct ow_resampler *resampler)
+{
+  debug_print (2, "Resetting buffers...\n");
 
   resampler->o2p_bufsize =
     resampler->bufsize * resampler->engine->o2p_frame_size;
@@ -122,7 +143,6 @@ ow_resampler_reset_buffers (struct ow_resampler *resampler)
   resampler->p2o_buf_out = malloc (resampler->p2o_bufsize * 8);
   resampler->p2o_aux = malloc (resampler->p2o_bufsize * 8);
   resampler->p2o_queue = malloc (resampler->p2o_bufsize * 8);
-  resampler->p2o_queue_len = 0;
 
   resampler->o2p_buf_in = malloc (resampler->o2p_bufsize);
   resampler->o2p_buf_out = malloc (resampler->o2p_bufsize);
@@ -130,18 +150,10 @@ ow_resampler_reset_buffers (struct ow_resampler *resampler)
   memset (resampler->p2o_aux, 0, resampler->p2o_bufsize);
   memset (resampler->o2p_buf_in, 0, resampler->p2o_bufsize);
 
-  resampler->reading_at_o2p_end = 0;
-
-  if (context && context->o2p_audio)
-    {
-      rso2p = context->read_space (context->o2p_audio);
-      bytes =
-	ow_bytes_to_frame_bytes (rso2p, resampler->engine->o2p_frame_size);
-      context->read (context->o2p_audio, NULL, bytes);
-    }
+  ow_resampler_clear_buffers (resampler);
 }
 
-void
+static void
 ow_resampler_reset_dll (struct ow_resampler *resampler,
 			uint32_t new_samplerate)
 {
@@ -566,7 +578,7 @@ ow_resampler_set_samplerate (struct ow_resampler *resampler,
 inline void
 ow_resampler_reset (struct ow_resampler *resampler)
 {
-  ow_resampler_reset_buffers (resampler);
+  ow_resampler_clear_buffers (resampler);
   ow_resampler_reset_dll (resampler, resampler->samplerate);
 }
 
