@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2023-11-01 12:28+0100\n"
+"POT-Creation-Date: 2024-01-19 19:03+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,36 +17,36 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/main.c:108
+#: src/main.c:115
 msgid "Error"
 msgstr ""
 
-#: src/main.c:110
+#: src/main.c:117
 msgid "Stopped"
 msgstr ""
 
-#: src/main.c:112
+#: src/main.c:119
 msgid "Ready"
 msgstr ""
 
-#: src/main.c:114
+#: src/main.c:121
 msgid "Booting"
 msgstr ""
 
-#: src/main.c:116
+#: src/main.c:123
 msgid "Tuning"
 msgstr ""
 
-#: src/main.c:118
+#: src/main.c:125
 msgid "Running"
 msgstr ""
 
-#: src/main.c:512
+#: src/main.c:522
 #, c-format
 msgid "JACK at %.5g kHz, %d period"
 msgstr ""
 
-#: src/main.c:517
+#: src/main.c:527
 #, c-format
 msgid "JACK not found"
 msgstr ""
