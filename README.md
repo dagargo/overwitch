@@ -17,7 +17,7 @@ Overwitch consists of 4 different binaries: `overwitch`, which is a GUI applicat
 As with other autotools project, you need to run the commands below. There are a few options available.
 
 * If you just want to compile the command line applications, pass `CLI_ONLY=yes` to `./configure`.
-* If you do not want to use the JSON devices files, pass `JSON_DEVS_FILE=no` to `./configure`. This is useful to eliminate GLIB dependencies when building the library. In this case, the devices configuration used are the ones in the source code. See [`Adding devices`](#Adding devices) section for more information.
+* If you do not want to use the JSON devices files, pass `JSON_DEVS_FILE=no` to `./configure`. This is useful to eliminate GLIB dependencies when building the library. In this case, the devices configuration used are the ones in the source code. See the [`adding devices`](#adding-devices) section for more information.
 
 ```
 autoreconf --install
