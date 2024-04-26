@@ -243,7 +243,7 @@ set_report_data (struct overwitch_instance *instance,
 }
 
 static void
-overwitch_cleanup_jack (GtkWidget * object, gpointer data)
+overwitch_cleanup_jack (GtkWidget *object, gpointer data)
 {
   gtk_dialog_run (GTK_DIALOG (about_dialog));
   gtk_widget_hide (GTK_WIDGET (about_dialog));
@@ -260,7 +260,7 @@ update_all_metrics (gboolean active)
 }
 
 static void
-refresh_at_startup (GtkWidget * object, gpointer data)
+refresh_at_startup (GtkWidget *object, gpointer data)
 {
   gboolean active;
 
@@ -272,7 +272,7 @@ refresh_at_startup (GtkWidget * object, gpointer data)
 }
 
 static void
-show_all_columns (GtkWidget * object, gpointer data)
+show_all_columns (GtkWidget *object, gpointer data)
 {
   gboolean active;
 
@@ -285,7 +285,7 @@ show_all_columns (GtkWidget * object, gpointer data)
 }
 
 gint
-save_file_char (const gchar * path, const guint8 * data, ssize_t len)
+save_file_char (const gchar *path, const guint8 *data, ssize_t len)
 {
   gint res;
   long bytes;
@@ -598,7 +598,7 @@ start_control_client ()
 }
 
 static gboolean
-remove_jclient_bg (guint * id)
+remove_jclient_bg (guint *id)
 {
   struct overwitch_instance *instance;
   GtkTreeIter iter;
@@ -650,7 +650,7 @@ remove_jclient (uint8_t bus, uint8_t address)
 }
 
 static void
-refresh_all (GtkWidget * object, gpointer data)
+refresh_all (GtkWidget *object, gpointer data)
 {
   struct ow_usb_device *devices, *device;
   struct ow_resampler_reporter *reporter;
@@ -753,7 +753,7 @@ refresh_all_sourcefunc (gpointer data)
 }
 
 static void
-stop_all (GtkWidget * object, gpointer data)
+stop_all (GtkWidget *object, gpointer data)
 {
   struct overwitch_instance *instance;
   GtkTreeIter iter;
@@ -775,8 +775,8 @@ stop_all (GtkWidget * object, gpointer data)
 }
 
 static void
-set_overbridge_name (GtkCellRendererText * self,
-		     gchar * path, gchar * name, gpointer user_data)
+set_overbridge_name (GtkCellRendererText *self,
+		     gchar *path, gchar *name, gpointer user_data)
 {
   struct overwitch_instance *instance;
   struct ow_engine *engine;
@@ -843,7 +843,7 @@ set_pipewire_props ()
 }
 
 static void
-open_preferences (GtkWidget * object, gpointer data)
+open_preferences (GtkWidget *object, gpointer data)
 {
   const gchar *props;
   gint res;
@@ -883,7 +883,7 @@ quit (int signo)
 }
 
 static gboolean
-overwitch_delete_window (GtkWidget * widget, GdkEvent * event, gpointer data)
+overwitch_delete_window (GtkWidget *widget, GdkEvent *event, gpointer data)
 {
   quit (0);
   return FALSE;

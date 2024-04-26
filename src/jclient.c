@@ -349,7 +349,7 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 
 inline void
 jclient_copy_o2j_audio (float *f, jack_nframes_t nframes,
-			jack_default_audio_sample_t * buffer[],
+			jack_default_audio_sample_t *buffer[],
 			const struct ow_device_desc *desc)
 {
   for (int i = 0; i < nframes; i++)
@@ -364,7 +364,7 @@ jclient_copy_o2j_audio (float *f, jack_nframes_t nframes,
 
 inline void
 jclient_copy_j2o_audio (float *f, jack_nframes_t nframes,
-			jack_default_audio_sample_t * buffer[],
+			jack_default_audio_sample_t *buffer[],
 			const struct ow_device_desc *desc)
 {
   for (int i = 0; i < nframes; i++)
