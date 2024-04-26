@@ -311,7 +311,7 @@ Although you can run Overwitch with verbose output this is **not recommended** u
 Devices can be specified in two ways.
 
 * Outside the library, in `JSON` files. Useful for a typical desktop usage as devices can be user-defined, so no need to recompile the code or wait for new releases.
-* Inside the library, in `C` code. Useful when using the `liboverwitch` library and `GLib` dependencies are unwanted. Notice that the library is compiled with `JSON` support by default. See [`Installation`](#Installation) section.
+* Inside the library, in `C` code. Useful when using the `liboverwitch` library and `GLib` dependencies are unwanted. Notice that the library is compiled with `JSON` support by default. See the [`Installation`](#Installation) section.
 
 ### Outside the library
 
