@@ -27,6 +27,8 @@
 #define STARTUP_TIME 5
 #define DEFAULT_REPORT_PERIOD 2
 
+#define OB_PERIOD_MS (1000.0 / OB_SAMPLE_RATE)
+
 inline void
 ow_resampler_report_status (struct ow_resampler *resampler)
 {
@@ -43,26 +45,26 @@ ow_resampler_report_status (struct ow_resampler *resampler)
 
   status = resampler->engine->status;
 
-  int p2o_enabled =
-    ow_engine_is_option (resampler->engine, OW_ENGINE_OPTION_P2O_AUDIO);
+  int p2o_enabled = ow_engine_is_option (resampler->engine,
+					 OW_ENGINE_OPTION_P2O_AUDIO);
 
   if (status == OW_ENGINE_STATUS_RUN)
     {
-      o2p_latency_d = o2p_latency_s * 1000.0 /
-	(resampler->engine->o2p_frame_size * OB_SAMPLE_RATE);
-      o2p_max_latency_d = o2p_max_latency_s * 1000.0 /
-	(resampler->engine->o2p_frame_size * OB_SAMPLE_RATE);
-      o2p_min_latency_d = o2p_min_latency_s * 1000.0 /
-	(resampler->engine->o2p_frame_size * OB_SAMPLE_RATE);
+      o2p_latency_d = o2p_latency_s * OB_PERIOD_MS /
+	resampler->engine->o2p_frame_size;
+      o2p_max_latency_d = o2p_max_latency_s * OB_PERIOD_MS /
+	resampler->engine->o2p_frame_size;
+      o2p_min_latency_d = o2p_min_latency_s * OB_PERIOD_MS /
+	resampler->engine->o2p_frame_size;
 
       if (p2o_enabled)
 	{
-	  p2o_latency_d = p2o_latency_s * 1000.0 /
-	    (resampler->engine->p2o_frame_size * OB_SAMPLE_RATE);
-	  p2o_max_latency_d = p2o_max_latency_s * 1000.0 /
-	    (resampler->engine->p2o_frame_size * OB_SAMPLE_RATE);
-	  p2o_min_latency_d = p2o_min_latency_s * 1000.0 /
-	    (resampler->engine->p2o_frame_size * OB_SAMPLE_RATE);
+	  p2o_latency_d = p2o_latency_s * OB_PERIOD_MS /
+	    resampler->engine->p2o_frame_size;
+	  p2o_max_latency_d = p2o_max_latency_s * OB_PERIOD_MS /
+	    resampler->engine->p2o_frame_size;
+	  p2o_min_latency_d = p2o_min_latency_s * OB_PERIOD_MS /
+	    resampler->engine->p2o_frame_size;
 	}
       else
 	{
