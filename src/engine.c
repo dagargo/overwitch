@@ -161,15 +161,6 @@ set_usb_input_data_blks (struct ow_engine *engine)
       return;
     }
 
-  pthread_spin_lock (&engine->lock);
-  engine->o2p_latency =
-    engine->context->read_space (engine->context->o2p_audio);
-  if (engine->o2p_latency > engine->o2p_max_latency)
-    {
-      engine->o2p_max_latency = engine->o2p_latency;
-    }
-  pthread_spin_unlock (&engine->lock);
-
   wso2p = engine->context->write_space (engine->context->o2p_audio);
   if (engine->o2p_transfer_size <= wso2p)
     {
@@ -181,6 +172,15 @@ set_usb_input_data_blks (struct ow_engine *engine)
     {
       error_print ("o2p: Audio ring buffer overflow. Discarding data...\n");
     }
+
+  pthread_spin_lock (&engine->lock);
+  engine->o2p_latency =
+    engine->context->read_space (engine->context->o2p_audio);
+  if (engine->o2p_latency > engine->o2p_max_latency)
+    {
+      engine->o2p_max_latency = engine->o2p_latency;
+    }
+  pthread_spin_unlock (&engine->lock);
 }
 
 inline void
