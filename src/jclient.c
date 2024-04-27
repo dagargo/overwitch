@@ -475,6 +475,7 @@ jclient_init (struct jclient *jclient)
 						     jclient->blocks_per_transfer,
 						     jclient->xfr_timeout,
 						     jclient->quality);
+  jclient->running = 0;
 
   if (err)
     {
