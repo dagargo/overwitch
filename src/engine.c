@@ -359,14 +359,16 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
 
       while (length < xfr->actual_length)
 	{
-	  memcpy (event.bytes, &engine->usb.xfr_midi_in_data[length],
+	  memcpy (event.raw, &engine->usb.xfr_midi_in_data[length],
 		  OB_MIDI_EVENT_SIZE);
-	  //Note-off, Note-on, Poly-KeyPress, Control Change, Program Change, Channel Pressure, PitchBend Change, Single Byte
-	  if (event.bytes[0] >= 0x08 && event.bytes[0] <= 0x0f)
+	  //Multiple Byte SysEx, Note-off, Note-on, Poly-KeyPress, Control Change, Program Change, Channel Pressure, PitchBend Change, Single Byte SysEx
+	  if (event.packet.header >= 0x04 && event.packet.header <= 0x0f)
 	    {
-	      debug_print (2, "o2p MIDI: %02x, %02x, %02x, %02x (%lu)\n",
-			   event.bytes[0], event.bytes[1], event.bytes[2],
-			   event.bytes[3], event.time);
+	      debug_print (2,
+			   "o2p MIDI packet: %02x %02x %02x %02x @ %lu us\n",
+			   event.packet.header, event.packet.data[0],
+			   event.packet.data[1], event.packet.data[2],
+			   event.time);
 
 	      if (engine->context->write_space (engine->context->o2p_midi) >=
 		  sizeof (struct ow_midi_event))
@@ -891,6 +893,11 @@ run_p2o_midi (void *data)
 	      engine->context->read (engine->context->p2o_midi,
 				     (void *) &event,
 				     sizeof (struct ow_midi_event));
+	      debug_print (2,
+			   "p2o MIDI packet: %02x %02x %02x %02x @ %lu us\n",
+			   event.packet.header, event.packet.data[0],
+			   event.packet.data[1], event.packet.data[2],
+			   event.time);
 	      event_read = 1;
 	    }
 
@@ -907,7 +914,7 @@ run_p2o_midi (void *data)
 	      break;
 	    }
 
-	  memcpy (pos, event.bytes, OB_MIDI_EVENT_SIZE);
+	  memcpy (pos, event.raw, OB_MIDI_EVENT_SIZE);
 	  pos += OB_MIDI_EVENT_SIZE;
 	  len += OB_MIDI_EVENT_SIZE;
 	  event_read = 0;
@@ -915,9 +922,8 @@ run_p2o_midi (void *data)
 
       if (len)
 	{
-	  debug_print (2, "Events time: %lu; delta %lu\n", event.time, delta);
-
 	  engine->p2o_midi_ready = 0;
+	  debug_print (2, "Sending %d bytes to MIDI endpoint...\n", len);
 	  prepare_cycle_out_midi (engine);
 
 	  //Waiting for the USB block to be sent...

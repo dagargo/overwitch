@@ -29,7 +29,8 @@
 #define OB_FRAMES_PER_BLOCK 7
 #define OB_BYTES_PER_SAMPLE sizeof(float)
 #define OB_MAX_TRACKS 64
-#define OB_MIDI_EVENT_SIZE 4
+#define OB_MIDI_EVENT_SIZE sizeof(struct ow_midi_event_packet)
+#define OB_MIDI_EVENT_BYTES 3
 
 #define OW_DEFAULT_RT_PROPERTY 20
 
@@ -172,10 +173,23 @@ struct ow_usb_device
   uint8_t address;
 };
 
+//This struct data similar to the USB MIDI packet with a timestamp.
+//Overbridge uses USB MIDI packets internally as they are delivered as such.
+
+struct ow_midi_event_packet
+{
+  uint8_t header;
+  uint8_t data[OB_MIDI_EVENT_BYTES];
+};
+
 struct ow_midi_event
 {
   uint64_t time;
-  uint8_t bytes[OB_MIDI_EVENT_SIZE];
+  union
+  {
+    struct ow_midi_event_packet packet;
+    uint8_t raw[OB_MIDI_EVENT_SIZE];
+  };
 };
 
 struct ow_resampler_reporter

@@ -38,6 +38,8 @@
 
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
+#define MAX_SYSEX_LEN (16 * 1024)
+
 size_t
 jclient_buffer_read (void *buffer, char *src, size_t size)
 {
@@ -181,11 +183,15 @@ jclient_set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
 static inline void
 jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 {
-  size_t data_size;
   void *midi_port_buf;
   jack_midi_data_t *jmidi;
   struct ow_midi_event event;
   jack_nframes_t first_frames, frames, event_frames;
+  static uint8_t sysex[MAX_SYSEX_LEN];
+  static size_t len = 0;
+  int send = 0;
+  size_t inc;
+  uint8_t *dst, *src, *data;
 
   midi_port_buf = jack_port_get_buffer (jclient->midi_output_port, nframes);
   jack_midi_clear_buffer (midi_port_buf);
@@ -226,107 +232,235 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
       jack_ringbuffer_read_advance (jclient->context.o2p_midi,
 				    sizeof (struct ow_midi_event));
 
-      if (event.bytes[0] == 0x0f)
+      if (event.packet.header >= 0x04 && event.packet.header <= 0x07)	//Multiple Byte SysEx
 	{
-	  data_size = 1;
+	  switch (event.packet.header)
+	    {
+	    case 0x04:
+	      inc = 3;
+	      break;
+	    case 0x05:
+	      inc = 1;
+	      send = 1;
+	      data = sysex;
+	      break;
+	    case 0x06:
+	      inc = 2;
+	      send = 1;
+	      data = sysex;
+	      break;
+	    case 0x07:
+	      inc = 3;
+	      send = 1;
+	      data = sysex;
+	      break;
+	    }
+
+	  if (len + inc >= MAX_SYSEX_LEN)
+	    {
+	      len = 0;
+	      error_print ("SysEx message too long\n");
+	      continue;
+	    }
+
+	  dst = sysex + len;
+	  src = event.packet.data;
+	  for (int i = 0; i < inc; i++, dst++, src++)
+	    {
+	      *dst = *src;
+	    }
 	}
       else
 	{
-	  data_size = 3;
-	}
-      jmidi = jack_midi_event_reserve (midi_port_buf, frames, data_size);
-      if (jmidi)
-	{
-	  jmidi[0] = event.bytes[1];
-	  if (data_size == 3)
+	  send = 1;
+	  data = event.packet.data;
+
+	  if (event.packet.header == 0x0f)	//Single Byte SysEx
 	    {
-	      jmidi[1] = event.bytes[2];
-	      jmidi[2] = event.bytes[3];
+	      inc = 1;
 	    }
+	  else if (event.packet.header == 0x0c || event.packet.header == 0x0d)	//Program Change, Channel Pressure (After-touch)
+	    {
+	      inc = 2;
+	    }
+	  else
+	    {
+	      inc = 3;
+	    }
+	}
+      len += inc;
+
+      if (send)
+	{
+	  jmidi = jack_midi_event_reserve (midi_port_buf, frames, len);
+	  if (jmidi)
+	    {
+	      dst = jmidi;
+	      src = data;
+	      for (int i = 0; i < len; i++, dst++, src++)
+		{
+		  *dst = *src;
+		}
+	      *dst = *src;
+	      *dst = *src;
+	    }
+	  len = 0;
 	}
     }
 }
 
 static inline void
+jclient_j2o_midi_queue_event (struct jclient *jclient,
+			      struct ow_midi_event event)
+{
+  if (jack_ringbuffer_write_space (jclient->context.p2o_midi) >=
+      sizeof (struct ow_midi_event))
+    {
+      jack_ringbuffer_write (jclient->context.p2o_midi,
+			     (void *) &event, sizeof (struct ow_midi_event));
+    }
+  else
+    {
+      error_print ("j2o: MIDI ring buffer overflow. Discarding data...\n");
+    }
+}
+
+static inline void
+jclient_copy_event_bytes (struct ow_midi_event *oevent,
+			  jack_midi_data_t *buffer, size_t len)
+{
+  memcpy (oevent->packet.data, buffer, len);
+  memset (oevent->packet.data + len, 0, OB_MIDI_EVENT_BYTES - len);
+}
+
+static inline void
+jclient_j2o_midi_msg (struct jclient *jclient, jack_midi_event_t jevent,
+		      jack_time_t time)
+{
+  struct ow_midi_event oevent;
+  jack_midi_data_t status_byte = jevent.buffer[0];
+  jack_midi_data_t type = status_byte & 0xf0;
+
+  oevent.packet.header = 0;
+
+  debug_print (2, "Sending MIDI mesage...\n");
+
+  if (jevent.size == 1)
+    {
+      if (status_byte >= 0xf8 && status_byte <= 0xfc)
+	{
+	  oevent.packet.header = 0x0f;	//Single Byte SysEx
+	}
+    }
+  else if (jevent.size == 2)
+    {
+      switch (type)
+	{
+	case 0xc0:		//Program Change
+	  oevent.packet.header = 0x0c;
+	  break;
+	case 0xd0:		//Channel Pressure (After-touch)
+	  oevent.packet.header = 0x0d;
+	  break;
+	}
+    }
+  else				// jevent.size == 3
+    {
+      switch (type)
+	{
+	case 0x80:		//Note Off
+	  oevent.packet.header = 0x08;
+	  break;
+	case 0x90:		//Note On
+	  oevent.packet.header = 0x09;
+	  break;
+	case 0xa0:		//Polyphonic Key Pressure
+	  oevent.packet.header = 0x0a;
+	  break;
+	case 0xb0:		//Control Change
+	  oevent.packet.header = 0x0b;
+	  break;
+	case 0xe0:		//Pitch Bend Change
+	  oevent.packet.header = 0x0e;
+	  break;
+	}
+    }
+
+  if (oevent.packet.header)
+    {
+      oevent.time = time;
+      jclient_copy_event_bytes (&oevent, jevent.buffer, jevent.size);
+      jclient_j2o_midi_queue_event (jclient, oevent);
+    }
+}
+
+//Multiple byte SysEx
+
+static inline void
+jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t jevent,
+			jack_time_t time)
+{
+  struct ow_midi_event oevent;
+  size_t rem = jevent.size;
+  jack_midi_data_t *src = jevent.buffer;
+  size_t len;
+
+  debug_print (2, "Sending MIDI SysEx mesage...\n");
+
+  oevent.time = time;
+
+  while (rem)
+    {
+      if (rem <= OB_MIDI_EVENT_BYTES)
+	{
+	  if (rem == 1)
+	    {
+	      oevent.packet.header = 0x05;
+	    }
+	  else if (rem == 2)
+	    {
+	      oevent.packet.header = 0x06;
+	    }
+	  else
+	    {
+	      oevent.packet.header = 0x07;
+	    }
+	  len = rem;
+	}
+      else
+	{
+	  oevent.packet.header = 0x04;
+	  len = OB_MIDI_EVENT_BYTES;
+	}
+      jclient_copy_event_bytes (&oevent, src, len);
+      jclient_j2o_midi_queue_event (jclient, oevent);
+      src += len;
+      rem -= len;
+    }
+}
+
+static inline void
 jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes,
-		  jack_nframes_t frames)
+		  jack_nframes_t current_frames)
 {
   jack_midi_event_t jevent;
   void *midi_port_buf;
-  struct ow_midi_event oevent;
   jack_nframes_t event_count;
-  jack_midi_data_t status_byte;
+  jack_time_t time = jack_frames_to_time (jclient->client, 0);
 
   midi_port_buf = jack_port_get_buffer (jclient->midi_input_port, nframes);
   event_count = jack_midi_get_event_count (midi_port_buf);
 
   for (int i = 0; i < event_count; i++)
     {
-      oevent.bytes[0] = 0;
       jack_midi_event_get (&jevent, midi_port_buf, i);
-      status_byte = jevent.buffer[0];
-
-      if (jevent.size == 1 && status_byte >= 0xf8 && status_byte <= 0xfc)
+      if (jevent.buffer[0] == 0xf0)	//SysEx
 	{
-	  oevent.bytes[0] = 0x0f;	//Single Byte
-	  oevent.bytes[1] = jevent.buffer[0];
+	  jclient_j2o_midi_sysex (jclient, jevent, time);
 	}
-      else if (jevent.size == 2)
+      else
 	{
-	  switch (status_byte & 0xf0)
-	    {
-	    case 0xc0:		//Program Change
-	      oevent.bytes[0] = 0x0c;
-	      break;
-	    case 0xd0:		//Channel Pressure (After-touch)
-	      oevent.bytes[0] = 0x0d;
-	      break;
-	    }
-	  oevent.bytes[1] = jevent.buffer[0];
-	  oevent.bytes[2] = jevent.buffer[1];
-	}
-      else if (jevent.size == 3)
-	{
-	  switch (status_byte & 0xf0)
-	    {
-	    case 0x80:		//Note Off
-	      oevent.bytes[0] = 0x08;
-	      break;
-	    case 0x90:		//Note On
-	      oevent.bytes[0] = 0x09;
-	      break;
-	    case 0xa0:		//Polyphonic Key Pressure
-	      oevent.bytes[0] = 0x0a;
-	      break;
-	    case 0xb0:		//Control Change
-	      oevent.bytes[0] = 0x0b;
-	      break;
-	    case 0xe0:		//Pitch Bend Change
-	      oevent.bytes[0] = 0x0e;
-	      break;
-	    }
-	  oevent.bytes[1] = jevent.buffer[0];
-	  oevent.bytes[2] = jevent.buffer[1];
-	  oevent.bytes[3] = jevent.buffer[2];
-	}
-
-      oevent.time = jack_frames_to_time (jclient->client, frames +
-					 jevent.time);
-
-      if (oevent.bytes[0])
-	{
-	  if (jack_ringbuffer_write_space (jclient->context.p2o_midi) >=
-	      sizeof (struct ow_midi_event))
-	    {
-	      jack_ringbuffer_write (jclient->context.p2o_midi,
-				     (void *) &oevent,
-				     sizeof (struct ow_midi_event));
-	    }
-	  else
-	    {
-	      error_print
-		("j2o: MIDI ring buffer overflow. Discarding data...\n");
-	    }
+	  jclient_j2o_midi_msg (jclient, jevent, time);
 	}
     }
 }
@@ -567,7 +701,7 @@ jclient_run (struct jclient *jclient)
       error_print ("Cannot set JACK client registration callback\n");
     }
 
-  //Sometimes these callbacks are not called when setting them so...
+  //Sometimes these callbacks are not called when setting them so
   jclient_set_buffer_size_cb (jack_get_buffer_size (jclient->client),
 			      jclient);
   jclient_set_sample_rate_cb (jack_get_sample_rate (jclient->client),
@@ -675,9 +809,8 @@ jclient_run (struct jclient *jclient)
   jclient->context.set_rt_priority = set_rt_priority;
   jclient->context.priority = jclient->priority;
 
-  jclient->context.options =
-    OW_ENGINE_OPTION_O2P_AUDIO | OW_ENGINE_OPTION_O2P_MIDI |
-    OW_ENGINE_OPTION_P2O_MIDI;
+  jclient->context.options = OW_ENGINE_OPTION_O2P_AUDIO |
+    OW_ENGINE_OPTION_O2P_MIDI | OW_ENGINE_OPTION_P2O_MIDI;
 
   err = ow_resampler_start (jclient->resampler, &jclient->context);
   if (err)
