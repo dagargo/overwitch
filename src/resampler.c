@@ -29,6 +29,12 @@
 
 #define OB_PERIOD_MS (1000.0 / OB_SAMPLE_RATE)
 
+// If `JSON_DEVS_FILE=no` is passed passed to `./configure`, the compilation is independent of GLib.
+// But since the MAX macro is defined there, not only do we need to add it,
+// but it is also needed to have a different name to avoid redefining it.
+
+#define RESAMPLER_MAX(a,b) (((a) > (b)) ? (a) : (b))
+
 inline void
 ow_resampler_report_status (struct ow_resampler *resampler)
 {
@@ -628,8 +634,8 @@ ow_resampler_get_p2o_latency (struct ow_resampler *resampler,
 {
   pthread_spin_lock (&resampler->engine->lock);
   *p2o_latency = resampler->engine->p2o_latency;
-  *p2o_min_latency = MAX (resampler->engine->p2o_min_latency,
-			  resampler->p2o_bufsize);
+  *p2o_min_latency = RESAMPLER_MAX (resampler->engine->p2o_min_latency,
+				    resampler->p2o_bufsize);
   *p2o_max_latency = resampler->engine->p2o_max_latency;
   pthread_spin_unlock (&resampler->engine->lock);
 }
@@ -641,8 +647,8 @@ ow_resampler_get_o2p_latency (struct ow_resampler *resampler,
 {
   pthread_spin_lock (&resampler->engine->lock);
   *o2p_latency = resampler->engine->o2p_latency;
-  *o2p_min_latency = MAX (resampler->engine->o2p_min_latency,
-			  resampler->o2p_bufsize);
+  *o2p_min_latency = RESAMPLER_MAX (resampler->engine->o2p_min_latency,
+				    resampler->o2p_bufsize);
   *o2p_max_latency = resampler->engine->o2p_max_latency;
   pthread_spin_unlock (&resampler->engine->lock);
 }
