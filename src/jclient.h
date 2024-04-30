@@ -36,8 +36,6 @@ struct jclient
   jack_port_t **input_ports;
   jack_port_t *midi_output_port;
   jack_port_t *midi_input_port;
-  unsigned int o2j_port_connections[OB_MAX_TRACKS];
-  unsigned int j2o_port_connections[OB_MAX_TRACKS];
   //Parameters
   uint8_t bus;
   uint8_t address;

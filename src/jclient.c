@@ -112,30 +112,24 @@ static void
 jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
 			 void *cb_data)
 {
+  int total_connections = 0;
   struct jclient *jclient = cb_data;
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
   const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
 
-  int total_connections = 0;
   for (int i = 0; i < desc->inputs; i++)
     {
-      if (jclient->input_ports[i] == jack_port_by_id (jclient->client, b))
-	{
-	  jclient->j2o_port_connections[i] += connect ? 1 : -1;
-	}
-      total_connections += jclient->j2o_port_connections[i];
+      total_connections += jack_port_connected (jclient->input_ports[i]);
     }
+
   ow_engine_set_option (engine, OW_ENGINE_OPTION_P2O_AUDIO,
 			total_connections != 0);
 
   for (int i = 0; i < desc->outputs; i++)
     {
-      if (jclient->output_ports[i] == jack_port_by_id (jclient->client, a))
-	{
-	  jclient->o2j_port_connections[i] += connect ? 1 : -1;
-	}
-      total_connections += jclient->o2j_port_connections[i];
+      total_connections += jack_port_connected (jclient->output_ports[i]);
     }
+
   if (!total_connections)
     {
       ow_resampler_clear_buffers (jclient->resampler);
@@ -511,11 +505,6 @@ jclient_run (struct jclient *jclient)
   jclient->context.o2p_audio = NULL;
   jclient->context.p2o_midi = NULL;
   jclient->context.o2p_midi = NULL;
-  for (int i = 0; i < OB_MAX_TRACKS; i++)
-    {
-      jclient->o2j_port_connections[i] = 0;
-      jclient->j2o_port_connections[i] = 0;
-    }
 
   engine = ow_resampler_get_engine (jclient->resampler);
   desc = ow_engine_get_device_desc (engine);
