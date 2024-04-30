@@ -191,8 +191,8 @@ struct ow_engine
     uint16_t audio_frames_counter;
     struct libusb_transfer *xfr_audio_in;
     struct libusb_transfer *xfr_audio_out;
-    unsigned char *xfr_audio_in_data;
-    unsigned char *xfr_audio_out_data;
+    uint8_t *xfr_audio_in_data;
+    uint8_t *xfr_audio_out_data;
     size_t audio_in_blk_len;
     size_t audio_out_blk_len;
     int xfr_audio_in_data_len;
@@ -200,13 +200,13 @@ struct ow_engine
     //MIDI
     struct libusb_transfer *xfr_midi_out;
     struct libusb_transfer *xfr_midi_in;
-    unsigned char *xfr_midi_out_data;
-    unsigned char *xfr_midi_in_data;
+    uint8_t *xfr_midi_out_data;
+    uint8_t *xfr_midi_in_data;
     //Control
     struct libusb_transfer *xfr_control_out;
     struct libusb_transfer *xfr_control_in;
-    unsigned char *xfr_control_out_data;
-    unsigned char *xfr_control_in_data;
+    uint8_t *xfr_control_out_data;
+    uint8_t *xfr_control_in_data;
   } usb;
   //j2o resampler
   float *p2o_resampler_buf;
