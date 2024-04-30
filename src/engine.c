@@ -867,81 +867,60 @@ static const char *ob_err_strgs[] = {
 static void *
 run_p2o_midi (void *data)
 {
-  int pos, p2o_midi_ready, event_read = 0;
-  double last_time, diff;
-  struct timespec sleep_time, smallest_sleep_time;
+  int len, p2o_midi_ready;
+  uint8_t *pos;
+  struct timespec smallest_sleep_time;
   struct ow_midi_event event;
   struct ow_engine *engine = data;
 
   smallest_sleep_time.tv_sec = 0;
   smallest_sleep_time.tv_nsec = SAMPLE_TIME_NS * 32 / 2;	//Average wait time for a 32 buffer sample
 
-  pos = 0;
-  diff = 0.0;
-  last_time = engine->context->get_time ();
-  engine->p2o_midi_ready = 1;
+  len = 0;
+  pos = engine->usb.xfr_midi_out_data;
+  memset (pos, 0, USB_BULK_MIDI_LEN);
   while (1)
     {
-
       while (engine->context->read_space (engine->context->p2o_midi) >=
-	     sizeof (struct ow_midi_event) && pos < USB_BULK_MIDI_LEN)
+	     sizeof (struct ow_midi_event) && len < USB_BULK_MIDI_LEN)
 	{
-	  if (!pos)
-	    {
-	      memset (engine->usb.xfr_midi_out_data, 0, USB_BULK_MIDI_LEN);
-	      diff = 0;
-	    }
+	  engine->context->read (engine->context->p2o_midi,
+				 (void *) &event,
+				 sizeof (struct ow_midi_event));
 
-	  if (!event_read)
-	    {
-	      engine->context->read (engine->context->p2o_midi,
-				     (void *) &event,
-				     sizeof (struct ow_midi_event));
-	      event_read = 1;
-	    }
-
-	  if (event.time > last_time)
-	    {
-	      diff = event.time - last_time;
-	      last_time = event.time;
-	      break;
-	    }
-
-	  memcpy (&engine->usb.xfr_midi_out_data[pos], event.bytes,
-		  OB_MIDI_EVENT_SIZE);
+	  memcpy (pos, event.bytes, OB_MIDI_EVENT_SIZE);
 	  pos += OB_MIDI_EVENT_SIZE;
-	  event_read = 0;
+	  len += OB_MIDI_EVENT_SIZE;
 	}
 
-      if (pos)
+      if (len)
 	{
-	  debug_print (2, "Event frames: %f; diff: %f\n", event.time, diff);
+	  debug_print (2, "Events frames: %f\n", event.time);
+
 	  engine->p2o_midi_ready = 0;
 	  prepare_cycle_out_midi (engine);
-	  pos = 0;
-	}
 
-      if (diff)
-	{
-	  sleep_time.tv_sec = diff;
-	  sleep_time.tv_nsec = (diff - sleep_time.tv_sec) * 1.0e9;
-	  nanosleep (&sleep_time, NULL);
+	  //Waiting for the USB block to be sent...
+
+	  pthread_spin_lock (&engine->p2o_midi_lock);
+	  p2o_midi_ready = engine->p2o_midi_ready;
+	  pthread_spin_unlock (&engine->p2o_midi_lock);
+	  while (!p2o_midi_ready)
+	    {
+	      nanosleep (&smallest_sleep_time, NULL);
+	      pthread_spin_lock (&engine->p2o_midi_lock);
+	      p2o_midi_ready = engine->p2o_midi_ready;
+	      pthread_spin_unlock (&engine->p2o_midi_lock);
+	    }
+
+	  len = 0;
+	  pos = engine->usb.xfr_midi_out_data;
+	  memset (pos, 0, USB_BULK_MIDI_LEN);
 	}
       else
 	{
 	  nanosleep (&smallest_sleep_time, NULL);
 	}
-
-      pthread_spin_lock (&engine->p2o_midi_lock);
-      p2o_midi_ready = engine->p2o_midi_ready;
-      pthread_spin_unlock (&engine->p2o_midi_lock);
-      while (!p2o_midi_ready)
-	{
-	  nanosleep (&smallest_sleep_time, NULL);
-	  pthread_spin_lock (&engine->p2o_midi_lock);
-	  p2o_midi_ready = engine->p2o_midi_ready;
-	  pthread_spin_unlock (&engine->p2o_midi_lock);
-	};
 
       if (ow_engine_get_status (engine) <= OW_ENGINE_STATUS_STOP)
 	{

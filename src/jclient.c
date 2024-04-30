@@ -254,7 +254,8 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 }
 
 static inline void
-jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
+jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes,
+		  jack_nframes_t frames)
 {
   jack_midi_event_t jevent;
   void *midi_port_buf;
@@ -321,7 +322,8 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes)
 	  oevent.bytes[3] = jevent.buffer[2];
 	}
 
-      oevent.time = jack_frames_to_time (jclient->client, jevent.time) * 1e-6;
+      oevent.time =
+	jack_frames_to_time (jclient->client, frames + jevent.time) * 1e-6;
 
       if (oevent.bytes[0])
 	{
@@ -433,7 +435,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 
   jclient_o2j_midi (jclient, nframes);
 
-  jclient_j2o_midi (jclient, nframes);
+  jclient_j2o_midi (jclient, nframes, current_frames);
 
   return 0;
 }
