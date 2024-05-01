@@ -45,10 +45,17 @@
 
 #define INT32_TO_FLOAT32_SCALE ((float) (1.0f / INT_MAX))
 
+#define SLEEP_THE_LEAST nanosleep (&SHORTEST_SLEEP_TIME, NULL)
+
 static void prepare_cycle_in_audio ();
 static void prepare_cycle_out_audio ();
 static void prepare_cycle_in_midi ();
 static void ow_engine_load_overbridge_name (struct ow_engine *);
+
+static const struct timespec SHORTEST_SLEEP_TIME = {
+  .tv_sec = 0,
+  .tv_nsec = SAMPLE_TIME_NS * 32 / 2	//Average wait time for a 32 sample buffer
+};
 
 static void
 ow_engine_init_name (struct ow_engine *engine, uint8_t bus, uint8_t address)
@@ -867,12 +874,9 @@ run_p2o_midi (void *data)
   uint8_t *pos;
   int64_t delta;
   uint64_t last_time, before_usb, after_usb;
-  struct timespec sleep_time, smallest_sleep_time;
+  struct timespec sleep_time;
   struct ow_midi_event event;
   struct ow_engine *engine = data;
-
-  smallest_sleep_time.tv_sec = 0;
-  smallest_sleep_time.tv_nsec = SAMPLE_TIME_NS * 32 / 2;	//Average wait time for a 32 sample buffer
 
   len = 0;
   delta = 0;
@@ -932,7 +936,7 @@ run_p2o_midi (void *data)
 	  pthread_spin_unlock (&engine->p2o_midi_lock);
 	  while (!p2o_midi_ready)
 	    {
-	      nanosleep (&smallest_sleep_time, NULL);
+	      SLEEP_THE_LEAST;
 	      pthread_spin_lock (&engine->p2o_midi_lock);
 	      p2o_midi_ready = engine->p2o_midi_ready;
 	      pthread_spin_unlock (&engine->p2o_midi_lock);
@@ -957,7 +961,7 @@ run_p2o_midi (void *data)
 	}
       else
 	{
-	  nanosleep (&smallest_sleep_time, NULL);
+	  SLEEP_THE_LEAST;
 	}
 
       if (ow_engine_get_status (engine) <= OW_ENGINE_STATUS_STOP)
