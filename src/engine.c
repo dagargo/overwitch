@@ -37,9 +37,6 @@
 #define MIDI_OUT_EP 0x01
 #define MIDI_IN_EP  (MIDI_OUT_EP | 0x80)
 
-#define MIDI_BUF_EVENTS 64
-#define MIDI_BUF_LEN (MIDI_BUF_EVENTS * OB_MIDI_EVENT_SIZE)
-
 #define USB_BULK_MIDI_LEN 512
 
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
