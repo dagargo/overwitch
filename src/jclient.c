@@ -37,7 +37,7 @@
 
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
-#define MAX_SYSEX_LEN (64 * 1024)
+#define MAX_MIDI_BUF_LEN (64 * 1024)
 
 size_t
 jclient_buffer_read (void *buffer, char *src, size_t size)
@@ -186,10 +186,12 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   jack_midi_data_t *jmidi;
   struct ow_midi_event event;
   jack_nframes_t first_frames, frames, event_frames;
-  static uint8_t buffer[MAX_SYSEX_LEN];
-  static size_t len = 0;
+  static uint8_t buffer[MAX_MIDI_BUF_LEN];
+  static size_t len = 0, cleanup = 0;
   int send = 0;
   size_t inc;
+  static uint32_t last_lost_count = 0;
+  uint32_t lost_count;
 
   midi_port_buf = jack_port_get_buffer (jclient->midi_output_port, nframes);
   jack_midi_clear_buffer (midi_port_buf);
@@ -218,7 +220,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
       if (event_frames < first_frames)
 	{
 	  jack_nframes_t delay = first_frames - event_frames;
-	  debug_print (2, "Event delayed %u frames\n", delay);
+	  debug_print (2, "Detected delayed event for %u frames\n", delay);
 	  frames = 0;
 	}
       else
@@ -234,23 +236,43 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	case 0x04:
 	  inc = 3;
 	  send = 0;
+	  if (cleanup)
+	    {
+	      continue;
+	    }
 	  break;
 	case 0x05:
 	  inc = 1;
 	  send = 1;
+	  if (cleanup)
+	    {
+	      cleanup = 0;
+	      continue;
+	    }
 	  break;
 	case 0x06:
 	  inc = 2;
 	  send = 1;
+	  if (cleanup)
+	    {
+	      cleanup = 0;
+	      continue;
+	    }
 	  break;
 	case 0x07:
 	  inc = 3;
 	  send = 1;
+	  if (cleanup)
+	    {
+	      cleanup = 0;
+	      continue;
+	    }
 	  break;
 	case 0x0c:		//Program Change
 	case 0x0d:		//Channel Pressure (After-touch)
 	  inc = 2;
 	  send = 1;
+	  cleanup = 0;
 	  break;
 	case 0x08:		//Note Off
 	case 0x09:		//Note On
@@ -259,22 +281,26 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	case 0x0e:		//Pitch Bend Change
 	  inc = 3;
 	  send = 1;
+	  cleanup = 0;
 	  break;
 	case 0x0f:		//Single Byte SysEx
 	  inc = 1;
 	  send = 1;
+	  cleanup = 0;
 	  break;
 	default:
 	  error_print ("o2j: Message %02X not implemented",
 		       event.packet.header);
 	  len = 0;
+	  cleanup = 0;
 	  continue;
 	}
 
-      if (len + inc >= MAX_SYSEX_LEN)
+      if (len + inc >= MAX_MIDI_BUF_LEN)
 	{
 	  error_print ("o2j: Message too long\n");
 	  len = 0;
+	  cleanup = 1;
 	  continue;
 	}
 
@@ -286,15 +312,22 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	  jmidi = jack_midi_event_reserve (midi_port_buf, frames, len);
 	  if (jmidi)
 	    {
-	      debug_print (2, "o2j: %02X MIDI message processed (%ld)\n",
-			   buffer[0], len);
 	      memcpy (jmidi, buffer, len);
+	      debug_print (2, "o2j: MIDI message processed @ %d (%ld)\n",
+			   frames, len);
 	    }
 	  else
 	    {
 	      error_print ("o2j: JACK could not reserve event\n");
 	    }
 	  len = 0;
+	}
+
+      lost_count = jack_midi_get_lost_event_count (midi_port_buf);
+      if (lost_count > last_lost_count)
+	{
+	  last_lost_count = lost_count;
+	  error_print ("Lost event count: %d\n", last_lost_count);
 	}
     }
 }
