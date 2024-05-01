@@ -37,7 +37,7 @@
 
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
-#define MAX_SYSEX_LEN (16 * 1024)
+#define MAX_SYSEX_LEN (64 * 1024)
 
 size_t
 jclient_buffer_read (void *buffer, char *src, size_t size)
@@ -186,11 +186,10 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   jack_midi_data_t *jmidi;
   struct ow_midi_event event;
   jack_nframes_t first_frames, frames, event_frames;
-  static uint8_t sysex[MAX_SYSEX_LEN];
+  static uint8_t buffer[MAX_SYSEX_LEN];
   static size_t len = 0;
   int send = 0;
   size_t inc;
-  uint8_t *dst, *src, *data;
 
   midi_port_buf = jack_port_get_buffer (jclient->midi_output_port, nframes);
   jack_midi_clear_buffer (midi_port_buf);
@@ -230,63 +229,56 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 
       jack_ringbuffer_read_advance (jclient->context.o2p_midi,
 				    sizeof (struct ow_midi_event));
-
-      if (event.packet.header >= 0x04 && event.packet.header <= 0x07)	//Multiple Byte SysEx
+      switch (event.packet.header)
 	{
-	  switch (event.packet.header)
-	    {
-	    case 0x04:
-	      inc = 3;
-	      break;
-	    case 0x05:
-	      inc = 1;
-	      send = 1;
-	      data = sysex;
-	      break;
-	    case 0x06:
-	      inc = 2;
-	      send = 1;
-	      data = sysex;
-	      break;
-	    case 0x07:
-	      inc = 3;
-	      send = 1;
-	      data = sysex;
-	      break;
-	    }
-
-	  if (len + inc >= MAX_SYSEX_LEN)
-	    {
-	      len = 0;
-	      error_print ("SysEx message too long\n");
-	      continue;
-	    }
-
-	  dst = sysex + len;
-	  src = event.packet.data;
-	  for (int i = 0; i < inc; i++, dst++, src++)
-	    {
-	      *dst = *src;
-	    }
-	}
-      else
-	{
+	case 0x04:
+	  inc = 3;
+	  send = 0;
+	  break;
+	case 0x05:
+	  inc = 1;
 	  send = 1;
-	  data = event.packet.data;
-
-	  if (event.packet.header == 0x0f)	//Single Byte SysEx
-	    {
-	      inc = 1;
-	    }
-	  else if (event.packet.header == 0x0c || event.packet.header == 0x0d)	//Program Change, Channel Pressure (After-touch)
-	    {
-	      inc = 2;
-	    }
-	  else
-	    {
-	      inc = 3;
-	    }
+	  break;
+	case 0x06:
+	  inc = 2;
+	  send = 1;
+	  break;
+	case 0x07:
+	  inc = 3;
+	  send = 1;
+	  break;
+	case 0x0c:		//Program Change
+	case 0x0d:		//Channel Pressure (After-touch)
+	  inc = 2;
+	  send = 1;
+	  break;
+	case 0x08:		//Note Off
+	case 0x09:		//Note On
+	case 0x0a:		//Polyphonic Key Pressure
+	case 0x0b:		//Control Change
+	case 0x0e:		//Pitch Bend Change
+	  inc = 3;
+	  send = 1;
+	  break;
+	case 0x0f:		//Single Byte SysEx
+	  inc = 1;
+	  send = 1;
+	  break;
+	default:
+	  error_print ("o2j: Message %02X not implemented",
+		       event.packet.header);
+	  len = 0;
+	  continue;
 	}
+
+      if (len + inc >= MAX_SYSEX_LEN)
+	{
+	  error_print ("o2j: Message too long\n");
+	  len = 0;
+	  continue;
+	}
+
+      memcpy (buffer + len, event.packet.data, inc);
       len += inc;
 
       if (send)
@@ -294,14 +286,13 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	  jmidi = jack_midi_event_reserve (midi_port_buf, frames, len);
 	  if (jmidi)
 	    {
-	      dst = jmidi;
-	      src = data;
-	      for (int i = 0; i < len; i++, dst++, src++)
-		{
-		  *dst = *src;
-		}
-	      *dst = *src;
-	      *dst = *src;
+	      debug_print (2, "o2j: %02X MIDI message processed (%ld)\n",
+			   buffer[0], len);
+	      memcpy (jmidi, buffer, len);
+	    }
+	  else
+	    {
+	      error_print ("o2j: JACK could not reserve event\n");
 	    }
 	  len = 0;
 	}
@@ -390,6 +381,10 @@ jclient_j2o_midi_msg (struct jclient *jclient, jack_midi_event_t jevent,
       oevent.time = time;
       jclient_copy_event_bytes (&oevent, jevent.buffer, jevent.size);
       jclient_j2o_midi_queue_event (jclient, oevent);
+    }
+  else
+    {
+      error_print ("j2o: Message not implemented");
     }
 }
 

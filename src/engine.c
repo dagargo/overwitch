@@ -352,19 +352,20 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
 static void LIBUSB_CALL
 cb_xfr_midi_in (struct libusb_transfer *xfr)
 {
+  int len;
+  uint8_t *pos;
   struct ow_midi_event event;
-  int length;
   struct ow_engine *engine = xfr->user_data;
 
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
-      length = 0;
+      len = 0;
+      pos = engine->usb.xfr_midi_in_data;
       event.time = engine->context->get_time ();
 
-      while (length < xfr->actual_length)
+      while (len < xfr->actual_length)
 	{
-	  memcpy (event.raw, &engine->usb.xfr_midi_in_data[length],
-		  OB_MIDI_EVENT_SIZE);
+	  memcpy (event.raw, pos, OB_MIDI_EVENT_SIZE);
 	  //Multiple Byte SysEx, Note-off, Note-on, Poly-KeyPress, Control Change, Program Change, Channel Pressure, PitchBend Change, Single Byte SysEx
 	  if (event.packet.header >= 0x04 && event.packet.header <= 0x0f)
 	    {
@@ -382,12 +383,17 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
 					  sizeof (struct ow_midi_event));
 		}
 	      else
-		{
-		  error_print
-		    ("o2p: MIDI ring buffer overflow. Discarding data...\n");
-		}
+		error_print
+		  ("o2p: MIDI ring buffer overflow. Discarding data...\n");
 	    }
-	  length += OB_MIDI_EVENT_SIZE;
+	  else
+	    {
+	      error_print ("o2p: Message %02X not implemented",
+			   event.packet.header);
+	    }
+
+	  len += OB_MIDI_EVENT_SIZE;
+	  pos += OB_MIDI_EVENT_SIZE;
 	}
     }
   else
