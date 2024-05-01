@@ -869,7 +869,7 @@ run_p2o_midi (void *data)
 {
   int len, p2o_midi_ready, event_read = 0;
   uint8_t *pos;
-  double last_time, delta = 0;
+  double last_time, delta = 0, before_usb, after_usb;
   struct timespec sleep_time, smallest_sleep_time;
   struct ow_midi_event event;
   struct ow_engine *engine = data;
@@ -924,6 +924,8 @@ run_p2o_midi (void *data)
 
 	  //Waiting for the USB block to be sent...
 
+	  before_usb = engine->context->get_time ();
+
 	  pthread_spin_lock (&engine->p2o_midi_lock);
 	  p2o_midi_ready = engine->p2o_midi_ready;
 	  pthread_spin_unlock (&engine->p2o_midi_lock);
@@ -935,10 +937,17 @@ run_p2o_midi (void *data)
 	      pthread_spin_unlock (&engine->p2o_midi_lock);
 	    }
 
+	  after_usb = engine->context->get_time ();
+
 	  //Sleep until the next event (already read)
-	  sleep_time.tv_sec = delta;
-	  sleep_time.tv_nsec = (delta - sleep_time.tv_sec) * 1.0e9;
-	  nanosleep (&sleep_time, NULL);
+	  delta -= (after_usb - before_usb);
+	  if (delta > 0)
+	    {
+	      debug_print (2, "Sleeping %.9f s...\n", delta);
+	      sleep_time.tv_sec = delta;
+	      sleep_time.tv_nsec = (delta - sleep_time.tv_sec) * 1.0e9;
+	      nanosleep (&sleep_time, NULL);
+	    }
 	  last_time = 0;
 
 	  len = 0;
