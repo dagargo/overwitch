@@ -33,7 +33,7 @@
 
 #define MSG_ERROR_PORT_REGISTER "Error while registering JACK port\n"
 
-#define MIDI_BUF_LEN (OW_MIDI_BUF_EVENTS * sizeof (struct ow_midi_event))
+#define MIDI_BUF_LEN (128 * 1024)
 
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
