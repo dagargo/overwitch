@@ -555,9 +555,8 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
   const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
 
-  if (jack_get_cycle_times (jclient->client,
-			    &current_frames,
-			    &current_usecs, &next_usecs, &period_usecs))
+  if (jack_get_cycle_times (jclient->client, &current_frames, &current_usecs,
+			    &next_usecs, &period_usecs))
     {
       error_print ("Error while getting JACK time\n");
     }
@@ -673,8 +672,8 @@ jclient_run (struct jclient *jclient)
   engine = ow_resampler_get_engine (jclient->resampler);
   desc = ow_engine_get_device_desc (engine);
 
-  jclient->client =
-    jack_client_open (jclient->name, JackNoStartServer, &status, NULL);
+  jclient->client = jack_client_open (jclient->name, JackNoStartServer,
+				      &status, NULL);
   if (jclient->client == NULL)
     {
       if (status & JackServerFailed)
@@ -806,9 +805,9 @@ jclient_run (struct jclient *jclient)
 	}
     }
 
-  jclient->midi_output_port =
-    jack_port_register (jclient->client, "MIDI out", JACK_DEFAULT_MIDI_TYPE,
-			JackPortIsOutput, 0);
+  jclient->midi_output_port = jack_port_register (jclient->client, "MIDI out",
+						  JACK_DEFAULT_MIDI_TYPE,
+						  JackPortIsOutput, 0);
 
   if (jclient->midi_output_port == NULL)
     {
@@ -816,9 +815,9 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
-  jclient->midi_input_port =
-    jack_port_register (jclient->client, "MIDI in", JACK_DEFAULT_MIDI_TYPE,
-			JackPortIsInput, 0);
+  jclient->midi_input_port = jack_port_register (jclient->client, "MIDI in",
+						 JACK_DEFAULT_MIDI_TYPE,
+						 JackPortIsInput, 0);
 
   if (jclient->midi_input_port == NULL)
     {
@@ -855,9 +854,8 @@ jclient_run (struct jclient *jclient)
   jclient->context.set_rt_priority = set_rt_priority;
   jclient->context.priority = jclient->priority;
 
-  jclient->context.options =
-    OW_ENGINE_OPTION_O2P_AUDIO | OW_ENGINE_OPTION_O2P_MIDI |
-    OW_ENGINE_OPTION_P2O_MIDI;
+  jclient->context.options = OW_ENGINE_OPTION_O2P_AUDIO |
+    OW_ENGINE_OPTION_O2P_MIDI | OW_ENGINE_OPTION_P2O_MIDI;
 
   err = ow_resampler_start (jclient->resampler, &jclient->context);
   if (err)
