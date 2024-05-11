@@ -520,9 +520,7 @@ ow_err_t
 ow_resampler_start (struct ow_resampler *resampler,
 		    struct ow_context *context)
 {
-  context->dll = &resampler->dll.dll_ow;
-  context->options |= OW_ENGINE_OPTION_DLL;
-  return ow_engine_start (resampler->engine, context);
+  return ow_engine_start (resampler->engine, context, &resampler->dll.dll_ow);
 }
 
 void

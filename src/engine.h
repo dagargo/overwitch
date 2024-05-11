@@ -216,6 +216,7 @@ struct ow_engine
   pthread_spinlock_t p2o_midi_lock;
   int p2o_midi_ready;
   struct ow_context *context;
+  void *dll;
 };
 
 struct ow_engine_usb_blk

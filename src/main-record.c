@@ -287,7 +287,7 @@ run_record (int device_num, const char *device_name,
   context.o2p_audio = sf;
   context.options = OW_ENGINE_OPTION_O2P_AUDIO;
 
-  err = ow_engine_start (engine, &context);
+  err = ow_engine_start (engine, &context, NULL);
   if (err)
     {
       goto cleanup;

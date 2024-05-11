@@ -181,7 +181,7 @@ run_play (int device_num, const char *device_name,
   context.p2o_audio = sf;
   context.options = OW_ENGINE_OPTION_P2O_AUDIO;
 
-  err = ow_engine_start (engine, &context);
+  err = ow_engine_start (engine, &context, NULL);
   if (!err)
     {
       ow_engine_wait (engine);

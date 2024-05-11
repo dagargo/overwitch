@@ -150,9 +150,9 @@ set_usb_input_data_blks (struct ow_engine *engine)
   ow_engine_status_t status;
 
   pthread_spin_lock (&engine->lock);
-  if (engine->context->dll)
+  if (engine->dll)
     {
-      ow_dll_overwitch_inc (engine->context->dll, engine->frames_per_transfer,
+      ow_dll_overwitch_inc (engine->dll, engine->frames_per_transfer,
 			    engine->context->get_time ());
     }
   status = engine->status;
@@ -1001,17 +1001,16 @@ run_audio_o2p_midi (void *data)
     {
       engine->p2o_latency = 0;
       engine->p2o_max_latency = 0;
-      engine->reading_at_p2o_end =
-	engine->context->options & OW_ENGINE_OPTION_DLL ? 0 : 1;
+      engine->reading_at_p2o_end = engine->dll ? 0 : 1;
       engine->o2p_latency = 0;
       engine->o2p_max_latency = 0;
 
       //status == OW_ENGINE_STATUS_BOOT || status == OW_ENGINE_STATUS_CLEAR
 
       pthread_spin_lock (&engine->lock);
-      if (engine->context->dll && engine->status == OW_ENGINE_STATUS_BOOT)
+      if (engine->dll && engine->status == OW_ENGINE_STATUS_BOOT)
 	{
-	  ow_dll_overwitch_init (engine->context->dll, OB_SAMPLE_RATE,
+	  ow_dll_overwitch_init (engine->dll, OB_SAMPLE_RATE,
 				 engine->frames_per_transfer,
 				 engine->context->get_time ());
 	  engine->status = OW_ENGINE_STATUS_WAIT;
@@ -1057,12 +1056,14 @@ ow_engine_clear_buffers (struct ow_engine *engine)
 }
 
 ow_err_t
-ow_engine_start (struct ow_engine *engine, struct ow_context *context)
+ow_engine_start (struct ow_engine *engine, struct ow_context *context,
+		 void *dll)
 {
   int audio_o2p_midi_thread = 0;
   int p2o_midi_thread = 0;
 
   engine->context = context;
+  engine->dll = dll;
 
   if (!context->options)
     {
@@ -1133,13 +1134,13 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 	}
     }
 
-  if (context->options & OW_ENGINE_OPTION_DLL)
+  if (engine->dll)
     {
       if (!context->get_time)
 	{
 	  return OW_INIT_ERROR_NO_GET_TIME;
 	}
-      if (!context->dll)
+      if (!engine->dll)
 	{
 	  return OW_INIT_ERROR_NO_DLL;
 	}
