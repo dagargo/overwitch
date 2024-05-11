@@ -281,6 +281,7 @@ run_record (int device_num, const char *device_name,
   debug_print (1, "Creating sample (%d channels)...\n", buffer.outputs);
   sf = sf_open (filename, SFM_WRITE, &sfinfo);
 
+  context.dll = NULL;
   context.write_space = buffer_dummy_rw_space;
   context.read_space = buffer_dummy_rw_space;
   context.write = buffer_write;

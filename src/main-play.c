@@ -176,6 +176,7 @@ run_play (int device_num, const char *device_name,
 
   ow_set_thread_rt_priority (pthread_self (), OW_DEFAULT_RT_PROPERTY);
 
+  context.dll = NULL;
   context.read_space = buffer_read_space;
   context.read = buffer_read;
   context.p2o_audio = sf;

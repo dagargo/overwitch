@@ -115,8 +115,7 @@ typedef enum
   OW_ENGINE_OPTION_O2P_AUDIO = 1,
   OW_ENGINE_OPTION_P2O_AUDIO = 2,
   OW_ENGINE_OPTION_O2P_MIDI = 4,
-  OW_ENGINE_OPTION_P2O_MIDI = 8,
-  OW_ENGINE_OPTION_DLL = 16
+  OW_ENGINE_OPTION_P2O_MIDI = 8
 } ow_engine_option_t;
 
 struct ow_context
@@ -231,7 +230,8 @@ ow_err_t ow_engine_init_from_libusb_device_descriptor (struct ow_engine **,
 						       int, unsigned int,
 						       unsigned int);
 
-ow_err_t ow_engine_start (struct ow_engine *, struct ow_context *);
+ow_err_t ow_engine_start (struct ow_engine *engine,
+			  struct ow_context *context);
 
 void ow_engine_clear_buffers (struct ow_engine *);
 
