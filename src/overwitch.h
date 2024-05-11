@@ -124,8 +124,6 @@ struct ow_context
   void *o2p_midi;
   //DLL
   void *dll;
-  ow_dll_overwitch_init_t dll_init;
-  ow_dll_overwitch_inc_t dll_inc;
   //RT priority is always activated. If this is NULL, Overwitch will set itself with its default RT priority and policy.
   ow_set_rt_priority_t set_rt_priority;
   int priority;
