@@ -530,7 +530,6 @@ ow_resampler_start (struct ow_resampler *resampler,
   context->dll = &resampler->dll.dll_overbridge;
   context->dll_overbridge_init = ow_dll_overbridge_init;
   context->dll_overbridge_inc = ow_dll_overbridge_inc;
-  context->options |= OW_ENGINE_OPTION_DLL;
   resampler->status = OW_RESAMPLER_STATUS_READY;
   return ow_engine_start (resampler->engine, context);
 }

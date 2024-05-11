@@ -1006,8 +1006,7 @@ run_audio_o2p_midi (void *data)
     {
       engine->p2o_latency = 0;
       engine->p2o_max_latency = 0;
-      engine->reading_at_p2o_end =
-	engine->context->options & OW_ENGINE_OPTION_DLL ? 0 : 1;
+      engine->reading_at_p2o_end = engine->context->dll ? 0 : 1;
       engine->o2p_latency = 0;
       engine->o2p_max_latency = 0;
 
@@ -1139,13 +1138,13 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 	}
     }
 
-  if (context->options & OW_ENGINE_OPTION_DLL)
+  if (engine->context->dll)
     {
       if (!context->get_time)
 	{
 	  return OW_INIT_ERROR_NO_GET_TIME;
 	}
-      if (!context->dll)
+      if (!engine->context->dll)
 	{
 	  return OW_INIT_ERROR_NO_DLL;
 	}

@@ -148,7 +148,6 @@
 #include <samplerate.h>
 #include <pthread.h>
 #include "utils.h"
-#include "dll.h"
 #include "overwitch.h"
 
 #define GET_NTH_USB_BLK(blks,blk_len,n) ((struct ow_engine_usb_blk *) &blks[n * blk_len])
