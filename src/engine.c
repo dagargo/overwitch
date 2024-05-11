@@ -351,11 +351,6 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
   int length;
   struct ow_engine *engine = xfr->user_data;
 
-  if (ow_engine_get_status (engine) < OW_ENGINE_STATUS_RUN)
-    {
-      goto end;
-    }
-
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
       length = 0;
@@ -397,7 +392,6 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
 	}
     }
 
-end:
   prepare_cycle_in_midi (engine);
 }
 
@@ -977,17 +971,22 @@ run_audio_o2p_midi (void *data)
   size_t rsp2o, bytes;
   struct ow_engine *engine = data;
 
-  while (ow_engine_get_status (engine) == OW_ENGINE_STATUS_READY);
-
-  //status == OW_ENGINE_STATUS_BOOT
-
-  //Both these calls always need to be called and can not be skipped.
-  prepare_cycle_in_audio (engine);
-  prepare_cycle_out_audio (engine);
+  //MIDI runs independently of audio status
   if (engine->context->options & OW_ENGINE_OPTION_O2P_MIDI)
     {
       prepare_cycle_in_midi (engine);
     }
+
+  while (ow_engine_get_status (engine) == OW_ENGINE_STATUS_READY)
+    {
+      libusb_handle_events_completed (engine->usb.context, NULL);
+    }
+
+  //status == OW_ENGINE_STATUS_BOOT
+
+  //These calls are needed to initialize the USB side.
+  prepare_cycle_in_audio (engine);
+  prepare_cycle_out_audio (engine);
 
   while (1)
     {

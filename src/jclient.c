@@ -256,12 +256,6 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes,
   struct ow_midi_event oevent;
   jack_nframes_t event_count;
   jack_midi_data_t status_byte;
-  struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
-
-  if (ow_engine_get_status (engine) < OW_ENGINE_STATUS_RUN)
-    {
-      return;
-    }
 
   midi_port_buf = jack_port_get_buffer (jclient->midi_input_port, nframes);
   event_count = jack_midi_get_event_count (midi_port_buf);
@@ -392,6 +386,10 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
       error_print ("Error while getting JACK time\n");
     }
 
+  //MIDI runs independently of audio status
+  jclient_o2j_midi (jclient, nframes);
+  jclient_j2o_midi (jclient, nframes, current_frames);
+
   if (ow_resampler_compute_ratios (jclient->resampler, current_usecs,
 				   jclient_audio_running, jclient->client))
     {
@@ -422,10 +420,6 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
       jclient_copy_j2o_audio (f, nframes, buffer, desc);
       ow_resampler_write_audio (jclient->resampler);
     }
-
-  jclient_o2j_midi (jclient, nframes);
-
-  jclient_j2o_midi (jclient, nframes, current_frames);
 
   return 0;
 }
