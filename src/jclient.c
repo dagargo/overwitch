@@ -561,6 +561,11 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
       error_print ("Error while getting JACK time\n");
     }
 
+  //MIDI
+  jclient_o2j_midi (jclient, nframes);
+
+  jclient_j2o_midi (jclient, nframes, current_frames);
+
   time = current_usecs * 1.0e-6;
 
   if (ow_resampler_compute_ratios (jclient->resampler, time,
@@ -593,10 +598,6 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
       jclient_copy_j2o_audio (f, nframes, buffer, desc);
       ow_resampler_write_audio (jclient->resampler);
     }
-
-  jclient_o2j_midi (jclient, nframes);
-
-  jclient_j2o_midi (jclient, nframes, current_frames);
 
   return 0;
 }
