@@ -1,11 +1,38 @@
 usb:v1935*
  ID_VENDOR_FROM_DATABASE=Elektron Music Machines
 
+usb:v1935p000A*
+ ID_MODEL_FROM_DATABASE=Analog Heat Overbridge
+
+usb:v1935p0009*
+ ID_MODEL_FROM_DATABASE=Analog Heat MIDI
+
+usb:v1935p0050*
+ ID_MODEL_FROM_DATABASE=Analog Heat Audio/MIDI
+
 usb:v1935p0003*
  ID_MODEL_FROM_DATABASE=Analog Four MIDI
 
 usb:v1935p0004*
  ID_MODEL_FROM_DATABASE=Analog Four Overbridge
+
+usb:v1935p000E*
+ ID_MODEL_FROM_DATABASE=Analog Four MKII Overbridge
+
+usb:v1935p100F*
+ ID_MODEL_FROM_DATABASE=Analog Four MKII MIDI
+
+usb:v1935p1047*
+ ID_MODEL_FROM_DATABASE=Analog Four MKII Audio/MIDI
+
+usb:v1935p0010*
+ ID_MODEL_FROM_DATABASE=Analog Rytm MKII Overbridge
+
+usb:v1935p0011*
+ ID_MODEL_FROM_DATABASE=Analog Rytm MKII MIDI
+
+usb:v1935p1048*
+ ID_MODEL_FROM_DATABASE=Analog Rytm MKII Audio/MIDI
 
 usb:v1935p000C*
  ID_MODEL_FROM_DATABASE=Digitakt Overbridge
@@ -15,6 +42,15 @@ usb:v1935p000D*
 
 usb:v1935p102C*
  ID_MODEL_FROM_DATABASE=Digitakt Audio/MIDI
+
+usb:v1935p0014*
+ ID_MODEL_FROM_DATABASE=Digitone Overbridge
+
+usb:v1935p0015*
+ ID_MODEL_FROM_DATABASE=Digitone MIDI
+
+usb:v1935p1036*
+ ID_MODEL_FROM_DATABASE=Digitone Audio/MIDI
 
 usb:v1935p001E*
  ID_MODEL_FROM_DATABASE=Syntakt Overbridge
