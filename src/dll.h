@@ -73,11 +73,11 @@ void ow_dll_primary_set_loop_filter (struct ow_dll *, double, int, double);
 
 void ow_dll_primary_update_err (struct ow_dll *, double);
 
+void ow_dll_primary_update_err_first_time (struct ow_dll *, double);
+
 void ow_dll_primary_update (struct ow_dll *);
 
 void ow_dll_primary_calc_avg (struct ow_dll *, int);
-
-void ow_dll_primary_first_time_run (struct ow_dll *);
 
 void ow_dll_primary_load_dll_overwitch (struct ow_dll *);
 

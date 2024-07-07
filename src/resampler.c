@@ -377,8 +377,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time,
   if (resampler->status == OW_RESAMPLER_STATUS_READY
       && engine_status == OW_ENGINE_STATUS_WAIT)
     {
-      ow_dll_primary_update_err (dll, time);
-      ow_dll_primary_first_time_run (dll);
+      ow_dll_primary_update_err_first_time (dll, time);
 
       debug_print (2, "Starting up resampler...\n");
       ow_dll_primary_set_loop_filter (dll, 1.0, resampler->bufsize,

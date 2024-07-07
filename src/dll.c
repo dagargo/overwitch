@@ -66,6 +66,16 @@ ow_dll_primary_update_err (struct ow_dll *dll, double time)
   dll->err = n + dob - dll->kdel;
 }
 
+//Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
+inline void
+ow_dll_primary_update_err_first_time (struct ow_dll *dll, double time)
+{
+  ow_dll_primary_update_err (dll, time);
+  int n = (int) (floor (dll->err + 0.5));
+  dll->kj += n;
+  dll->err -= n;
+}
+
 inline void
 ow_dll_primary_update (struct ow_dll *dll)
 {
@@ -108,20 +118,11 @@ ow_dll_primary_reset (struct ow_dll *dll, double output_samplerate,
 
   dll->kj = -input_frames_per_transfer / dll->ratio;
 
-  dll->kdel =
-    2.0 * input_frames_per_transfer + 1.5 * output_frames_per_transfer;
+  dll->kdel = 2.0 * input_frames_per_transfer +
+    1.5 * output_frames_per_transfer;
 
   debug_print (2, "Target delay: %.1f ms (%d frames)\n",
 	       dll->kdel * 1000 / input_samplerate, dll->kdel);
-}
-
-//Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
-inline void
-ow_dll_primary_first_time_run (struct ow_dll *dll)
-{
-  int n = (int) (floor (dll->err + 0.5));
-  dll->kj += n;
-  dll->err -= n;
 }
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
@@ -130,8 +131,8 @@ ow_dll_primary_set_loop_filter (struct ow_dll *dll, double bw,
 				int output_frames_per_transfer,
 				double output_samplerate)
 {
-  double w =
-    2.0 * M_PI * 20 * bw * output_frames_per_transfer / output_samplerate;
+  double w = 2.0 * M_PI * 20 * bw * output_frames_per_transfer /
+    output_samplerate;
   dll->_w0 = 1.0 - exp (-w);
   w = 2.0 * M_PI * bw * dll->ratio / output_samplerate;
   dll->_w1 = w * 1.6;
