@@ -29,6 +29,8 @@
 
 #define OB_PERIOD_MS (1000.0 / OB_SAMPLE_RATE)
 
+#define RATIO_ERROR_TOLERANCE 4
+
 // If `JSON_DEVS_FILE=no` is passed passed to `./configure`, the compilation is independent of GLib.
 // But since the MAX macro is defined there, not only do we need to add it,
 // but it is also needed to have a different name to avoid redefining it.
@@ -170,6 +172,8 @@ static void
 ow_resampler_reset_dll (struct ow_resampler *resampler,
 			uint32_t new_samplerate)
 {
+  gdouble target_ratio;
+
   if (resampler->dll.set
       && ow_engine_get_status (resampler->engine) == OW_ENGINE_STATUS_RUN)
     {
@@ -193,6 +197,10 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
   resampler->status = OW_RESAMPLER_STATUS_READY;
   resampler->o2p_ratio = resampler->dll.ratio;
   resampler->samplerate = new_samplerate;
+
+  target_ratio = new_samplerate / OB_SAMPLE_RATE;
+  resampler->max_target_ratio = target_ratio * RATIO_ERROR_TOLERANCE;
+  resampler->min_target_ratio = target_ratio / RATIO_ERROR_TOLERANCE;
 }
 
 static long
@@ -406,9 +414,12 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time,
   ow_dll_primary_update_err (dll, time);
   ow_dll_primary_update (dll);
 
-  if (dll->ratio < 0.0)
+  if (dll->ratio < resampler->min_target_ratio ||
+      dll->ratio > resampler->max_target_ratio)
     {
-      error_print ("Negative ratio detected. Stopping resampler...\n");
+      error_print ("Invalid ratio %f detected. Stopping resampler...\n",
+		   dll->ratio);
+      resampler->status = OW_RESAMPLER_STATUS_ERROR;
       ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_ERROR);
       return 1;
     }
