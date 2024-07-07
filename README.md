@@ -67,7 +67,7 @@ Options:
   --help, -h
 ```
 
-If you are running PipeWire, go to the [PipeWire section](##PipeWire) for additional information.
+If you are running PipeWire, go to the [PipeWire section](#PipeWire) for additional information.
 
 Notice that once an Overbridge device is running the options can not be changed so you will need to stop the running instances and refresh the list.
 
@@ -128,11 +128,6 @@ Options:
   --help, -h
 ```
 
-If you are running PipeWire, you might want to pass the `PIPEWIRE_PROPS` environment variable with the `node.group` property set to same value the hardware has. Go to the [PipeWire section](##PipeWire) for additional information.
-
-```
-$ PIPEWIRE_PROPS='{ node.group = hardware_node_group }' overwitch
-```
 
 ### overwitch-play
 
@@ -231,8 +226,16 @@ Under PipeWire, a JACK client always follows a driver and when no connections ar
 To avoid that, here are some recommendations. Still, always try to follow the official PipeWire documentation.
 
 * Use the Pro audio profile.
-* Schedule Overwitch (both CLI and GUI) under the hardware driver. This can be achieved by using the properties `node.link-group` or `node.group`.
 * Do not have passive PipeWire nodes (`node.passive` set to `true`) to avoid driver changes.
+* Schedule Overwitch (both CLI and GUI) under the hardware driver. This can be achieved by using the properties `node.link-group` or `node.group`.
+
+```
+# List your node.groups:
+$ pw-cli info all | grep -i node.group
+
+# Set node.group to your output device (e.g. "pro-audio-0")
+$ PIPEWIRE_PROPS='{ node.group = "pro-audio-0" }' overwitch
+```
 
 ## Latency
 
