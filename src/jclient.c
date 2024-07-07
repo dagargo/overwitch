@@ -327,8 +327,8 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes,
 
       if (oevent.bytes[0])
 	{
-	  if (jack_ringbuffer_write_space (jclient->context.p2o_midi)
-	      >= sizeof (struct ow_midi_event))
+	  if (jack_ringbuffer_write_space (jclient->context.p2o_midi) >=
+	      sizeof (struct ow_midi_event))
 	    {
 	      jack_ringbuffer_write (jclient->context.p2o_midi,
 				     (void *) &oevent,
@@ -393,9 +393,8 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
   const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
 
-  if (jack_get_cycle_times (jclient->client,
-			    &current_frames,
-			    &current_usecs, &next_usecs, &period_usecs))
+  if (jack_get_cycle_times (jclient->client, &current_frames, &current_usecs,
+			    &next_usecs, &period_usecs))
     {
       error_print ("Error while getting JACK time\n");
     }
@@ -511,8 +510,8 @@ jclient_run (struct jclient *jclient)
   engine = ow_resampler_get_engine (jclient->resampler);
   desc = ow_engine_get_device_desc (engine);
 
-  jclient->client =
-    jack_client_open (jclient->name, JackNoStartServer, &status, NULL);
+  jclient->client = jack_client_open (jclient->name, JackNoStartServer,
+				      &status, NULL);
   if (jclient->client == NULL)
     {
       if (status & JackServerFailed)
@@ -537,20 +536,20 @@ jclient_run (struct jclient *jclient)
       debug_print (0, "Name client in use. Using %s...\n", client_name);
     }
 
-  if (jack_set_process_callback
-      (jclient->client, jclient_process_cb, jclient))
+  if (jack_set_process_callback (jclient->client, jclient_process_cb,
+				 jclient))
     {
       goto cleanup_jack;
     }
 
-  if (jack_set_xrun_callback
-      (jclient->client, jclient_thread_xrun_cb, jclient->resampler))
+  if (jack_set_xrun_callback (jclient->client, jclient_thread_xrun_cb,
+			      jclient->resampler))
     {
       goto cleanup_jack;
     }
 
-  if (jack_set_latency_callback
-      (jclient->client, jclient_thread_latency_cb, jclient))
+  if (jack_set_latency_callback (jclient->client, jclient_thread_latency_cb,
+				 jclient))
     {
       goto cleanup_jack;
     }
@@ -583,20 +582,20 @@ jclient_run (struct jclient *jclient)
       error_print ("Cannot set JACK client registration callback\n");
     }
 
-  //Sometimes these callbacks are not called when setting them so
+  //Sometimes these callbacks are not called when setting them so...
   jclient_set_buffer_size_cb (jack_get_buffer_size (jclient->client),
 			      jclient);
   jclient_set_sample_rate_cb (jack_get_sample_rate (jclient->client),
 			      jclient);
 
-  if (jack_set_buffer_size_callback
-      (jclient->client, jclient_set_buffer_size_cb, jclient))
+  if (jack_set_buffer_size_callback (jclient->client,
+				     jclient_set_buffer_size_cb, jclient))
     {
       goto cleanup_jack;
     }
 
-  if (jack_set_sample_rate_callback
-      (jclient->client, jclient_set_sample_rate_cb, jclient))
+  if (jack_set_sample_rate_callback (jclient->client,
+				     jclient_set_sample_rate_cb, jclient))
     {
       goto cleanup_jack;
     }
@@ -644,9 +643,9 @@ jclient_run (struct jclient *jclient)
 	}
     }
 
-  jclient->midi_output_port =
-    jack_port_register (jclient->client, "MIDI out", JACK_DEFAULT_MIDI_TYPE,
-			JackPortIsOutput, 0);
+  jclient->midi_output_port = jack_port_register (jclient->client, "MIDI out",
+						  JACK_DEFAULT_MIDI_TYPE,
+						  JackPortIsOutput, 0);
 
   if (jclient->midi_output_port == NULL)
     {
@@ -654,9 +653,9 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
-  jclient->midi_input_port =
-    jack_port_register (jclient->client, "MIDI in", JACK_DEFAULT_MIDI_TYPE,
-			JackPortIsInput, 0);
+  jclient->midi_input_port = jack_port_register (jclient->client, "MIDI in",
+						 JACK_DEFAULT_MIDI_TYPE,
+						 JackPortIsInput, 0);
 
   if (jclient->midi_input_port == NULL)
     {
@@ -664,16 +663,14 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
-  jclient->context.o2p_audio =
-    jack_ringbuffer_create (MAX_LATENCY *
-			    ow_resampler_get_o2p_frame_size
-			    (jclient->resampler));
+  jclient->context.o2p_audio = jack_ringbuffer_create (MAX_LATENCY *
+						       ow_resampler_get_o2p_frame_size
+						       (jclient->resampler));
   jack_ringbuffer_mlock (jclient->context.o2p_audio);
 
-  jclient->context.p2o_audio =
-    jack_ringbuffer_create (MAX_LATENCY *
-			    ow_resampler_get_p2o_frame_size
-			    (jclient->resampler));
+  jclient->context.p2o_audio = jack_ringbuffer_create (MAX_LATENCY *
+						       ow_resampler_get_p2o_frame_size
+						       (jclient->resampler));
   jack_ringbuffer_mlock (jclient->context.p2o_audio);
 
   jclient->context.o2p_midi = jack_ringbuffer_create (MIDI_BUF_LEN);

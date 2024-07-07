@@ -282,9 +282,8 @@ ow_resampler_read_audio (struct ow_resampler *resampler)
 {
   long gen_frames;
 
-  gen_frames =
-    src_callback_read (resampler->o2p_state, resampler->o2p_ratio,
-		       resampler->bufsize, resampler->o2p_buf_out);
+  gen_frames = src_callback_read (resampler->o2p_state, resampler->o2p_ratio,
+				  resampler->bufsize, resampler->o2p_buf_out);
   if (gen_frames != resampler->bufsize)
     {
       error_print
@@ -319,9 +318,8 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
   p2o_acc -= inc;
   frames = resampler->bufsize + inc;
 
-  gen_frames =
-    src_callback_read (resampler->p2o_state,
-		       resampler->p2o_ratio, frames, resampler->p2o_buf_out);
+  gen_frames = src_callback_read (resampler->p2o_state, resampler->p2o_ratio,
+				  frames, resampler->p2o_buf_out);
   if (gen_frames != frames)
     {
       error_print
