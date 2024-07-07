@@ -130,8 +130,8 @@ get_status_string (ow_resampler_status_t status)
 static void
 start_instance (struct overwitch_instance *instance)
 {
-  struct ow_engine *engine =
-    ow_resampler_get_engine (instance->jclient.resampler);
+  struct ow_resampler *resampler = instance->jclient.resampler;
+  struct ow_engine *engine = ow_resampler_get_engine (resampler);
   debug_print (1, "Starting %s...\n", ow_engine_get_overbridge_name (engine));
   jclient_start (&instance->jclient);
 }
@@ -139,21 +139,24 @@ start_instance (struct overwitch_instance *instance)
 static void
 stop_instance (struct overwitch_instance *instance)
 {
-  struct ow_engine *engine =
-    ow_resampler_get_engine (instance->jclient.resampler);
+  struct ow_resampler *resampler = instance->jclient.resampler;
+  struct ow_engine *engine = ow_resampler_get_engine (resampler);
   debug_print (1, "Stopping %s...\n", ow_engine_get_overbridge_name (engine));
   jclient_stop (&instance->jclient);
 }
 
 static gboolean
-set_overwitch_instance_status (struct overwitch_instance *instance)
+set_overwitch_instance_status (gpointer data)
 {
-  static char o2j_latency_s[OW_LABEL_MAX_LEN];
-  static char j2o_latency_s[OW_LABEL_MAX_LEN];
-  const char *status;
+  struct overwitch_instance *instance = data;
+  static gchar o2j_latency_s[OW_LABEL_MAX_LEN];
+  static gchar j2o_latency_s[OW_LABEL_MAX_LEN];
+  ow_resampler_status_t status;
+  const char *status_name;
   GtkTreeIter iter;
   gint bus, address;
   gboolean valid, editing;
+  GtkTreeModel *model = GTK_TREE_MODEL (status_list_store);
 
   g_object_get (G_OBJECT (name_cell_renderer), "editing", &editing, NULL);
 
@@ -162,13 +165,11 @@ set_overwitch_instance_status (struct overwitch_instance *instance)
       return FALSE;
     }
 
-  valid =
-    gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store), &iter);
+  valid = gtk_tree_model_get_iter_first (model, &iter);
 
   while (valid)
     {
-      gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
-			  STATUS_LIST_STORE_BUS, &bus,
+      gtk_tree_model_get (model, &iter, STATUS_LIST_STORE_BUS, &bus,
 			  STATUS_LIST_STORE_ADDRESS, &address, -1);
 
       if (instance->jclient.bus == bus
@@ -198,13 +199,12 @@ set_overwitch_instance_status (struct overwitch_instance *instance)
 	      j2o_latency_s[0] = '\0';
 	    }
 
-	  status =
-	    get_status_string (ow_resampler_get_status
-			       (instance->jclient.resampler));
+	  status = ow_resampler_get_status (instance->jclient.resampler);
+	  status_name = get_status_string (status);
 
 	  gtk_list_store_set (status_list_store, &iter,
 			      STATUS_LIST_STORE_STATUS,
-			      status,
+			      status_name,
 			      STATUS_LIST_STORE_O2J_LATENCY,
 			      o2j_latency_s,
 			      STATUS_LIST_STORE_J2O_LATENCY,
@@ -217,8 +217,7 @@ set_overwitch_instance_status (struct overwitch_instance *instance)
 	  break;
 	}
 
-      valid =
-	gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store), &iter);
+      valid = gtk_tree_model_iter_next (model, &iter);
     }
 
   return FALSE;
@@ -239,7 +238,7 @@ set_report_data (struct overwitch_instance *instance,
   instance->j2o_max_latency = j2o_max_latency;
   instance->o2j_ratio = o2j_ratio;
   instance->j2o_ratio = j2o_ratio;
-  g_idle_add ((GSourceFunc) set_overwitch_instance_status, instance);
+  g_idle_add (set_overwitch_instance_status, instance);
 }
 
 static void
@@ -482,13 +481,12 @@ is_device_at_bus_address_running (uint8_t bus, uint8_t address,
 {
   guint dev_bus, dev_address;
   GtkTreeIter iter;
-  gboolean valid =
-    gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store), &iter);
+  GtkTreeModel *model = GTK_TREE_MODEL (status_list_store);
+  gboolean valid = gtk_tree_model_get_iter_first (model, &iter);
 
   while (valid)
     {
-      gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
-			  STATUS_LIST_STORE_INSTANCE, instance,
+      gtk_tree_model_get (model, &iter, STATUS_LIST_STORE_INSTANCE, instance,
 			  STATUS_LIST_STORE_BUS, &dev_bus,
 			  STATUS_LIST_STORE_ADDRESS, &dev_address, -1);
 
@@ -497,8 +495,7 @@ is_device_at_bus_address_running (uint8_t bus, uint8_t address,
 	  return TRUE;
 	}
 
-      valid = gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store),
-					&iter);
+      valid = gtk_tree_model_iter_next (model, &iter);
     }
 
   return FALSE;
@@ -598,55 +595,41 @@ start_control_client ()
 }
 
 static gboolean
-remove_jclient_bg (guint *id)
+terminate_jclient_bg (gpointer data)
 {
   struct overwitch_instance *instance;
   GtkTreeIter iter;
+  guint *id = data;
   uint8_t bus = *id >> 8;
   uint8_t address = 0xff & *id;
-  gint remaining = 0;
-  gboolean valid =
-    gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store), &iter);
+  GtkTreeModel *model = GTK_TREE_MODEL (status_list_store);
+  gboolean valid = gtk_tree_model_get_iter_first (model, &iter);
 
   g_free (id);
 
   while (valid)
     {
-      gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
-			  STATUS_LIST_STORE_INSTANCE, &instance, -1);
+      gtk_tree_model_get (model, &iter, STATUS_LIST_STORE_INSTANCE, &instance,
+			  -1);
 
-      if (instance->jclient.bus == bus
-	  && instance->jclient.address == address)
+      if (instance->jclient.bus == bus &&
+	  instance->jclient.address == address)
 	{
-	  debug_print (2, "Freeing instance...\n");
-	  jclient_wait (&instance->jclient);
-	  jclient_destroy (&instance->jclient);
-	  g_free (instance);
-	  valid = gtk_list_store_remove (status_list_store, &iter);
+	  set_overwitch_instance_status (instance);
 	}
-      else
-	{
-	  remaining++;
-	  valid =
-	    gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store),
-				      &iter);
-	}
-    }
 
-  if (!remaining)
-    {
-      set_widgets_to_running_state (FALSE);
+      valid = gtk_tree_model_iter_next (model, &iter);
     }
 
   return FALSE;
 }
 
 static void
-remove_jclient (uint8_t bus, uint8_t address)
+notifiy_jclient_end (uint8_t bus, uint8_t address)
 {
   guint *id = g_malloc (sizeof (guint));
   *id = (bus << 8) + address;
-  g_idle_add ((GSourceFunc) remove_jclient_bg, id);
+  g_idle_add (terminate_jclient_bg, id);
 }
 
 static void
@@ -656,7 +639,8 @@ refresh_all (GtkWidget *object, gpointer data)
   struct ow_resampler_reporter *reporter;
   struct overwitch_instance *instance;
   size_t devices_count;
-  const char *status;
+  const char *status_string;
+  ow_resampler_status_t status;
   ow_err_t err;
 
   err = ow_get_usb_device_list (&devices, &devices_count);
@@ -692,7 +676,7 @@ refresh_all (GtkWidget *object, gpointer data)
       instance->jclient.quality =
 	gtk_combo_box_get_active (quality_combo_box);
       instance->jclient.priority = -1;
-      instance->jclient.end_notifier = remove_jclient;
+      instance->jclient.end_notifier = notifiy_jclient_end;
 
       instance->o2j_latency = 0.0;
       instance->j2o_latency = 0.0;
@@ -711,13 +695,12 @@ refresh_all (GtkWidget *object, gpointer data)
 
       debug_print (1, "Adding %s...\n", instance->jclient.name);
 
-      status =
-	get_status_string (ow_resampler_get_status
-			   (instance->jclient.resampler));
+      status = ow_resampler_get_status (instance->jclient.resampler);
+      status_string = get_status_string (status);
 
       gtk_list_store_insert_with_values (status_list_store, NULL, -1,
 					 STATUS_LIST_STORE_STATUS,
-					 status,
+					 status_string,
 					 STATUS_LIST_STORE_NAME,
 					 instance->jclient.name,
 					 STATUS_LIST_STORE_DEVICE,
@@ -757,18 +740,18 @@ stop_all (GtkWidget *object, gpointer data)
 {
   struct overwitch_instance *instance;
   GtkTreeIter iter;
-  gboolean valid =
-    gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store), &iter);
+  GtkTreeModel *model = GTK_TREE_MODEL (status_list_store);
+  gboolean valid = gtk_tree_model_get_iter_first (model, &iter);
 
   while (valid)
     {
-      gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
-			  STATUS_LIST_STORE_INSTANCE, &instance, -1);
-
+      gtk_tree_model_get (model, &iter, STATUS_LIST_STORE_INSTANCE, &instance,
+			  -1);
       stop_instance (instance);
-
-      valid = gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store),
-					&iter);
+      jclient_wait (&instance->jclient);
+      jclient_destroy (&instance->jclient);
+      g_free (instance);
+      valid = gtk_list_store_remove (status_list_store, &iter);
     }
 
   set_widgets_to_running_state (FALSE);
@@ -782,29 +765,27 @@ set_overbridge_name (GtkCellRendererText *self,
   struct ow_engine *engine;
   GtkTreeIter iter;
   gint row = atoi (path);
-  gboolean valid =
-    gtk_tree_model_get_iter_first (GTK_TREE_MODEL (status_list_store), &iter);
+  GtkTreeModel *model = GTK_TREE_MODEL (status_list_store);
+  gboolean valid = gtk_tree_model_get_iter_first (model, &iter);
   gint i = 0;
 
   while (valid && i < row)
     {
-      valid =
-	gtk_tree_model_iter_next (GTK_TREE_MODEL (status_list_store), &iter);
+      valid = gtk_tree_model_iter_next (model, &iter);
       i++;
     }
 
   if (valid)
     {
-      gtk_tree_model_get (GTK_TREE_MODEL (status_list_store), &iter,
-			  STATUS_LIST_STORE_INSTANCE, &instance, -1);
+      gtk_tree_model_get (model, &iter, STATUS_LIST_STORE_INSTANCE, &instance,
+			  -1);
 
       engine = ow_resampler_get_engine (instance->jclient.resampler);
       ow_engine_set_overbridge_name (engine, name);
 
       stop_instance (instance);
 
-      if (!gtk_tree_model_iter_n_children (GTK_TREE_MODEL (status_list_store),
-					   NULL))
+      if (!gtk_tree_model_iter_n_children (model, NULL))
 	{
 	  set_widgets_to_running_state (FALSE);
 	}
