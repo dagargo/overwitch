@@ -539,6 +539,7 @@ void
 ow_resampler_wait (struct ow_resampler *resampler)
 {
   ow_engine_wait (resampler->engine);
+  ow_resampler_report_status (resampler);
 }
 
 void

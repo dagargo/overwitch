@@ -50,7 +50,6 @@ struct jclient
   // Thread stuff
   int running;
   pthread_t thread;
-  jclient_end_notifier_t end_notifier;
 };
 
 void jclient_check_jack_server (jclient_notify_status_t);

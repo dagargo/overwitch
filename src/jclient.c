@@ -728,10 +728,6 @@ jclient_thread_runner (void *data)
 {
   struct jclient *jclient = data;
   jclient_run (jclient);
-  if (jclient->end_notifier)
-    {
-      jclient->end_notifier (jclient->bus, jclient->address);
-    }
   return NULL;
 }
 

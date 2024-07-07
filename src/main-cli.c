@@ -86,7 +86,6 @@ run_single (int device_num, const char *device_name,
   jclients->xfr_timeout = xfr_timeout;
   jclients->quality = quality;
   jclients->priority = priority;
-  jclients->end_notifier = NULL;
 
   free (device);
 
@@ -130,7 +129,6 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
       jclient->xfr_timeout = xfr_timeout;
       jclient->quality = quality;
       jclient->priority = priority;
-      jclient->end_notifier = NULL;
 
       if (jclient_init (jclient))
 	{
