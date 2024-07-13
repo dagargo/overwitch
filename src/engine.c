@@ -379,7 +379,7 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
 	  //Note-off, Note-on, Poly-KeyPress, Control Change, Program Change, Channel Pressure, PitchBend Change, Single Byte
 	  if (event.bytes[0] >= 0x08 && event.bytes[0] <= 0x0f)
 	    {
-	      debug_print (2, "o2p MIDI: %02x, %02x, %02x, %02x (%f)\n",
+	      debug_print (2, "o2p MIDI: %02x, %02x, %02x, %02x (%lu)\n",
 			   event.bytes[0], event.bytes[1], event.bytes[2],
 			   event.bytes[3], event.time);
 
@@ -869,7 +869,8 @@ run_p2o_midi (void *data)
 {
   int len, p2o_midi_ready, event_read = 0;
   uint8_t *pos;
-  double last_time, delta = 0, before_usb, after_usb;
+  int64_t delta;
+  uint64_t last_time, before_usb, after_usb;
   struct timespec sleep_time, smallest_sleep_time;
   struct ow_midi_event event;
   struct ow_engine *engine = data;
@@ -878,6 +879,7 @@ run_p2o_midi (void *data)
   smallest_sleep_time.tv_nsec = SAMPLE_TIME_NS * 32 / 2;	//Average wait time for a 32 sample buffer
 
   len = 0;
+  delta = 0;
   last_time = 0;
   pos = engine->usb.xfr_midi_out_data;
   memset (pos, 0, USB_BULK_MIDI_LEN);
@@ -916,8 +918,7 @@ run_p2o_midi (void *data)
 
       if (len)
 	{
-	  debug_print (2, "Events time: %f; delta %.12f\n", event.time,
-		       delta);
+	  debug_print (2, "Events time: %lu; delta %lu\n", event.time, delta);
 
 	  engine->p2o_midi_ready = 0;
 	  prepare_cycle_out_midi (engine);
@@ -940,12 +941,12 @@ run_p2o_midi (void *data)
 	  after_usb = engine->context->get_time ();
 
 	  //Sleep until the next event (already read)
-	  delta -= (after_usb - before_usb);
+	  delta -= after_usb - before_usb;
 	  if (delta > 0)
 	    {
-	      debug_print (2, "Sleeping %.9f s...\n", delta);
-	      sleep_time.tv_sec = delta;
-	      sleep_time.tv_nsec = (delta - sleep_time.tv_sec) * 1.0e9;
+	      debug_print (2, "Sleeping %lu us...\n", delta);
+	      sleep_time.tv_sec = delta / 1000000;
+	      sleep_time.tv_nsec = (delta - sleep_time.tv_sec) * 1e3;
 	      nanosleep (&sleep_time, NULL);
 	    }
 	  last_time = 0;

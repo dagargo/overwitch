@@ -25,7 +25,7 @@
 
 struct instant
 {
-  double time;
+  uint64_t time;		//us
   uint32_t frames;
 };
 
@@ -33,7 +33,7 @@ struct ow_dll_overwitch
 {
   struct instant i0;
   struct instant i1;
-  double e2;
+  uint64_t e2;
   double b;
   double c;
 };
@@ -55,15 +55,15 @@ struct ow_dll
   double err;
   uint32_t ko0;
   uint32_t ko1;
-  double to0;
-  double to1;
+  uint64_t to0;
+  uint64_t to1;
   struct ow_dll_overwitch dll_ow;
   int set;
 };
 
-void ow_dll_overwitch_init (struct ow_dll_overwitch *, double, int, double);
+void ow_dll_overwitch_init (struct ow_dll_overwitch *, double, int, uint64_t);
 
-void ow_dll_overwitch_inc (struct ow_dll_overwitch *, int, double);
+void ow_dll_overwitch_inc (struct ow_dll_overwitch *, int, uint64_t);
 
 void ow_dll_primary_init (struct ow_dll *);
 
@@ -71,9 +71,9 @@ void ow_dll_primary_reset (struct ow_dll *, double, double, int, int);
 
 void ow_dll_primary_set_loop_filter (struct ow_dll *, double, int, double);
 
-void ow_dll_primary_update_err (struct ow_dll *, double);
+void ow_dll_primary_update_err (struct ow_dll *, uint64_t);
 
-void ow_dll_primary_update_err_first_time (struct ow_dll *, double);
+void ow_dll_primary_update_err_first_time (struct ow_dll *, uint64_t);
 
 void ow_dll_primary_update (struct ow_dll *);
 

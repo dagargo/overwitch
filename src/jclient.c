@@ -38,12 +38,6 @@
 
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
-double
-jclient_get_time ()
-{
-  return jack_get_time () * 1.0e-6;
-}
-
 size_t
 jclient_buffer_read (void *buffer, char *src, size_t size)
 {
@@ -207,8 +201,8 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
       // We add 1 JACK cycle because it's the maximum delay we want to achieve
       // as everyting generated during the previous cycle will always be played.
       // If we tried to adjust it automatically we'd get 1 cycle delay.
-      event_frames = jack_time_to_frames (jclient->client, event.time * 1.0e6)
-	+ nframes;
+      event_frames = jack_time_to_frames (jclient->client, event.time) +
+	nframes;
       if (event_frames >= first_frames + nframes)
 	{
 	  debug_print (2,
@@ -322,8 +316,8 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes,
 	  oevent.bytes[3] = jevent.buffer[2];
 	}
 
-      oevent.time =
-	jack_frames_to_time (jclient->client, frames + jevent.time) * 1e-6;
+      oevent.time = jack_frames_to_time (jclient->client, frames +
+					 jevent.time);
 
       if (oevent.bytes[0])
 	{
@@ -389,7 +383,6 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   jack_time_t current_usecs;
   jack_time_t next_usecs;
   float period_usecs;
-  double time;
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
   const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
 
@@ -399,9 +392,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
       error_print ("Error while getting JACK time\n");
     }
 
-  time = current_usecs * 1.0e-6;
-
-  if (ow_resampler_compute_ratios (jclient->resampler, time,
+  if (ow_resampler_compute_ratios (jclient->resampler, current_usecs,
 				   jclient_audio_running, jclient->client))
     {
       return 0;
@@ -685,7 +676,7 @@ jclient_run (struct jclient *jclient)
     (ow_buffer_rw_space_t) jack_ringbuffer_write_space;
   jclient->context.read = jclient_buffer_read;
   jclient->context.write = (ow_buffer_write_t) jack_ringbuffer_write;
-  jclient->context.get_time = jclient_get_time;
+  jclient->context.get_time = jack_get_time;
 
   jclient->context.set_rt_priority = set_rt_priority;
   jclient->context.priority = jclient->priority;

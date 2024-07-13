@@ -354,7 +354,8 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
 }
 
 int
-ow_resampler_compute_ratios (struct ow_resampler *resampler, double time,
+ow_resampler_compute_ratios (struct ow_resampler *resampler,
+			     uint64_t current_usecs,
 			     void (*audio_running_cb) (void *), void *cb_data)
 {
   int xruns;
@@ -385,7 +386,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time,
   if (resampler->status == OW_RESAMPLER_STATUS_READY
       && engine_status == OW_ENGINE_STATUS_WAIT)
     {
-      ow_dll_primary_update_err_first_time (dll, time);
+      ow_dll_primary_update_err_first_time (dll, current_usecs);
 
       debug_print (2, "Starting up resampler...\n");
       ow_dll_primary_set_loop_filter (dll, 1.0, resampler->bufsize,
@@ -411,7 +412,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler, double time,
       return 0;
     }
 
-  ow_dll_primary_update_err (dll, time);
+  ow_dll_primary_update_err (dll, current_usecs);
   ow_dll_primary_update (dll);
 
   if (dll->ratio < resampler->min_target_ratio ||

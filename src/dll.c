@@ -23,18 +23,19 @@
 #include "dll.h"
 
 #define RATIO_DIFF_THRES 0.00001
+#define USEC_PER_SEC 1.0e6
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc.
 inline void
 ow_dll_overwitch_init (struct ow_dll_overwitch *dll_ow, double samplerate,
-		       int frames_per_transfer, double time)
+		       int frames_per_transfer, uint64_t time)
 {
   double dtime = frames_per_transfer / samplerate;
   double w = 2 * M_PI * 0.1 * dtime;
   dll_ow->b = 1.6 * w;
   dll_ow->c = w * w;
 
-  dll_ow->e2 = dtime;
+  dll_ow->e2 = dtime * USEC_PER_SEC;
   dll_ow->i0.time = time;
   dll_ow->i1.time = dll_ow->i0.time + dll_ow->e2;
 
@@ -44,9 +45,9 @@ ow_dll_overwitch_init (struct ow_dll_overwitch *dll_ow, double samplerate,
 
 inline void
 ow_dll_overwitch_inc (struct ow_dll_overwitch *dll_ow,
-		      int frames_per_transfer, double time)
+		      int frames_per_transfer, uint64_t time)
 {
-  double e = time - dll_ow->i1.time;
+  uint64_t e = time - dll_ow->i1.time;
   dll_ow->i0.time = dll_ow->i1.time;
   dll_ow->i1.time += dll_ow->b * e + dll_ow->e2;
   dll_ow->e2 += dll_ow->c * e;
@@ -56,19 +57,18 @@ ow_dll_overwitch_inc (struct ow_dll_overwitch *dll_ow,
 
 //The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
-ow_dll_primary_update_err (struct ow_dll *dll, double time)
+ow_dll_primary_update_err (struct ow_dll *dll, uint64_t time)
 {
-  double tj = time;
+  uint64_t tj = time;
   uint32_t frames = dll->ko1 - dll->ko0;
   double dob = frames * (tj - dll->to0) / (dll->to1 - dll->to0);
-  int n =
-    dll->ko0 > dll->kj ? dll->ko0 - dll->kj : -(int) (dll->kj - dll->ko0);
+  int n = dll->ko0 > dll->kj ? dll->ko0 - dll->kj : -(dll->kj - dll->ko0);
   dll->err = n + dob - dll->kdel;
 }
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
-ow_dll_primary_update_err_first_time (struct ow_dll *dll, double time)
+ow_dll_primary_update_err_first_time (struct ow_dll *dll, uint64_t time)
 {
   ow_dll_primary_update_err (dll, time);
   int n = (int) (floor (dll->err + 0.5));

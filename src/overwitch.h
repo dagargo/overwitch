@@ -43,10 +43,10 @@ typedef size_t (*ow_buffer_rw_space_t) (void *);
 typedef size_t (*ow_buffer_read_t) (void *, char *, size_t);
 typedef size_t (*ow_buffer_write_t) (void *, const char *, size_t);
 
-typedef double (*ow_get_time_t) ();	//Time in seconds
+typedef uint64_t (*ow_get_time_t) ();	//Time in us
 
-typedef size_t (*ow_dll_overwitch_init_t) (void *, double, int, double);
-typedef size_t (*ow_dll_overwitch_inc_t) (void *, int, double);
+typedef size_t (*ow_dll_overwitch_init_t) (void *, double, int, uint64_t);
+typedef size_t (*ow_dll_overwitch_inc_t) (void *, int, uint64_t);
 
 typedef void (*ow_set_rt_priority_t) (pthread_t, int);
 
@@ -163,7 +163,7 @@ struct ow_usb_device
 
 struct ow_midi_event
 {
-  double time;
+  uint64_t time;
   uint8_t bytes[OB_MIDI_EVENT_SIZE];
 };
 
@@ -251,7 +251,7 @@ void ow_resampler_read_audio (struct ow_resampler *);
 
 void ow_resampler_write_audio (struct ow_resampler *);
 
-int ow_resampler_compute_ratios (struct ow_resampler *, double,
+int ow_resampler_compute_ratios (struct ow_resampler *, uint64_t,
 				 void (*)(void *), void *);
 
 void ow_resampler_inc_xruns (struct ow_resampler *);
