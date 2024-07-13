@@ -93,19 +93,36 @@ To stop, just press `Ctrl+C`. You'll see an oputput like the one below. Notice t
 
 ```
 $ overwitch-cli -d Digitakt -v -b 4
-DEBUG:overwitch.c:206:(ow_get_devices): Found Digitakt (bus 001, address 005, ID 1935:000c)
-DEBUG:jclient.c:112:(jclient_set_sample_rate_cb): JACK sample rate: 48000
-DEBUG:jclient.c:471:(jclient_run): Using RT priority 5...
-DEBUG:engine.c:1001:(ow_engine_activate): Starting p2o MIDI thread...
-DEBUG:engine.c:1015:(ow_engine_activate): Starting audio and o2p MIDI thread...
-DEBUG:jclient.c:112:(jclient_set_sample_rate_cb): JACK sample rate: 48000
-DEBUG:jclient.c:102:(jclient_set_buffer_size_cb): JACK buffer size: 64
-DEBUG:jclient.c:102:(jclient_set_buffer_size_cb): JACK buffer size: 64
-Digitakt@001,005: o2j latency: -1.0 ms, max. -1.0 ms; j2o latency: -1.0 ms, max. -1.0 ms, o2j ratio: 0.999888, avg. 0.999904
-Digitakt@001,005: o2j latency: -1.0 ms, max. -1.0 ms; j2o latency: -1.0 ms, max. -1.0 ms, o2j ratio: 0.999901, avg. 0.999903
-Digitakt@001,005: o2j latency:  1.4 ms, max.  1.8 ms; j2o latency: -1.0 ms, max. -1.0 ms, o2j ratio: 0.999903, avg. 0.999905
-^C
-DEBUG:jclient.c:579:(jclient_run): Exiting...
+DEBUG:overwitch.c:314:(ow_get_device_desc_from_vid_pid): Failed to open file “/home/david/.config/overwitch/devices.json”: No such file or directory
+DEBUG:overwitch.c:320:(ow_get_device_desc_from_vid_pid): Falling back to /usr/local/share/overwitch/devices.json...
+DEBUG:overwitch.c:379:(ow_get_device_desc_from_vid_pid): Device with PID 12 found
+DEBUG:overwitch.c:240:(ow_get_usb_device_list): Found Digitakt (bus 003, address 007, ID 1935:000c)
+DEBUG:overwitch.c:314:(ow_get_device_desc_from_vid_pid): Failed to open file “/home/david/.config/overwitch/devices.json”: No such file or directory
+DEBUG:overwitch.c:320:(ow_get_device_desc_from_vid_pid): Falling back to /usr/local/share/overwitch/devices.json...
+DEBUG:overwitch.c:379:(ow_get_device_desc_from_vid_pid): Device with PID 12 found
+DEBUG:engine.c:619:(ow_engine_init): USB transfer timeout: 10
+DEBUG:engine.c:526:(ow_engine_init_mem): Blocks per transfer: 4
+DEBUG:engine.c:1322:(ow_engine_load_overbridge_name): USB control in data (32 B): Digitakt
+DEBUG:engine.c:1342:(ow_engine_load_overbridge_name): USB control in data (16 B): 0089       1.51A
+DEBUG:jclient.c:166:(jclient_set_buffer_size_cb): JACK buffer size: 64
+DEBUG:resampler.c:578:(ow_resampler_set_buffer_size): Setting resampler buffer size to 64
+DEBUG:jclient.c:176:(jclient_set_sample_rate_cb): JACK sample rate: 48000
+DEBUG:resampler.c:591:(ow_resampler_set_samplerate): Setting resampler sample rate to 48000
+DEBUG:jclient.c:176:(jclient_set_sample_rate_cb): JACK sample rate: 48000
+DEBUG:jclient.c:598:(jclient_run): Using RT priority 77...
+DEBUG:jclient.c:600:(jclient_run): Registering ports...
+DEBUG:engine.c:1147:(ow_engine_start): Starting p2o MIDI thread...
+DEBUG:engine.c:1160:(ow_engine_start): Starting audio and o2p MIDI thread...
+DEBUG:jclient.c:166:(jclient_set_buffer_size_cb): JACK buffer size: 64
+Digitakt @ 003,007: o2p latency: -1.0 [-1.0, -1.0] ms; p2o latency: -1.0 [-1.0, -1.0] ms, o2p ratio: 0.998679, avg. 1.013469
+[...]
+Digitakt @ 003,007: o2p latency:  2.6 [ 1.3,  3.1] ms; p2o latency: -1.0 [-1.0, -1.0] ms, o2p ratio: 0.999967, avg. 0.999987
+^CDEBUG:jclient.c:446:(jclient_stop): Stopping client...
+Digitakt @ 003,007: o2p latency:  1.6 [ 1.3,  3.8] ms; p2o latency: -1.0 [-1.0, -1.0] ms, o2p ratio: 0.999926, avg. 0.999934
+Digitakt @ 003,007: o2p latency: -1.0 [-1.0, -1.0] ms; p2o latency: -1.0 [-1.0, -1.0] ms, o2p ratio: 0.999926, avg. 0.999934
+DEBUG:jclient.c:703:(jclient_run): Exiting...
+DEBUG:jclient.c:158:(jclient_jack_client_registration_cb): JACK client Digitakt is being unregistered...
+
 ```
 
 To limit latency to the lowest possible value, audio is not sent through during the first seconds.

@@ -56,7 +56,7 @@ static void ow_engine_load_overbridge_name (struct ow_engine *);
 static void
 ow_engine_init_name (struct ow_engine *engine, uint8_t bus, uint8_t address)
 {
-  snprintf (engine->name, OW_LABEL_MAX_LEN, "%s@%03d,%03d",
+  snprintf (engine->name, OW_LABEL_MAX_LEN, "%s @ %03d,%03d",
 	    engine->device_desc.name, bus, address);
   ow_engine_load_overbridge_name (engine);
 }
