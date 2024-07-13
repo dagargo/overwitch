@@ -60,12 +60,7 @@ enum list_store_columns
 
 struct overwitch_instance
 {
-  gdouble o2j_latency;
-  gdouble o2j_min_latency;
-  gdouble o2j_max_latency;
-  gdouble j2o_latency;
-  gdouble j2o_min_latency;
-  gdouble j2o_max_latency;
+  struct ow_resampler_latency latency;
   gdouble o2j_ratio;
   gdouble j2o_ratio;
   struct jclient jclient;
@@ -175,24 +170,24 @@ set_overwitch_instance_status (gpointer data)
       if (instance->jclient.bus == bus
 	  && instance->jclient.address == address)
 	{
-	  if (instance->o2j_latency >= 0)
+	  if (instance->latency.o2p >= 0)
 	    {
 	      g_snprintf (o2j_latency_s, OW_LABEL_MAX_LEN,
-			  "%.1f [%.1f, %.1f] ms", instance->o2j_latency,
-			  instance->o2j_min_latency,
-			  instance->o2j_max_latency);
+			  "%.1f [%.1f, %.1f] ms", instance->latency.o2p,
+			  instance->latency.o2p_min,
+			  instance->latency.o2p_max);
 	    }
 	  else
 	    {
 	      o2j_latency_s[0] = '\0';
 	    }
 
-	  if (instance->j2o_latency >= 0)
+	  if (instance->latency.p2o >= 0)
 	    {
 	      g_snprintf (j2o_latency_s, OW_LABEL_MAX_LEN,
-			  "%.1f [%.1f, %.1f] ms", instance->j2o_latency,
-			  instance->j2o_min_latency,
-			  instance->j2o_max_latency);
+			  "%.1f [%.1f, %.1f] ms", instance->latency.p2o,
+			  instance->latency.p2o_min,
+			  instance->latency.p2o_max);
 	    }
 	  else
 	    {
@@ -225,17 +220,15 @@ set_overwitch_instance_status (gpointer data)
 
 static void
 set_report_data (struct overwitch_instance *instance,
-		 double o2j_latency, double o2j_min_latency,
-		 double o2j_max_latency, double j2o_latency,
-		 double j2o_min_latency, double j2o_max_latency,
-		 double o2j_ratio, double j2o_ratio)
+		 struct ow_resampler_latency *latency, gdouble o2j_ratio,
+		 gdouble j2o_ratio)
 {
-  instance->o2j_latency = o2j_latency;
-  instance->o2j_min_latency = o2j_min_latency;
-  instance->o2j_max_latency = o2j_max_latency;
-  instance->j2o_latency = j2o_latency;
-  instance->j2o_min_latency = j2o_min_latency;
-  instance->j2o_max_latency = j2o_max_latency;
+  instance->latency.o2p = latency->o2p;
+  instance->latency.o2p_min = latency->o2p_min;
+  instance->latency.o2p_max = latency->o2p_max;
+  instance->latency.p2o = latency->p2o;
+  instance->latency.p2o_min = latency->p2o_min;
+  instance->latency.p2o_max = latency->p2o_max;
   instance->o2j_ratio = o2j_ratio;
   instance->j2o_ratio = j2o_ratio;
   g_idle_add (set_overwitch_instance_status, instance);
@@ -648,8 +641,8 @@ refresh_all (GtkWidget *object, gpointer data)
 	gtk_combo_box_get_active (quality_combo_box);
       instance->jclient.priority = -1;
 
-      instance->o2j_latency = 0.0;
-      instance->j2o_latency = 0.0;
+      instance->latency.o2p = 0.0;
+      instance->latency.p2o = 0.0;
       instance->o2j_ratio = 1.0;
       instance->j2o_ratio = 1.0;
 

@@ -42,8 +42,7 @@ ow_resampler_report_status (struct ow_resampler *resampler)
 {
   size_t o2p_latency_s, o2p_min_latency_s, o2p_max_latency_s, p2o_latency_s,
     p2o_min_latency_s, p2o_max_latency_s;
-  double o2p_latency_d, o2p_min_latency_d, o2p_max_latency_d, p2o_latency_d,
-    p2o_min_latency_d, p2o_max_latency_d;
+  struct ow_resampler_latency latency;
   ow_engine_status_t status;
 
   ow_resampler_get_o2p_latency (resampler, &o2p_latency_s, &o2p_min_latency_s,
@@ -58,55 +57,53 @@ ow_resampler_report_status (struct ow_resampler *resampler)
 
   if (status == OW_ENGINE_STATUS_RUN)
     {
-      o2p_latency_d = o2p_latency_s * OB_PERIOD_MS /
+      latency.o2p = o2p_latency_s * OB_PERIOD_MS /
 	resampler->engine->o2p_frame_size;
-      o2p_max_latency_d = o2p_max_latency_s * OB_PERIOD_MS /
+      latency.o2p_max = o2p_max_latency_s * OB_PERIOD_MS /
 	resampler->engine->o2p_frame_size;
-      o2p_min_latency_d = o2p_min_latency_s * OB_PERIOD_MS /
+      latency.o2p_min = o2p_min_latency_s * OB_PERIOD_MS /
 	resampler->engine->o2p_frame_size;
 
       if (p2o_enabled)
 	{
-	  p2o_latency_d = p2o_latency_s * OB_PERIOD_MS /
+	  latency.p2o = p2o_latency_s * OB_PERIOD_MS /
 	    resampler->engine->p2o_frame_size;
-	  p2o_max_latency_d = p2o_max_latency_s * OB_PERIOD_MS /
+	  latency.p2o_max = p2o_max_latency_s * OB_PERIOD_MS /
 	    resampler->engine->p2o_frame_size;
-	  p2o_min_latency_d = p2o_min_latency_s * OB_PERIOD_MS /
+	  latency.p2o_min = p2o_min_latency_s * OB_PERIOD_MS /
 	    resampler->engine->p2o_frame_size;
 	}
       else
 	{
-	  p2o_latency_d = -1.0;
-	  p2o_max_latency_d = -1.0;
-	  p2o_min_latency_d = -1.0;
+	  latency.p2o = -1.0;
+	  latency.p2o_max = -1.0;
+	  latency.p2o_min = -1.0;
 	}
     }
   else
     {
-      o2p_latency_d = -1.0;
-      o2p_max_latency_d = -1.0;
-      o2p_min_latency_d = -1.0;
+      latency.o2p = -1.0;
+      latency.o2p_max = -1.0;
+      latency.o2p_min = -1.0;
 
-      p2o_latency_d = -1.0;
-      p2o_max_latency_d = -1.0;
-      p2o_min_latency_d = -1.0;
+      latency.p2o = -1.0;
+      latency.p2o_max = -1.0;
+      latency.p2o_min = -1.0;
     }
 
   if (debug_level)
     {
       printf
 	("%s: o2p latency: %4.1f [%4.1f, %4.1f] ms; p2o latency: %4.1f [%4.1f, %4.1f] ms, o2p ratio: %f, avg. %f\n",
-	 resampler->engine->name, o2p_latency_d, o2p_min_latency_d,
-	 o2p_max_latency_d, p2o_latency_d, p2o_min_latency_d,
-	 p2o_max_latency_d, resampler->dll.ratio, resampler->dll.ratio_avg);
+	 resampler->engine->name, latency.o2p, latency.o2p_min,
+	 latency.o2p_max, latency.p2o, latency.p2o_min, latency.p2o_max,
+	 resampler->dll.ratio, resampler->dll.ratio_avg);
     }
 
   if (resampler->reporter.callback)
     {
-      resampler->reporter.callback (resampler->reporter.data, o2p_latency_d,
-				    o2p_min_latency_d, o2p_max_latency_d,
-				    p2o_latency_d, p2o_min_latency_d,
-				    p2o_max_latency_d, resampler->o2p_ratio,
+      resampler->reporter.callback (resampler->reporter.data, &latency,
+				    resampler->o2p_ratio,
 				    resampler->p2o_ratio);
     }
 }
@@ -290,8 +287,9 @@ ow_resampler_read_audio (struct ow_resampler *resampler)
 {
   long gen_frames;
 
-  gen_frames = src_callback_read (resampler->o2p_state, resampler->o2p_ratio,
-				  resampler->bufsize, resampler->o2p_buf_out);
+  gen_frames =
+    src_callback_read (resampler->o2p_state, resampler->o2p_ratio,
+		       resampler->bufsize, resampler->o2p_buf_out);
   if (gen_frames != resampler->bufsize)
     {
       error_print

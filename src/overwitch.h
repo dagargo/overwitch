@@ -50,8 +50,18 @@ typedef size_t (*ow_dll_overwitch_inc_t) (void *, int, uint64_t);
 
 typedef void (*ow_set_rt_priority_t) (pthread_t, int);
 
-typedef void (*ow_resampler_report_t) (void *, double, double, double, double,
-				       double, double, double, double);
+struct ow_resampler_latency
+{
+  double o2p;
+  double o2p_min;
+  double o2p_max;
+  double p2o;
+  double p2o_min;
+  double p2o_max;
+};
+
+typedef void (*ow_resampler_report_t) (void *, struct ow_resampler_latency *,
+				       double, double);
 
 typedef enum
 {
