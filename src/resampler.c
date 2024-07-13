@@ -538,6 +538,10 @@ void
 ow_resampler_wait (struct ow_resampler *resampler)
 {
   ow_engine_wait (resampler->engine);
+  if (resampler->engine->status == OW_ENGINE_STATUS_ERROR)
+    {
+      resampler->status = OW_RESAMPLER_STATUS_ERROR;
+    }
   ow_resampler_report_status (resampler);
 }
 
