@@ -103,17 +103,6 @@ prepare_transfers (struct ow_engine *engine)
   return LIBUSB_SUCCESS;
 }
 
-static void
-free_transfers (struct ow_engine *engine)
-{
-  libusb_free_transfer (engine->usb.xfr_audio_in);
-  libusb_free_transfer (engine->usb.xfr_audio_out);
-  libusb_free_transfer (engine->usb.xfr_midi_in);
-  libusb_free_transfer (engine->usb.xfr_midi_out);
-  libusb_free_transfer (engine->usb.xfr_control_in);
-  libusb_free_transfer (engine->usb.xfr_control_out);
-}
-
 inline void
 ow_engine_read_usb_input_blocks (struct ow_engine *engine)
 {
@@ -509,6 +498,12 @@ usb_shutdown (struct ow_engine *engine)
   libusb_release_interface (engine->usb.device_handle, 2);
   libusb_release_interface (engine->usb.device_handle, 3);
   libusb_close (engine->usb.device_handle);
+  libusb_free_transfer (engine->usb.xfr_audio_in);
+  libusb_free_transfer (engine->usb.xfr_audio_out);
+  libusb_free_transfer (engine->usb.xfr_midi_in);
+  libusb_free_transfer (engine->usb.xfr_midi_out);
+  libusb_free_transfer (engine->usb.xfr_control_in);
+  libusb_free_transfer (engine->usb.xfr_control_out);
   libusb_exit (engine->usb.context);
 }
 
@@ -614,6 +609,13 @@ ow_engine_init (struct ow_engine *engine, unsigned int blocks_per_transfer,
 {
   int err;
   ow_err_t ret = OW_OK;
+
+  engine->usb.xfr_audio_in = NULL;
+  engine->usb.xfr_audio_out = NULL;
+  engine->usb.xfr_midi_in = NULL;
+  engine->usb.xfr_midi_out = NULL;
+  engine->usb.xfr_control_in = NULL;
+  engine->usb.xfr_control_out = NULL;
 
   engine->usb.xfr_timeout = xfr_timeout;
   debug_print (1, "USB transfer timeout: %u\n", engine->usb.xfr_timeout);
@@ -1191,7 +1193,6 @@ void
 ow_engine_destroy (struct ow_engine *engine)
 {
   usb_shutdown (engine);
-  free_transfers (engine);
   ow_engine_free_mem (engine);
   free (engine);
 }
