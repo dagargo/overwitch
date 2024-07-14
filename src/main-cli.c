@@ -97,6 +97,7 @@ run_single (int device_num, const char *device_name,
 
   jclient_start (jclients);
   jclient_wait (jclients);
+  jclient_destroy (jclients);
 
 end:
   free (jclients);
@@ -144,6 +145,7 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
   for (int i = 0; i < jclient_count; i++, jclient++)
     {
       jclient_wait (jclient);
+      jclient_destroy (jclient);
     }
 
   free (jclients);
