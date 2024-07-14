@@ -587,6 +587,34 @@ start_control_client ()
 }
 
 static void
+remove_instances_with_error ()
+{
+  GtkTreeIter iter;
+  ow_resampler_status_t status;
+  struct overwitch_instance *instance;
+  GtkTreeModel *model = GTK_TREE_MODEL (status_list_store);
+  gboolean valid = gtk_tree_model_get_iter_first (model, &iter);
+
+  while (valid)
+    {
+      gtk_tree_model_get (model, &iter, STATUS_LIST_STORE_INSTANCE, &instance,
+			  -1);
+      status = ow_resampler_get_status (instance->jclient.resampler);
+      if (status == OW_RESAMPLER_STATUS_ERROR)
+	{
+	  jclient_wait (&instance->jclient);
+	  jclient_destroy (&instance->jclient);
+	  g_free (instance);
+	  valid = gtk_list_store_remove (status_list_store, &iter);
+	}
+      else
+	{
+	  valid = gtk_tree_model_iter_next (model, &iter);
+	}
+    }
+}
+
+static void
 refresh_all (GtkWidget *object, gpointer data)
 {
   struct ow_usb_device *devices, *device;
@@ -597,14 +625,12 @@ refresh_all (GtkWidget *object, gpointer data)
   ow_resampler_status_t status;
   ow_err_t err;
 
-  err = ow_get_usb_device_list (&devices, &devices_count);
-  if (err)
-    {
-      return;
-    }
+  remove_instances_with_error ();
 
-  if (!devices_count)
+  err = ow_get_usb_device_list (&devices, &devices_count);
+  if (err || !devices_count)
     {
+      set_widgets_to_running_state (FALSE);
       return;
     }
 
@@ -616,18 +642,9 @@ refresh_all (GtkWidget *object, gpointer data)
       if (is_device_at_bus_address (device->bus, device->address, &iter,
 				    &instance))
 	{
-	  status = ow_resampler_get_status (instance->jclient.resampler);
-	  if (status == OW_RESAMPLER_STATUS_ERROR)
-	    {
-	      jclient_wait (&instance->jclient);
-	      jclient_destroy (&instance->jclient);
-	      g_free (instance);
-	      gtk_list_store_remove (status_list_store, &iter);
-	    }
-	  else
-	    {
-	      continue;
-	    }
+	  debug_print (2, "%s already running. Skipping...\n",
+		       instance->jclient.name);
+	  continue;
 	}
 
       instance = g_malloc (sizeof (struct overwitch_instance));
@@ -704,8 +721,9 @@ refresh_all_sourcefunc (gpointer data)
 static void
 stop_all (GtkWidget *object, gpointer data)
 {
-  struct overwitch_instance *instance;
   GtkTreeIter iter;
+  ow_resampler_status_t status;
+  struct overwitch_instance *instance;
   GtkTreeModel *model = GTK_TREE_MODEL (status_list_store);
   gboolean valid = gtk_tree_model_get_iter_first (model, &iter);
 
@@ -713,7 +731,12 @@ stop_all (GtkWidget *object, gpointer data)
     {
       gtk_tree_model_get (model, &iter, STATUS_LIST_STORE_INSTANCE, &instance,
 			  -1);
-      stop_instance (instance);
+      status = ow_resampler_get_status (instance->jclient.resampler);
+      if (status != OW_RESAMPLER_STATUS_ERROR)
+	{
+	  debug_print (1, "Stopping %s...\n", instance->jclient.name);
+	  stop_instance (instance);
+	}
       jclient_wait (&instance->jclient);
       jclient_destroy (&instance->jclient);
       g_free (instance);
