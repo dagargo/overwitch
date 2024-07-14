@@ -483,7 +483,7 @@ ow_resampler_init_from_bus_address (struct ow_resampler **resampler_,
   resampler->bufsize = 0;
   resampler->xruns = 0;
   resampler->p2o_aux = NULL;
-  resampler->status = OW_RESAMPLER_STATUS_READY;
+  resampler->status = OW_RESAMPLER_STATUS_STOP;
 
   resampler->p2o_state =
     src_callback_new (resampler_p2o_reader, quality,
@@ -531,6 +531,7 @@ ow_resampler_start (struct ow_resampler *resampler,
   context->dll_init = (ow_dll_overwitch_init_t) ow_dll_overwitch_init;
   context->dll_inc = (ow_dll_overwitch_inc_t) ow_dll_overwitch_inc;
   context->options |= OW_ENGINE_OPTION_DLL;
+  resampler->status = OW_RESAMPLER_STATUS_READY;
   return ow_engine_start (resampler->engine, context);
 }
 
