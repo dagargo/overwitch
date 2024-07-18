@@ -137,8 +137,9 @@ set_usb_input_data_blks (struct ow_engine *engine)
   pthread_spin_lock (&engine->lock);
   if (engine->context->dll)
     {
-      ow_dll_overwitch_inc (engine->context->dll, engine->frames_per_transfer,
-			    engine->context->get_time ());
+      engine->context->dll_overbridge_inc (engine->context->dll,
+					   engine->frames_per_transfer,
+					   engine->context->get_time ());
     }
   status = engine->status;
   pthread_spin_unlock (&engine->lock);
@@ -1002,9 +1003,10 @@ run_audio_o2p_midi (void *data)
       pthread_spin_lock (&engine->lock);
       if (engine->context->dll && engine->status == OW_ENGINE_STATUS_BOOT)
 	{
-	  ow_dll_overwitch_init (engine->context->dll, OB_SAMPLE_RATE,
-				 engine->frames_per_transfer,
-				 engine->context->get_time ());
+	  engine->context->dll_overbridge_init (engine->context->dll,
+						OB_SAMPLE_RATE,
+						engine->frames_per_transfer,
+						engine->context->get_time ());
 	  engine->status = OW_ENGINE_STATUS_WAIT;
 	}
       else

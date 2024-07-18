@@ -29,7 +29,7 @@ struct instant
   uint32_t frames;
 };
 
-struct ow_dll_overwitch
+struct ow_dll_overbridge
 {
   struct instant i0;
   struct instant i1;
@@ -57,13 +57,13 @@ struct ow_dll
   uint32_t ko1;
   uint64_t to0;
   uint64_t to1;
-  struct ow_dll_overwitch dll_ow;
+  struct ow_dll_overbridge dll_overbridge;
   int set;
 };
 
-void ow_dll_overwitch_init (struct ow_dll_overwitch *, double, int, uint64_t);
+void ow_dll_overbridge_init (void *, double, uint32_t, uint64_t);
 
-void ow_dll_overwitch_inc (struct ow_dll_overwitch *, int, uint64_t);
+void ow_dll_overbridge_inc (void *, uint32_t, uint64_t);
 
 void ow_dll_primary_init (struct ow_dll *);
 

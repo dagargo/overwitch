@@ -527,9 +527,9 @@ ow_err_t
 ow_resampler_start (struct ow_resampler *resampler,
 		    struct ow_context *context)
 {
-  context->dll = &resampler->dll.dll_ow;
-  context->dll_init = (ow_dll_overwitch_init_t) ow_dll_overwitch_init;
-  context->dll_inc = (ow_dll_overwitch_inc_t) ow_dll_overwitch_inc;
+  context->dll = &resampler->dll.dll_overbridge;
+  context->dll_overbridge_init = ow_dll_overbridge_init;
+  context->dll_overbridge_inc = ow_dll_overbridge_inc;
   context->options |= OW_ENGINE_OPTION_DLL;
   resampler->status = OW_RESAMPLER_STATUS_READY;
   return ow_engine_start (resampler->engine, context);

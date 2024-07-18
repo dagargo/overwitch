@@ -27,32 +27,33 @@
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc.
 inline void
-ow_dll_overwitch_init (struct ow_dll_overwitch *dll_ow, double samplerate,
-		       int frames_per_transfer, uint64_t time)
+ow_dll_overbridge_init (void *data, double samplerate,
+			uint32_t frames_per_transfer, uint64_t time)
 {
+  struct ow_dll_overbridge *dll_ob = data;
   double dtime = frames_per_transfer / samplerate;
   double w = 2 * M_PI * 0.1 * dtime;
-  dll_ow->b = 1.6 * w;
-  dll_ow->c = w * w;
+  dll_ob->b = 1.6 * w;
+  dll_ob->c = w * w;
 
-  dll_ow->e2 = dtime * USEC_PER_SEC;
-  dll_ow->i0.time = time;
-  dll_ow->i1.time = dll_ow->i0.time + dll_ow->e2;
+  dll_ob->e2 = dtime * USEC_PER_SEC;
+  dll_ob->i0.time = time;
+  dll_ob->i1.time = dll_ob->i0.time + dll_ob->e2;
 
-  dll_ow->i0.frames = 0;
-  dll_ow->i1.frames = frames_per_transfer;
+  dll_ob->i0.frames = 0;
+  dll_ob->i1.frames = frames_per_transfer;
 }
 
 inline void
-ow_dll_overwitch_inc (struct ow_dll_overwitch *dll_ow,
-		      int frames_per_transfer, uint64_t time)
+ow_dll_overbridge_inc (void *data, uint32_t frames, uint64_t time)
 {
-  uint64_t e = time - dll_ow->i1.time;
-  dll_ow->i0.time = dll_ow->i1.time;
-  dll_ow->i1.time += dll_ow->b * e + dll_ow->e2;
-  dll_ow->e2 += dll_ow->c * e;
-  dll_ow->i0.frames = dll_ow->i1.frames;
-  dll_ow->i1.frames += frames_per_transfer;
+  struct ow_dll_overbridge *dll_ob = data;
+  uint64_t e = time - dll_ob->i1.time;
+  dll_ob->i0.time = dll_ob->i1.time;
+  dll_ob->i1.time += dll_ob->b * e + dll_ob->e2;
+  dll_ob->e2 += dll_ob->c * e;
+  dll_ob->i0.frames = dll_ob->i1.frames;
+  dll_ob->i1.frames += frames;
 }
 
 //The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
@@ -142,10 +143,10 @@ ow_dll_primary_set_loop_filter (struct ow_dll *dll, double bw,
 inline void
 ow_dll_primary_load_dll_overwitch (struct ow_dll *dll)
 {
-  dll->ko0 = dll->dll_ow.i0.frames;
-  dll->to0 = dll->dll_ow.i0.time;
-  dll->ko1 = dll->dll_ow.i1.frames;
-  dll->to1 = dll->dll_ow.i1.time;
+  dll->ko0 = dll->dll_overbridge.i0.frames;
+  dll->to0 = dll->dll_overbridge.i0.time;
+  dll->ko1 = dll->dll_overbridge.i1.frames;
+  dll->to1 = dll->dll_overbridge.i1.time;
 }
 
 inline int
