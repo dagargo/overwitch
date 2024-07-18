@@ -366,7 +366,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   pthread_spin_unlock (&resampler->lock);
 
   pthread_spin_lock (&resampler->engine->lock);
-  ow_dll_primary_load_dll_overwitch (dll);
+  ow_dll_primary_load_dll_overbridge (dll);
   pthread_spin_unlock (&resampler->engine->lock);
 
   engine_status = ow_engine_get_status (resampler->engine);

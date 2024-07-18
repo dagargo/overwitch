@@ -53,10 +53,8 @@ struct ow_dll
   double ratio_avg;
   double last_ratio_avg;
   double err;
-  uint32_t ko0;
-  uint32_t ko1;
-  uint64_t to0;
-  uint64_t to1;
+  struct instant i0;
+  struct instant i1;
   struct ow_dll_overbridge dll_overbridge;
   int set;
 };
@@ -79,7 +77,7 @@ void ow_dll_primary_update (struct ow_dll *);
 
 void ow_dll_primary_calc_avg (struct ow_dll *, int);
 
-void ow_dll_primary_load_dll_overwitch (struct ow_dll *);
+void ow_dll_primary_load_dll_overbridge (struct ow_dll *);
 
 int ow_dll_tuned (struct ow_dll *);
 

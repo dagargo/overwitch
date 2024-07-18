@@ -61,9 +61,10 @@ inline void
 ow_dll_primary_update_err (struct ow_dll *dll, uint64_t time)
 {
   uint64_t tj = time;
-  uint32_t frames = dll->ko1 - dll->ko0;
-  double dob = frames * (tj - dll->to0) / (dll->to1 - dll->to0);
-  int n = dll->ko0 > dll->kj ? dll->ko0 - dll->kj : -(dll->kj - dll->ko0);
+  uint32_t frames = dll->i1.frames - dll->i0.frames;
+  double dob = frames * (tj - dll->i0.time) / (dll->i1.time - dll->i0.time);
+  int n = dll->i0.frames > dll->kj ? dll->i0.frames - dll->kj :
+    -(dll->kj - dll->i0.frames);
   dll->err = n + dob - dll->kdel;
 }
 
@@ -141,12 +142,10 @@ ow_dll_primary_set_loop_filter (struct ow_dll *dll, double bw,
 }
 
 inline void
-ow_dll_primary_load_dll_overwitch (struct ow_dll *dll)
+ow_dll_primary_load_dll_overbridge (struct ow_dll *dll)
 {
-  dll->ko0 = dll->dll_overbridge.i0.frames;
-  dll->to0 = dll->dll_overbridge.i0.time;
-  dll->ko1 = dll->dll_overbridge.i1.frames;
-  dll->to1 = dll->dll_overbridge.i1.time;
+  dll->i0 = dll->dll_overbridge.i0;
+  dll->i1 = dll->dll_overbridge.i1;
 }
 
 inline int
