@@ -36,6 +36,7 @@ struct jclient
   jack_port_t **input_ports;
   jack_port_t *midi_output_port;
   jack_port_t *midi_input_port;
+  int j2o_ongoing_sysex;
   //Parameters
   uint8_t bus;
   uint8_t address;

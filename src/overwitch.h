@@ -32,6 +32,9 @@
 #define OB_MIDI_EVENT_SIZE sizeof(struct ow_midi_event_packet)
 #define OB_MIDI_EVENT_BYTES 3
 
+//SysEx messages are longer than 8 KB, which would need 8 KB / 3 B parts repackaged in 12 B events per part or 32 KB
+#define OB_MIDI_BUF_LEN (128 * 1024)
+
 #define OW_DEFAULT_RT_PROPERTY 20
 
 #define OW_LABEL_MAX_LEN 64
