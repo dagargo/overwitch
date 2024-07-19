@@ -417,7 +417,7 @@ jclient_j2o_midi_msg (struct jclient *jclient, jack_midi_event_t jevent,
     }
   else
     {
-      error_print ("j2o: Message not implemented");
+      error_print ("j2o: Message %02x not implemented\n", type);
     }
 }
 
