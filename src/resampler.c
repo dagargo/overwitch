@@ -169,7 +169,7 @@ static void
 ow_resampler_reset_dll (struct ow_resampler *resampler,
 			uint32_t new_samplerate)
 {
-  gdouble target_ratio;
+  double target_ratio;
 
   if (resampler->dll.set
       && ow_engine_get_status (resampler->engine) == OW_ENGINE_STATUS_RUN)
