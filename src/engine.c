@@ -1012,14 +1012,23 @@ run_audio_o2p_midi (void *data)
 
       //status == OW_ENGINE_STATUS_BOOT || status == OW_ENGINE_STATUS_CLEAR
 
-      pthread_spin_lock (&engine->lock);
-      if (engine->context->dll && engine->status == OW_ENGINE_STATUS_BOOT)
+      if (ow_engine_get_status (engine) == OW_ENGINE_STATUS_CLEAR)
 	{
-	  engine->context->dll_overbridge_init (engine->context->dll,
-						OB_SAMPLE_RATE,
-						engine->frames_per_transfer,
-						engine->context->get_time ());
-	  engine->status = OW_ENGINE_STATUS_WAIT;
+	  engine->status = OW_ENGINE_STATUS_RUN;
+	}
+
+      pthread_spin_lock (&engine->lock);
+      if (engine->context->dll)
+	{
+	  if (engine->status == OW_ENGINE_STATUS_BOOT)
+	    {
+	      engine->context->dll_overbridge_init (engine->context->dll,
+						    OB_SAMPLE_RATE,
+						    engine->frames_per_transfer,
+						    engine->
+						    context->get_time ());
+	      engine->status = OW_ENGINE_STATUS_WAIT;
+	    }
 	}
       else
 	{
