@@ -87,14 +87,16 @@ ow_dll_primary_update (struct ow_dll *dll)
   dll->ratio = 1.0 - dll->_z2 - dll->_z3;
 
   dll->ratio_sum += dll->ratio;
+  dll->ratio_avg_cycles++;
 }
 
 inline void
-ow_dll_primary_calc_avg (struct ow_dll *dll, int cycles)
+ow_dll_primary_calc_avg (struct ow_dll *dll)
 {
   dll->last_ratio_avg = dll->ratio_avg;
-  dll->ratio_avg = dll->ratio_sum / cycles;
+  dll->ratio_avg = dll->ratio_sum / dll->ratio_avg_cycles;
   dll->ratio_sum = 0.0;
+  dll->ratio_avg_cycles = 0;
 }
 
 inline void
@@ -112,11 +114,13 @@ ow_dll_primary_reset (struct ow_dll *dll, double output_samplerate,
   dll->_z1 = 0.0;
   dll->_z2 = 0.0;
   dll->_z3 = 0.0;
-  dll->ratio_sum = 0.0;
-  dll->ratio_avg = 0.0;
-  dll->last_ratio_avg = 0.0;
 
   dll->ratio = output_samplerate / input_samplerate;
+
+  dll->ratio_sum = 0.0;
+  dll->ratio_avg = dll->ratio;
+  dll->ratio_avg_cycles = 0;
+  dll->last_ratio_avg = 0.0;
 
   dll->kj = -input_frames_per_transfer / dll->ratio;
 
