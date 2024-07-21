@@ -728,12 +728,6 @@ jclient_run (struct jclient *jclient)
       error_print ("Cannot set JACK client registration callback\n");
     }
 
-  //Sometimes these callbacks are not called when setting them so
-  jclient_set_buffer_size_cb (jack_get_buffer_size (jclient->client),
-			      jclient);
-  jclient_set_sample_rate_cb (jack_get_sample_rate (jclient->client),
-			      jclient);
-
   if (jack_set_buffer_size_callback (jclient->client,
 				     jclient_set_buffer_size_cb, jclient))
     {
