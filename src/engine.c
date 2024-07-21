@@ -141,9 +141,9 @@ set_usb_input_data_blks (struct ow_engine *engine)
   pthread_spin_lock (&engine->lock);
   if (engine->context->dll)
     {
-      engine->context->dll_overbridge_inc (engine->context->dll,
-					   engine->frames_per_transfer,
-					   engine->context->get_time ());
+      engine->context->dll_overbridge_update (engine->context->dll,
+					      engine->frames_per_transfer,
+					      engine->context->get_time ());
     }
   status = engine->status;
   pthread_spin_unlock (&engine->lock);
@@ -234,7 +234,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
     {
       if (engine->reading_at_p2o_end)
 	{
-	  debug_print (3, "p2o: Clearing buffer and stopping...\n");
+	  debug_print (2, "p2o: Clearing buffer and stopping...\n");
 	  memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
 	  engine->reading_at_p2o_end = 0;
 	  engine->p2o_max_latency = 0;
@@ -985,6 +985,13 @@ run_audio_o2p_midi (void *data)
   size_t rsp2o, bytes;
   struct ow_engine *engine = data;
 
+  if (engine->context->dll)
+    {
+      engine->context->dll_overbridge_init (engine->context->dll,
+					    OB_SAMPLE_RATE,
+					    engine->frames_per_transfer);
+    }
+
   //MIDI runs independently of audio status
   if (engine->context->options & OW_ENGINE_OPTION_O2P_MIDI)
     {
@@ -996,11 +1003,19 @@ run_audio_o2p_midi (void *data)
       libusb_handle_events_completed (engine->usb.context, NULL);
     }
 
-  //status == OW_ENGINE_STATUS_BOOT
+  //status == OW_ENGINE_STATUS_STEADY
 
-  //These calls are needed to initialize the USB side.
+  //These calls are needed to initialize the Overbridge side before the primary side.
   prepare_cycle_in_audio (engine);
   prepare_cycle_out_audio (engine);
+  if (engine->context->dll)
+    {
+      engine->context->dll_overbridge_update (engine->context->dll,
+					      engine->frames_per_transfer,
+					      engine->context->get_time ());
+    }
+
+  ow_engine_set_status (engine, OW_ENGINE_STATUS_BOOT);
 
   while (1)
     {
@@ -1022,11 +1037,6 @@ run_audio_o2p_midi (void *data)
 	{
 	  if (engine->status == OW_ENGINE_STATUS_BOOT)
 	    {
-	      engine->context->dll_overbridge_init (engine->context->dll,
-						    OB_SAMPLE_RATE,
-						    engine->frames_per_transfer,
-						    engine->
-						    context->get_time ());
 	      engine->status = OW_ENGINE_STATUS_WAIT;
 	    }
 	}

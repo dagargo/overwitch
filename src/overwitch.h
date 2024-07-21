@@ -46,9 +46,11 @@ typedef size_t (*ow_buffer_write_t) (void *, const char *, size_t);
 
 typedef uint64_t (*ow_get_time_t) ();	//Time in us
 
-typedef void (*ow_dll_overbridge_init_t) (void *, double, uint32_t, uint64_t);
+struct ow_context;
 
-typedef void (*ow_dll_overbridge_inc_t) (void *, uint32_t, uint64_t);
+typedef void (*ow_dll_overbridge_init_t) (void *, double, uint32_t);
+
+typedef void (*ow_dll_overbridge_update_t) (void *, uint32_t, uint64_t);
 
 typedef void (*ow_set_rt_priority_t) (pthread_t, int);
 
@@ -94,6 +96,7 @@ typedef enum
   OW_ENGINE_STATUS_ERROR = -1,
   OW_ENGINE_STATUS_STOP,
   OW_ENGINE_STATUS_READY,
+  OW_ENGINE_STATUS_STEADY,
   OW_ENGINE_STATUS_BOOT,
   OW_ENGINE_STATUS_CLEAR,
   OW_ENGINE_STATUS_WAIT,
@@ -133,9 +136,9 @@ struct ow_context
   void *p2o_midi;
   void *o2p_midi;
   //DLL
-  void *dll;
+  struct ow_dll *dll;
   ow_dll_overbridge_init_t dll_overbridge_init;
-  ow_dll_overbridge_inc_t dll_overbridge_inc;
+  ow_dll_overbridge_update_t dll_overbridge_update;
   //RT priority is always activated. If this is NULL, Overwitch will set itself with its default RT priority and policy.
   ow_set_rt_priority_t set_rt_priority;
   int priority;

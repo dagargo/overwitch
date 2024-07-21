@@ -25,7 +25,7 @@
 
 struct instant
 {
-  uint64_t time;		//us
+  double time;
   uint32_t frames;
 };
 
@@ -33,22 +33,24 @@ struct ow_dll_overbridge
 {
   struct instant i0;
   struct instant i1;
-  uint64_t e2;
-  double b;
-  double c;
+  double dt;
+  double w1;
+  double w2;
+  int boot;
 };
 
 struct ow_dll
 {
   double ratio;
-  uint32_t kj;
-  double _w0;
-  double _w1;
-  double _w2;
-  int kdel;
-  double _z1;
-  double _z2;
-  double _z3;
+  uint32_t frames;
+  double w0;
+  double w1;
+  double w2;
+  int delay;
+  double z1;
+  double z2;
+  double z3;
+  double t_quantum;
   double ratio_sum;
   double ratio_avg;
   int ratio_avg_cycles;
@@ -58,21 +60,22 @@ struct ow_dll
   struct instant i1;
   struct ow_dll_overbridge dll_overbridge;
   int set;
+  int boot;
 };
 
-void ow_dll_overbridge_init (void *, double, uint32_t, uint64_t);
+void ow_dll_overbridge_init (void *, double, uint32_t);
 
-void ow_dll_overbridge_inc (void *, uint32_t, uint64_t);
+void ow_dll_overbridge_update (void *, uint32_t, uint64_t);
 
 void ow_dll_primary_init (struct ow_dll *);
 
-void ow_dll_primary_reset (struct ow_dll *, double, double, int, int);
+void ow_dll_primary_reset (struct ow_dll *, double, double, uint32_t,
+			   uint32_t);
 
-void ow_dll_primary_set_loop_filter (struct ow_dll *, double, int, double);
+void ow_dll_primary_set_loop_filter (struct ow_dll *, double, uint32_t,
+				     double);
 
-void ow_dll_primary_update_err (struct ow_dll *, uint64_t);
-
-void ow_dll_primary_update_err_first_time (struct ow_dll *, uint64_t);
+void ow_dll_primary_update_error (struct ow_dll *, uint64_t);
 
 void ow_dll_primary_update (struct ow_dll *);
 
