@@ -24,67 +24,124 @@
 
 #define RATIO_DIFF_THRES 0.00001
 #define USEC_PER_SEC 1.0e6
+#define SEC_PER_USEC 1.0e-6
+
+//Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc
+//Transform us to seconds only considering the lowest 28 bits
+#define UINT64_USEC_TO_DOUBLE_SEC(t) (SEC_PER_USEC * (int)(t & 0x0FFFFFFF))
+#define MODTIME_THRESHOLD 200	//A value smaller than the maximum returned by UINT64_USEC_TO_DOUBLE_SEC
+
+double
+wrap_time (double d, double q)
+{
+  if (d < -MODTIME_THRESHOLD)
+    {
+      d += q;
+    }
+  if (d > MODTIME_THRESHOLD)
+    {
+      d -= q;
+    }
+  return d;
+}
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc.
 inline void
-ow_dll_overbridge_init (void *data, double samplerate,
-			uint32_t frames_per_transfer, uint64_t time)
+ow_dll_overbridge_init (void *data, double samplerate, uint32_t frames)
 {
-  struct ow_dll_overbridge *dll_ob = data;
-  double dtime = frames_per_transfer / samplerate;
-  double w = 2 * M_PI * 0.1 * dtime;
-  dll_ob->b = 1.6 * w;
-  dll_ob->c = w * w;
+  double w;
+  struct ow_dll *dll = data;
+  struct ow_dll_overbridge *dll_ob = &dll->dll_overbridge;
 
-  dll_ob->e2 = dtime * USEC_PER_SEC;
-  dll_ob->i0.time = time;
-  dll_ob->i1.time = dll_ob->i0.time + dll_ob->e2;
+  debug_print (2, "Initializing Overbridge side of DLL...\n");
 
-  dll_ob->i0.frames = 0;
-  dll_ob->i1.frames = frames_per_transfer;
+  dll_ob->dt = frames / (double) samplerate;
+  w = 2 * M_PI * 0.1 * dll_ob->dt;
+  dll_ob->w1 = 1.6 * w;
+  dll_ob->w2 = w * w;
 }
 
+//Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc.
 inline void
-ow_dll_overbridge_inc (void *data, uint32_t frames, uint64_t time)
+ow_dll_overbridge_update (void *data, uint32_t frames, uint64_t t)
 {
-  struct ow_dll_overbridge *dll_ob = data;
-  uint64_t e = time - dll_ob->i1.time;
+  double time, err;
+  struct ow_dll *dll = data;
+  struct ow_dll_overbridge *dll_ob = &dll->dll_overbridge;
+
+  debug_print (3, "Updating Overbridge side of DLL...\n");
+
+  time = UINT64_USEC_TO_DOUBLE_SEC (t);
+
+  if (dll_ob->boot)
+    {
+      dll_ob->i0.time = time;
+      dll_ob->i1.time = dll_ob->i0.time + dll_ob->dt;
+
+      dll_ob->i0.frames = 0;
+      dll_ob->i1.frames = frames;
+      dll_ob->boot = 0;
+    }
+
+  err = time - dll_ob->i1.time;
+  if (err < -MODTIME_THRESHOLD)
+    {
+      dll_ob->i1.time -= dll->t_quantum;
+      err = time - dll_ob->i1.time;
+    }
+
   dll_ob->i0.time = dll_ob->i1.time;
-  dll_ob->i1.time += dll_ob->b * e + dll_ob->e2;
-  dll_ob->e2 += dll_ob->c * e;
+  dll_ob->i1.time += dll_ob->w1 * err + dll_ob->dt;
+  dll_ob->dt += dll_ob->w2 * err;
+
   dll_ob->i0.frames = dll_ob->i1.frames;
   dll_ob->i1.frames += frames;
+
+  debug_print (3, "time: %3.6f; t0: %3.6f: t1: %3.6f; f0: % 8d; f1: % 8d\n",
+	       time, dll_ob->i0.time, dll_ob->i1.time, dll_ob->i0.frames,
+	       dll_ob->i1.frames);
 }
 
 //The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
-ow_dll_primary_update_err (struct ow_dll *dll, uint64_t time)
+ow_dll_primary_update_error (struct ow_dll *dll, uint64_t t)
 {
-  uint64_t tj = time;
-  uint32_t frames = dll->i1.frames - dll->i0.frames;
-  double dob = frames * (tj - dll->i0.time) / (dll->i1.time - dll->i0.time);
-  int n = dll->i0.frames > dll->kj ? dll->i0.frames - dll->kj :
-    -(dll->kj - dll->i0.frames);
-  dll->err = n + dob - dll->kdel;
-}
+  double delta_overbridge, dn, dd;
+  int32_t delta_frames_exp, delta_frames_act;
+  double time = UINT64_USEC_TO_DOUBLE_SEC (t);
 
-//Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
-inline void
-ow_dll_primary_update_err_first_time (struct ow_dll *dll, uint64_t time)
-{
-  ow_dll_primary_update_err (dll, time);
-  int n = (int) (floor (dll->err + 0.5));
-  dll->kj += n;
-  dll->err -= n;
+  debug_print (3, "Updating error in primary side of DLL...\n");
+
+  delta_frames_exp = dll->i1.frames - dll->i0.frames;
+  dn = wrap_time (time - dll->i0.time, dll->t_quantum);
+  dd = wrap_time (dll->i1.time - dll->i0.time, dll->t_quantum);
+  delta_overbridge = delta_frames_exp * dn / dd;
+  delta_frames_act = dll->i0.frames - dll->frames;	// - (dll->frames + dll->i0.frames)
+  dll->err = delta_frames_act + delta_overbridge - dll->delay;
+
+  if (dll->boot)
+    {
+      int n = (int) (floor (dll->err + 0.5));
+      dll->frames += n;
+      dll->err -= n;
+      dll->boot = 0;
+    }
+
+  debug_print (3,
+	       "delta_frames_exp: %d; delta_frames_act: %d; delta_overbridge: %f; DLL delay: %d; DLL error: %f\n",
+	       delta_frames_exp, delta_frames_act, delta_overbridge,
+	       dll->delay, dll->err);
 }
 
 inline void
 ow_dll_primary_update (struct ow_dll *dll)
 {
-  dll->_z1 += dll->_w0 * (dll->_w1 * dll->err - dll->_z1);
-  dll->_z2 += dll->_w0 * (dll->_z1 - dll->_z2);
-  dll->_z3 += dll->_w2 * dll->_z2;
-  dll->ratio = 1.0 - dll->_z2 - dll->_z3;
+  debug_print (3, "Updating primary side of DLL...\n");
+
+  dll->z1 += dll->w0 * (dll->w1 * dll->err - dll->z1);
+  dll->z2 += dll->w0 * (dll->z1 - dll->z2);
+  dll->z3 += dll->w2 * dll->z2;
+  dll->ratio = 1.0 - dll->z2 - dll->z3;
 
   dll->ratio_sum += dll->ratio;
   dll->ratio_avg_cycles++;
@@ -102,18 +159,25 @@ ow_dll_primary_calc_avg (struct ow_dll *dll)
 inline void
 ow_dll_primary_init (struct ow_dll *dll)
 {
+  debug_print (2, "Initializing primary side of DLL...\n");
   dll->set = 0;
+  dll->boot = 1;
+  dll->dll_overbridge.boot = 1;
+  dll->t_quantum = ldexp (1e-6, 28);	//28 bits as used in UINT64_USEC_TO_DOUBLE_SEC
 }
 
 inline void
 ow_dll_primary_reset (struct ow_dll *dll, double output_samplerate,
-		      double input_samplerate, int output_frames_per_transfer,
-		      int input_frames_per_transfer)
+		      double input_samplerate, uint32_t output_frames,
+		      uint32_t input_frames)
 {
+  debug_print (2, "Resetting the DLL...\n");
+
   dll->set = 1;
-  dll->_z1 = 0.0;
-  dll->_z2 = 0.0;
-  dll->_z3 = 0.0;
+
+  dll->z1 = 0.0;
+  dll->z2 = 0.0;
+  dll->z3 = 0.0;
 
   dll->ratio = output_samplerate / input_samplerate;
 
@@ -122,27 +186,25 @@ ow_dll_primary_reset (struct ow_dll *dll, double output_samplerate,
   dll->ratio_avg_cycles = 0;
   dll->last_ratio_avg = 0.0;
 
-  dll->kj = -input_frames_per_transfer / dll->ratio;
+  dll->frames = -input_frames / dll->ratio;
 
-  dll->kdel = 2.0 * input_frames_per_transfer +
-    1.5 * output_frames_per_transfer;
+  dll->delay = 2.0 * input_frames + 1.5 * output_frames;
 
-  debug_print (2, "Target delay: %.1f ms (%d frames)\n",
-	       dll->kdel * 1000 / input_samplerate, dll->kdel);
+  debug_print (2, "Target delay: %d frames (%f ms)\n", dll->delay,
+	       dll->delay * 1000 / input_samplerate);
 }
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
 ow_dll_primary_set_loop_filter (struct ow_dll *dll, double bw,
-				int output_frames_per_transfer,
+				uint32_t output_frames,
 				double output_samplerate)
 {
-  double w = 2.0 * M_PI * 20 * bw * output_frames_per_transfer /
-    output_samplerate;
-  dll->_w0 = 1.0 - exp (-w);
+  double w = 2.0 * M_PI * 20 * bw * output_frames / output_samplerate;
+  dll->w0 = 1.0 - exp (-w);
   w = 2.0 * M_PI * bw * dll->ratio / output_samplerate;
-  dll->_w1 = w * 1.6;
-  dll->_w2 = w * output_frames_per_transfer / 1.6;
+  dll->w1 = w * 1.6;
+  dll->w2 = w * output_frames / 1.6;
 }
 
 inline void

@@ -184,7 +184,6 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
     }
   else
     {
-      debug_print (2, "Resetting the DLL...\n");
       ow_dll_primary_reset (&resampler->dll, new_samplerate, OB_SAMPLE_RATE,
 			    resampler->bufsize,
 			    resampler->engine->frames_per_transfer);
@@ -279,7 +278,7 @@ resampler_o2p_reader (void *cb_data, float **data)
       frames = MAX_READ_FRAMES;
     }
 
-  resampler->dll.kj += frames;
+  resampler->dll.frames += frames;
   last_frames = frames;
   return frames;
 }
@@ -375,7 +374,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 	{
 	  debug_print (2, "Booting Overbridge side...\n");
 
-	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_BOOT);
+	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_STEADY);
 	}
       return 1;
     }
@@ -384,12 +383,12 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   ow_dll_primary_load_dll_overbridge (dll);
   pthread_spin_unlock (&resampler->engine->lock);
 
+  ow_dll_primary_update_error (dll, current_usecs);
+
   if (resampler->status == OW_RESAMPLER_STATUS_READY
       && engine_status == OW_ENGINE_STATUS_WAIT)
     {
       debug_print (2, "Starting up resampler...\n");
-
-      ow_dll_primary_update_err_first_time (dll, current_usecs);
 
       ow_dll_primary_set_loop_filter (dll, 1.0, resampler->bufsize,
 				      resampler->samplerate);
@@ -417,7 +416,6 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       return 0;
     }
 
-  ow_dll_primary_update_err (dll, current_usecs);
   ow_dll_primary_update (dll);
 
   if (dll->ratio < resampler->min_target_ratio ||
@@ -545,9 +543,9 @@ ow_err_t
 ow_resampler_start (struct ow_resampler *resampler,
 		    struct ow_context *context)
 {
-  context->dll = &resampler->dll.dll_overbridge;
+  context->dll = &resampler->dll;
   context->dll_overbridge_init = ow_dll_overbridge_init;
-  context->dll_overbridge_inc = ow_dll_overbridge_inc;
+  context->dll_overbridge_update = ow_dll_overbridge_update;
 
   resampler->status = OW_RESAMPLER_STATUS_READY;
 
