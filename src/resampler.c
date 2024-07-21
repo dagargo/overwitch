@@ -440,7 +440,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   resampler->log_cycles++;
   if (resampler->log_cycles == resampler->log_control_cycles)
     {
-      ow_dll_primary_calc_avg (dll, resampler->log_control_cycles);
+      ow_dll_primary_calc_avg (dll);
 
       if (resampler->status == OW_RESAMPLER_STATUS_BOOT)
 	{
