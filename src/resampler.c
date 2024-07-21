@@ -191,7 +191,9 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
     }
 
   ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_BOOT);
+
   resampler->status = OW_RESAMPLER_STATUS_READY;
+
   resampler->o2p_ratio = resampler->dll.ratio;
   resampler->samplerate = new_samplerate;
 
@@ -371,8 +373,9 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
     {
       if (engine_status == OW_ENGINE_STATUS_READY)
 	{
-	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_BOOT);
 	  debug_print (2, "Booting Overbridge side...\n");
+
+	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_BOOT);
 	}
       return 1;
     }
@@ -384,12 +387,15 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   if (resampler->status == OW_RESAMPLER_STATUS_READY
       && engine_status == OW_ENGINE_STATUS_WAIT)
     {
+      debug_print (2, "Starting up resampler...\n");
+
       ow_dll_primary_update_err_first_time (dll, current_usecs);
 
-      debug_print (2, "Starting up resampler...\n");
       ow_dll_primary_set_loop_filter (dll, 1.0, resampler->bufsize,
 				      resampler->samplerate);
+
       resampler->status = OW_RESAMPLER_STATUS_BOOT;
+      ow_resampler_report_status (resampler);
 
       resampler->log_cycles = 0;
       resampler->log_control_cycles =
@@ -419,8 +425,12 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
     {
       error_print ("Invalid ratio %f detected. Stopping resampler...\n",
 		   dll->ratio);
-      resampler->status = OW_RESAMPLER_STATUS_ERROR;
+
       ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_ERROR);
+
+      resampler->status = OW_RESAMPLER_STATUS_ERROR;
+      ow_resampler_report_status (resampler);
+
       return 1;
     }
 
@@ -432,16 +442,15 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
     {
       ow_dll_primary_calc_avg (dll, resampler->log_control_cycles);
 
-      ow_resampler_report_status (resampler);
-
-      resampler->log_cycles = 0;
-
       if (resampler->status == OW_RESAMPLER_STATUS_BOOT)
 	{
 	  debug_print (2, "Tuning resampler...\n");
+
 	  ow_dll_primary_set_loop_filter (dll, 0.05, resampler->bufsize,
 					  resampler->samplerate);
+
 	  resampler->status = OW_RESAMPLER_STATUS_TUNE;
+
 	  resampler->log_control_cycles =
 	    resampler->reporter.period * resampler->samplerate /
 	    resampler->bufsize;
@@ -450,12 +459,20 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       if (resampler->status == OW_RESAMPLER_STATUS_TUNE && ow_dll_tuned (dll))
 	{
 	  debug_print (2, "Running resampler...\n");
+
 	  ow_dll_primary_set_loop_filter (dll, 0.02, resampler->bufsize,
 					  resampler->samplerate);
-	  resampler->status = OW_RESAMPLER_STATUS_RUN;
+
 	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_RUN);
+
+	  resampler->status = OW_RESAMPLER_STATUS_RUN;
+
 	  audio_running_cb (cb_data);
 	}
+
+      ow_resampler_report_status (resampler);
+
+      resampler->log_cycles = 0;
     }
 
   return 0;
@@ -531,7 +548,9 @@ ow_resampler_start (struct ow_resampler *resampler,
   context->dll = &resampler->dll.dll_overbridge;
   context->dll_overbridge_init = ow_dll_overbridge_init;
   context->dll_overbridge_inc = ow_dll_overbridge_inc;
+
   resampler->status = OW_RESAMPLER_STATUS_READY;
+
   return ow_engine_start (resampler->engine, context);
 }
 
