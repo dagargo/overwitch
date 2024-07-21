@@ -365,10 +365,6 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   resampler->xruns = 0;
   pthread_spin_unlock (&resampler->lock);
 
-  pthread_spin_lock (&resampler->engine->lock);
-  ow_dll_primary_load_dll_overbridge (dll);
-  pthread_spin_unlock (&resampler->engine->lock);
-
   engine_status = ow_engine_get_status (resampler->engine);
   if (resampler->status == OW_RESAMPLER_STATUS_READY
       && engine_status <= OW_ENGINE_STATUS_BOOT)
@@ -380,6 +376,10 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 	}
       return 1;
     }
+
+  pthread_spin_lock (&resampler->engine->lock);
+  ow_dll_primary_load_dll_overbridge (dll);
+  pthread_spin_unlock (&resampler->engine->lock);
 
   if (resampler->status == OW_RESAMPLER_STATUS_READY
       && engine_status == OW_ENGINE_STATUS_WAIT)
@@ -394,6 +394,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       resampler->log_cycles = 0;
       resampler->log_control_cycles =
 	STARTUP_TIME * resampler->samplerate / resampler->bufsize;
+
       return 0;
     }
 
