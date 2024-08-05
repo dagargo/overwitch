@@ -560,6 +560,10 @@ ow_resampler_wait (struct ow_resampler *resampler)
     {
       resampler->status = OW_RESAMPLER_STATUS_ERROR;
     }
+  else
+    {
+      resampler->status = OW_RESAMPLER_STATUS_STOP;
+    }
   ow_resampler_report_status (resampler);
 }
 
