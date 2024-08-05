@@ -37,6 +37,49 @@
 
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
+void
+squeue_init (struct squeue *queue, uint32_t max_len)
+{
+  queue->max_len = max_len;
+  queue->data = malloc (max_len);
+  queue->len = 0;
+}
+
+void
+squeue_destroy (struct squeue *queue)
+{
+  free (queue->data);
+}
+
+inline int
+squeue_write (struct squeue *queue, void *data, uint32_t len)
+{
+  if (queue->len + len >= queue->max_len)
+    {
+      error_print ("o2j: Not enough space in queue. Resetting...\n");
+      queue->len = 0;
+      return 1;
+    }
+
+  memcpy (queue->data + queue->len, data, len);
+  queue->len += len;
+  return 0;
+}
+
+inline void
+squeue_read (struct squeue *queue, void *data)
+{
+  memcpy (data, queue->data, queue->len);
+  queue->len = 0;
+}
+
+void
+squeue_consume (struct squeue *queue, uint32_t consumed)
+{
+  queue->len -= consumed;
+  memcpy (queue->data, queue->data + consumed, queue->len);
+}
+
 size_t
 jclient_buffer_read (void *buffer, char *src, size_t size)
 {
@@ -184,10 +227,9 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   jack_midi_data_t *jmidi;
   struct ow_midi_event event;
   jack_nframes_t first_frames, frames, event_frames;
-  static uint8_t buffer[MAX_MIDI_BUF_LEN];
-  static size_t len = 0, cleanup = 0;
+  static int skip = 0;		//Used to indicate that we are currently skipping the bytes as a too long message is being processed
   int send = 0;
-  size_t inc;
+  uint32_t len;
   static uint32_t last_lost_count = 0;
   uint32_t lost_count;
 
@@ -232,93 +274,89 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
       switch (event.packet.header)
 	{
 	case 0x04:
-	  inc = 3;
+	  len = 3;
 	  send = 0;
-	  if (cleanup)
+	  if (skip)
 	    {
 	      continue;
 	    }
 	  break;
 	case 0x05:
-	  inc = 1;
+	  len = 1;
 	  send = 1;
-	  if (cleanup)
+	  if (skip)
 	    {
-	      cleanup = 0;
+	      skip = 0;
 	      continue;
 	    }
 	  break;
 	case 0x06:
-	  inc = 2;
+	  len = 2;
 	  send = 1;
-	  if (cleanup)
+	  if (skip)
 	    {
-	      cleanup = 0;
+	      skip = 0;
 	      continue;
 	    }
 	  break;
 	case 0x07:
-	  inc = 3;
+	  len = 3;
 	  send = 1;
-	  if (cleanup)
+	  if (skip)
 	    {
-	      cleanup = 0;
+	      skip = 0;
 	      continue;
 	    }
 	  break;
 	case 0x0c:		//Program Change
 	case 0x0d:		//Channel Pressure (After-touch)
-	  inc = 2;
+	  len = 2;
 	  send = 1;
-	  cleanup = 0;
+	  skip = 0;
 	  break;
 	case 0x08:		//Note Off
 	case 0x09:		//Note On
 	case 0x0a:		//Polyphonic Key Pressure
 	case 0x0b:		//Control Change
 	case 0x0e:		//Pitch Bend Change
-	  inc = 3;
+	  len = 3;
 	  send = 1;
-	  cleanup = 0;
+	  skip = 0;
 	  break;
 	case 0x0f:		//Single Byte SysEx
-	  inc = 1;
+	  len = 1;
 	  send = 1;
-	  cleanup = 0;
+	  skip = 0;
 	  break;
 	default:
 	  error_print ("o2j: Message %02X not implemented",
 		       event.packet.header);
-	  len = 0;
-	  cleanup = 0;
+	  jclient->o2j_midi_queue.len = 0;
+	  skip = 0;
 	  continue;
 	}
 
-      if (len + inc >= MAX_MIDI_BUF_LEN)
+      if (squeue_write (&jclient->o2j_midi_queue, event.packet.data, len))
 	{
-	  error_print ("o2j: Message too long\n");
-	  len = 0;
-	  cleanup = 1;
+	  skip = 1;		//No space. We skip the current message being sent.
 	  continue;
 	}
-
-      memcpy (buffer + len, event.packet.data, inc);
-      len += inc;
 
       if (send)
 	{
-	  jmidi = jack_midi_event_reserve (midi_port_buf, frames, len);
+	  jmidi = jack_midi_event_reserve (midi_port_buf, frames,
+					   jclient->o2j_midi_queue.len);
 	  if (jmidi)
 	    {
-	      memcpy (jmidi, buffer, len);
-	      debug_print (2, "o2j: MIDI message processed @ %d (%ld)\n",
-			   frames, len);
+	      debug_print (2, "o2j: MIDI message to process @ %d (%d B)\n",
+			   frames, jclient->o2j_midi_queue.len);
+	      squeue_read (&jclient->o2j_midi_queue, jmidi);
 	    }
 	  else
 	    {
 	      error_print ("o2j: JACK could not reserve event\n");
+	      jclient->o2j_midi_queue.len = 0;
 	    }
-	  len = 0;
 	}
 
       lost_count = jack_midi_get_lost_event_count (midi_port_buf);
@@ -430,26 +468,20 @@ static inline void
 jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
 			jack_time_t time)
 {
-  static jack_midi_data_t buffer[MAX_MIDI_BUF_LEN];
-  static int len = 0;
   static int total = 0;
   int consumed;
   uint8_t *b;
 
-  if (len + jevent->size >= MAX_MIDI_BUF_LEN)
+  if (squeue_write (&jclient->j2o_midi_queue, jevent->buffer, jevent->size))
     {
-      error_print ("SysEx message too long. Skipping...\n");
       return;
     }
 
-  memcpy (buffer + len, jevent->buffer, jevent->size);
-  len += jevent->size;
-
   debug_print (2, "Sending MIDI SysEx packets...\n");
 
-  b = buffer;
+  b = jclient->j2o_midi_queue.data;
   consumed = 0;
-  while (consumed < len)
+  while (consumed < jclient->j2o_midi_queue.len)
     {
       struct ow_midi_event oevent;
       size_t plen = 0;
@@ -458,8 +490,8 @@ jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
       oevent.packet.header = 0x04;
       oevent.time = time;
 
-      for (int i = 0; i < OB_MIDI_EVENT_BYTES && consumed + i < len;
-	   i++, b++, plen++)
+      for (int i = 0; i < OB_MIDI_EVENT_BYTES &&
+	   consumed + i < jclient->j2o_midi_queue.len; i++, b++, plen++)
 	{
 	  if (*b == 0xf7)
 	    {
@@ -499,8 +531,7 @@ jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
 	}
     }
 
-  memcpy (buffer, buffer + consumed, consumed);
-  len -= consumed;
+  squeue_consume (&jclient->j2o_midi_queue, consumed);
 }
 
 static inline void
@@ -872,6 +903,9 @@ jclient_run (struct jclient *jclient)
   jclient->context.options = OW_ENGINE_OPTION_O2P_AUDIO |
     OW_ENGINE_OPTION_O2P_MIDI | OW_ENGINE_OPTION_P2O_MIDI;
 
+  squeue_init (&jclient->o2j_midi_queue, MAX_MIDI_BUF_LEN);
+  squeue_init (&jclient->j2o_midi_queue, MAX_MIDI_BUF_LEN);
+
   err = ow_resampler_start (jclient->resampler, &jclient->context);
   if (err)
     {
@@ -895,6 +929,8 @@ cleanup_jack:
   jack_ringbuffer_free (jclient->context.o2p_audio);
   jack_ringbuffer_free (jclient->context.p2o_midi);
   jack_ringbuffer_free (jclient->context.o2p_midi);
+  squeue_destroy (&jclient->o2j_midi_queue);
+  squeue_destroy (&jclient->j2o_midi_queue);
   jack_client_close (jclient->client);
   free (jclient->output_ports);
   free (jclient->input_ports);
