@@ -226,11 +226,9 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   void *midi_port_buf;
   jack_midi_data_t *jmidi;
   struct ow_midi_event event;
-  jack_nframes_t first_frames, frames, event_frames;
-  static int skip = 0;		//Used to indicate that we are currently skipping the bytes as a too long message is being processed
+  jack_nframes_t first_frames, frames, jack_frames, event_frames;
   int send = 0;
   uint32_t len;
-  static uint32_t last_lost_count = 0;
   uint32_t lost_count;
 
   midi_port_buf = jack_port_get_buffer (jclient->midi_output_port, nframes);
@@ -247,12 +245,12 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
       // We add 1 JACK cycle because it's the maximum delay we want to achieve
       // as everyting generated during the previous cycle will always be played.
       // If we tried to adjust it automatically we'd get 1 cycle delay.
-      event_frames = jack_time_to_frames (jclient->client, event.time) +
-	nframes;
+      jack_frames = jack_time_to_frames (jclient->client, event.time);
+      event_frames = jack_frames + nframes;
       if (event_frames >= first_frames + nframes)
 	{
 	  debug_print (2,
-		       "Skipping until the next cycle (event frames %d)...\n",
+		       "Skipping until the next cycle (event frames %u)...\n",
 		       event_frames);
 	  break;
 	}
@@ -276,7 +274,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	case 0x04:
 	  len = 3;
 	  send = 0;
-	  if (skip)
+	  if (jclient->o2j_midi_skipping)
 	    {
 	      continue;
 	    }
@@ -284,27 +282,27 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	case 0x05:
 	  len = 1;
 	  send = 1;
-	  if (skip)
+	  if (jclient->o2j_midi_skipping)
 	    {
-	      skip = 0;
+	      jclient->o2j_midi_skipping = 0;
 	      continue;
 	    }
 	  break;
 	case 0x06:
 	  len = 2;
 	  send = 1;
-	  if (skip)
+	  if (jclient->o2j_midi_skipping)
 	    {
-	      skip = 0;
+	      jclient->o2j_midi_skipping = 0;
 	      continue;
 	    }
 	  break;
 	case 0x07:
 	  len = 3;
 	  send = 1;
-	  if (skip)
+	  if (jclient->o2j_midi_skipping)
 	    {
-	      skip = 0;
+	      jclient->o2j_midi_skipping = 0;
 	      continue;
 	    }
 	  break;
@@ -312,7 +310,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	case 0x0d:		//Channel Pressure (After-touch)
 	  len = 2;
 	  send = 1;
-	  skip = 0;
+	  jclient->o2j_midi_skipping = 0;
 	  break;
 	case 0x08:		//Note Off
 	case 0x09:		//Note On
@@ -321,24 +319,24 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	case 0x0e:		//Pitch Bend Change
 	  len = 3;
 	  send = 1;
-	  skip = 0;
+	  jclient->o2j_midi_skipping = 0;
 	  break;
 	case 0x0f:		//Single Byte SysEx
 	  len = 1;
 	  send = 1;
-	  skip = 0;
+	  jclient->o2j_midi_skipping = 0;
 	  break;
 	default:
 	  error_print ("o2j: Message %02X not implemented",
 		       event.packet.header);
 	  jclient->o2j_midi_queue.len = 0;
-	  skip = 0;
+	  jclient->o2j_midi_skipping = 0;
 	  continue;
 	}
 
       if (squeue_write (&jclient->o2j_midi_queue, event.packet.data, len))
 	{
-	  skip = 1;		//No space. We skip the current message being sent.
+	  jclient->o2j_midi_skipping = 1;	//No space. We skip the current message being sent.
 	  continue;
 	}
 
@@ -360,10 +358,11 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	}
 
       lost_count = jack_midi_get_lost_event_count (midi_port_buf);
-      if (lost_count > last_lost_count)
+      if (lost_count > jclient->o2j_last_lost_count)
 	{
-	  last_lost_count = lost_count;
-	  error_print ("Lost event count: %d\n", last_lost_count);
+	  jclient->o2j_last_lost_count = lost_count;
+	  error_print ("Lost event count: %d\n",
+		       jclient->o2j_last_lost_count);
 	}
     }
 }
@@ -468,7 +467,6 @@ static inline void
 jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
 			jack_time_t time)
 {
-  static int total = 0;
   int consumed;
   uint8_t *b;
 
@@ -522,12 +520,13 @@ jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
       jclient_copy_event_bytes (&oevent, start, plen);
       jclient_j2o_midi_queue_event (jclient, &oevent);
       consumed += plen;
-      total += plen;
+      jclient->j2o_midi_sysex_pending += plen;
 
       if (end)
 	{
-	  debug_print (3, "SysEx message bytes: %d\n", total);
-	  total = 0;
+	  debug_print (3, "SysEx message bytes: %d\n",
+		       jclient->j2o_midi_sysex_pending);
+	  jclient->j2o_midi_sysex_pending = 0;
 	}
     }
 
@@ -905,6 +904,10 @@ jclient_run (struct jclient *jclient)
 
   squeue_init (&jclient->o2j_midi_queue, MAX_MIDI_BUF_LEN);
   squeue_init (&jclient->j2o_midi_queue, MAX_MIDI_BUF_LEN);
+
+  jclient->o2j_midi_skipping = 0;
+  jclient->o2j_last_lost_count = 0;
+  jclient->j2o_midi_sysex_pending = 0;
 
   err = ow_resampler_start (jclient->resampler, &jclient->context);
   if (err)
