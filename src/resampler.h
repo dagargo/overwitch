@@ -27,24 +27,24 @@ struct ow_resampler
   ow_resampler_status_t status;
   struct ow_engine *engine;
   struct ow_dll dll;		//The DLL is based on o2j data
-  double o2p_ratio;
-  double p2o_ratio;
-  SRC_STATE *p2o_state;
-  SRC_STATE *o2p_state;
-  float *p2o_buf_in;
-  float *p2o_buf_out;
-  float *p2o_aux;
-  float *p2o_queue;
-  float *o2p_buf_in;
-  float *o2p_buf_out;
-  size_t p2o_queue_len;
+  double o2h_ratio;
+  double h2o_ratio;
+  SRC_STATE *h2o_state;
+  SRC_STATE *o2h_state;
+  float *h2o_buf_in;
+  float *h2o_buf_out;
+  float *h2o_aux;
+  float *h2o_queue;
+  float *o2h_buf_in;
+  float *o2h_buf_out;
+  size_t h2o_queue_len;
   int log_control_cycles;
   int log_cycles;
   int xruns;
   pthread_spinlock_t lock;	//Used to synchronize access to xruns.
-  int reading_at_o2p_end;
-  size_t o2p_bufsize;
-  size_t p2o_bufsize;
+  int reading_at_o2h_end;
+  size_t o2h_bufsize;
+  size_t h2o_bufsize;
   uint32_t bufsize;
   double samplerate;
   double max_target_ratio;

@@ -67,21 +67,19 @@ void ow_dll_overbridge_init (void *, double, uint32_t);
 
 void ow_dll_overbridge_update (void *, uint32_t, uint64_t);
 
-void ow_dll_primary_init (struct ow_dll *);
+void ow_dll_host_init (struct ow_dll *);
 
-void ow_dll_primary_reset (struct ow_dll *, double, double, uint32_t,
-			   uint32_t);
+void ow_dll_host_reset (struct ow_dll *, double, double, uint32_t, uint32_t);
 
-void ow_dll_primary_set_loop_filter (struct ow_dll *, double, uint32_t,
-				     double);
+void ow_dll_host_set_loop_filter (struct ow_dll *, double, uint32_t, double);
 
-void ow_dll_primary_update_error (struct ow_dll *, uint64_t);
+void ow_dll_host_update_error (struct ow_dll *, uint64_t);
 
-void ow_dll_primary_update (struct ow_dll *);
+void ow_dll_host_update (struct ow_dll *);
 
-void ow_dll_primary_calc_avg (struct ow_dll *);
+void ow_dll_host_calc_avg (struct ow_dll *);
 
-void ow_dll_primary_load_dll_overbridge (struct ow_dll *);
+void ow_dll_host_load_dll_overbridge (struct ow_dll *);
 
 int ow_dll_tuned (struct ow_dll *);
 

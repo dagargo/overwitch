@@ -120,7 +120,7 @@ jclient_thread_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
       for (int i = 0; i < desc->outputs; i++)
 	{
 	  jack_port_get_latency_range (jclient->input_ports[0], mode, &range);
-	  ow_resampler_get_o2p_latency (jclient->resampler, &latency,
+	  ow_resampler_get_o2h_latency (jclient->resampler, &latency,
 					&min_latency, &max_latency);
 	  range.min += min_latency;
 	  range.max += max_latency;
@@ -135,7 +135,7 @@ jclient_thread_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
 	{
 	  jack_port_get_latency_range (jclient->output_ports[0], mode,
 				       &range);
-	  ow_resampler_get_p2o_latency (jclient->resampler, &latency,
+	  ow_resampler_get_h2o_latency (jclient->resampler, &latency,
 					&min_latency, &max_latency);
 	  range.min += min_latency;
 	  range.max += max_latency;
@@ -237,10 +237,10 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
   last_frame = jack_last_frame_time (jclient->client);
 
 
-  while (jack_ringbuffer_read_space (jclient->context.o2p_midi) >=
+  while (jack_ringbuffer_read_space (jclient->context.o2h_midi) >=
 	 sizeof (struct ow_midi_event))
     {
-      jack_ringbuffer_peek (jclient->context.o2p_midi, (void *) &event,
+      jack_ringbuffer_peek (jclient->context.o2h_midi, (void *) &event,
 			    sizeof (struct ow_midi_event));
 
       // We add 1 JACK cycle because it's the maximum delay we want to achieve
@@ -271,7 +271,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 
       debug_print (2, "Event frames: %lu\n", frame);
 
-      jack_ringbuffer_read_advance (jclient->context.o2p_midi,
+      jack_ringbuffer_read_advance (jclient->context.o2h_midi,
 				    sizeof (struct ow_midi_event));
       switch (event.packet.header)
 	{
@@ -375,7 +375,7 @@ static inline void
 jclient_j2o_midi_queue_event (struct jclient *jclient,
 			      struct ow_midi_event *event)
 {
-  if (jack_ringbuffer_write_space (jclient->context.p2o_midi) >=
+  if (jack_ringbuffer_write_space (jclient->context.h2o_midi) >=
       sizeof (struct ow_midi_event))
     {
       debug_print (2,
@@ -383,7 +383,7 @@ jclient_j2o_midi_queue_event (struct jclient *jclient,
 		   event->packet.header, event->packet.data[0],
 		   event->packet.data[1], event->packet.data[2], event->time);
 
-      jack_ringbuffer_write (jclient->context.p2o_midi,
+      jack_ringbuffer_write (jclient->context.h2o_midi,
 			     (void *) event, sizeof (struct ow_midi_event));
     }
   else
@@ -629,18 +629,18 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
       return 0;
     }
 
-  //o2p
+  //o2h
 
   for (int i = 0; i < desc->outputs; i++)
     {
       buffer[i] = jack_port_get_buffer (jclient->output_ports[i], nframes);
     }
 
-  f = ow_resampler_get_o2p_audio_buffer (jclient->resampler);
+  f = ow_resampler_get_o2h_audio_buffer (jclient->resampler);
   ow_resampler_read_audio (jclient->resampler);
   jclient_copy_o2j_audio (f, nframes, buffer, desc);
 
-  //p2o
+  //h2o
 
   if (ow_engine_is_option (engine, OW_ENGINE_OPTION_P2O_AUDIO))
     {
@@ -649,7 +649,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 	  buffer[i] = jack_port_get_buffer (jclient->input_ports[i], nframes);
 	}
 
-      f = ow_resampler_get_p2o_audio_buffer (jclient->resampler);
+      f = ow_resampler_get_h2o_audio_buffer (jclient->resampler);
       jclient_copy_j2o_audio (f, nframes, buffer, desc);
       ow_resampler_write_audio (jclient->resampler);
     }
@@ -721,10 +721,10 @@ jclient_run (struct jclient *jclient)
   jclient->output_ports = NULL;
   jclient->input_ports = NULL;
   jclient->j2o_ongoing_sysex = 0;
-  jclient->context.p2o_audio = NULL;
-  jclient->context.o2p_audio = NULL;
-  jclient->context.p2o_midi = NULL;
-  jclient->context.o2p_midi = NULL;
+  jclient->context.h2o_audio = NULL;
+  jclient->context.o2h_audio = NULL;
+  jclient->context.h2o_midi = NULL;
+  jclient->context.o2h_midi = NULL;
 
   engine = ow_resampler_get_engine (jclient->resampler);
   desc = ow_engine_get_device_desc (engine);
@@ -876,21 +876,21 @@ jclient_run (struct jclient *jclient)
       goto cleanup_jack;
     }
 
-  jclient->context.o2p_audio = jack_ringbuffer_create (MAX_LATENCY *
-						       ow_resampler_get_o2p_frame_size
+  jclient->context.o2h_audio = jack_ringbuffer_create (MAX_LATENCY *
+						       ow_resampler_get_o2h_frame_size
 						       (jclient->resampler));
-  jack_ringbuffer_mlock (jclient->context.o2p_audio);
+  jack_ringbuffer_mlock (jclient->context.o2h_audio);
 
-  jclient->context.p2o_audio = jack_ringbuffer_create (MAX_LATENCY *
-						       ow_resampler_get_p2o_frame_size
+  jclient->context.h2o_audio = jack_ringbuffer_create (MAX_LATENCY *
+						       ow_resampler_get_h2o_frame_size
 						       (jclient->resampler));
-  jack_ringbuffer_mlock (jclient->context.p2o_audio);
+  jack_ringbuffer_mlock (jclient->context.h2o_audio);
 
-  jclient->context.o2p_midi = jack_ringbuffer_create (OB_MIDI_BUF_LEN);
-  jack_ringbuffer_mlock (jclient->context.o2p_midi);
+  jclient->context.o2h_midi = jack_ringbuffer_create (OB_MIDI_BUF_LEN);
+  jack_ringbuffer_mlock (jclient->context.o2h_midi);
 
-  jclient->context.p2o_midi = jack_ringbuffer_create (OB_MIDI_BUF_LEN);
-  jack_ringbuffer_mlock (jclient->context.p2o_midi);
+  jclient->context.h2o_midi = jack_ringbuffer_create (OB_MIDI_BUF_LEN);
+  jack_ringbuffer_mlock (jclient->context.h2o_midi);
 
   jclient->context.read_space =
     (ow_buffer_rw_space_t) jack_ringbuffer_read_space;
@@ -932,10 +932,10 @@ jclient_run (struct jclient *jclient)
   jack_deactivate (jclient->client);
 
 cleanup_jack:
-  jack_ringbuffer_free (jclient->context.p2o_audio);
-  jack_ringbuffer_free (jclient->context.o2p_audio);
-  jack_ringbuffer_free (jclient->context.p2o_midi);
-  jack_ringbuffer_free (jclient->context.o2p_midi);
+  jack_ringbuffer_free (jclient->context.h2o_audio);
+  jack_ringbuffer_free (jclient->context.o2h_audio);
+  jack_ringbuffer_free (jclient->context.h2o_midi);
+  jack_ringbuffer_free (jclient->context.o2h_midi);
   squeue_destroy (&jclient->o2j_midi_queue);
   squeue_destroy (&jclient->j2o_midi_queue);
   jack_client_close (jclient->client);

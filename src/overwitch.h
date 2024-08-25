@@ -59,12 +59,12 @@ typedef void (*ow_set_rt_priority_t) (pthread_t, int);
 
 struct ow_resampler_latency
 {
-  double o2p;
-  double o2p_min;
-  double o2p_max;
-  double p2o;
-  double p2o_min;
-  double p2o_max;
+  double o2h;
+  double o2h_min;
+  double o2h_max;
+  double h2o;
+  double h2o_min;
+  double h2o_max;
 };
 
 typedef void (*ow_resampler_report_t) (void *, struct ow_resampler_latency *,
@@ -134,10 +134,10 @@ struct ow_context
   //Needed for MIDI and the DLL
   ow_get_time_t get_time;
   //Data
-  void *p2o_audio;
-  void *o2p_audio;
-  void *p2o_midi;
-  void *o2p_midi;
+  void *h2o_audio;
+  void *o2h_audio;
+  void *h2o_midi;
+  void *o2h_midi;
   //DLL
   struct ow_dll *dll;
   ow_dll_overbridge_init_t dll_overbridge_init;
@@ -297,21 +297,21 @@ void ow_resampler_set_buffer_size (struct ow_resampler *, uint32_t);
 
 void ow_resampler_set_samplerate (struct ow_resampler *, uint32_t);
 
-size_t ow_resampler_get_o2p_frame_size (struct ow_resampler *);
+size_t ow_resampler_get_o2h_frame_size (struct ow_resampler *);
 
-size_t ow_resampler_get_p2o_frame_size (struct ow_resampler *);
+size_t ow_resampler_get_h2o_frame_size (struct ow_resampler *);
 
-float *ow_resampler_get_o2p_audio_buffer (struct ow_resampler *);
+float *ow_resampler_get_o2h_audio_buffer (struct ow_resampler *);
 
-float *ow_resampler_get_p2o_audio_buffer (struct ow_resampler *);
+float *ow_resampler_get_h2o_audio_buffer (struct ow_resampler *);
 
 struct ow_resampler_reporter *ow_resampler_get_reporter (struct ow_resampler
 							 *);
 
-void ow_resampler_get_p2o_latency (struct ow_resampler *, size_t *, size_t *,
+void ow_resampler_get_h2o_latency (struct ow_resampler *, size_t *, size_t *,
 				   size_t *);
 
-void ow_resampler_get_o2p_latency (struct ow_resampler *, size_t *, size_t *,
+void ow_resampler_get_o2h_latency (struct ow_resampler *, size_t *, size_t *,
 				   size_t *);
 
 #endif

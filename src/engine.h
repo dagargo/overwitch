@@ -166,21 +166,21 @@ struct ow_engine
   unsigned int blocks_per_transfer;
   unsigned int frames_per_transfer;
   pthread_spinlock_t lock;
-  size_t o2p_latency;
-  size_t o2p_min_latency;
-  size_t o2p_max_latency;
-  size_t p2o_latency;
-  size_t p2o_min_latency;
-  size_t p2o_max_latency;
-  pthread_t audio_o2p_midi_thread;
-  pthread_t p2o_midi_thread;
+  size_t o2h_latency;
+  size_t o2h_min_latency;
+  size_t o2h_max_latency;
+  size_t h2o_latency;
+  size_t h2o_min_latency;
+  size_t h2o_max_latency;
+  pthread_t audio_o2h_midi_thread;
+  pthread_t h2o_midi_thread;
   struct ow_device_desc device_desc;
-  size_t p2o_transfer_size;
-  size_t o2p_transfer_size;
-  float *p2o_transfer_buf;
-  float *o2p_transfer_buf;
-  size_t o2p_frame_size;
-  size_t p2o_frame_size;
+  size_t h2o_transfer_size;
+  size_t o2h_transfer_size;
+  float *h2o_transfer_buf;
+  float *o2h_transfer_buf;
+  size_t o2h_frame_size;
+  size_t h2o_frame_size;
   struct
   {
     libusb_context *context;
@@ -208,12 +208,12 @@ struct ow_engine
     uint8_t *xfr_control_in_data;
   } usb;
   //j2o resampler
-  float *p2o_resampler_buf;
-  SRC_DATA p2o_data;
+  float *h2o_resampler_buf;
+  SRC_DATA h2o_data;
   //MIDI
-  int reading_at_p2o_end;
-  pthread_spinlock_t p2o_midi_lock;
-  int p2o_midi_ready;
+  int reading_at_h2o_end;
+  pthread_spinlock_t h2o_midi_lock;
+  int h2o_midi_ready;
   struct ow_context *context;
 };
 

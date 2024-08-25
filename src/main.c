@@ -170,24 +170,24 @@ set_overwitch_instance_status (gpointer data)
       if (instance->jclient.bus == bus
 	  && instance->jclient.address == address)
 	{
-	  if (instance->latency.o2p >= 0)
+	  if (instance->latency.o2h >= 0)
 	    {
 	      g_snprintf (o2j_latency_s, OW_LABEL_MAX_LEN,
-			  "%.1f [%.1f, %.1f] ms", instance->latency.o2p,
-			  instance->latency.o2p_min,
-			  instance->latency.o2p_max);
+			  "%.1f [%.1f, %.1f] ms", instance->latency.o2h,
+			  instance->latency.o2h_min,
+			  instance->latency.o2h_max);
 	    }
 	  else
 	    {
 	      o2j_latency_s[0] = '\0';
 	    }
 
-	  if (instance->latency.p2o >= 0)
+	  if (instance->latency.h2o >= 0)
 	    {
 	      g_snprintf (j2o_latency_s, OW_LABEL_MAX_LEN,
-			  "%.1f [%.1f, %.1f] ms", instance->latency.p2o,
-			  instance->latency.p2o_min,
-			  instance->latency.p2o_max);
+			  "%.1f [%.1f, %.1f] ms", instance->latency.h2o,
+			  instance->latency.h2o_min,
+			  instance->latency.h2o_max);
 	    }
 	  else
 	    {
@@ -223,12 +223,12 @@ set_report_data (struct overwitch_instance *instance,
 		 struct ow_resampler_latency *latency, gdouble o2j_ratio,
 		 gdouble j2o_ratio)
 {
-  instance->latency.o2p = latency->o2p;
-  instance->latency.o2p_min = latency->o2p_min;
-  instance->latency.o2p_max = latency->o2p_max;
-  instance->latency.p2o = latency->p2o;
-  instance->latency.p2o_min = latency->p2o_min;
-  instance->latency.p2o_max = latency->p2o_max;
+  instance->latency.o2h = latency->o2h;
+  instance->latency.o2h_min = latency->o2h_min;
+  instance->latency.o2h_max = latency->o2h_max;
+  instance->latency.h2o = latency->h2o;
+  instance->latency.h2o_min = latency->h2o_min;
+  instance->latency.h2o_max = latency->h2o_max;
   instance->o2j_ratio = o2j_ratio;
   instance->j2o_ratio = j2o_ratio;
   g_idle_add (set_overwitch_instance_status, instance);
@@ -658,8 +658,8 @@ refresh_all (GtkWidget *object, gpointer data)
 	gtk_combo_box_get_active (quality_combo_box);
       instance->jclient.priority = -1;
 
-      instance->latency.o2p = 0.0;
-      instance->latency.p2o = 0.0;
+      instance->latency.o2h = 0.0;
+      instance->latency.h2o = 0.0;
       instance->o2j_ratio = 1.0;
       instance->j2o_ratio = 1.0;
 

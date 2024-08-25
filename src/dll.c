@@ -104,13 +104,13 @@ ow_dll_overbridge_update (void *data, uint32_t frames, uint64_t t)
 
 //The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
-ow_dll_primary_update_error (struct ow_dll *dll, uint64_t t)
+ow_dll_host_update_error (struct ow_dll *dll, uint64_t t)
 {
   double delta_overbridge, dn, dd;
   int32_t delta_frames_exp, delta_frames_act;
   double time = UINT64_USEC_TO_DOUBLE_SEC (t);
 
-  debug_print (3, "Updating error in primary side of DLL...\n");
+  debug_print (3, "Updating error in host side of DLL...\n");
 
   delta_frames_exp = dll->i1.frames - dll->i0.frames;
   dn = wrap_time (time - dll->i0.time, dll->t_quantum);
@@ -134,9 +134,9 @@ ow_dll_primary_update_error (struct ow_dll *dll, uint64_t t)
 }
 
 inline void
-ow_dll_primary_update (struct ow_dll *dll)
+ow_dll_host_update (struct ow_dll *dll)
 {
-  debug_print (3, "Updating primary side of DLL...\n");
+  debug_print (3, "Updating host side of DLL...\n");
 
   dll->z1 += dll->w0 * (dll->w1 * dll->err - dll->z1);
   dll->z2 += dll->w0 * (dll->z1 - dll->z2);
@@ -148,7 +148,7 @@ ow_dll_primary_update (struct ow_dll *dll)
 }
 
 inline void
-ow_dll_primary_calc_avg (struct ow_dll *dll)
+ow_dll_host_calc_avg (struct ow_dll *dll)
 {
   dll->last_ratio_avg = dll->ratio_avg;
   dll->ratio_avg = dll->ratio_sum / dll->ratio_avg_cycles;
@@ -157,9 +157,9 @@ ow_dll_primary_calc_avg (struct ow_dll *dll)
 }
 
 inline void
-ow_dll_primary_init (struct ow_dll *dll)
+ow_dll_host_init (struct ow_dll *dll)
 {
-  debug_print (2, "Initializing primary side of DLL...\n");
+  debug_print (2, "Initializing host side of DLL...\n");
   dll->set = 0;
   dll->boot = 1;
   dll->dll_overbridge.boot = 1;
@@ -167,9 +167,9 @@ ow_dll_primary_init (struct ow_dll *dll)
 }
 
 inline void
-ow_dll_primary_reset (struct ow_dll *dll, double output_samplerate,
-		      double input_samplerate, uint32_t output_frames,
-		      uint32_t input_frames)
+ow_dll_host_reset (struct ow_dll *dll, double output_samplerate,
+		   double input_samplerate, uint32_t output_frames,
+		   uint32_t input_frames)
 {
   debug_print (2, "Resetting the DLL...\n");
 
@@ -196,9 +196,8 @@ ow_dll_primary_reset (struct ow_dll *dll, double output_samplerate,
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
-ow_dll_primary_set_loop_filter (struct ow_dll *dll, double bw,
-				uint32_t output_frames,
-				double output_samplerate)
+ow_dll_host_set_loop_filter (struct ow_dll *dll, double bw,
+			     uint32_t output_frames, double output_samplerate)
 {
   double w = 2.0 * M_PI * 20 * bw * output_frames / output_samplerate;
   dll->w0 = 1.0 - exp (-w);
@@ -208,7 +207,7 @@ ow_dll_primary_set_loop_filter (struct ow_dll *dll, double bw,
 }
 
 inline void
-ow_dll_primary_load_dll_overbridge (struct ow_dll *dll)
+ow_dll_host_load_dll_overbridge (struct ow_dll *dll)
 {
   dll->i0 = dll->dll_overbridge.i0;
   dll->i1 = dll->dll_overbridge.i1;
