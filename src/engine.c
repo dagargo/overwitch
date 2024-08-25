@@ -300,6 +300,8 @@ set_blocks:
 static void LIBUSB_CALL
 cb_xfr_audio_in (struct libusb_transfer *xfr)
 {
+  struct ow_engine *engine = xfr->user_data;
+
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
       if (xfr->length < xfr->actual_length)
@@ -320,13 +322,19 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
       error_print ("o2p: Error on USB audio transfer: %s\n",
 		   libusb_error_name (xfr->status));
     }
-  // start new cycle even if this one did not succeed
-  prepare_cycle_in_audio (xfr->user_data);
+
+  if (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP)
+    {
+      // start new cycle even if this one did not succeed
+      prepare_cycle_in_audio (xfr->user_data);
+    }
 }
 
 static void LIBUSB_CALL
 cb_xfr_audio_out (struct libusb_transfer *xfr)
 {
+  struct ow_engine *engine = xfr->user_data;
+
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
       if (xfr->length < xfr->actual_length)
@@ -344,9 +352,12 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
 
   set_usb_output_data_blks (xfr->user_data);
 
-  // We have to make sure that the out cycle is always started after its callback
-  // Race condition on slower systems!
-  prepare_cycle_out_audio (xfr->user_data);
+  if (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP)
+    {
+      // We have to make sure that the out cycle is always started after its callback
+      // Race condition on slower systems!
+      prepare_cycle_out_audio (xfr->user_data);
+    }
 }
 
 static void LIBUSB_CALL
@@ -405,7 +416,10 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
 	}
     }
 
-  prepare_cycle_in_midi (engine);
+  if (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP)
+    {
+      prepare_cycle_in_midi (engine);
+    }
 }
 
 static void LIBUSB_CALL
@@ -931,6 +945,7 @@ run_p2o_midi (void *data)
 	{
 	  engine->p2o_midi_ready = 0;
 	  debug_print (2, "Sending %d bytes to MIDI endpoint...\n", len);
+
 	  prepare_cycle_out_midi (engine);
 
 	  //Waiting for the USB block to be sent...
@@ -983,6 +998,10 @@ static void *
 run_audio_o2p_midi (void *data)
 {
   size_t rsp2o, bytes;
+  struct timeval timeout = {
+    .tv_sec = 1,
+    .tv_usec = 0
+  };
   struct ow_engine *engine = data;
 
   if (engine->context->dll)
@@ -1065,6 +1084,13 @@ run_audio_o2p_midi (void *data)
       engine->context->read (engine->context->p2o_audio, NULL, bytes);
       memset (engine->p2o_transfer_buf, 0, engine->p2o_transfer_size);
     }
+
+  //status == OW_ENGINE_STATUS_STOP || status == OW_ENGINE_STATUS_ERROR
+
+  //Handle completed events but not actually processed.
+  //No new transfers will be submitted due to the status.
+  debug_print (2, "Processing remaining event...\n");
+  libusb_handle_events_completed (engine->usb.context, NULL);
 
   return NULL;
 }
