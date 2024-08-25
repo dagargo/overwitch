@@ -305,7 +305,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="tooltip-text" translatable="yes">USB Transfer Timeout</property>
+                <property name="tooltip-text" translatable="yes">USB Transfer Timeout (ms)</property>
                 <property name="label" translatable="yes">Transfer Timeout</property>
               </object>
               <packing>

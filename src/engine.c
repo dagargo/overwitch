@@ -998,10 +998,6 @@ static void *
 run_audio_o2p_midi (void *data)
 {
   size_t rsp2o, bytes;
-  struct timeval timeout = {
-    .tv_sec = 1,
-    .tv_usec = 0
-  };
   struct ow_engine *engine = data;
 
   if (engine->context->dll)

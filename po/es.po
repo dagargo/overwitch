@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2024-01-19 19:03+0100\n"
+"POT-Creation-Date: 2024-08-26 09:22+0200\n"
 "PO-Revision-Date: 2022-09-21 19:06+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: Spanish\n"
@@ -17,36 +17,36 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/main.c:115
+#: src/main.c:110
 msgid "Error"
 msgstr "Error"
 
-#: src/main.c:117
+#: src/main.c:112
 msgid "Stopped"
 msgstr "Parado"
 
-#: src/main.c:119
+#: src/main.c:114
 msgid "Ready"
 msgstr "Preparado"
 
-#: src/main.c:121
+#: src/main.c:116
 msgid "Booting"
 msgstr "Arrancando"
 
-#: src/main.c:123
+#: src/main.c:118
 msgid "Tuning"
 msgstr "Ajustando"
 
-#: src/main.c:125
+#: src/main.c:120
 msgid "Running"
 msgstr "Ejecutando"
 
-#: src/main.c:522
+#: src/main.c:511
 #, c-format
 msgid "JACK at %.5g kHz, %d period"
 msgstr "JACK a %.5g kHz, periodo de %d"
 
-#: src/main.c:527
+#: src/main.c:516
 #, c-format
 msgid "JACK not found"
 msgstr "JACK no encontrado"
@@ -112,8 +112,8 @@ msgid "Resampler Quality"
 msgstr "Calidad de remuestreo"
 
 #: res/gui.glade:308
-msgid "USB Transfer Timeout"
-msgstr "Tiempo de expiración de la transferencia USB"
+msgid "USB Transfer Timeout (ms)"
+msgstr "Tiempo de expiración de la transferencia USB (ms)"
 
 #: res/gui.glade:309
 msgid "Transfer Timeout"
