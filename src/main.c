@@ -587,7 +587,7 @@ start_control_client ()
 }
 
 static void
-remove_instances_with_error ()
+remove_stopped_instances ()
 {
   GtkTreeIter iter;
   ow_resampler_status_t status;
@@ -600,7 +600,7 @@ remove_instances_with_error ()
       gtk_tree_model_get (model, &iter, STATUS_LIST_STORE_INSTANCE, &instance,
 			  -1);
       status = ow_resampler_get_status (instance->jclient.resampler);
-      if (status == OW_RESAMPLER_STATUS_ERROR)
+      if (status <= OW_RESAMPLER_STATUS_STOP)
 	{
 	  jclient_wait (&instance->jclient);
 	  jclient_destroy (&instance->jclient);
@@ -625,7 +625,7 @@ refresh_all (GtkWidget *object, gpointer data)
   ow_resampler_status_t status;
   ow_err_t err;
 
-  remove_instances_with_error ();
+  remove_stopped_instances ();
 
   err = ow_get_usb_device_list (&devices, &devices_count);
   if (err || !devices_count)
