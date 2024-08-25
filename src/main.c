@@ -907,7 +907,7 @@ main (int argc, char *argv[])
 
   gtk_init (&argc, &argv);
   builder = gtk_builder_new ();
-  gtk_builder_add_from_file (builder, DATADIR "/gui.glade", NULL);
+  gtk_builder_add_from_file (builder, DATADIR "/overwitch.ui", NULL);
 
   main_window = GTK_WIDGET (gtk_builder_get_object (builder, "main_window"));
   gtk_window_resize (GTK_WINDOW (main_window), 1, 1);	//Compact window

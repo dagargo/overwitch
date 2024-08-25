@@ -1,5 +1,5 @@
 resdir = $(datadir)/overwitch
-res_DATA = gui.glade
+res_DATA = overwitch.ui
 
 if JSON_DEVS_FILE
 res_DATA += devices.json
