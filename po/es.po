@@ -81,7 +81,7 @@ msgstr "David García Goñi <dagargo@gmail.com>"
 
 #: res/gui.glade:123
 msgid "Refresh At Startup"
-msgstr "Recargar al arrancar"
+msgstr "Actualizar al arrancar"
 
 #: res/gui.glade:136
 msgid "Show All Columns"
