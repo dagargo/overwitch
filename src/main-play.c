@@ -73,7 +73,7 @@ buffer_read (void *data, char *buf, size_t size)
 
   wanted_frames = size / bytes_per_frame;
 
-  debug_print (2, "Reading %ld bytes (%ld frames) from file...\n", size,
+  debug_print (2, "Reading %ld bytes (%ld frames) from file...", size,
 	       wanted_frames);
 
   read_frames = sf_readf_float (sf, (float *) buf, wanted_frames);
@@ -156,14 +156,14 @@ run_play (int device_num, const char *device_name,
   sf = sf_open (file, SFM_READ, &sfinfo);
   if (!sf)
     {
-      error_print ("Audio file could not be opened\n");
+      error_print ("Audio file could not be opened");
       err = OW_GENERIC_ERROR;
       goto cleanup_engine;
     }
 
   if (sfinfo.channels != desc->inputs)
     {
-      error_print ("Number of channels do not match inputs\n");
+      error_print ("Number of channels do not match inputs");
       err = OW_GENERIC_ERROR;
       goto cleanup_audio;
     }
@@ -196,7 +196,7 @@ cleanup_engine:
 end:
   if (err)
     {
-      error_print ("%s\n", ow_get_err_str (err));
+      error_print ("%s", ow_get_err_str (err));
     }
   return err;
 }

@@ -114,7 +114,7 @@ ow_resampler_clear_buffers (struct ow_resampler *resampler)
   size_t rso2h, bytes;
   struct ow_context *context = resampler->engine->context;
 
-  debug_print (2, "Clearing buffers...\n");
+  debug_print (2, "Clearing buffers...");
 
   resampler->h2o_queue_len = 0;
   resampler->reading_at_o2h_end = 0;
@@ -133,7 +133,7 @@ ow_resampler_clear_buffers (struct ow_resampler *resampler)
 static void
 ow_resampler_reset_buffers (struct ow_resampler *resampler)
 {
-  debug_print (2, "Resetting buffers...\n");
+  debug_print (2, "Resetting buffers...");
 
   resampler->o2h_bufsize =
     resampler->bufsize * resampler->engine->o2h_frame_size;
@@ -174,7 +174,7 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
   if (resampler->dll.set
       && ow_engine_get_status (resampler->engine) == OW_ENGINE_STATUS_RUN)
     {
-      debug_print (2, "Just adjusting DLL ratio...\n");
+      debug_print (2, "Just adjusting DLL ratio...");
       resampler->dll.ratio =
 	resampler->dll.last_ratio_avg * new_samplerate /
 	resampler->samplerate;
@@ -211,7 +211,7 @@ resampler_h2o_reader (void *cb_data, float **data)
 
   if (resampler->h2o_queue_len == 0)
     {
-      debug_print (2, "h2o: Can not read data from queue\n");
+      debug_print (2, "h2o: Can not read data from queue");
       return resampler->bufsize;
     }
 
@@ -252,7 +252,7 @@ resampler_o2h_reader (void *cb_data, float **data)
       else
 	{
 	  debug_print (2,
-		       "o2h: Audio ring buffer underflow (%zu < %zu). Replicating last samples...\n",
+		       "o2h: Audio ring buffer underflow (%zu < %zu). Replicating last samples...",
 		       rso2h, resampler->engine->o2h_transfer_size);
 	  if (last_frames > 1)
 	    {
@@ -269,7 +269,7 @@ resampler_o2h_reader (void *cb_data, float **data)
       if (rso2h >= resampler->o2h_bufsize)
 	{
 	  bytes = ow_bytes_to_frame_bytes (rso2h, resampler->o2h_bufsize);
-	  debug_print (2, "o2h: Emptying buffer (%zu B) and running...\n",
+	  debug_print (2, "o2h: Emptying buffer (%zu B) and running...",
 		       bytes);
 	  resampler->engine->context->read (resampler->engine->
 					    context->o2h_audio, NULL, bytes);
@@ -294,7 +294,7 @@ ow_resampler_read_audio (struct ow_resampler *resampler)
   if (gen_frames != resampler->bufsize)
     {
       error_print
-	("o2h: Unexpected frames with ratio %f (output %ld, expected %d)\n",
+	("o2h: Unexpected frames with ratio %f (output %ld, expected %d)",
 	 resampler->o2h_ratio, gen_frames, resampler->bufsize);
     }
 }
@@ -330,7 +330,7 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
   if (gen_frames != frames)
     {
       error_print
-	("h2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
+	("h2o: Unexpected frames with ratio %f (output %ld, expected %d)",
 	 resampler->h2o_ratio, gen_frames, frames);
     }
 
@@ -348,7 +348,7 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
     }
   else
     {
-      error_print ("h2o: Audio ring buffer overflow. Discarding data...\n");
+      error_print ("h2o: Audio ring buffer overflow. Discarding data...");
     }
 }
 
@@ -372,7 +372,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
     {
       if (engine_status == OW_ENGINE_STATUS_READY)
 	{
-	  debug_print (2, "Booting Overbridge side...\n");
+	  debug_print (2, "Booting Overbridge side...");
 
 	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_STEADY);
 	}
@@ -388,7 +388,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   if (resampler->status == OW_RESAMPLER_STATUS_READY
       && engine_status == OW_ENGINE_STATUS_WAIT)
     {
-      debug_print (2, "Starting up resampler...\n");
+      debug_print (2, "Starting up resampler...");
 
       ow_dll_host_set_loop_filter (dll, 1.0, resampler->bufsize,
 				   resampler->samplerate);
@@ -405,7 +405,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 
   if (xruns)
     {
-      debug_print (2, "Fixing %d xruns...\n", xruns);
+      debug_print (2, "Fixing %d xruns...", xruns);
 
       //With this, we try to recover from the unreaded frames that are in the o2h buffer and...
       resampler->o2h_ratio = dll->ratio * (1 + xruns);
@@ -421,7 +421,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   if (dll->ratio < resampler->min_target_ratio ||
       dll->ratio > resampler->max_target_ratio)
     {
-      error_print ("Invalid ratio %f detected. Stopping resampler...\n",
+      error_print ("Invalid ratio %f detected. Stopping resampler...",
 		   dll->ratio);
 
       ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_ERROR);
@@ -442,7 +442,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 
       if (resampler->status == OW_RESAMPLER_STATUS_BOOT)
 	{
-	  debug_print (2, "Tuning resampler...\n");
+	  debug_print (2, "Tuning resampler...");
 
 	  ow_dll_host_set_loop_filter (dll, 0.05, resampler->bufsize,
 				       resampler->samplerate);
@@ -456,7 +456,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 
       if (resampler->status == OW_RESAMPLER_STATUS_TUNE && ow_dll_tuned (dll))
 	{
-	  debug_print (2, "Running resampler...\n");
+	  debug_print (2, "Running resampler...");
 
 	  ow_dll_host_set_loop_filter (dll, 0.02, resampler->bufsize,
 				       resampler->samplerate);
@@ -599,7 +599,7 @@ ow_resampler_set_buffer_size (struct ow_resampler *resampler,
 {
   if (resampler->bufsize != bufsize)
     {
-      debug_print (1, "Setting resampler buffer size to %d\n", bufsize);
+      debug_print (1, "Setting resampler buffer size to %d", bufsize);
       resampler->bufsize = bufsize;
       ow_resampler_reset_buffers (resampler);
       ow_resampler_reset_dll (resampler, resampler->samplerate);
@@ -612,7 +612,7 @@ ow_resampler_set_samplerate (struct ow_resampler *resampler,
 {
   if (resampler->samplerate != samplerate)
     {
-      debug_print (1, "Setting resampler sample rate to %d\n", samplerate);
+      debug_print (1, "Setting resampler sample rate to %d", samplerate);
       if (resampler->h2o_aux)	//This means that ow_resampler_reset_buffers has been called and thus bufsize has been set.
 	{
 	  ow_resampler_reset_dll (resampler, samplerate);

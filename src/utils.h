@@ -34,8 +34,19 @@
 
 #define CONF_DIR "~/.config/" PACKAGE
 
-#define debug_print(level, format, ...) if (level <= debug_level) fprintf(stderr, "DEBUG:" __FILE__ ":%d:%s: " format, __LINE__, __FUNCTION__, ## __VA_ARGS__)
-#define error_print(format, ...) fprintf(stderr, "%sERROR:" __FILE__ ":%d:(%s): " format "%s", isatty(fileno(stderr)) ? "\x1b[31m" : "", __LINE__, __FUNCTION__, ## __VA_ARGS__, isatty(fileno(stderr)) ? "\x1b[m" : "")
+#define debug_print(level, format, ...) { \
+  if (level <= debug_level) \
+    { \
+      fprintf(stderr, "DEBUG:" __FILE__ ":%d:%s: " format "\n", __LINE__, __FUNCTION__, ## __VA_ARGS__); \
+    } \
+}
+
+#define error_print(format, ...) { \
+  gboolean tty = isatty(fileno(stderr)); \
+  const gchar * color_start = tty ? "\x1b[31m" : ""; \
+  const gchar * color_end = tty ? "\x1b[m" : ""; \
+  fprintf(stderr, "%sERROR:" __FILE__ ":%d:(%s): " format "%s\n", color_start, __LINE__, __FUNCTION__, ## __VA_ARGS__, color_end); \
+}
 
 extern int debug_level;
 

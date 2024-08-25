@@ -127,7 +127,7 @@ start_instance (struct overwitch_instance *instance)
 {
   struct ow_resampler *resampler = instance->jclient.resampler;
   struct ow_engine *engine = ow_resampler_get_engine (resampler);
-  debug_print (1, "Starting %s...\n", ow_engine_get_overbridge_name (engine));
+  debug_print (1, "Starting %s...", ow_engine_get_overbridge_name (engine));
   jclient_start (&instance->jclient);
 }
 
@@ -136,7 +136,7 @@ stop_instance (struct overwitch_instance *instance)
 {
   struct ow_resampler *resampler = instance->jclient.resampler;
   struct ow_engine *engine = ow_resampler_get_engine (resampler);
-  debug_print (1, "Stopping %s...\n", ow_engine_get_overbridge_name (engine));
+  debug_print (1, "Stopping %s...", ow_engine_get_overbridge_name (engine));
   jclient_stop (&instance->jclient);
 }
 
@@ -290,17 +290,17 @@ save_file_char (const gchar *path, const guint8 *data, ssize_t len)
       return -errno;
     }
 
-  debug_print (1, "Saving file %s...\n", path);
+  debug_print (1, "Saving file %s...", path);
 
   res = 0;
   bytes = fwrite (data, 1, len, file);
   if (bytes == len)
     {
-      debug_print (1, "%zu bytes written\n", bytes);
+      debug_print (1, "%zu bytes written", bytes);
     }
   else
     {
-      error_print ("Error while writing to file %s\n", path);
+      error_print ("Error while writing to file %s", path);
       res = -EIO;
     }
 
@@ -325,7 +325,7 @@ save_preferences ()
 			    S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH |
 			    S_IXOTH))
     {
-      error_print ("Error wile creating dir `%s'\n", CONF_DIR);
+      error_print ("Error wile creating dir `%s'", CONF_DIR);
       return;
     }
 
@@ -333,7 +333,7 @@ save_preferences ()
   strncat (preferences_path, CONF_FILE, n);
   preferences_path[PATH_MAX - 1] = 0;
 
-  debug_print (1, "Saving preferences to '%s'...\n", preferences_path);
+  debug_print (1, "Saving preferences to '%s'...", preferences_path);
 
   builder = json_builder_new ();
 
@@ -403,7 +403,7 @@ load_preferences ()
   json_parser_load_from_file (parser, preferences_file, &error);
   if (error)
     {
-      error_print ("Error wile loading preferences from `%s': %s\n",
+      error_print ("Error wile loading preferences from `%s': %s",
 		   CONF_DIR CONF_FILE, error->message);
       g_error_free (error);
       g_object_unref (parser);
@@ -523,7 +523,7 @@ set_status (gpointer data)
 static int
 set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
 {
-  debug_print (1, "JACK sample rate: %d\n", nframes);
+  debug_print (1, "JACK sample rate: %d", nframes);
   jack_sample_rate = nframes;
   g_idle_add (set_status, NULL);
   return 0;
@@ -532,7 +532,7 @@ set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
 static int
 set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
 {
-  debug_print (1, "JACK buffer size: %d\n", nframes);
+  debug_print (1, "JACK buffer size: %d", nframes);
   jack_buffer_size = nframes;
   g_idle_add (set_status, NULL);
   return 0;
@@ -566,19 +566,18 @@ start_control_client ()
       if (jack_set_sample_rate_callback (control_client, set_sample_rate_cb,
 					 NULL))
 	{
-	  error_print
-	    ("Cannot set JACK control client sample rate callback\n");
+	  error_print ("Cannot set JACK control client sample rate callback");
 	}
       if (jack_set_buffer_size_callback (control_client, set_buffer_size_cb,
 					 NULL))
 	{
 	  error_print
-	    ("Cannot set JACK control client set buffer size callback\n");
+	    ("Cannot set JACK control client set buffer size callback");
 	}
 
       if (jack_activate (control_client))
 	{
-	  error_print ("Cannot activate control client\n");
+	  error_print ("Cannot activate control client");
 	  jack_client_close (control_client);
 	}
     }
@@ -642,7 +641,7 @@ refresh_all (GtkWidget *object, gpointer data)
       if (is_device_at_bus_address (device->bus, device->address, &iter,
 				    &instance))
 	{
-	  debug_print (2, "%s already running. Skipping...\n",
+	  debug_print (2, "%s already running. Skipping...",
 		       instance->jclient.name);
 	  continue;
 	}
@@ -679,7 +678,7 @@ refresh_all (GtkWidget *object, gpointer data)
       reporter->callback = (ow_resampler_report_t) set_report_data;
       reporter->data = instance;
 
-      debug_print (1, "Adding %s...\n", instance->jclient.name);
+      debug_print (1, "Adding %s...", instance->jclient.name);
 
       status = ow_resampler_get_status (instance->jclient.resampler);
       status_string = get_status_string (status);
@@ -734,7 +733,7 @@ stop_all (GtkWidget *object, gpointer data)
       status = ow_resampler_get_status (instance->jclient.resampler);
       if (status != OW_RESAMPLER_STATUS_ERROR)
 	{
-	  debug_print (1, "Stopping %s...\n", instance->jclient.name);
+	  debug_print (1, "Stopping %s...", instance->jclient.name);
 	  stop_instance (instance);
 	}
       jclient_wait (&instance->jclient);
@@ -794,7 +793,7 @@ set_pipewire_props ()
 {
   if (pipewire_venv_set)
     {
-      debug_print (1, "%s was '%s' at launch. Ignoring user value '%s'...\n",
+      debug_print (1, "%s was '%s' at launch. Ignoring user value '%s'...",
 		   PIPEWIRE_PROPS_ENVV, getenv (PIPEWIRE_PROPS_ENVV),
 		   pipewire_props);
       return;
@@ -802,7 +801,7 @@ set_pipewire_props ()
 
   if (pipewire_props)
     {
-      debug_print (1, "Setting %s to '%s'...\n", PIPEWIRE_PROPS_ENVV,
+      debug_print (1, "Setting %s to '%s'...", PIPEWIRE_PROPS_ENVV,
 		   pipewire_props);
       setenv (PIPEWIRE_PROPS_ENVV, pipewire_props, TRUE);
     }
@@ -848,7 +847,7 @@ quit (int signo)
     }
   stop_control_client ();
   save_preferences ();
-  debug_print (1, "Quitting GTK+...\n");
+  debug_print (1, "Quitting GTK+...");
   gtk_main_quit ();
 }
 

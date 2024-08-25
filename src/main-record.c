@@ -108,10 +108,10 @@ dump_buffer (void *data)
       if (status == READY)
 	{
 	  pthread_spin_lock (&buffer.lock);
-	  debug_print (2, "Writing %ld frames to disk...\n",
+	  debug_print (2, "Writing %ld frames to disk...",
 		       buffer.disk_frames);
 	  sf_write_float (sf, (float *) buffer.disk, buffer.disk_samples);
-	  debug_print (2, "Done\n");
+	  debug_print (2, "Done");
 
 	  buffer.status = EMPTY;
 	  pthread_spin_unlock (&buffer.lock);
@@ -133,7 +133,7 @@ buffer_write (void *data, const char *buf, size_t size)
   void *dst;
   size_t frames = size / (desc->outputs * OB_BYTES_PER_SAMPLE);
 
-  debug_print (2, "Writing %ld bytes (%ld frames) to buffer...\n", size,
+  debug_print (2, "Writing %ld bytes (%ld frames) to buffer...", size,
 	       frames);
   new_pos = pos + frames * buffer.outputs * OB_BYTES_PER_SAMPLE;
   if (new_pos >= buffer.len)
@@ -278,7 +278,7 @@ run_record (int device_num, const char *device_name,
   snprintf (filename, MAX_FILENAME_LEN, "%s_%s.wav", desc->name,
 	    curr_time_string);
 
-  debug_print (1, "Creating sample (%d channels)...\n", buffer.outputs);
+  debug_print (1, "Creating sample (%d channels)...", buffer.outputs);
   sf = sf_open (filename, SFM_WRITE, &sfinfo);
 
   context.dll = NULL;
@@ -309,7 +309,7 @@ run_record (int device_num, const char *device_name,
   pthread_spin_init (&buffer.lock, PTHREAD_PROCESS_SHARED);
   if (pthread_create (&buffer.pthread, NULL, dump_buffer, NULL))
     {
-      error_print ("Could not start recording thread\n");
+      error_print ("Could not start recording thread");
       goto cleanup;
     }
   ow_set_thread_rt_priority (buffer.pthread, OW_DEFAULT_RT_PROPERTY);
@@ -331,7 +331,7 @@ cleanup_engine:
 end:
   if (err)
     {
-      error_print ("%s\n", ow_get_err_str (err));
+      error_print ("%s", ow_get_err_str (err));
     }
   return err;
 }

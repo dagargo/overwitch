@@ -53,7 +53,7 @@ ow_dll_overbridge_init (void *data, double samplerate, uint32_t frames)
   struct ow_dll *dll = data;
   struct ow_dll_overbridge *dll_ob = &dll->dll_overbridge;
 
-  debug_print (2, "Initializing Overbridge side of DLL...\n");
+  debug_print (2, "Initializing Overbridge side of DLL...");
 
   dll_ob->dt = frames / (double) samplerate;
   w = 2 * M_PI * 0.1 * dll_ob->dt;
@@ -69,7 +69,7 @@ ow_dll_overbridge_update (void *data, uint32_t frames, uint64_t t)
   struct ow_dll *dll = data;
   struct ow_dll_overbridge *dll_ob = &dll->dll_overbridge;
 
-  debug_print (3, "Updating Overbridge side of DLL...\n");
+  debug_print (3, "Updating Overbridge side of DLL...");
 
   time = UINT64_USEC_TO_DOUBLE_SEC (t);
 
@@ -97,7 +97,7 @@ ow_dll_overbridge_update (void *data, uint32_t frames, uint64_t t)
   dll_ob->i0.frames = dll_ob->i1.frames;
   dll_ob->i1.frames += frames;
 
-  debug_print (3, "time: %3.6f; t0: %3.6f: t1: %3.6f; f0: % 8d; f1: % 8d\n",
+  debug_print (3, "time: %3.6f; t0: %3.6f: t1: %3.6f; f0: % 8d; f1: % 8d",
 	       time, dll_ob->i0.time, dll_ob->i1.time, dll_ob->i0.frames,
 	       dll_ob->i1.frames);
 }
@@ -110,7 +110,7 @@ ow_dll_host_update_error (struct ow_dll *dll, uint64_t t)
   int32_t delta_frames_exp, delta_frames_act;
   double time = UINT64_USEC_TO_DOUBLE_SEC (t);
 
-  debug_print (3, "Updating error in host side of DLL...\n");
+  debug_print (3, "Updating error in host side of DLL...");
 
   delta_frames_exp = dll->i1.frames - dll->i0.frames;
   dn = wrap_time (time - dll->i0.time, dll->t_quantum);
@@ -128,7 +128,7 @@ ow_dll_host_update_error (struct ow_dll *dll, uint64_t t)
     }
 
   debug_print (3,
-	       "delta_frames_exp: %d; delta_frames_act: %d; delta_overbridge: %f; DLL delay: %d; DLL error: %f\n",
+	       "delta_frames_exp: %d; delta_frames_act: %d; delta_overbridge: %f; DLL delay: %d; DLL error: %f",
 	       delta_frames_exp, delta_frames_act, delta_overbridge,
 	       dll->delay, dll->err);
 }
@@ -136,7 +136,7 @@ ow_dll_host_update_error (struct ow_dll *dll, uint64_t t)
 inline void
 ow_dll_host_update (struct ow_dll *dll)
 {
-  debug_print (3, "Updating host side of DLL...\n");
+  debug_print (3, "Updating host side of DLL...");
 
   dll->z1 += dll->w0 * (dll->w1 * dll->err - dll->z1);
   dll->z2 += dll->w0 * (dll->z1 - dll->z2);
@@ -159,7 +159,7 @@ ow_dll_host_calc_avg (struct ow_dll *dll)
 inline void
 ow_dll_host_init (struct ow_dll *dll)
 {
-  debug_print (2, "Initializing host side of DLL...\n");
+  debug_print (2, "Initializing host side of DLL...");
   dll->set = 0;
   dll->boot = 1;
   dll->dll_overbridge.boot = 1;
@@ -171,7 +171,7 @@ ow_dll_host_reset (struct ow_dll *dll, double output_samplerate,
 		   double input_samplerate, uint32_t output_frames,
 		   uint32_t input_frames)
 {
-  debug_print (2, "Resetting the DLL...\n");
+  debug_print (2, "Resetting the DLL...");
 
   dll->set = 1;
 
@@ -190,7 +190,7 @@ ow_dll_host_reset (struct ow_dll *dll, double output_samplerate,
 
   dll->delay = 2.0 * input_frames + 1.5 * output_frames;
 
-  debug_print (2, "Target delay: %d frames (%f ms)\n", dll->delay,
+  debug_print (2, "Target delay: %d frames (%f ms)", dll->delay,
 	       dll->delay * 1000 / input_samplerate);
 }
 

@@ -237,7 +237,7 @@ ow_get_usb_device_list (struct ow_usb_device **devices, size_t *size)
 	{
 	  bus = libusb_get_bus_number (*usb_device);
 	  address = libusb_get_device_address (*usb_device);
-	  debug_print (1, "Found %s (bus %03d, address %03d, ID %04x:%04x)\n",
+	  debug_print (1, "Found %s (bus %03d, address %03d, ID %04x:%04x)",
 		       device->desc.name, bus, address, desc.idVendor,
 		       desc.idProduct);
 	  device->vid = desc.idVendor;
@@ -311,13 +311,13 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 
   if (!json_parser_load_from_file (parser, devices_filename, &error))
     {
-      debug_print (1, "%s\n", error->message);
+      debug_print (1, "%s", error->message);
       g_clear_error (&error);
 
       g_free (devices_filename);
       devices_filename = strdup (DATADIR DEVICES_FILE);
 
-      debug_print (1, "Falling back to %s...\n", devices_filename);
+      debug_print (1, "Falling back to %s...", devices_filename);
 
       if (!json_parser_load_from_file (parser, devices_filename, &error))
 	{
@@ -338,7 +338,7 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 
   if (!json_reader_is_array (reader))
     {
-      error_print ("Not an array\n");
+      error_print ("Not an array");
       err = -ENODEV;
       goto cleanup_reader;
     }
@@ -346,7 +346,7 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
   devices = json_reader_count_elements (reader);
   if (!devices)
     {
-      debug_print (1, "No devices found\n");
+      debug_print (1, "No devices found");
       err = -ENODEV;
       goto cleanup_reader;
     }
@@ -356,14 +356,13 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
     {
       if (!json_reader_read_element (reader, i))
 	{
-	  error_print ("Cannot read element %d. Continuing...\n", i);
+	  error_print ("Cannot read element %d. Continuing...", i);
 	  continue;
 	}
 
       if (!json_reader_read_member (reader, DEV_TAG_PID))
 	{
-	  error_print ("Cannot read member '%s'. Continuing...\n",
-		       DEV_TAG_PID);
+	  error_print ("Cannot read member '%s'. Continuing...", DEV_TAG_PID);
 	  continue;
 	}
       dpid = json_reader_get_int_value (reader);
@@ -376,12 +375,11 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
       device_desc->pid = dpid;
 
       err = 0;
-      debug_print (1, "Device with PID %d found\n", dpid);
+      debug_print (1, "Device with PID %d found", dpid);
 
       if (!json_reader_read_member (reader, DEV_TAG_NAME))
 	{
-	  error_print ("Cannot read member '%s'. Stopping...\n",
-		       DEV_TAG_NAME);
+	  error_print ("Cannot read member '%s'. Stopping...", DEV_TAG_NAME);
 	  json_reader_end_element (reader);
 	  err = -ENODEV;
 	  break;
@@ -391,7 +389,7 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 
       if (!json_reader_read_member (reader, DEV_TAG_INPUT_TRACK_NAMES))
 	{
-	  error_print ("Cannot read member '%s'. Stopping...\n",
+	  error_print ("Cannot read member '%s'. Stopping...",
 		       DEV_TAG_INPUT_TRACK_NAMES);
 	  json_reader_end_element (reader);
 	  err = -ENODEV;
@@ -399,14 +397,14 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 	}
       if (!json_reader_is_array (reader))
 	{
-	  error_print ("Not an array\n");
+	  error_print ("Not an array");
 	  err = -ENODEV;
 	  goto cleanup_reader;
 	}
       device_desc->inputs = json_reader_count_elements (reader);
       if (!device_desc->inputs)
 	{
-	  debug_print (1, "No tracks found\n");
+	  debug_print (1, "No tracks found");
 	  err = -ENODEV;
 	  goto cleanup_reader;
 	}
@@ -426,7 +424,7 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 	    }
 	  else
 	    {
-	      error_print ("Cannot read input track name %d\n", j);
+	      error_print ("Cannot read input track name %d", j);
 	      ow_free_device_desc (device_desc);
 	      err = -ENODEV;
 	      goto cleanup_reader;
@@ -436,7 +434,7 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 
       if (!json_reader_read_member (reader, DEV_TAG_OUTPUT_TRACK_NAMES))
 	{
-	  error_print ("Cannot read member '%s'. Stopping...\n",
+	  error_print ("Cannot read member '%s'. Stopping...",
 		       DEV_TAG_OUTPUT_TRACK_NAMES);
 	  json_reader_end_element (reader);
 	  err = -ENODEV;
@@ -444,14 +442,14 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 	}
       if (!json_reader_is_array (reader))
 	{
-	  error_print ("Not an array\n");
+	  error_print ("Not an array");
 	  err = -ENODEV;
 	  goto cleanup_reader;
 	}
       device_desc->outputs = json_reader_count_elements (reader);
       if (!device_desc->outputs)
 	{
-	  debug_print (1, "No tracks found\n");
+	  debug_print (1, "No tracks found");
 	  err = -ENODEV;
 	  goto cleanup_reader;
 	}
@@ -471,7 +469,7 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 	    }
 	  else
 	    {
-	      error_print ("Cannot read output track name %d\n", j);
+	      error_print ("Cannot read output track name %d", j);
 	      ow_free_device_desc (device_desc);
 	      err = -ENODEV;
 	      goto cleanup_reader;

@@ -31,7 +31,7 @@
 #include "utils.h"
 #include "jclient.h"
 
-#define MSG_ERROR_PORT_REGISTER "Error while registering JACK port\n"
+#define MSG_ERROR_PORT_REGISTER "Error while registering JACK port"
 
 #define MAX_MIDI_BUF_LEN OB_MIDI_BUF_LEN
 
@@ -56,7 +56,7 @@ squeue_write (struct squeue *queue, void *data, uint32_t len)
 {
   if (queue->len + len >= queue->max_len)
     {
-      error_print ("o2j: Not enough space in queue. Resetting...\n");
+      error_print ("o2j: Not enough space in queue. Resetting...");
       queue->len = 0;
       return 1;
     }
@@ -98,7 +98,7 @@ static int
 jclient_thread_xrun_cb (void *cb_data)
 {
   struct ow_resampler *resampler = cb_data;
-  error_print ("JACK xrun\n");
+  error_print ("JACK xrun");
   ow_resampler_inc_xruns (resampler);
   return 0;
 }
@@ -112,11 +112,11 @@ jclient_thread_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
   const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
 
-  debug_print (2, "JACK latency request\n");
+  debug_print (2, "JACK latency request");
 
   if (mode == JackPlaybackLatency)
     {
-      debug_print (2, "Recalculating input to output latency...\n");
+      debug_print (2, "Recalculating input to output latency...");
       for (int i = 0; i < desc->outputs; i++)
 	{
 	  jack_port_get_latency_range (jclient->input_ports[0], mode, &range);
@@ -130,7 +130,7 @@ jclient_thread_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
     }
   else if (mode == JackCaptureLatency)
     {
-      debug_print (2, "Recalculating output to input latency...\n");
+      debug_print (2, "Recalculating output to input latency...");
       for (int i = 0; i < desc->inputs; i++)
 	{
 	  jack_port_get_latency_range (jclient->output_ports[0], mode,
@@ -177,27 +177,27 @@ jclient_jack_shutdown_cb (jack_status_t code, const char *reason,
 			  void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  debug_print (1, "JACK is shutting down: %s\n", reason);
+  debug_print (1, "JACK is shutting down: %s", reason);
   jclient_stop (jclient);
 }
 
 static void
 jclient_jack_freewheel (int starting, void *cb_data)
 {
-  debug_print (1, "JACK in freewheel mode: %d\n", starting);
+  debug_print (1, "JACK in freewheel mode: %d", starting);
 }
 
 static int
 jclient_jack_graph_order_cb (void *cb_data)
 {
-  debug_print (1, "JACK calling graph order...\n");
+  debug_print (1, "JACK calling graph order...");
   return 0;
 }
 
 static void
 jclient_jack_client_registration_cb (const char *name, int op, void *cb_data)
 {
-  debug_print (1, "JACK client %s is being %s...\n", name,
+  debug_print (1, "JACK client %s is being %s...", name,
 	       op ? "registered" : "unregistered");
 }
 
@@ -205,7 +205,7 @@ static int
 jclient_set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  debug_print (1, "JACK buffer size: %d\n", nframes);
+  debug_print (1, "JACK buffer size: %d", nframes);
   jclient->bufsize = nframes;
   ow_resampler_set_buffer_size (jclient->resampler, nframes);
   return 0;
@@ -215,7 +215,7 @@ static int
 jclient_set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
 {
   struct jclient *jclient = cb_data;
-  debug_print (1, "JACK sample rate: %d\n", nframes);
+  debug_print (1, "JACK sample rate: %d", nframes);
   ow_resampler_set_samplerate (jclient->resampler, nframes);
   return 0;
 }
@@ -249,13 +249,13 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
       jack_frame = jack_time_to_frames (jclient->client, event.time) +
 	nframes;
 
-      debug_print (2, "last frame: %u\n", last_frame);
-      debug_print (2, "JACK frame: %u\n", jack_frame);
+      debug_print (2, "last frame: %u", last_frame);
+      debug_print (2, "JACK frame: %u", jack_frame);
 
       if (jack_frame < last_frame)
 	{
 	  frame = 0;
-	  debug_print (2, "Processing missed event @ %lu us...\n", frame);
+	  debug_print (2, "Processing missed event @ %lu us...", frame);
 	}
       else
 	{
@@ -263,13 +263,13 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	  if (frame >= nframes)
 	    {
 	      debug_print (2,
-			   "Skipping until the next cycle (event frames %lu)...\n",
+			   "Skipping until the next cycle (event frames %lu)...",
 			   frame);
 	      break;
 	    }
 	}
 
-      debug_print (2, "Event frames: %lu\n", frame);
+      debug_print (2, "Event frames: %lu", frame);
 
       jack_ringbuffer_read_advance (jclient->context.o2h_midi,
 				    sizeof (struct ow_midi_event));
@@ -350,13 +350,13 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 					   jclient->o2j_midi_queue.len);
 	  if (jmidi)
 	    {
-	      debug_print (2, "o2j: MIDI message to process @ %lu (%d B)\n",
+	      debug_print (2, "o2j: MIDI message to process @ %lu (%d B)",
 			   frame, jclient->o2j_midi_queue.len);
 	      squeue_read (&jclient->o2j_midi_queue, jmidi);
 	    }
 	  else
 	    {
-	      error_print ("o2j: JACK could not reserve event\n");
+	      error_print ("o2j: JACK could not reserve event");
 	      jclient->o2j_midi_queue.len = 0;
 	    }
 	}
@@ -365,8 +365,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
       if (lost_count > jclient->o2j_last_lost_count)
 	{
 	  jclient->o2j_last_lost_count = lost_count;
-	  error_print ("Lost event count: %d\n",
-		       jclient->o2j_last_lost_count);
+	  error_print ("Lost event count: %d", jclient->o2j_last_lost_count);
 	}
     }
 }
@@ -379,7 +378,7 @@ jclient_j2o_midi_queue_event (struct jclient *jclient,
       sizeof (struct ow_midi_event))
     {
       debug_print (2,
-		   "j2o MIDI packet: %02x %02x %02x %02x @ %lu us\n",
+		   "j2o MIDI packet: %02x %02x %02x %02x @ %lu us",
 		   event->packet.header, event->packet.data[0],
 		   event->packet.data[1], event->packet.data[2], event->time);
 
@@ -388,7 +387,7 @@ jclient_j2o_midi_queue_event (struct jclient *jclient,
     }
   else
     {
-      error_print ("j2o: MIDI ring buffer overflow. Discarding data...\n");
+      error_print ("j2o: MIDI ring buffer overflow. Discarding data...");
     }
 }
 
@@ -410,7 +409,7 @@ jclient_j2o_midi_msg (struct jclient *jclient, jack_midi_event_t *jevent,
 
   oevent.packet.header = 0;
 
-  debug_print (2, "Sending MIDI mesage...\n");
+  debug_print (2, "Sending MIDI mesage...");
 
   if (jevent->size == 1)
     {
@@ -461,7 +460,7 @@ jclient_j2o_midi_msg (struct jclient *jclient, jack_midi_event_t *jevent,
     }
   else
     {
-      error_print ("j2o: Message %02x not implemented\n", type);
+      error_print ("j2o: Message %02x not implemented", type);
     }
 }
 
@@ -479,7 +478,7 @@ jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
       return;
     }
 
-  debug_print (2, "Sending MIDI SysEx packets...\n");
+  debug_print (2, "Sending MIDI SysEx packets...");
 
   b = jclient->j2o_midi_queue.data;
   consumed = 0;
@@ -528,7 +527,7 @@ jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
 
       if (end)
 	{
-	  debug_print (3, "SysEx message bytes: %d\n",
+	  debug_print (3, "SysEx message bytes: %d",
 		       jclient->j2o_midi_sysex_pending);
 	  jclient->j2o_midi_sysex_pending = 0;
 	}
@@ -616,7 +615,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   if (jack_get_cycle_times (jclient->client, &current_frames, &current_usecs,
 			    &next_usecs, &period_usecs))
     {
-      error_print ("Error while getting JACK time\n");
+      error_print ("Error while getting JACK time");
     }
 
   //MIDI runs independently of audio status
@@ -663,14 +662,14 @@ set_rt_priority (pthread_t thread, int priority)
   int err = jack_acquire_real_time_scheduling (thread, priority);
   if (err)
     {
-      error_print ("Could not set real time priority\n");
+      error_print ("Could not set real time priority");
     }
 }
 
 void
 jclient_stop (struct jclient *jclient)
 {
-  debug_print (1, "Stopping client...\n");
+  debug_print (1, "Stopping client...");
   if (jclient->client)
     {
       ow_resampler_report_status (jclient->resampler);
@@ -692,7 +691,7 @@ jclient_init (struct jclient *jclient)
 
   if (err)
     {
-      error_print ("Overwitch error: %s\n", ow_get_err_str (err));
+      error_print ("Overwitch error: %s", ow_get_err_str (err));
       return -1;
     }
 
@@ -735,24 +734,24 @@ jclient_run (struct jclient *jclient)
     {
       if (status & JackServerFailed)
 	{
-	  error_print ("Unable to connect to JACK server\n");
+	  error_print ("Unable to connect to JACK server");
 	}
       else
 	{
-	  error_print ("Unable to open client. Error 0x%2.0x\n", status);
+	  error_print ("Unable to open client. Error 0x%2.0x", status);
 	}
       return OW_GENERIC_ERROR;
     }
 
   if (status & JackServerStarted)
     {
-      debug_print (1, "JACK server started\n");
+      debug_print (1, "JACK server started");
     }
 
   if (status & JackNameNotUnique)
     {
       client_name = jack_get_client_name (jclient->client);
-      debug_print (0, "Name client in use. Using %s...\n", client_name);
+      debug_print (0, "Name client in use. Using %s...", client_name);
     }
 
   if (jack_set_process_callback (jclient->client, jclient_process_cb,
@@ -777,7 +776,7 @@ jclient_run (struct jclient *jclient)
 				      jclient_port_connect_cb, jclient))
     {
       error_print
-	("Cannot set port connect callback so j2o audio will not be possible\n");
+	("Cannot set port connect callback so j2o audio will not be possible");
     }
 
   jack_on_info_shutdown (jclient->client, jclient_jack_shutdown_cb, jclient);
@@ -785,20 +784,20 @@ jclient_run (struct jclient *jclient)
   if (jack_set_freewheel_callback (jclient->client, jclient_jack_freewheel,
 				   jclient))
     {
-      error_print ("Cannot set JACK freewheel callback\n");
+      error_print ("Cannot set JACK freewheel callback");
     }
 
   if (jack_set_graph_order_callback (jclient->client,
 				     jclient_jack_graph_order_cb, jclient))
     {
-      error_print ("Cannot set JACK graph order callback\n");
+      error_print ("Cannot set JACK graph order callback");
     }
 
   if (jack_set_client_registration_callback (jclient->client,
 					     jclient_jack_client_registration_cb,
 					     jclient))
     {
-      error_print ("Cannot set JACK client registration callback\n");
+      error_print ("Cannot set JACK client registration callback");
     }
 
   if (jack_set_buffer_size_callback (jclient->client,
@@ -817,14 +816,14 @@ jclient_run (struct jclient *jclient)
     {
       jclient->priority = jack_client_real_time_priority (jclient->client);
     }
-  debug_print (1, "Using RT priority %d...\n", jclient->priority);
+  debug_print (1, "Using RT priority %d...", jclient->priority);
 
-  debug_print (1, "Registering ports...\n");
+  debug_print (1, "Registering ports...");
   jclient->output_ports = malloc (sizeof (jack_port_t *) * desc->outputs);
   for (int i = 0; i < desc->outputs; i++)
     {
       const char *name = desc->output_track_names[i];
-      debug_print (2, "Registering output port %s...\n", name);
+      debug_print (2, "Registering output port %s...", name);
       jclient->output_ports[i] = jack_port_register (jclient->client,
 						     name,
 						     JACK_DEFAULT_AUDIO_TYPE,
@@ -842,7 +841,7 @@ jclient_run (struct jclient *jclient)
   for (int i = 0; i < desc->inputs; i++)
     {
       const char *name = desc->input_track_names[i];
-      debug_print (2, "Registering input port %s...\n", name);
+      debug_print (2, "Registering input port %s...", name);
       jclient->input_ports[i] = jack_port_register (jclient->client,
 						    name,
 						    JACK_DEFAULT_AUDIO_TYPE,
@@ -921,14 +920,14 @@ jclient_run (struct jclient *jclient)
 
   if (jack_activate (jclient->client))
     {
-      error_print ("Cannot activate client\n");
+      error_print ("Cannot activate client");
       err = -1;
       goto cleanup_jack;
     }
 
   ow_resampler_wait (jclient->resampler);
 
-  debug_print (1, "Exiting...\n");
+  debug_print (1, "Exiting...");
   jack_deactivate (jclient->client);
 
 cleanup_jack:

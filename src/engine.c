@@ -164,7 +164,7 @@ set_usb_input_data_blks (struct ow_engine *engine)
     }
   else
     {
-      error_print ("o2h: Audio ring buffer overflow. Discarding data...\n");
+      error_print ("o2h: Audio ring buffer overflow. Discarding data...");
     }
 
   pthread_spin_lock (&engine->lock);
@@ -222,7 +222,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
 	      ow_engine_get_status (engine) == OW_ENGINE_STATUS_RUN)
 	    {
 	      bytes = ow_bytes_to_frame_bytes (rsh2o, engine->h2o_frame_size);
-	      debug_print (2, "h2o: Emptying buffer (%zu B) and running...\n",
+	      debug_print (2, "h2o: Emptying buffer (%zu B) and running...",
 			   bytes);
 	      engine->context->read (engine->context->h2o_audio, NULL, bytes);
 	      engine->reading_at_h2o_end = 1;
@@ -234,7 +234,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
     {
       if (engine->reading_at_h2o_end)
 	{
-	  debug_print (2, "h2o: Clearing buffer and stopping...\n");
+	  debug_print (2, "h2o: Clearing buffer and stopping...");
 	  memset (engine->h2o_transfer_buf, 0, engine->h2o_transfer_size);
 	  engine->reading_at_h2o_end = 0;
 	  engine->h2o_max_latency = 0;
@@ -260,7 +260,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
   else if (rsh2o > engine->h2o_frame_size)	//At least 2 frames to apply resampling to
     {
       debug_print (2,
-		   "h2o: Audio ring buffer underflow (%zu B < %zu B). Resampling...\n",
+		   "h2o: Audio ring buffer underflow (%zu B < %zu B). Resampling...",
 		   rsh2o, engine->h2o_transfer_size);
       frames = rsh2o / engine->h2o_frame_size;
       bytes = frames * engine->h2o_frame_size;
@@ -275,21 +275,21 @@ set_usb_output_data_blks (struct ow_engine *engine)
       if (res)
 	{
 	  error_print
-	    ("h2o: Error while resampling %zu frames (%zu B, ratio %f): %s\n",
+	    ("h2o: Error while resampling %zu frames (%zu B, ratio %f): %s",
 	     frames, bytes, engine->h2o_data.src_ratio, src_strerror (res));
 	}
       else if (engine->h2o_data.output_frames_gen !=
 	       engine->frames_per_transfer)
 	{
 	  error_print
-	    ("h2o: Unexpected frames with ratio %f (output %ld, expected %d)\n",
+	    ("h2o: Unexpected frames with ratio %f (output %ld, expected %d)",
 	     engine->h2o_data.src_ratio, engine->h2o_data.output_frames_gen,
 	     engine->frames_per_transfer);
 	}
     }
   else
     {
-      debug_print (2, "h2o: Not enough data (%zu B). Waiting...\n", rsh2o);
+      debug_print (2, "h2o: Not enough data (%zu B). Waiting...", rsh2o);
       memset (engine->h2o_transfer_buf, 0, engine->h2o_transfer_size);
     }
 
@@ -307,8 +307,8 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
       if (xfr->length < xfr->actual_length)
 	{
 	  error_print
-	    ("o2h: incomplete USB audio transfer (%d B < %d B)\n",
-	     xfr->length, xfr->actual_length);
+	    ("o2h: incomplete USB audio transfer (%d B < %d B)", xfr->length,
+	     xfr->actual_length);
 	}
 
       struct ow_engine *engine = xfr->user_data;
@@ -319,7 +319,7 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
     }
   else
     {
-      error_print ("o2h: Error on USB audio transfer: %s\n",
+      error_print ("o2h: Error on USB audio transfer: %s",
 		   libusb_error_name (xfr->status));
     }
 
@@ -340,13 +340,13 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
       if (xfr->length < xfr->actual_length)
 	{
 	  error_print
-	    ("h2o: incomplete USB audio transfer (%d B < %d B)\n",
-	     xfr->length, xfr->actual_length);
+	    ("h2o: incomplete USB audio transfer (%d B < %d B)", xfr->length,
+	     xfr->actual_length);
 	}
     }
   else
     {
-      error_print ("h2o: Error on USB audio transfer: %s\n",
+      error_print ("h2o: Error on USB audio transfer: %s",
 		   libusb_error_name (xfr->status));
     }
 
@@ -381,7 +381,7 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
 	  if (event.packet.header >= 0x04 && event.packet.header <= 0x0f)
 	    {
 	      debug_print (2,
-			   "o2h MIDI packet: %02x %02x %02x %02x @ %lu us\n",
+			   "o2h MIDI packet: %02x %02x %02x %02x @ %lu us",
 			   event.packet.header, event.packet.data[0],
 			   event.packet.data[1], event.packet.data[2],
 			   event.time);
@@ -395,7 +395,7 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
 		}
 	      else
 		error_print
-		  ("o2h: MIDI ring buffer overflow. Discarding data...\n");
+		  ("o2h: MIDI ring buffer overflow. Discarding data...");
 	    }
 	  else
 	    {
@@ -411,7 +411,7 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
     {
       if (xfr->status != LIBUSB_TRANSFER_TIMED_OUT)
 	{
-	  error_print ("Error on USB MIDI in transfer: %s\n",
+	  error_print ("Error on USB MIDI in transfer: %s",
 		       libusb_strerror (xfr->status));
 	}
     }
@@ -433,7 +433,7 @@ cb_xfr_midi_out (struct libusb_transfer *xfr)
 
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
     {
-      error_print ("Error on USB MIDI out transfer: %s\n",
+      error_print ("Error on USB MIDI out transfer: %s",
 		   libusb_strerror (xfr->status));
     }
 }
@@ -451,7 +451,7 @@ prepare_cycle_out_audio (struct ow_engine *engine)
   int err = libusb_submit_transfer (engine->usb.xfr_audio_out);
   if (err)
     {
-      error_print ("h2o: Error when submitting USB audio transfer: %s\n",
+      error_print ("h2o: Error when submitting USB audio transfer: %s",
 		   libusb_strerror (err));
       ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
     }
@@ -470,7 +470,7 @@ prepare_cycle_in_audio (struct ow_engine *engine)
   int err = libusb_submit_transfer (engine->usb.xfr_audio_in);
   if (err)
     {
-      error_print ("o2h: Error when submitting USB audio in transfer: %s\n",
+      error_print ("o2h: Error when submitting USB audio in transfer: %s",
 		   libusb_strerror (err));
       ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
     }
@@ -488,7 +488,7 @@ prepare_cycle_in_midi (struct ow_engine *engine)
   int err = libusb_submit_transfer (engine->usb.xfr_midi_in);
   if (err)
     {
-      error_print ("o2h: Error when submitting USB MIDI transfer: %s\n",
+      error_print ("o2h: Error when submitting USB MIDI transfer: %s",
 		   libusb_strerror (err));
       ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
     }
@@ -506,7 +506,7 @@ prepare_cycle_out_midi (struct ow_engine *engine)
   int err = libusb_submit_transfer (engine->usb.xfr_midi_out);
   if (err)
     {
-      error_print ("h2o: Error when submitting USB MIDI transfer: %s\n",
+      error_print ("h2o: Error when submitting USB MIDI transfer: %s",
 		   libusb_strerror (err));
       ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
     }
@@ -539,7 +539,7 @@ ow_engine_init_mem (struct ow_engine *engine,
   pthread_spin_init (&engine->lock, PTHREAD_PROCESS_SHARED);
 
   engine->blocks_per_transfer = blocks_per_transfer;
-  debug_print (1, "Blocks per transfer: %u\n", engine->blocks_per_transfer);
+  debug_print (1, "Blocks per transfer: %u", engine->blocks_per_transfer);
 
   engine->frames_per_transfer =
     OB_FRAMES_PER_BLOCK * engine->blocks_per_transfer;
@@ -552,8 +552,8 @@ ow_engine_init_mem (struct ow_engine *engine,
   engine->h2o_min_latency =
     engine->frames_per_transfer * engine->h2o_frame_size;
 
-  debug_print (2, "o2h: USB in frame size: %zu B\n", engine->o2h_frame_size);
-  debug_print (2, "h2o: USB out frame size: %zu B\n", engine->h2o_frame_size);
+  debug_print (2, "o2h: USB in frame size: %zu B", engine->o2h_frame_size);
+  debug_print (2, "h2o: USB out frame size: %zu B", engine->h2o_frame_size);
 
   engine->usb.audio_in_blk_len =
     sizeof (struct ow_engine_usb_blk) +
@@ -562,9 +562,9 @@ ow_engine_init_mem (struct ow_engine *engine,
     sizeof (struct ow_engine_usb_blk) +
     OB_FRAMES_PER_BLOCK * engine->h2o_frame_size;
 
-  debug_print (2, "o2h: USB in block size: %zu B\n",
+  debug_print (2, "o2h: USB in block size: %zu B",
 	       engine->usb.audio_in_blk_len);
-  debug_print (2, "h2o: USB out block size: %zu B\n",
+  debug_print (2, "h2o: USB out block size: %zu B",
 	       engine->usb.audio_out_blk_len);
 
   engine->o2h_transfer_size =
@@ -572,9 +572,9 @@ ow_engine_init_mem (struct ow_engine *engine,
   engine->h2o_transfer_size =
     engine->frames_per_transfer * engine->h2o_frame_size;
 
-  debug_print (2, "o2h: audio transfer size: %zu B\n",
+  debug_print (2, "o2h: audio transfer size: %zu B",
 	       engine->o2h_transfer_size);
-  debug_print (2, "h2o: audio transfer size: %zu B\n",
+  debug_print (2, "h2o: audio transfer size: %zu B",
 	       engine->h2o_transfer_size);
 
   engine->usb.audio_frames_counter = 0;
@@ -639,7 +639,7 @@ ow_engine_init (struct ow_engine *engine, unsigned int blocks_per_transfer,
   engine->usb.xfr_control_out = NULL;
 
   engine->usb.xfr_timeout = xfr_timeout;
-  debug_print (1, "USB transfer timeout: %u\n", engine->usb.xfr_timeout);
+  debug_print (1, "USB transfer timeout: %u", engine->usb.xfr_timeout);
 
   err = libusb_set_configuration (engine->usb.device_handle, 1);
   if (LIBUSB_SUCCESS != err)
@@ -722,7 +722,7 @@ end:
     {
       usb_shutdown (engine);
       free (engine);
-      error_print ("Error while initializing device: %s\n",
+      error_print ("Error while initializing device: %s",
 		   libusb_error_name (err));
     }
   return ret;
@@ -786,7 +786,7 @@ error:
   return err;
 #else
   error_print
-    ("The libusb version 0x%.8x does not support opening a device descriptor\n",
+    ("The libusb version 0x%.8x does not support opening a device descriptor",
      LIBUSB_API_VERSION);
   return OW_GENERIC_ERROR;
 #endif
@@ -835,7 +835,7 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
 	  err = libusb_open (*device, &engine->usb.device_handle);
 	  if (err)
 	    {
-	      error_print ("Error while opening device: %s\n",
+	      error_print ("Error while opening device: %s",
 			   libusb_error_name (err));
 	    }
 
@@ -915,7 +915,7 @@ run_h2o_midi (void *data)
 				     (void *) &event,
 				     sizeof (struct ow_midi_event));
 	      debug_print (2,
-			   "h2o MIDI packet: %02x %02x %02x %02x @ %lu us\n",
+			   "h2o MIDI packet: %02x %02x %02x %02x @ %lu us",
 			   event.packet.header, event.packet.data[0],
 			   event.packet.data[1], event.packet.data[2],
 			   event.time);
@@ -944,7 +944,7 @@ run_h2o_midi (void *data)
       if (len)
 	{
 	  engine->h2o_midi_ready = 0;
-	  debug_print (2, "Sending %d bytes to MIDI endpoint...\n", len);
+	  debug_print (2, "Sending %d bytes to MIDI endpoint...", len);
 
 	  prepare_cycle_out_midi (engine);
 
@@ -969,7 +969,7 @@ run_h2o_midi (void *data)
 	  delta -= after_usb - before_usb;
 	  if (delta > 0)
 	    {
-	      debug_print (2, "Sleeping %lu us...\n", delta);
+	      debug_print (2, "Sleeping %lu us...", delta);
 	      sleep_time.tv_sec = delta / 1000000;
 	      sleep_time.tv_nsec = (delta - sleep_time.tv_sec) * 1e3;
 	      nanosleep (&sleep_time, NULL);
@@ -1073,7 +1073,7 @@ run_audio_o2h_midi (void *data)
 
       //status == OW_ENGINE_STATUS_BOOT || status == OW_ENGINE_STATUS_CLEAR
 
-      debug_print (1, "Clearing buffers...\n");
+      debug_print (1, "Clearing buffers...");
 
       rsh2o = engine->context->read_space (engine->context->h2o_audio);
       bytes = ow_bytes_to_frame_bytes (rsh2o, engine->h2o_frame_size);
@@ -1085,7 +1085,7 @@ run_audio_o2h_midi (void *data)
 
   //Handle completed events but not actually processed.
   //No new transfers will be submitted due to the status.
-  debug_print (2, "Processing remaining event...\n");
+  debug_print (2, "Processing remaining event...");
   libusb_handle_events_completed (engine->usb.context, NULL);
 
   return NULL;
@@ -1200,11 +1200,11 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 
   if (h2o_midi_thread)
     {
-      debug_print (1, "Starting h2o MIDI thread...\n");
+      debug_print (1, "Starting h2o MIDI thread...");
       if (pthread_create (&engine->h2o_midi_thread, NULL, run_h2o_midi,
 			  engine))
 	{
-	  error_print ("Could not start MIDI thread\n");
+	  error_print ("Could not start MIDI thread");
 	  return OW_GENERIC_ERROR;
 	}
       context->set_rt_priority (engine->h2o_midi_thread,
@@ -1213,11 +1213,11 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 
   if (audio_o2h_midi_thread)
     {
-      debug_print (1, "Starting audio and o2h MIDI thread...\n");
+      debug_print (1, "Starting audio and o2h MIDI thread...");
       if (pthread_create (&engine->audio_o2h_midi_thread, NULL,
 			  run_audio_o2h_midi, engine))
 	{
-	  error_print ("Could not start device thread\n");
+	  error_print ("Could not start device thread");
 	  return OW_GENERIC_ERROR;
 	}
       context->set_rt_priority (engine->audio_o2h_midi_thread,
@@ -1313,7 +1313,7 @@ ow_engine_set_option (struct ow_engine *engine, ow_engine_option_t option,
 	  engine->context->options &= ~option;
 	}
       pthread_spin_unlock (&engine->lock);
-      debug_print (1, "Setting option %d to %d...\n", option, enabled);
+      debug_print (1, "Setting option %d to %d...", option, enabled);
     }
 }
 
@@ -1374,14 +1374,14 @@ ow_engine_load_overbridge_name (struct ow_engine *engine)
 
   if (res >= 0)
     {
-      debug_print (1, "USB control in data (%d B): %s\n", res,
+      debug_print (1, "USB control in data (%d B): %s", res,
 		   engine->usb.xfr_control_in_data);
       memcpy (engine->overbridge_name, engine->usb.xfr_control_in_data,
 	      OB_NAME_MAX_LEN);
     }
   else
     {
-      error_print ("Error on USB control in transfer: %s\n",
+      error_print ("Error on USB control in transfer: %s",
 		   libusb_strerror (res));
     }
 
@@ -1394,12 +1394,12 @@ ow_engine_load_overbridge_name (struct ow_engine *engine)
 
   if (res >= 0)
     {
-      debug_print (1, "USB control in data (%d B): %s\n", res,
+      debug_print (1, "USB control in data (%d B): %s", res,
 		   engine->usb.xfr_control_in_data);
     }
   else
     {
-      error_print ("Error on USB control in transfer: %s\n",
+      error_print ("Error on USB control in transfer: %s",
 		   libusb_strerror (res));
     }
 }
@@ -1409,7 +1409,7 @@ cb_xfr_control_out (struct libusb_transfer *xfr)
 {
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
     {
-      error_print ("Error on USB control out transfer: %s\n",
+      error_print ("Error on USB control out transfer: %s",
 		   libusb_strerror (xfr->status));
     }
 }
@@ -1435,7 +1435,7 @@ ow_engine_set_overbridge_name (struct ow_engine *engine, const char *name)
   int err = libusb_submit_transfer (engine->usb.xfr_control_out);
   if (err)
     {
-      error_print ("Error when submitting USB control transfer: %s\n",
+      error_print ("Error when submitting USB control transfer: %s",
 		   libusb_strerror (err));
       ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
     }
