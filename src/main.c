@@ -837,7 +837,7 @@ open_preferences (GtkWidget *object, gpointer data)
 }
 
 static void
-quit (int signo)
+quit ()
 {
   stop_all (NULL, NULL);
   usleep (PAUSE_TO_BE_NOTIFIED_USECS);	//Time to let the devices notify us.
@@ -854,8 +854,28 @@ quit (int signo)
 static gboolean
 overwitch_delete_window (GtkWidget *widget, GdkEvent *event, gpointer data)
 {
-  quit (0);
+  quit ();
   return FALSE;
+}
+
+static void
+signal_handler (int signum)
+{
+  if (signum == SIGUSR1)
+    {
+      debug_level++;
+      debug_print (1, "Debug level: %d", debug_level);
+    }
+  else if (signum == SIGUSR2)
+    {
+      debug_level--;
+      debug_level = debug_level < 0 ? 0 : debug_level;
+      debug_print (1, "Debug level: %d", debug_level);
+    }
+  else
+    {
+      quit ();
+    }
 }
 
 int
@@ -893,13 +913,15 @@ main (int argc, char *argv[])
       debug_level = vflg;
     }
 
-  action.sa_handler = quit;
+  action.sa_handler = signal_handler;
   sigemptyset (&action.sa_mask);
   action.sa_flags = 0;
   sigaction (SIGHUP, &action, NULL);
   sigaction (SIGINT, &action, NULL);
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGTSTP, &action, NULL);
+  sigaction (SIGUSR1, &action, NULL);
+  sigaction (SIGUSR2, &action, NULL);
 
   setlocale (LC_ALL, "");
   bindtextdomain (PACKAGE, LOCALEDIR);

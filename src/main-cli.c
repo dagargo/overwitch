@@ -44,10 +44,10 @@ static struct option options[] = {
 };
 
 static void
-signal_handler (int signo)
+signal_handler (int signum)
 {
-  if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM
-      || signo == SIGTSTP)
+  if (signum == SIGHUP || signum == SIGINT || signum == SIGTERM
+      || signum == SIGTSTP)
     {
       struct jclient *jclient = jclients;
       for (int i = 0; i < jclient_count; i++, jclient++)
@@ -55,13 +55,16 @@ signal_handler (int signo)
 	  jclient_stop (jclient);
 	}
     }
-  else if (signo == SIGUSR1)
+  else if (signum == SIGUSR1)
     {
-      struct jclient *jclient = jclients;
-      for (int i = 0; i < jclient_count; i++, jclient++)
-	{
-	  ow_resampler_report_status (jclient->resampler);
-	}
+      debug_level++;
+      debug_print (1, "Debug level: %d", debug_level);
+    }
+  else if (signum == SIGUSR2)
+    {
+      debug_level--;
+      debug_level = debug_level < 0 ? 0 : debug_level;
+      debug_print (1, "Debug level: %d", debug_level);
     }
 }
 
@@ -176,8 +179,9 @@ main (int argc, char *argv[])
   sigaction (SIGHUP, &action, NULL);
   sigaction (SIGINT, &action, NULL);
   sigaction (SIGTERM, &action, NULL);
-  sigaction (SIGUSR1, &action, NULL);
   sigaction (SIGTSTP, &action, NULL);
+  sigaction (SIGUSR1, &action, NULL);
+  sigaction (SIGUSR2, &action, NULL);
 
   while ((opt = getopt_long (argc, argv, "n:d:q:b:t:p:lvh",
 			     options, &long_index)) != -1)
