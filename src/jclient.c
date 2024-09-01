@@ -409,7 +409,7 @@ jclient_j2o_midi_msg (struct jclient *jclient, jack_midi_event_t *jevent,
 
   oevent.packet.header = 0;
 
-  debug_print (2, "Sending MIDI mesage...");
+  debug_print (2, "Sending MIDI message...");
 
   if (jevent->size == 1)
     {
