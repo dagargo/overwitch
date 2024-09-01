@@ -394,8 +394,10 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
 					  sizeof (struct ow_midi_event));
 		}
 	      else
-		error_print
-		  ("o2h: MIDI ring buffer overflow. Discarding data...");
+		{
+		  error_print
+		    ("o2h: MIDI ring buffer overflow. Discarding data...");
+		}
 	    }
 	  else
 	    {
