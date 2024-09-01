@@ -550,15 +550,17 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes,
 
   for (int i = 0; i < event_count; i++)
     {
-      jack_midi_event_get (&jevent, midi_port_buf, i);
-      if (jevent.buffer[0] == 0xf0 || jclient->j2o_ongoing_sysex)
+      if (!jack_midi_event_get (&jevent, midi_port_buf, i))
 	{
-	  jclient->j2o_ongoing_sysex = 1;
-	  jclient_j2o_midi_sysex (jclient, &jevent, time);
-	}
-      else
-	{
-	  jclient_j2o_midi_msg (jclient, &jevent, time);
+	  if (jevent.buffer[0] == 0xf0 || jclient->j2o_ongoing_sysex)
+	    {
+	      jclient->j2o_ongoing_sysex = 1;
+	      jclient_j2o_midi_sysex (jclient, &jevent, time);
+	    }
+	  else
+	    {
+	      jclient_j2o_midi_msg (jclient, &jevent, time);
+	    }
 	}
     }
 }
