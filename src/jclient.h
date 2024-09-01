@@ -49,7 +49,6 @@ struct jclient
   struct squeue j2o_midi_queue;
   int o2j_midi_skipping;
   uint32_t o2j_last_lost_count;
-  uint32_t j2o_midi_sysex_pending;
   //Parameters
   uint8_t bus;
   uint8_t address;

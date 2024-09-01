@@ -523,17 +523,12 @@ jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
       jclient_copy_event_bytes (&oevent, start, plen);
       jclient_j2o_midi_queue_event (jclient, &oevent);
       consumed += plen;
-      jclient->j2o_midi_sysex_pending += plen;
-
-      if (end)
-	{
-	  debug_print (3, "SysEx message bytes: %d",
-		       jclient->j2o_midi_sysex_pending);
-	  jclient->j2o_midi_sysex_pending = 0;
-	}
     }
 
   squeue_consume (&jclient->j2o_midi_queue, consumed);
+
+  debug_print (2, "SysEx message pending bytes: %d",
+	       jclient->j2o_midi_queue.len);
 }
 
 static inline void
@@ -552,6 +547,7 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes,
     {
       if (!jack_midi_event_get (&jevent, midi_port_buf, i))
 	{
+	  debug_print (2, "Processing MIDI event...");
 	  if (jevent.buffer[0] == 0xf0 || jclient->j2o_ongoing_sysex)
 	    {
 	      jclient->j2o_ongoing_sysex = 1;
@@ -912,7 +908,6 @@ jclient_run (struct jclient *jclient)
 
   jclient->o2j_midi_skipping = 0;
   jclient->o2j_last_lost_count = 0;
-  jclient->j2o_midi_sysex_pending = 0;
 
   err = ow_resampler_start (jclient->resampler, &jclient->context);
   if (err)
