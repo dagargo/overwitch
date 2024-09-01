@@ -892,24 +892,24 @@ static const char *ob_err_strgs[] = {
 static void *
 run_h2o_midi (void *data)
 {
-  int len, h2o_midi_ready, event_read = 0;
+  int len, h2o_midi_ready, event_read;
   uint8_t *pos;
-  int64_t delta;
-  uint64_t last_time, before_usb, after_usb;
+  uint64_t last_time, before_usb, after_usb, delta_event, delta_usb;
   struct timespec sleep_time;
   struct ow_midi_event event;
   struct ow_engine *engine = data;
 
+  event_read = 0;
   len = 0;
-  delta = 0;
   last_time = 0;
+  delta_event = 0;
   pos = engine->usb.xfr_midi_out_data;
   memset (pos, 0, USB_BULK_MIDI_LEN);
   while (1)
     {
-      while ((engine->context->read_space (engine->context->h2o_midi) >=
-	      sizeof (struct ow_midi_event) || event_read) &&
-	     len < USB_BULK_MIDI_LEN)
+      while ((event_read
+	      || engine->context->read_space (engine->context->h2o_midi) >=
+	      sizeof (struct ow_midi_event)) && len < USB_BULK_MIDI_LEN)
 	{
 	  if (!event_read)
 	    {
@@ -922,19 +922,21 @@ run_h2o_midi (void *data)
 			   event.packet.data[1], event.packet.data[2],
 			   event.time);
 	      event_read = 1;
-	    }
-
-	  if (last_time == 0)
-	    {
-	      last_time = event.time;
-	      delta = 0;
-	    }
-
-	  if (event.time > last_time)
-	    {
-	      delta = event.time - last_time;
-	      last_time = event.time;
-	      break;
+	      if (len == 0)
+		{
+		  debug_print (1, "Init bytes to MIDI endpoint...");
+		  delta_event = 0;
+		  last_time = event.time;
+		}
+	      else
+		{
+		  if (event.time != last_time)
+		    {
+		      delta_event = event.time - last_time;
+		      last_time = event.time;
+		      break;
+		    }
+		}
 	    }
 
 	  memcpy (pos, event.raw, OB_MIDI_EVENT_SIZE);
@@ -945,6 +947,8 @@ run_h2o_midi (void *data)
 
       if (len)
 	{
+	  int64_t delta;
+
 	  engine->h2o_midi_ready = 0;
 	  debug_print (2, "Sending %d bytes to MIDI endpoint...", len);
 
@@ -968,7 +972,8 @@ run_h2o_midi (void *data)
 	  after_usb = engine->context->get_time ();
 
 	  //Sleep until the next event (already read)
-	  delta -= after_usb - before_usb;
+	  delta_usb = after_usb - before_usb;
+	  delta = delta_event - delta_usb;
 	  if (delta > 0)
 	    {
 	      debug_print (2, "Sleeping %lu us...", delta);
@@ -976,7 +981,6 @@ run_h2o_midi (void *data)
 	      sleep_time.tv_nsec = (delta - sleep_time.tv_sec) * 1e3;
 	      nanosleep (&sleep_time, NULL);
 	    }
-	  last_time = 0;
 
 	  len = 0;
 	  pos = engine->usb.xfr_midi_out_data;
