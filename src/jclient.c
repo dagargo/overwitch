@@ -338,6 +338,11 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	  continue;
 	}
 
+      debug_print (3,
+		   "o2j MIDI packet: %02x %02x %02x %02x @ %lu us",
+		   event.packet.header, event.packet.data[0],
+		   event.packet.data[1], event.packet.data[2], event.time);
+
       if (squeue_write (&jclient->o2j_midi_queue, event.packet.data, len))
 	{
 	  jclient->o2j_midi_skipping = 1;	//No space. We skip the current message being sent.
@@ -377,7 +382,7 @@ jclient_j2o_midi_queue_event (struct jclient *jclient,
   if (jack_ringbuffer_write_space (jclient->context.h2o_midi) >=
       sizeof (struct ow_midi_event))
     {
-      debug_print (2,
+      debug_print (3,
 		   "j2o MIDI packet: %02x %02x %02x %02x @ %lu us",
 		   event->packet.header, event->packet.data[0],
 		   event->packet.data[1], event->packet.data[2], event->time);

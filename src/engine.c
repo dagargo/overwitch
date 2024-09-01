@@ -380,7 +380,7 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
 	  //Multiple Byte SysEx, Note-off, Note-on, Poly-KeyPress, Control Change, Program Change, Channel Pressure, PitchBend Change, Single Byte SysEx
 	  if (event.packet.header >= 0x04 && event.packet.header <= 0x0f)
 	    {
-	      debug_print (2,
+	      debug_print (3,
 			   "o2h MIDI packet: %02x %02x %02x %02x @ %lu us",
 			   event.packet.header, event.packet.data[0],
 			   event.packet.data[1], event.packet.data[2],
@@ -916,7 +916,7 @@ run_h2o_midi (void *data)
 	      engine->context->read (engine->context->h2o_midi,
 				     (void *) &event,
 				     sizeof (struct ow_midi_event));
-	      debug_print (2,
+	      debug_print (3,
 			   "h2o MIDI packet: %02x %02x %02x %02x @ %lu us",
 			   event.packet.header, event.packet.data[0],
 			   event.packet.data[1], event.packet.data[2],
