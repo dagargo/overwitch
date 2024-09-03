@@ -381,7 +381,7 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
 	  if (event.packet.header >= 0x04 && event.packet.header <= 0x0f)
 	    {
 	      debug_print (3,
-			   "o2h MIDI packet: %02x %02x %02x %02x @ %lu us",
+			   "o2h: MIDI packet: %02x %02x %02x %02x @ %lu us",
 			   event.packet.header, event.packet.data[0],
 			   event.packet.data[1], event.packet.data[2],
 			   event.time);
@@ -917,14 +917,13 @@ run_h2o_midi (void *data)
 				     (void *) &event,
 				     sizeof (struct ow_midi_event));
 	      debug_print (3,
-			   "h2o MIDI packet: %02x %02x %02x %02x @ %lu us",
+			   "h2o: MIDI packet: %02x %02x %02x %02x @ %lu us",
 			   event.packet.header, event.packet.data[0],
 			   event.packet.data[1], event.packet.data[2],
 			   event.time);
 	      event_read = 1;
 	      if (len == 0)
 		{
-		  debug_print (1, "Init bytes to MIDI endpoint...");
 		  delta_event = 0;
 		  last_time = event.time;
 		}

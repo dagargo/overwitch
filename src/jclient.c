@@ -236,7 +236,6 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 
   last_frame = jack_last_frame_time (jclient->client);
 
-
   while (jack_ringbuffer_read_space (jclient->context.o2h_midi) >=
 	 sizeof (struct ow_midi_event))
     {
@@ -249,13 +248,13 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
       jack_frame = jack_time_to_frames (jclient->client, event.time) +
 	nframes;
 
-      debug_print (2, "last frame: %u", last_frame);
-      debug_print (2, "JACK frame: %u", jack_frame);
+      debug_print (3, "o2j: last frame: %u", last_frame);
+      debug_print (3, "o2j: JACK frame: %u", jack_frame);
 
       if (jack_frame < last_frame)
 	{
 	  frame = 0;
-	  debug_print (2, "Processing missed event @ %lu us...", frame);
+	  debug_print (2, "o2j: Processing missed event @ %lu us...", frame);
 	}
       else
 	{
@@ -263,13 +262,13 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 	  if (frame >= nframes)
 	    {
 	      debug_print (2,
-			   "Skipping until the next cycle (event frames %lu)...",
+			   "o2j: Skipping until the next cycle (event frames %lu)...",
 			   frame);
 	      break;
 	    }
 	}
 
-      debug_print (2, "Event frames: %lu", frame);
+      debug_print (2, "o2j: Event frames: %lu", frame);
 
       jack_ringbuffer_read_advance (jclient->context.o2h_midi,
 				    sizeof (struct ow_midi_event));
@@ -355,7 +354,7 @@ jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
 					   jclient->o2j_midi_queue.len);
 	  if (jmidi)
 	    {
-	      debug_print (2, "o2j: MIDI message to process @ %lu (%d B)",
+	      debug_print (2, "o2j: Processing MIDI event @ %lu (%d B)",
 			   frame, jclient->o2j_midi_queue.len);
 	      squeue_read (&jclient->o2j_midi_queue, jmidi);
 	    }
@@ -383,7 +382,7 @@ jclient_j2o_midi_queue_event (struct jclient *jclient,
       sizeof (struct ow_midi_event))
     {
       debug_print (3,
-		   "j2o MIDI packet: %02x %02x %02x %02x @ %lu us",
+		   "j2o: MIDI packet: %02x %02x %02x %02x @ %lu us",
 		   event->packet.header, event->packet.data[0],
 		   event->packet.data[1], event->packet.data[2], event->time);
 
@@ -414,7 +413,7 @@ jclient_j2o_midi_msg (struct jclient *jclient, jack_midi_event_t *jevent,
 
   oevent.packet.header = 0;
 
-  debug_print (2, "Sending MIDI message...");
+  debug_print (2, "j2o: Sending MIDI message...");
 
   if (jevent->size == 1)
     {
@@ -483,7 +482,7 @@ jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
       return;
     }
 
-  debug_print (2, "Sending MIDI SysEx packets...");
+  debug_print (2, "j2o: Sending MIDI SysEx packets...");
 
   b = jclient->j2o_midi_queue.data;
   consumed = 0;
@@ -516,6 +515,12 @@ jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
 	      end = 1;
 	      plen = i + 1;
 	      jclient->j2o_ongoing_sysex = 0;
+
+	      error_print
+		("j2o: MIDI packet (%ld): %02x %02x %02x %02x @ %lu us", plen,
+		 oevent.packet.header, *start, *(start + 1), *(start + 2),
+		 oevent.time);
+
 	      break;
 	    }
 	}
@@ -532,7 +537,7 @@ jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
 
   squeue_consume (&jclient->j2o_midi_queue, consumed);
 
-  debug_print (2, "SysEx message pending bytes: %d",
+  debug_print (2, "j2o: SysEx message pending bytes: %d",
 	       jclient->j2o_midi_queue.len);
 }
 
@@ -552,7 +557,8 @@ jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes,
     {
       if (!jack_midi_event_get (&jevent, midi_port_buf, i))
 	{
-	  debug_print (2, "Processing MIDI event...");
+	  debug_print (2, "j2o: Processing MIDI event @ %u (%zu B)",
+		       jevent.time, jevent.size);
 	  if (jevent.buffer[0] == 0xf0 || jclient->j2o_ongoing_sysex)
 	    {
 	      jclient->j2o_ongoing_sysex = 1;
