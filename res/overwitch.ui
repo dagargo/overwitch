@@ -1,17 +1,42 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.40.0 -->
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Created with Cambalache 0.90.4 -->
 <interface>
-  <requires lib="gtk+" version="3.24"/>
+  <!-- interface-name overwitch.ui -->
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="gio" version="2.0"/>
+  <menu id="main_popover_model">
+    <section>
+      <item>
+        <attribute name="action">app.refresh_at_startup</attribute>
+        <attribute name="label" translatable="yes">Refresh At Startup</attribute>
+      </item>
+      <item>
+        <attribute name="action">app.show_all_columns</attribute>
+        <attribute name="label" translatable="yes">Show All Columns</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="action">app.open_preferences</attribute>
+        <attribute name="label" translatable="yes">Preferences</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="action">app.open_about</attribute>
+        <attribute name="label" translatable="yes">About</attribute>
+      </item>
+    </section>
+  </menu>
   <object class="GtkAdjustment" id="blocks_adjustment">
     <property name="lower">2</property>
+    <property name="page-increment">4</property>
+    <property name="step-increment">1</property>
     <property name="upper">24</property>
     <property name="value">24</property>
-    <property name="step-increment">1</property>
-    <property name="page-increment">4</property>
   </object>
   <object class="GtkListStore" id="quality_list_store">
     <columns>
-      <!-- column-name name -->
       <column type="gchararray"/>
     </columns>
     <data>
@@ -34,336 +59,131 @@
   </object>
   <object class="GtkListStore" id="status_list_store">
     <columns>
-      <!-- column-name status -->
       <column type="gchararray"/>
-      <!-- column-name name -->
       <column type="gchararray"/>
-      <!-- column-name device -->
       <column type="gchararray"/>
-      <!-- column-name bus -->
       <column type="guint"/>
-      <!-- column-name address -->
       <column type="guint"/>
-      <!-- column-name o2j_latency -->
       <column type="gchararray"/>
-      <!-- column-name j2o_latency -->
       <column type="gchararray"/>
-      <!-- column-name o2j_ratio -->
       <column type="gfloat"/>
-      <!-- column-name j2o_ratio -->
       <column type="gfloat"/>
-      <!-- column-name instance -->
       <column type="gpointer"/>
     </columns>
   </object>
   <object class="GtkAdjustment" id="transfer_timeout_adjustment">
     <property name="lower">1</property>
+    <property name="page-increment">10</property>
+    <property name="step-increment">1</property>
     <property name="upper">100</property>
     <property name="value">10</property>
-    <property name="step-increment">1</property>
-    <property name="page-increment">10</property>
   </object>
   <object class="GtkAboutDialog" id="about_dialog">
-    <property name="can-focus">False</property>
-    <property name="modal">True</property>
-    <property name="type-hint">dialog</property>
-    <property name="transient-for">main_window</property>
-    <property name="program-name">Overwitch</property>
-    <property name="copyright">Copyright © 2022 David García Goñi</property>
-    <property name="comments" translatable="yes">Overbridge 2 device client for JACK</property>
-    <property name="website">https://github.com/dagargo/overwitch</property>
     <property name="authors">David García Goñi&lt;dagargo@gmail.com&gt;
 Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
-    <property name="translator-credits" translatable="yes">translator-credits</property>
-    <property name="logo-icon-name">overwitch</property>
+    <property name="comments" translatable="yes">Overbridge 2 device client for JACK</property>
+    <property name="copyright">Copyright © 2022 David García Goñi</property>
+    <property name="hide-on-close">1</property>
     <property name="license-type">gpl-3-0</property>
-    <child internal-child="vbox">
-      <object class="GtkBox">
-        <property name="can-focus">False</property>
-        <property name="orientation">vertical</property>
-        <property name="spacing">2</property>
-        <child internal-child="action_area">
-          <object class="GtkButtonBox">
-            <property name="can-focus">False</property>
-            <property name="layout-style">end</property>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">False</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-        <child>
-          <placeholder/>
-        </child>
-      </object>
-    </child>
-  </object>
-  <object class="GtkPopoverMenu" id="main_popover">
-    <property name="can-focus">False</property>
-    <property name="relative-to">menu_button</property>
-    <child>
-      <object class="GtkBox">
-        <property name="visible">True</property>
-        <property name="can-focus">False</property>
-        <property name="margin-start">9</property>
-        <property name="margin-end">9</property>
-        <property name="margin-top">9</property>
-        <property name="margin-bottom">9</property>
-        <property name="orientation">vertical</property>
-        <child>
-          <object class="GtkModelButton" id="refresh_at_startup_button">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="text" translatable="yes">Refresh At Startup</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkModelButton" id="show_all_columns_button">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="text" translatable="yes">Show All Columns</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">1</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkSeparator">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">2</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkModelButton" id="preferences_button">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="text" translatable="yes">Preferences</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">3</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkSeparator">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">4</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkModelButton" id="about_button">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="receives-default">True</property>
-            <property name="text" translatable="yes">About</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">5</property>
-          </packing>
-        </child>
-      </object>
-      <packing>
-        <property name="submenu">main</property>
-        <property name="position">1</property>
-      </packing>
-    </child>
+    <property name="logo-icon-name">overwitch</property>
+    <property name="modal">1</property>
+    <property name="program-name">Overwitch</property>
+    <property name="transient-for">main_window</property>
+    <property name="translator-credits" translatable="yes">translator-credits</property>
+    <property name="website">https://github.com/dagargo/overwitch</property>
   </object>
   <object class="GtkWindow" id="main_window">
-    <property name="can-focus">False</property>
-    <property name="margin-start">6</property>
-    <property name="margin-end">6</property>
-    <property name="margin-bottom">6</property>
-    <property name="resizable">False</property>
-    <property name="icon-name">overwitch</property>
-    <child>
+    <property name="child">
       <object class="GtkBox">
-        <property name="visible">True</property>
-        <property name="can-focus">False</property>
-        <property name="margin-start">6</property>
-        <property name="margin-end">6</property>
-        <property name="margin-top">6</property>
         <property name="margin-bottom">6</property>
+        <property name="margin-end">6</property>
+        <property name="margin-start">6</property>
+        <property name="margin-top">6</property>
         <property name="orientation">vertical</property>
         <property name="spacing">6</property>
         <child>
           <object class="GtkBox">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
             <property name="spacing">6</property>
             <child>
               <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="tooltip-text" translatable="yes">Overbridge Blocks (7 frames) per USB Transfer</property>
                 <property name="label" translatable="yes">Blocks per Transfer</property>
+                <property name="tooltip-text" translatable="yes">Overbridge Blocks (7 frames) per USB Transfer</property>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
             </child>
             <child>
               <object class="GtkSpinButton" id="blocks_spin_button">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="text">2</property>
                 <property name="adjustment">blocks_adjustment</property>
                 <property name="climb-rate">1</property>
+                <property name="focusable">1</property>
+                <property name="text">2</property>
                 <property name="value">24</property>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-              </packing>
             </child>
             <child>
-              <object class="GtkSeparator">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">2</property>
-              </packing>
+              <object class="GtkSeparator"/>
             </child>
             <child>
               <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="tooltip-text" translatable="yes">Resampler quality to balance out the CPU usage</property>
                 <property name="label" translatable="yes">Resampler Quality</property>
+                <property name="tooltip-text" translatable="yes">Resampler quality to balance out the CPU usage</property>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">3</property>
-              </packing>
             </child>
             <child>
               <object class="GtkComboBox" id="quality_combo_box">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="model">quality_list_store</property>
                 <property name="active">0</property>
                 <property name="id-column">0</property>
+                <property name="model">quality_list_store</property>
                 <child>
                   <object class="GtkCellRendererText"/>
+                  <!-- Custom child fragments -->
                   <attributes>
                     <attribute name="text">0</attribute>
                   </attributes>
                 </child>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">4</property>
-              </packing>
             </child>
             <child>
-              <object class="GtkSeparator">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">5</property>
-              </packing>
+              <object class="GtkSeparator"/>
             </child>
             <child>
               <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="tooltip-text" translatable="yes">USB Transfer Timeout (ms)</property>
                 <property name="label" translatable="yes">Transfer Timeout</property>
+                <property name="tooltip-text" translatable="yes">USB Transfer Timeout (ms)</property>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">6</property>
-              </packing>
             </child>
             <child>
               <object class="GtkSpinButton" id="timeout_spin_button">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="text">24</property>
                 <property name="adjustment">transfer_timeout_adjustment</property>
                 <property name="climb-rate">1</property>
+                <property name="focusable">1</property>
+                <property name="text">24</property>
                 <property name="value">10</property>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">7</property>
-              </packing>
             </child>
           </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">0</property>
-          </packing>
         </child>
         <child>
           <object class="GtkViewport">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="hexpand">True</property>
-            <child>
+            <property name="child">
               <object class="GtkTreeView">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="hexpand">True</property>
-                <property name="vexpand">True</property>
+                <property name="enable-search">0</property>
+                <property name="headers-clickable">0</property>
+                <property name="hexpand">1</property>
                 <property name="model">status_list_store</property>
-                <property name="headers-clickable">False</property>
-                <property name="enable-search">False</property>
                 <property name="search-column">0</property>
+                <property name="vexpand">1</property>
                 <child internal-child="selection">
                   <object class="GtkTreeSelection"/>
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn">
+                    <property name="expand">1</property>
                     <property name="title" translatable="yes">Name</property>
-                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText" id="name_cell_renderer">
-                        <property name="editable">True</property>
+                        <property name="editable">1</property>
                       </object>
+                      <!-- Custom child fragments -->
                       <attributes>
                         <attribute name="text">1</attribute>
                       </attributes>
@@ -372,10 +192,11 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn">
+                    <property name="expand">1</property>
                     <property name="title" translatable="yes">Status</property>
-                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
+                      <!-- Custom child fragments -->
                       <attributes>
                         <attribute name="text">0</attribute>
                       </attributes>
@@ -384,10 +205,11 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn" id="device_column">
+                    <property name="expand">1</property>
                     <property name="title" translatable="yes">Device</property>
-                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
+                      <!-- Custom child fragments -->
                       <attributes>
                         <attribute name="text">2</attribute>
                       </attributes>
@@ -396,10 +218,11 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn" id="bus_column">
+                    <property name="expand">1</property>
                     <property name="title" translatable="yes">Bus</property>
-                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
+                      <!-- Custom child fragments -->
                       <attributes>
                         <attribute name="text">3</attribute>
                       </attributes>
@@ -408,10 +231,11 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn" id="address_column">
+                    <property name="expand">1</property>
                     <property name="title" translatable="yes">Address</property>
-                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
+                      <!-- Custom child fragments -->
                       <attributes>
                         <attribute name="text">4</attribute>
                       </attributes>
@@ -420,10 +244,11 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn">
+                    <property name="expand">1</property>
                     <property name="title" translatable="yes">Overbridge to JACK latency</property>
-                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
+                      <!-- Custom child fragments -->
                       <attributes>
                         <attribute name="text">5</attribute>
                       </attributes>
@@ -432,10 +257,11 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn">
+                    <property name="expand">1</property>
                     <property name="title" translatable="yes">JACK to Overbridge latency</property>
-                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
+                      <!-- Custom child fragments -->
                       <attributes>
                         <attribute name="text">6</attribute>
                       </attributes>
@@ -444,10 +270,11 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn" id="o2j_ratio_column">
+                    <property name="expand">1</property>
                     <property name="title" translatable="yes">Overbridge to JACK ratio</property>
-                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
+                      <!-- Custom child fragments -->
                       <attributes>
                         <attribute name="text">7</attribute>
                       </attributes>
@@ -456,10 +283,11 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn" id="j2o_ratio_column">
+                    <property name="expand">1</property>
                     <property name="title" translatable="yes">JACK to Overbridge ratio</property>
-                    <property name="expand">True</property>
                     <child>
                       <object class="GtkCellRendererText"/>
+                      <!-- Custom child fragments -->
                       <attributes>
                         <attribute name="text">8</attribute>
                       </attributes>
@@ -467,237 +295,130 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                   </object>
                 </child>
               </object>
-            </child>
+            </property>
+            <property name="hexpand">1</property>
           </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">1</property>
-          </packing>
         </child>
         <child>
           <object class="GtkBox">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="hexpand">True</property>
+            <property name="hexpand">1</property>
             <property name="spacing">6</property>
             <child>
               <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
                 <property name="halign">start</property>
-                <property name="hexpand">True</property>
+                <property name="hexpand">1</property>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
             </child>
             <child>
               <object class="GtkLabel" id="jack_status_label">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
                 <property name="halign">end</property>
-                <property name="hexpand">True</property>
+                <property name="hexpand">1</property>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-              </packing>
             </child>
           </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">2</property>
-          </packing>
         </child>
       </object>
-    </child>
+    </property>
+    <property name="icon-name">overwitch</property>
+    <property name="resizable">0</property>
+    <property name="title">Overwitch</property>
     <child type="titlebar">
       <object class="GtkHeaderBar">
-        <property name="visible">True</property>
-        <property name="can-focus">False</property>
-        <property name="title">Overwitch</property>
-        <property name="has-subtitle">False</property>
-        <property name="show-close-button">True</property>
-        <child>
+        <child type="end">
           <object class="GtkBox">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
             <property name="spacing">6</property>
             <child>
               <object class="GtkButton" id="stop_button">
-                <property name="visible">True</property>
-                <property name="sensitive">False</property>
-                <property name="can-focus">True</property>
-                <property name="receives-default">True</property>
+                <property name="focusable">1</property>
+                <property name="receives-default">1</property>
+                <property name="sensitive">0</property>
                 <property name="tooltip-text" translatable="yes">Stop All Devices</property>
                 <child>
                   <object class="GtkImage">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
                     <property name="icon-name">media-playback-stop-symbolic</property>
                   </object>
                 </child>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
             </child>
             <child>
               <object class="GtkButton" id="refresh_button">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="receives-default">True</property>
+                <property name="focusable">1</property>
+                <property name="receives-default">1</property>
                 <property name="tooltip-text" translatable="yes">Refresh Devices</property>
                 <child>
                   <object class="GtkImage">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
                     <property name="icon-name">view-refresh-symbolic</property>
                   </object>
                 </child>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-              </packing>
             </child>
             <child>
               <object class="GtkMenuButton" id="menu_button">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="receives-default">True</property>
-                <property name="direction">none</property>
-                <property name="popover">main_popover</property>
-                <child>
-                  <placeholder/>
-                </child>
+                <property name="icon-name">open-menu-symbolic</property>
+                <property name="menu-model">main_popover_model</property>
+                <property name="valign">center</property>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">2</property>
-              </packing>
             </child>
           </object>
-          <packing>
-            <property name="pack-type">end</property>
-          </packing>
         </child>
       </object>
     </child>
   </object>
-  <object class="GtkDialog" id="preferences_dialog">
-    <property name="width-request">400</property>
-    <property name="can-focus">False</property>
-    <property name="title" translatable="yes">Preferences</property>
-    <property name="resizable">False</property>
-    <property name="modal">True</property>
-    <property name="type-hint">dialog</property>
-    <property name="deletable">False</property>
-    <property name="transient-for">main_window</property>
-    <child internal-child="vbox">
+  <object class="GtkWindow" id="preferences_window">
+    <property name="child">
       <object class="GtkBox">
-        <property name="can-focus">False</property>
-        <property name="margin-start">6</property>
-        <property name="margin-end">6</property>
-        <property name="margin-top">6</property>
         <property name="margin-bottom">6</property>
+        <property name="margin-end">6</property>
+        <property name="margin-start">6</property>
+        <property name="margin-top">6</property>
         <property name="orientation">vertical</property>
-        <property name="spacing">6</property>
-        <child internal-child="action_area">
-          <object class="GtkButtonBox">
-            <property name="can-focus">False</property>
-            <property name="layout-style">end</property>
-            <child>
-              <object class="GtkButton" id="name_dialog_cancel_button">
-                <property name="label" translatable="yes">_Cancel</property>
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="receives-default">True</property>
-                <property name="use-underline">True</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="name_dialog_accept_button">
-                <property name="label" translatable="yes">_Save</property>
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="can-default">True</property>
-                <property name="has-default">True</property>
-                <property name="receives-default">False</property>
-                <property name="use-underline">True</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">False</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
+        <property name="spacing">12</property>
         <child>
           <object class="GtkBox">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
             <property name="margin-bottom">6</property>
             <property name="spacing">6</property>
             <child>
               <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="tooltip-text" translatable="yes">Value of the "PIPEWIRE_PROPS" environment variable</property>
                 <property name="label" translatable="yes">PipeWire Properties</property>
+                <property name="tooltip-text" translatable="yes">Value of the "PIPEWIRE_PROPS" environment variable</property>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
             </child>
             <child>
               <object class="GtkEntry" id="pipewire_props_dialog_entry">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="hexpand">True</property>
-                <property name="activates-default">True</property>
+                <property name="activates-default">1</property>
+                <property name="focusable">1</property>
+                <property name="hexpand">1</property>
                 <property name="input-purpose">alpha</property>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-              </packing>
             </child>
           </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">1</property>
-          </packing>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="halign">end</property>
+            <property name="spacing">6</property>
+            <child>
+              <object class="GtkButton" id="preferences_window_cancel_button">
+                <property name="focusable">1</property>
+                <property name="label" translatable="yes">_Cancel</property>
+                <property name="receives-default">1</property>
+                <property name="use-underline">1</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="preferences_window_save_button">
+                <property name="focusable">1</property>
+                <property name="label" translatable="yes">_Save</property>
+                <property name="use-underline">1</property>
+              </object>
+            </child>
+          </object>
         </child>
       </object>
-    </child>
-    <action-widgets>
-      <action-widget response="-6">name_dialog_cancel_button</action-widget>
-      <action-widget response="-3">name_dialog_accept_button</action-widget>
-    </action-widgets>
+    </property>
+    <property name="hide-on-close">True</property>
+    <property name="modal">True</property>
+    <property name="title">Preferences</property>
+    <property name="transient-for">main_window</property>
   </object>
 </interface>
