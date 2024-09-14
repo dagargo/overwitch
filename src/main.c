@@ -85,7 +85,7 @@ static GtkWidget *refresh_button;
 static GtkWidget *stop_button;
 static GtkSpinButton *blocks_spin_button;
 static GtkSpinButton *timeout_spin_button;
-static GtkComboBox *quality_combo_box;
+static GtkDropDown *quality_drop_down;
 static GtkCellRendererText *name_cell_renderer;
 static GtkTreeViewColumn *device_column;
 static GtkTreeViewColumn *bus_column;
@@ -342,11 +342,7 @@ save_preferences ()
 
   json_builder_set_member_name (builder, CONF_QUALITY);
   json_builder_add_int_value (builder,
-			      gtk_combo_box_get_active (quality_combo_box));
-
-  json_builder_set_member_name (builder, CONF_QUALITY);
-  json_builder_add_int_value (builder,
-			      gtk_combo_box_get_active (quality_combo_box));
+			      gtk_drop_down_get_selected (quality_drop_down));
 
   json_builder_set_member_name (builder, CONF_PIPEWIRE_PROPS);
   json_builder_add_string_value (builder, pipewire_props);
@@ -452,7 +448,7 @@ end:
 
   gtk_spin_button_set_value (blocks_spin_button, blocks);
   gtk_spin_button_set_value (timeout_spin_button, timeout);
-  gtk_combo_box_set_active (quality_combo_box, quality);
+  gtk_drop_down_set_selected (quality_drop_down, quality);
   update_all_metrics (show_all_columns);
 }
 
@@ -487,7 +483,7 @@ set_widgets_to_running_state (gboolean running)
   gtk_widget_set_sensitive (stop_button, running);
   gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), !running);
   gtk_widget_set_sensitive (GTK_WIDGET (timeout_spin_button), !running);
-  gtk_widget_set_sensitive (GTK_WIDGET (quality_combo_box), !running);
+  gtk_widget_set_sensitive (GTK_WIDGET (quality_drop_down), !running);
 }
 
 static gboolean
@@ -642,7 +638,7 @@ refresh_all (GtkWidget *object, gpointer data)
       instance->jclient.xfr_timeout =
 	gtk_spin_button_get_value_as_int (timeout_spin_button);
       instance->jclient.quality =
-	gtk_combo_box_get_active (quality_combo_box);
+	gtk_drop_down_get_selected (quality_drop_down);
       instance->jclient.priority = -1;
 
       instance->latency.o2h = 0.0;
@@ -904,8 +900,8 @@ overwitch_build_ui ()
     GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "blocks_spin_button"));
   timeout_spin_button =
     GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "timeout_spin_button"));
-  quality_combo_box =
-    GTK_COMBO_BOX (gtk_builder_get_object (builder, "quality_combo_box"));
+  quality_drop_down =
+    GTK_DROP_DOWN (gtk_builder_get_object (builder, "quality_drop_down"));
 
   refresh_button =
     GTK_WIDGET (gtk_builder_get_object (builder, "refresh_button"));

@@ -33,6 +33,7 @@ test-driver
 *.gcno
 *.gcda
 *.dirstamp
+res/overwitch.cmb.db
 src/overwitch
 src/overwitch-*
 src/.libs/*
