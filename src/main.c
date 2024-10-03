@@ -30,6 +30,7 @@
 #include "common.h"
 #include "jclient.h"
 #include "utils.h"
+#include "overwitch_device.h"
 
 #define CONF_FILE "/preferences.json"
 
@@ -43,20 +44,6 @@
 #define PIPEWIRE_PROPS_ENV_VAR "PIPEWIRE_PROPS"
 
 #define PAUSE_TO_BE_NOTIFIED_USECS (jack_sample_rate ? jack_buffer_size * 10 * 1000000 / (gdouble) jack_sample_rate : 0)
-
-enum list_store_columns
-{
-  STATUS_LIST_STORE_STATUS,
-  STATUS_LIST_STORE_NAME,
-  STATUS_LIST_STORE_DEVICE,
-  STATUS_LIST_STORE_BUS,
-  STATUS_LIST_STORE_ADDRESS,
-  STATUS_LIST_STORE_O2J_LATENCY,
-  STATUS_LIST_STORE_J2O_LATENCY,
-  STATUS_LIST_STORE_O2J_RATIO,
-  STATUS_LIST_STORE_J2O_RATIO,
-  STATUS_LIST_STORE_INSTANCE
-};
 
 struct overwitch_instance
 {
@@ -87,12 +74,12 @@ static GtkSpinButton *blocks_spin_button;
 static GtkSpinButton *timeout_spin_button;
 static GtkDropDown *quality_drop_down;
 static GtkCellRendererText *name_cell_renderer;
-static GtkTreeViewColumn *device_column;
-static GtkTreeViewColumn *bus_column;
-static GtkTreeViewColumn *address_column;
-static GtkTreeViewColumn *o2j_ratio_column;
-static GtkTreeViewColumn *j2o_ratio_column;
-static GtkListStore *status_list_store;
+static GtkColumnViewColumn *device_column;
+static GtkColumnViewColumn *bus_column;
+static GtkColumnViewColumn *address_column;
+static GtkColumnViewColumn *o2j_ratio_column;
+static GtkColumnViewColumn *j2o_ratio_column;
+static GListStore *status_list_store;
 static GtkLabel *jack_status_label;
 
 static struct option options[] = {
@@ -140,6 +127,7 @@ stop_instance (struct overwitch_instance *instance)
   jclient_stop (&instance->jclient);
 }
 
+
 static gboolean
 set_overwitch_instance_status (gpointer data)
 {
@@ -147,28 +135,16 @@ set_overwitch_instance_status (gpointer data)
   static gchar o2j_latency_s[OW_LABEL_MAX_LEN];
   static gchar j2o_latency_s[OW_LABEL_MAX_LEN];
   ow_resampler_status_t status;
-  const char *status_name;
-  GtkTreeIter iter;
-  gint bus, address;
-  gboolean valid, editing;
-  GtkTreeModel *model = GTK_TREE_MODEL (status_list_store);
+  const char *status_string;
 
-  g_object_get (G_OBJECT (name_cell_renderer), "editing", &editing, NULL);
+  GListModel *model = G_LIST_MODEL (status_list_store);
 
-  if (editing)
+  for (guint i = 0; i < g_list_model_get_n_items (model); i++)
     {
-      return FALSE;
-    }
+      OverwitchDevice *dev = g_list_model_get_item (model, i);
 
-  valid = gtk_tree_model_get_iter_first (model, &iter);
-
-  while (valid)
-    {
-      gtk_tree_model_get (model, &iter, STATUS_LIST_STORE_BUS, &bus,
-			  STATUS_LIST_STORE_ADDRESS, &address, -1);
-
-      if (instance->jclient.bus == bus
-	  && instance->jclient.address == address)
+      if (instance->jclient.bus == dev->bus
+	  && instance->jclient.address == dev->address)
 	{
 	  if (instance->latency.o2h >= 0)
 	    {
@@ -195,24 +171,13 @@ set_overwitch_instance_status (gpointer data)
 	    }
 
 	  status = ow_resampler_get_status (instance->jclient.resampler);
-	  status_name = get_status_string (status);
-
-	  gtk_list_store_set (status_list_store, &iter,
-			      STATUS_LIST_STORE_STATUS,
-			      status_name,
-			      STATUS_LIST_STORE_O2J_LATENCY,
-			      o2j_latency_s,
-			      STATUS_LIST_STORE_J2O_LATENCY,
-			      j2o_latency_s,
-			      STATUS_LIST_STORE_O2J_RATIO,
-			      instance->o2j_ratio,
-			      STATUS_LIST_STORE_J2O_RATIO,
-			      instance->j2o_ratio, -1);
+	  status_string = get_status_string (status);
+	  overwitch_device_set_status (dev, status_string, o2j_latency_s,
+				       j2o_latency_s, instance->o2j_ratio,
+				       instance->j2o_ratio);
 
 	  break;
 	}
-
-      valid = gtk_tree_model_iter_next (model, &iter);
     }
 
   return FALSE;
@@ -237,11 +202,11 @@ set_report_data (struct overwitch_instance *instance,
 static void
 update_all_metrics (gboolean active)
 {
-  gtk_tree_view_column_set_visible (device_column, active);
-  gtk_tree_view_column_set_visible (bus_column, active);
-  gtk_tree_view_column_set_visible (address_column, active);
-  gtk_tree_view_column_set_visible (o2j_ratio_column, active);
-  gtk_tree_view_column_set_visible (j2o_ratio_column, active);
+  gtk_column_view_column_set_visible (device_column, active);
+  gtk_column_view_column_set_visible (bus_column, active);
+  gtk_column_view_column_set_visible (address_column, active);
+  gtk_column_view_column_set_visible (o2j_ratio_column, active);
+  gtk_column_view_column_set_visible (j2o_ratio_column, active);
 }
 
 static void
@@ -453,25 +418,17 @@ end:
 }
 
 static gboolean
-is_device_at_bus_address (uint8_t bus, uint8_t address, GtkTreeIter *iter,
-			  struct overwitch_instance **instance)
+is_device_at_bus_address (uint8_t bus, uint8_t address, GtkTreeIter *iter)
 {
-  guint dev_bus, dev_address;
-  GtkTreeModel *model = GTK_TREE_MODEL (status_list_store);
-  gboolean valid = gtk_tree_model_get_iter_first (model, iter);
+  GListModel *model = G_LIST_MODEL (status_list_store);
 
-  while (valid)
+  for (guint i = 0; i < g_list_model_get_n_items (model); i++)
     {
-      gtk_tree_model_get (model, iter, STATUS_LIST_STORE_INSTANCE, instance,
-			  STATUS_LIST_STORE_BUS, &dev_bus,
-			  STATUS_LIST_STORE_ADDRESS, &dev_address, -1);
-
-      if (dev_bus == bus && dev_address == address)
+      OverwitchDevice *dev = g_list_model_get_item (model, i);
+      if (dev->bus == bus && dev->address == address)
 	{
 	  return TRUE;
 	}
-
-      valid = gtk_tree_model_iter_next (model, iter);
     }
 
   return FALSE;
@@ -572,29 +529,32 @@ start_control_client ()
 static void
 remove_stopped_instances ()
 {
-  GtkTreeIter iter;
-  ow_resampler_status_t status;
-  struct overwitch_instance *instance;
-  GtkTreeModel *model = GTK_TREE_MODEL (status_list_store);
-  gboolean valid = gtk_tree_model_get_iter_first (model, &iter);
+  GListModel *model = G_LIST_MODEL (status_list_store);
+  GSList *e, *to_delete = NULL;
 
-  while (valid)
+  for (guint i = 0; i < g_list_model_get_n_items (model); i++)
     {
-      gtk_tree_model_get (model, &iter, STATUS_LIST_STORE_INSTANCE, &instance,
-			  -1);
-      status = ow_resampler_get_status (instance->jclient.resampler);
+      OverwitchDevice *dev = g_list_model_get_item (model, i);
+      struct overwitch_instance *instance = dev->instance;
+      struct ow_resampler *resampler = instance->jclient.resampler;
+      ow_resampler_status_t status = ow_resampler_get_status (resampler);
       if (status <= OW_RESAMPLER_STATUS_STOP)
 	{
 	  jclient_wait (&instance->jclient);
 	  jclient_destroy (&instance->jclient);
 	  g_free (instance);
-	  valid = gtk_list_store_remove (status_list_store, &iter);
-	}
-      else
-	{
-	  valid = gtk_tree_model_iter_next (model, &iter);
+	  to_delete = g_slist_prepend (to_delete, GUINT_TO_POINTER (i));
 	}
     }
+
+  e = to_delete;
+  while (e)
+    {
+      g_list_store_remove (status_list_store, GPOINTER_TO_UINT (e->data));
+      e = e->next;
+    }
+
+  g_slist_free (to_delete);
 }
 
 static void
@@ -604,8 +564,6 @@ refresh_all (GtkWidget *object, gpointer data)
   struct ow_resampler_reporter *reporter;
   struct overwitch_instance *instance;
   size_t devices_count;
-  const char *status_string;
-  ow_resampler_status_t status;
   ow_err_t err;
 
   remove_stopped_instances ();
@@ -622,11 +580,10 @@ refresh_all (GtkWidget *object, gpointer data)
   for (gint i = 0; i < devices_count; i++, device++)
     {
       GtkTreeIter iter;
-      if (is_device_at_bus_address (device->bus, device->address, &iter,
-				    &instance))
+      if (is_device_at_bus_address (device->bus, device->address, &iter))
 	{
-	  debug_print (2, "%s already running. Skipping...",
-		       instance->jclient.name);
+	  debug_print (2, "Device at %03d:%03d already running. Skipping...",
+		       device->bus, device->address);
 	  continue;
 	}
 
@@ -664,28 +621,12 @@ refresh_all (GtkWidget *object, gpointer data)
 
       debug_print (1, "Adding %s...", instance->jclient.name);
 
-      status = ow_resampler_get_status (instance->jclient.resampler);
-      status_string = get_status_string (status);
-
-      gtk_list_store_insert_with_values (status_list_store, NULL, -1,
-					 STATUS_LIST_STORE_STATUS,
-					 status_string,
-					 STATUS_LIST_STORE_NAME,
-					 instance->jclient.name,
-					 STATUS_LIST_STORE_DEVICE,
-					 device->desc.name,
-					 STATUS_LIST_STORE_BUS,
-					 instance->jclient.bus,
-					 STATUS_LIST_STORE_ADDRESS,
-					 instance->jclient.address,
-					 STATUS_LIST_STORE_O2J_LATENCY, "",
-					 STATUS_LIST_STORE_J2O_LATENCY, "",
-					 STATUS_LIST_STORE_O2J_RATIO,
-					 instance->o2j_ratio,
-					 STATUS_LIST_STORE_J2O_RATIO,
-					 instance->j2o_ratio,
-					 STATUS_LIST_STORE_INSTANCE, instance,
-					 -1);
+      g_list_store_append (status_list_store,
+			   overwitch_device_new (instance->jclient.name,
+						 device->desc.name,
+						 instance->jclient.bus,
+						 instance->jclient.address,
+						 instance));
 
       start_instance (instance);
       set_widgets_to_running_state (TRUE);
@@ -704,17 +645,14 @@ refresh_all_sourcefunc (gpointer data)
 static void
 stop_all (GtkWidget *object, gpointer data)
 {
-  GtkTreeIter iter;
-  ow_resampler_status_t status;
-  struct overwitch_instance *instance;
-  GtkTreeModel *model = GTK_TREE_MODEL (status_list_store);
-  gboolean valid = gtk_tree_model_get_iter_first (model, &iter);
+  GListModel *model = G_LIST_MODEL (status_list_store);
 
-  while (valid)
+  for (guint i = 0; i < g_list_model_get_n_items (model); i++)
     {
-      gtk_tree_model_get (model, &iter, STATUS_LIST_STORE_INSTANCE, &instance,
-			  -1);
-      status = ow_resampler_get_status (instance->jclient.resampler);
+      OverwitchDevice *dev = g_list_model_get_item (model, i);
+      struct overwitch_instance *instance = dev->instance;
+      struct ow_resampler *resampler = instance->jclient.resampler;
+      ow_resampler_status_t status = ow_resampler_get_status (resampler);
       if (status != OW_RESAMPLER_STATUS_ERROR)
 	{
 	  debug_print (1, "Stopping %s...", instance->jclient.name);
@@ -723,48 +661,11 @@ stop_all (GtkWidget *object, gpointer data)
       jclient_wait (&instance->jclient);
       jclient_destroy (&instance->jclient);
       g_free (instance);
-      valid = gtk_list_store_remove (status_list_store, &iter);
     }
+
+  g_list_store_remove_all (status_list_store);
 
   set_widgets_to_running_state (FALSE);
-}
-
-static void
-set_overbridge_name (GtkCellRendererText *self,
-		     gchar *path, gchar *name, gpointer user_data)
-{
-  struct overwitch_instance *instance;
-  struct ow_engine *engine;
-  GtkTreeIter iter;
-  gint row = atoi (path);
-  GtkTreeModel *model = GTK_TREE_MODEL (status_list_store);
-  gboolean valid = gtk_tree_model_get_iter_first (model, &iter);
-  gint i = 0;
-
-  while (valid && i < row)
-    {
-      valid = gtk_tree_model_iter_next (model, &iter);
-      i++;
-    }
-
-  if (valid)
-    {
-      gtk_tree_model_get (model, &iter, STATUS_LIST_STORE_INSTANCE, &instance,
-			  -1);
-
-      engine = ow_resampler_get_engine (instance->jclient.resampler);
-      ow_engine_set_overbridge_name (engine, name);
-
-      stop_instance (instance);
-
-      if (!gtk_tree_model_iter_n_children (model, NULL))
-	{
-	  set_widgets_to_running_state (FALSE);
-	}
-
-      usleep (PAUSE_TO_BE_NOTIFIED_USECS);	//Time to let the device notify us.
-      g_idle_add (refresh_all_sourcefunc, NULL);
-    }
 }
 
 // When under PipeWire, it is desirable to run Overwitch as a follower of the hardware driver.
@@ -873,10 +774,36 @@ const GActionEntry APP_ENTRIES[] = {
 };
 
 static void
+overwitch_device_name_changed (GtkEditableLabel *label, GParamSpec *pspec,
+			       GtkColumnViewCell *cell)
+{
+  if (!gtk_editable_label_get_editing (label))
+    {
+      OverwitchDevice *d =
+	OVERWITCH_DEVICE (gtk_column_view_cell_get_item (cell));
+      struct overwitch_instance *instance = d->instance;
+      struct ow_engine *engine =
+	ow_resampler_get_engine (instance->jclient.resampler);
+      const char *new_name = gtk_editable_get_text (GTK_EDITABLE (label));
+      const char *old_name = d->name;
+      if (g_strcmp0 (new_name, old_name))
+	{
+	  debug_print (1, "Renaming device to '%s'...", new_name);
+	  ow_engine_set_overbridge_name (engine, new_name);
+	}
+    }
+}
+
+static void
 overwitch_build_ui ()
 {
+  GtkBuilderScope *scope = gtk_builder_cscope_new ();
+  gtk_builder_cscope_add_callback (scope, overwitch_device_name_changed);
+
   builder = gtk_builder_new ();
+  gtk_builder_set_scope (builder, scope);
   gtk_builder_add_from_file (builder, DATADIR "/overwitch.ui", NULL);
+  g_object_unref (scope);
 
   main_window = GTK_WIDGET (gtk_builder_get_object (builder, "main_window"));
 
@@ -908,23 +835,25 @@ overwitch_build_ui ()
   stop_button = GTK_WIDGET (gtk_builder_get_object (builder, "stop_button"));
 
   status_list_store =
-    GTK_LIST_STORE (gtk_builder_get_object (builder, "status_list_store"));
+    G_LIST_STORE (gtk_builder_get_object (builder, "status_list_store"));
 
   name_cell_renderer =
     GTK_CELL_RENDERER_TEXT (gtk_builder_get_object
 			    (builder, "name_cell_renderer"));
   device_column =
-    GTK_TREE_VIEW_COLUMN (gtk_builder_get_object (builder, "device_column"));
+    GTK_COLUMN_VIEW_COLUMN (gtk_builder_get_object
+			    (builder, "device_column"));
   bus_column =
-    GTK_TREE_VIEW_COLUMN (gtk_builder_get_object (builder, "bus_column"));
+    GTK_COLUMN_VIEW_COLUMN (gtk_builder_get_object (builder, "bus_column"));
   address_column =
-    GTK_TREE_VIEW_COLUMN (gtk_builder_get_object (builder, "address_column"));
+    GTK_COLUMN_VIEW_COLUMN (gtk_builder_get_object
+			    (builder, "address_column"));
   o2j_ratio_column =
-    GTK_TREE_VIEW_COLUMN (gtk_builder_get_object
-			  (builder, "o2j_ratio_column"));
+    GTK_COLUMN_VIEW_COLUMN (gtk_builder_get_object
+			    (builder, "o2j_ratio_column"));
   j2o_ratio_column =
-    GTK_TREE_VIEW_COLUMN (gtk_builder_get_object
-			  (builder, "j2o_ratio_column"));
+    GTK_COLUMN_VIEW_COLUMN (gtk_builder_get_object
+			    (builder, "j2o_ratio_column"));
 
   jack_status_label =
     GTK_LABEL (gtk_builder_get_object (builder, "jack_status_label"));
@@ -940,9 +869,6 @@ overwitch_build_ui ()
   g_signal_connect (refresh_button, "clicked", G_CALLBACK (refresh_all),
 		    NULL);
   g_signal_connect (stop_button, "clicked", G_CALLBACK (stop_all), NULL);
-
-  g_signal_connect (name_cell_renderer, "edited",
-		    G_CALLBACK (set_overbridge_name), NULL);
 
   g_action_map_add_action_entries (G_ACTION_MAP (app), APP_ENTRIES,
 				   G_N_ELEMENTS (APP_ENTRIES), app);

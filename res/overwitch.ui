@@ -3,7 +3,7 @@
 <interface>
   <!-- interface-name overwitch.ui -->
   <requires lib="gio" version="2.44"/>
-  <requires lib="gtk" version="4.8"/>
+  <requires lib="gtk" version="4.16"/>
   <menu id="main_popover_model">
     <section>
       <item>
@@ -34,20 +34,6 @@
     <property name="step-increment">1</property>
     <property name="upper">24</property>
     <property name="value">24</property>
-  </object>
-  <object class="GtkListStore" id="status_list_store">
-    <columns>
-      <column type="gchararray"/>
-      <column type="gchararray"/>
-      <column type="gchararray"/>
-      <column type="guint"/>
-      <column type="guint"/>
-      <column type="gchararray"/>
-      <column type="gchararray"/>
-      <column type="gfloat"/>
-      <column type="gfloat"/>
-      <column type="gpointer"/>
-    </columns>
   </object>
   <object class="GtkAdjustment" id="transfer_timeout_adjustment">
     <property name="lower">1</property>
@@ -136,133 +122,248 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
         <child>
           <object class="GtkViewport">
             <property name="child">
-              <object class="GtkTreeView">
-                <property name="enable-search">0</property>
-                <property name="headers-clickable">0</property>
-                <property name="hexpand">1</property>
-                <property name="model">status_list_store</property>
-                <property name="search-column">0</property>
-                <property name="vexpand">1</property>
-                <child internal-child="selection">
-                  <object class="GtkTreeSelection"/>
-                </child>
+              <object class="GtkColumnView">
+                <property name="hexpand">True</property>
+                <property name="model">
+                  <object class="GtkNoSelection">
+                    <property name="model">
+                      <object class="GListStore" id="status_list_store"/>
+                    </property>
+                  </object>
+                </property>
+                <property name="reorderable">False</property>
+                <property name="vexpand">True</property>
                 <child>
-                  <object class="GtkTreeViewColumn">
-                    <property name="expand">1</property>
-                    <property name="title" translatable="yes">Name</property>
-                    <child>
-                      <object class="GtkCellRendererText" id="name_cell_renderer">
-                        <property name="editable">1</property>
+                  <object class="GtkColumnViewColumn" id="device_column">
+                    <property name="expand">True</property>
+                    <property name="factory">
+                      <object class="GtkBuilderListItemFactory">
+                        <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkLabel">
+        <property name="hexpand">TRUE</property>
+        <property name="xalign">0</property>
+        <binding name="label">
+          <lookup name="device" type="OverwitchDevice">
+            <lookup name="item">GtkListItem</lookup>
+          </lookup>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
                       </object>
-                      <!-- Custom child fragments -->
-                      <attributes>
-                        <attribute name="text">1</attribute>
-                      </attributes>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkTreeViewColumn">
-                    <property name="expand">1</property>
-                    <property name="title" translatable="yes">Status</property>
-                    <child>
-                      <object class="GtkCellRendererText"/>
-                      <!-- Custom child fragments -->
-                      <attributes>
-                        <attribute name="text">0</attribute>
-                      </attributes>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkTreeViewColumn" id="device_column">
-                    <property name="expand">1</property>
+                    </property>
                     <property name="title" translatable="yes">Device</property>
-                    <child>
-                      <object class="GtkCellRendererText"/>
-                      <!-- Custom child fragments -->
-                      <attributes>
-                        <attribute name="text">2</attribute>
-                      </attributes>
-                    </child>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkTreeViewColumn" id="bus_column">
-                    <property name="expand">1</property>
+                  <object class="GtkColumnViewColumn">
+                    <property name="expand">True</property>
+                    <property name="factory">
+                      <object class="GtkBuilderListItemFactory">
+                        <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkColumnViewCell">
+    <property name="child">
+      <object class="GtkEditableLabel">
+        <binding name="text">
+          <lookup name="name" type="OverwitchDevice">
+            <lookup name="item">GtkColumnViewCell</lookup>
+          </lookup>
+        </binding>
+        <signal name="notify::editing" handler="overwitch_device_name_changed"/>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
+                      </object>
+                    </property>
+                    <property name="title" translatable="yes">Name</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkColumnViewColumn">
+                    <property name="expand">True</property>
+                    <property name="factory">
+                      <object class="GtkBuilderListItemFactory">
+                        <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkLabel">
+        <property name="hexpand">TRUE</property>
+        <property name="xalign">0</property>
+        <binding name="label">
+          <lookup name="status" type="OverwitchDevice">
+            <lookup name="item">GtkListItem</lookup>
+          </lookup>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
+                      </object>
+                    </property>
+                    <property name="title" translatable="yes">Status</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkColumnViewColumn" id="bus_column">
+                    <property name="expand">True</property>
+                    <property name="factory">
+                      <object class="GtkBuilderListItemFactory">
+                        <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkLabel">
+        <property name="hexpand">TRUE</property>
+        <property name="xalign">0</property>
+        <binding name="label">
+          <lookup name="bus" type="OverwitchDevice">
+            <lookup name="item">GtkListItem</lookup>
+          </lookup>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
+                      </object>
+                    </property>
                     <property name="title" translatable="yes">Bus</property>
-                    <child>
-                      <object class="GtkCellRendererText"/>
-                      <!-- Custom child fragments -->
-                      <attributes>
-                        <attribute name="text">3</attribute>
-                      </attributes>
-                    </child>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkTreeViewColumn" id="address_column">
-                    <property name="expand">1</property>
+                  <object class="GtkColumnViewColumn" id="address_column">
+                    <property name="expand">True</property>
+                    <property name="factory">
+                      <object class="GtkBuilderListItemFactory">
+                        <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkLabel">
+        <property name="hexpand">TRUE</property>
+        <property name="xalign">0</property>
+        <binding name="label">
+          <lookup name="address" type="OverwitchDevice">
+            <lookup name="item">GtkListItem</lookup>
+          </lookup>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
+                      </object>
+                    </property>
                     <property name="title" translatable="yes">Address</property>
-                    <child>
-                      <object class="GtkCellRendererText"/>
-                      <!-- Custom child fragments -->
-                      <attributes>
-                        <attribute name="text">4</attribute>
-                      </attributes>
-                    </child>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkTreeViewColumn">
-                    <property name="expand">1</property>
+                  <object class="GtkColumnViewColumn">
+                    <property name="expand">True</property>
+                    <property name="factory">
+                      <object class="GtkBuilderListItemFactory">
+                        <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkLabel">
+        <property name="hexpand">TRUE</property>
+        <property name="xalign">0</property>
+        <binding name="label">
+          <lookup name="o2j_latency" type="OverwitchDevice">
+            <lookup name="item">GtkListItem</lookup>
+          </lookup>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
+                      </object>
+                    </property>
                     <property name="title" translatable="yes">Overbridge to JACK latency</property>
-                    <child>
-                      <object class="GtkCellRendererText"/>
-                      <!-- Custom child fragments -->
-                      <attributes>
-                        <attribute name="text">5</attribute>
-                      </attributes>
-                    </child>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkTreeViewColumn">
-                    <property name="expand">1</property>
+                  <object class="GtkColumnViewColumn">
+                    <property name="expand">True</property>
+                    <property name="factory">
+                      <object class="GtkBuilderListItemFactory">
+                        <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkLabel">
+        <property name="hexpand">TRUE</property>
+        <property name="xalign">0</property>
+        <binding name="label">
+          <lookup name="j2o_latency" type="OverwitchDevice">
+            <lookup name="item">GtkListItem</lookup>
+          </lookup>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
+                      </object>
+                    </property>
                     <property name="title" translatable="yes">JACK to Overbridge latency</property>
-                    <child>
-                      <object class="GtkCellRendererText"/>
-                      <!-- Custom child fragments -->
-                      <attributes>
-                        <attribute name="text">6</attribute>
-                      </attributes>
-                    </child>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkTreeViewColumn" id="o2j_ratio_column">
-                    <property name="expand">1</property>
+                  <object class="GtkColumnViewColumn" id="o2j_ratio_column">
+                    <property name="expand">True</property>
+                    <property name="factory">
+                      <object class="GtkBuilderListItemFactory">
+                        <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkLabel">
+        <property name="hexpand">TRUE</property>
+        <property name="xalign">0</property>
+        <binding name="label">
+          <lookup name="o2j_ratio" type="OverwitchDevice">
+            <lookup name="item">GtkListItem</lookup>
+          </lookup>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
+                      </object>
+                    </property>
                     <property name="title" translatable="yes">Overbridge to JACK ratio</property>
-                    <child>
-                      <object class="GtkCellRendererText"/>
-                      <!-- Custom child fragments -->
-                      <attributes>
-                        <attribute name="text">7</attribute>
-                      </attributes>
-                    </child>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkTreeViewColumn" id="j2o_ratio_column">
-                    <property name="expand">1</property>
+                  <object class="GtkColumnViewColumn" id="j2o_ratio_column">
+                    <property name="expand">True</property>
+                    <property name="factory">
+                      <object class="GtkBuilderListItemFactory">
+                        <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkLabel">
+        <property name="hexpand">TRUE</property>
+        <property name="xalign">0</property>
+        <binding name="label">
+          <lookup name="j2o_ratio" type="OverwitchDevice">
+            <lookup name="item">GtkListItem</lookup>
+          </lookup>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
+                      </object>
+                    </property>
                     <property name="title" translatable="yes">JACK to Overbridge ratio</property>
-                    <child>
-                      <object class="GtkCellRendererText"/>
-                      <!-- Custom child fragments -->
-                      <attributes>
-                        <attribute name="text">8</attribute>
-                      </attributes>
-                    </child>
                   </object>
                 </child>
               </object>
