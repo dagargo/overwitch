@@ -18,8 +18,7 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef DLL_H
-#define DLL_H
+#pragma once
 
 #include <stdint.h>
 
@@ -82,5 +81,3 @@ void ow_dll_host_calc_avg (struct ow_dll *);
 void ow_dll_host_load_dll_overbridge (struct ow_dll *);
 
 int ow_dll_tuned (struct ow_dll *);
-
-#endif

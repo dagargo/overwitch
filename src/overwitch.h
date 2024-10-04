@@ -18,8 +18,7 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OVERWITCH_H
-#define OVERWITCH_H
+#pragma once
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -314,5 +313,3 @@ void ow_resampler_get_h2o_latency (struct ow_resampler *, size_t *, size_t *,
 
 void ow_resampler_get_o2h_latency (struct ow_resampler *, size_t *, size_t *,
 				   size_t *);
-
-#endif

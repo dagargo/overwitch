@@ -18,8 +18,7 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 #include <stdio.h>
 #include <unistd.h>
@@ -51,5 +50,3 @@
 extern int debug_level;
 
 char *get_expanded_dir (const char *);
-
-#endif
