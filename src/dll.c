@@ -102,7 +102,7 @@ ow_dll_overbridge_update (void *data, uint32_t frames, uint64_t t)
 	       dll_ob->i1.frames);
 }
 
-//The whole calculation of the delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
+//The whole calculation of the target_delay and the loop filter is taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.
 inline void
 ow_dll_host_update_error (struct ow_dll *dll, uint64_t t)
 {
@@ -117,7 +117,7 @@ ow_dll_host_update_error (struct ow_dll *dll, uint64_t t)
   dd = wrap_time (dll->i1.time - dll->i0.time, dll->t_quantum);
   delta_overbridge = delta_frames_exp * dn / dd;
   delta_frames_act = dll->i0.frames - dll->frames;	// - (dll->frames + dll->i0.frames)
-  dll->err = delta_frames_act + delta_overbridge - dll->delay;
+  dll->err = delta_frames_act + delta_overbridge - dll->target_delay;
 
   if (dll->boot)
     {
@@ -128,9 +128,9 @@ ow_dll_host_update_error (struct ow_dll *dll, uint64_t t)
     }
 
   debug_print (4,
-	       "delta_frames_exp: %d; delta_frames_act: %d; delta_overbridge: %f; DLL delay: %d; DLL error: %f",
+	       "delta_frames_exp: %d; delta_frames_act: %d; delta_overbridge: %f; DLL target delay: %d; DLL error: %f",
 	       delta_frames_exp, delta_frames_act, delta_overbridge,
-	       dll->delay, dll->err);
+	       dll->target_delay, dll->err);
 }
 
 inline void
@@ -188,10 +188,7 @@ ow_dll_host_reset (struct ow_dll *dll, double output_samplerate,
 
   dll->frames = -input_frames / dll->ratio;
 
-  dll->delay = 2.0 * input_frames + 1.5 * output_frames;
-
-  debug_print (2, "Target delay: %d frames (%f ms)", dll->delay,
-	       dll->delay * 1000 / input_samplerate);
+  dll->target_delay = 2.0 * input_frames + 1.5 * output_frames;
 }
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.

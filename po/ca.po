@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2024-08-26 09:22+0200\n"
+"POT-Creation-Date: 2024-10-05 18:33+0200\n"
 "PO-Revision-Date: 2022-09-21 19:08+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: Catalan\n"
@@ -17,164 +17,169 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/main.c:110
+#: src/main.c:98
 msgid "Error"
 msgstr "Error"
 
-#: src/main.c:112
+#: src/main.c:100
 msgid "Stopped"
 msgstr "Parat"
 
-#: src/main.c:114
+#: src/main.c:102
 msgid "Ready"
 msgstr "Preparat"
 
-#: src/main.c:116
+#: src/main.c:104
 msgid "Booting"
 msgstr "Arrancant"
 
-#: src/main.c:118
+#: src/main.c:106
 msgid "Tuning"
 msgstr "Ajustant"
 
-#: src/main.c:120
+#: src/main.c:108
 msgid "Running"
 msgstr "Executant"
 
-#: src/main.c:511
+#: src/main.c:126
+#, c-format
+msgid "Target latency: %.1f ms"
+msgstr "Latència objectiu: %.1f ms"
+
+#: src/main.c:478
 #, c-format
 msgid "JACK at %.5g kHz, %d period"
 msgstr "JACK a %.5g kHz, període de %d"
 
-#: src/main.c:516
+#: src/main.c:483
 #, c-format
 msgid "JACK not found"
 msgstr "JACK no trobat"
 
-#: res/gui.glade:19
-msgid "Highest"
-msgstr "Màxima"
-
-#: res/gui.glade:22
-msgid "High"
-msgstr "Alta"
-
-#: res/gui.glade:25
-msgid "Medium"
-msgstr "Mitja"
-
-#: res/gui.glade:28
-msgid "Low"
-msgstr "Baixa"
-
-#: res/gui.glade:31
-msgid "Lowest"
-msgstr "Mínima"
-
-#: res/gui.glade:71
-msgid "Overbridge 2 device client for JACK"
-msgstr "Client JACK per a dispositius Overbridge 2"
-
-#: res/gui.glade:75
-msgid "translator-credits"
-msgstr "David García Goñi <dagargo@gmail.com>"
-
-#: res/gui.glade:123
+#: res/overwitch.ui:11
 msgid "Refresh At Startup"
 msgstr "Actualitza a l'arrancament"
 
-#: res/gui.glade:136
+#: res/overwitch.ui:15
 msgid "Show All Columns"
 msgstr "Mostra totes les columnes"
 
-#: res/gui.glade:160 res/gui.glade:598
+#: res/overwitch.ui:21 res/overwitch.ui:494
 msgid "Preferences"
 msgstr "Preferències"
 
-#: res/gui.glade:184
+#: res/overwitch.ui:27
 msgid "About"
 msgstr "_Quant a"
 
-#: res/gui.glade:225
-msgid "Overbridge Blocks (7 frames) per USB Transfer"
-msgstr "Blocs Overbridge (7 mostres) per transferència USB"
+#: res/overwitch.ui:48
+msgid "Overbridge 2 device client for JACK"
+msgstr "Client JACK per a dispositius Overbridge 2"
 
-#: res/gui.glade:226
+#: res/overwitch.ui:56
+msgid "translator-credits"
+msgstr "David García Goñi <dagargo@gmail.com>"
+
+#: res/overwitch.ui:73
 msgid "Blocks per Transfer"
 msgstr "Blocs per transferència"
 
-#: res/gui.glade:264
-msgid "Resampler quality to balance out the CPU usage"
-msgstr "Qualitat de remostreig per a equilibrar l'ús de CPU"
+#: res/overwitch.ui:74
+msgid "Overbridge Blocks (7 frames) per USB Transfer"
+msgstr "Blocs Overbridge (7 mostres) per transferència USB"
 
-#: res/gui.glade:265
+#: res/overwitch.ui:91
 msgid "Resampler Quality"
 msgstr "Qualitat de remostreig"
 
-#: res/gui.glade:308
-msgid "USB Transfer Timeout (ms)"
-msgstr "Temps d'expiració de la transferéncia USB (ms)"
+#: res/overwitch.ui:92
+msgid "Resampler quality to balance out the CPU usage"
+msgstr "Qualitat de remostreig per a equilibrar l'ús de CPU"
 
-#: res/gui.glade:309
+#: res/overwitch.ui:107
 msgid "Transfer Timeout"
 msgstr "Temps d'expiració"
 
-#: res/gui.glade:359
-msgid "Name"
-msgstr "Nom"
+#: res/overwitch.ui:108
+msgid "USB Transfer Timeout (ms)"
+msgstr "Temps d'expiració de la transferéncia USB (ms)"
 
-#: res/gui.glade:373
-msgid "Status"
-msgstr "Estat"
-
-#: res/gui.glade:385
+#: res/overwitch.ui:159
 msgid "Device"
 msgstr "Dispositiu"
 
-#: res/gui.glade:397
+#: res/overwitch.ui:184
+msgid "Name"
+msgstr "Nom"
+
+#: res/overwitch.ui:210
+msgid "Status"
+msgstr "Estat"
+
+#: res/overwitch.ui:236
 msgid "Bus"
 msgstr "Bus"
 
-#: res/gui.glade:409
+#: res/overwitch.ui:262
 msgid "Address"
 msgstr "Adreça"
 
-#: res/gui.glade:421
+#: res/overwitch.ui:288
 msgid "Overbridge to JACK latency"
 msgstr "Latència de JACK a Overbridge"
 
-#: res/gui.glade:433
+#: res/overwitch.ui:314
 msgid "JACK to Overbridge latency"
 msgstr "Latència d'Overbridge a JACK"
 
-#: res/gui.glade:445
+#: res/overwitch.ui:340
 msgid "Overbridge to JACK ratio"
 msgstr "Ràtio entre Overbridge i JACK"
 
-#: res/gui.glade:457
+#: res/overwitch.ui:366
 msgid "JACK to Overbridge ratio"
 msgstr "Ràtio entre JACK i Overbridge"
 
-#: res/gui.glade:535
+#: res/overwitch.ui:407
 msgid "Stop All Devices"
 msgstr "Para tots el dispositius"
 
-#: res/gui.glade:555
+#: res/overwitch.ui:419
 msgid "Refresh Devices"
 msgstr "Actualitza els dispositius"
 
-#: res/gui.glade:619
-msgid "_Cancel"
-msgstr "_Cancel·la"
+#: res/overwitch.ui:454
+msgid "PipeWire Properties"
+msgstr "Propietats de PipeWire"
 
-#: res/gui.glade:633
-msgid "_Save"
-msgstr "_Alça"
-
-#: res/gui.glade:664
+#: res/overwitch.ui:455
 msgid "Value of the \"PIPEWIRE_PROPS\" environment variable"
 msgstr "Valor de la variable d'entorn «PIPEWIRE_PROPS»"
 
-#: res/gui.glade:665
-msgid "PipeWire Properties"
-msgstr "Propietats de PipeWire"
+#: res/overwitch.ui:475
+msgid "_Cancel"
+msgstr "_Cancel·la"
+
+#: res/overwitch.ui:483
+msgid "_Save"
+msgstr "_Alça"
+
+#: res/overwitch.ui:499
+msgid "Highest"
+msgstr "Màxima"
+
+#: res/overwitch.ui:500
+msgid "High"
+msgstr "Alta"
+
+#: res/overwitch.ui:501
+msgid "Medium"
+msgstr "Mitja"
+
+#: res/overwitch.ui:502
+msgid "Low"
+msgstr "Baixa"
+
+#: res/overwitch.ui:503
+msgid "Lowest"
+msgstr "Mínima"

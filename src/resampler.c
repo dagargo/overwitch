@@ -165,11 +165,18 @@ ow_resampler_reset_buffers (struct ow_resampler *resampler)
   ow_resampler_clear_buffers (resampler);
 }
 
+double
+ow_resampler_get_target_delay_ms (struct ow_resampler *resampler)
+{
+  return resampler->dll.target_delay * 1000 / OB_SAMPLE_RATE;
+}
+
 static void
 ow_resampler_reset_dll (struct ow_resampler *resampler,
 			uint32_t new_samplerate)
 {
   double target_ratio;
+  double target_delay_ms;
 
   if (resampler->dll.set
       && ow_engine_get_status (resampler->engine) == OW_ENGINE_STATUS_RUN)
@@ -187,6 +194,10 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
       ow_dll_host_reset (&resampler->dll, new_samplerate, OB_SAMPLE_RATE,
 			 resampler->bufsize,
 			 resampler->engine->frames_per_transfer);
+
+      target_delay_ms = ow_resampler_get_target_delay_ms (resampler);
+      debug_print (2, "DLL target delay: %d frames (%f ms)",
+		   resampler->dll.target_delay, target_delay_ms);
     }
 
   ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_BOOT);
@@ -235,8 +246,8 @@ resampler_o2h_reader (void *cb_data, float **data)
   *data = resampler->o2h_buf_in;
 
   rso2h =
-    resampler->engine->context->read_space (resampler->engine->context->
-					    o2h_audio);
+    resampler->engine->context->read_space (resampler->engine->
+					    context->o2h_audio);
   if (resampler->reading_at_o2h_end)
     {
       if (rso2h >= resampler->engine->o2h_frame_size)
@@ -244,8 +255,8 @@ resampler_o2h_reader (void *cb_data, float **data)
 	  frames = rso2h / resampler->engine->o2h_frame_size;
 	  frames = frames > MAX_READ_FRAMES ? MAX_READ_FRAMES : frames;
 	  bytes = frames * resampler->engine->o2h_frame_size;
-	  resampler->engine->context->read (resampler->engine->
-					    context->o2h_audio,
+	  resampler->engine->context->read (resampler->engine->context->
+					    o2h_audio,
 					    (void *) resampler->o2h_buf_in,
 					    bytes);
 	}
@@ -271,8 +282,8 @@ resampler_o2h_reader (void *cb_data, float **data)
 	  bytes = ow_bytes_to_frame_bytes (rso2h, resampler->o2h_bufsize);
 	  debug_print (2, "o2h: Emptying buffer (%zu B) and running...",
 		       bytes);
-	  resampler->engine->context->read (resampler->engine->
-					    context->o2h_audio, NULL, bytes);
+	  resampler->engine->context->read (resampler->engine->context->
+					    o2h_audio, NULL, bytes);
 	  resampler->reading_at_o2h_end = 1;
 	}
       frames = MAX_READ_FRAMES;
@@ -336,13 +347,13 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
 
   bytes = gen_frames * resampler->engine->h2o_frame_size;
   wsh2o =
-    resampler->engine->context->write_space (resampler->engine->context->
-					     h2o_audio);
+    resampler->engine->context->write_space (resampler->engine->
+					     context->h2o_audio);
 
   if (bytes <= wsh2o)
     {
-      resampler->engine->context->write (resampler->engine->context->
-					 h2o_audio,
+      resampler->engine->context->write (resampler->engine->
+					 context->h2o_audio,
 					 (void *) resampler->h2o_buf_out,
 					 bytes);
     }

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2024-08-26 09:22+0200\n"
+"POT-Creation-Date: 2024-10-05 18:33+0200\n"
 "PO-Revision-Date: 2022-09-21 19:03+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: English\n"
@@ -17,164 +17,169 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/main.c:110
+#: src/main.c:98
 msgid "Error"
 msgstr ""
 
-#: src/main.c:112
+#: src/main.c:100
 msgid "Stopped"
 msgstr ""
 
-#: src/main.c:114
+#: src/main.c:102
 msgid "Ready"
 msgstr ""
 
-#: src/main.c:116
+#: src/main.c:104
 msgid "Booting"
 msgstr ""
 
-#: src/main.c:118
+#: src/main.c:106
 msgid "Tuning"
 msgstr ""
 
-#: src/main.c:120
+#: src/main.c:108
 msgid "Running"
 msgstr ""
 
-#: src/main.c:511
+#: src/main.c:126
+#, c-format
+msgid "Target latency: %.1f ms"
+msgstr ""
+
+#: src/main.c:478
 #, c-format
 msgid "JACK at %.5g kHz, %d period"
 msgstr ""
 
-#: src/main.c:516
+#: src/main.c:483
 #, c-format
 msgid "JACK not found"
 msgstr ""
 
-#: res/gui.glade:19
-msgid "Highest"
-msgstr ""
-
-#: res/gui.glade:22
-msgid "High"
-msgstr ""
-
-#: res/gui.glade:25
-msgid "Medium"
-msgstr ""
-
-#: res/gui.glade:28
-msgid "Low"
-msgstr ""
-
-#: res/gui.glade:31
-msgid "Lowest"
-msgstr ""
-
-#: res/gui.glade:71
-msgid "Overbridge 2 device client for JACK"
-msgstr ""
-
-#: res/gui.glade:75
-msgid "translator-credits"
-msgstr "David García Goñi <dagargo@gmail.com>"
-
-#: res/gui.glade:123
+#: res/overwitch.ui:11
 msgid "Refresh At Startup"
 msgstr ""
 
-#: res/gui.glade:136
+#: res/overwitch.ui:15
 msgid "Show All Columns"
 msgstr ""
 
-#: res/gui.glade:160 res/gui.glade:598
+#: res/overwitch.ui:21 res/overwitch.ui:494
 msgid "Preferences"
 msgstr ""
 
-#: res/gui.glade:184
+#: res/overwitch.ui:27
 msgid "About"
 msgstr ""
 
-#: res/gui.glade:225
-msgid "Overbridge Blocks (7 frames) per USB Transfer"
+#: res/overwitch.ui:48
+msgid "Overbridge 2 device client for JACK"
 msgstr ""
 
-#: res/gui.glade:226
+#: res/overwitch.ui:56
+msgid "translator-credits"
+msgstr "David García Goñi <dagargo@gmail.com>"
+
+#: res/overwitch.ui:73
 msgid "Blocks per Transfer"
 msgstr ""
 
-#: res/gui.glade:264
-msgid "Resampler quality to balance out the CPU usage"
+#: res/overwitch.ui:74
+msgid "Overbridge Blocks (7 frames) per USB Transfer"
 msgstr ""
 
-#: res/gui.glade:265
+#: res/overwitch.ui:91
 msgid "Resampler Quality"
 msgstr ""
 
-#: res/gui.glade:308
-msgid "USB Transfer Timeout (ms)"
+#: res/overwitch.ui:92
+msgid "Resampler quality to balance out the CPU usage"
 msgstr ""
 
-#: res/gui.glade:309
+#: res/overwitch.ui:107
 msgid "Transfer Timeout"
 msgstr ""
 
-#: res/gui.glade:359
-msgid "Name"
+#: res/overwitch.ui:108
+msgid "USB Transfer Timeout (ms)"
 msgstr ""
 
-#: res/gui.glade:373
-msgid "Status"
-msgstr ""
-
-#: res/gui.glade:385
+#: res/overwitch.ui:159
 msgid "Device"
 msgstr ""
 
-#: res/gui.glade:397
+#: res/overwitch.ui:184
+msgid "Name"
+msgstr ""
+
+#: res/overwitch.ui:210
+msgid "Status"
+msgstr ""
+
+#: res/overwitch.ui:236
 msgid "Bus"
 msgstr ""
 
-#: res/gui.glade:409
+#: res/overwitch.ui:262
 msgid "Address"
 msgstr ""
 
-#: res/gui.glade:421
+#: res/overwitch.ui:288
 msgid "Overbridge to JACK latency"
 msgstr ""
 
-#: res/gui.glade:433
+#: res/overwitch.ui:314
 msgid "JACK to Overbridge latency"
 msgstr ""
 
-#: res/gui.glade:445
+#: res/overwitch.ui:340
 msgid "Overbridge to JACK ratio"
 msgstr ""
 
-#: res/gui.glade:457
+#: res/overwitch.ui:366
 msgid "JACK to Overbridge ratio"
 msgstr ""
 
-#: res/gui.glade:535
+#: res/overwitch.ui:407
 msgid "Stop All Devices"
 msgstr ""
 
-#: res/gui.glade:555
+#: res/overwitch.ui:419
 msgid "Refresh Devices"
 msgstr ""
 
-#: res/gui.glade:619
-msgid "_Cancel"
+#: res/overwitch.ui:454
+msgid "PipeWire Properties"
 msgstr ""
 
-#: res/gui.glade:633
-msgid "_Save"
-msgstr ""
-
-#: res/gui.glade:664
+#: res/overwitch.ui:455
 msgid "Value of the \"PIPEWIRE_PROPS\" environment variable"
 msgstr ""
 
-#: res/gui.glade:665
-msgid "PipeWire Properties"
+#: res/overwitch.ui:475
+msgid "_Cancel"
+msgstr ""
+
+#: res/overwitch.ui:483
+msgid "_Save"
+msgstr ""
+
+#: res/overwitch.ui:499
+msgid "Highest"
+msgstr ""
+
+#: res/overwitch.ui:500
+msgid "High"
+msgstr ""
+
+#: res/overwitch.ui:501
+msgid "Medium"
+msgstr ""
+
+#: res/overwitch.ui:502
+msgid "Low"
+msgstr ""
+
+#: res/overwitch.ui:503
+msgid "Lowest"
 msgstr ""

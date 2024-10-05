@@ -45,7 +45,7 @@ struct ow_dll
   double w0;
   double w1;
   double w2;
-  int delay;
+  int target_delay;
   double z1;
   double z2;
   double z3;

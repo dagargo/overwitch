@@ -81,6 +81,7 @@ static GtkColumnViewColumn *o2j_ratio_column;
 static GtkColumnViewColumn *j2o_ratio_column;
 static GListStore *status_list_store;
 static GtkLabel *jack_status_label;
+static GtkLabel *target_delay_label;
 
 static struct option options[] = {
   {"verbose", 0, NULL, 'v'},
@@ -110,12 +111,38 @@ get_status_string (ow_resampler_status_t status)
 }
 
 static void
+set_dll_target_delay ()
+{
+  static char msg[OW_LABEL_MAX_LEN];
+  GListModel *model = G_LIST_MODEL (status_list_store);
+
+  if (g_list_model_get_n_items (model))
+    {
+      OverwitchDevice *dev = g_list_model_get_item (model, 0);
+      struct overwitch_instance *instance = dev->instance;
+      struct ow_resampler *resampler = instance->jclient.resampler;
+      double target_delay_ms = ow_resampler_get_target_delay_ms (resampler);
+
+      snprintf (msg, OW_LABEL_MAX_LEN, _("Target latency: %.1f ms"),
+		target_delay_ms);
+      gtk_label_set_text (target_delay_label, msg);
+    }
+  else
+    {
+      gtk_label_set_text (target_delay_label, "");
+    }
+}
+
+static void
 start_instance (struct overwitch_instance *instance)
 {
   struct ow_resampler *resampler = instance->jclient.resampler;
   struct ow_engine *engine = ow_resampler_get_engine (resampler);
   debug_print (1, "Starting %s...", ow_engine_get_overbridge_name (engine));
   jclient_start (&instance->jclient);
+
+  usleep (PAUSE_TO_BE_NOTIFIED_USECS);
+  set_dll_target_delay ();
 }
 
 static void
@@ -126,7 +153,6 @@ stop_instance (struct overwitch_instance *instance)
   debug_print (1, "Stopping %s...", ow_engine_get_overbridge_name (engine));
   jclient_stop (&instance->jclient);
 }
-
 
 static gboolean
 set_overwitch_instance_status (gpointer data)
@@ -555,6 +581,8 @@ remove_stopped_instances ()
     }
 
   g_slist_free (to_delete);
+
+  set_dll_target_delay ();
 }
 
 static void
@@ -666,6 +694,8 @@ stop_all (GtkWidget *object, gpointer data)
   g_list_store_remove_all (status_list_store);
 
   set_widgets_to_running_state (FALSE);
+
+  set_dll_target_delay ();
 }
 
 // When under PipeWire, it is desirable to run Overwitch as a follower of the hardware driver.
@@ -857,6 +887,8 @@ overwitch_build_ui ()
 
   jack_status_label =
     GTK_LABEL (gtk_builder_get_object (builder, "jack_status_label"));
+  target_delay_label =
+    GTK_LABEL (gtk_builder_get_object (builder, "target_delay_label"));
 
   g_signal_connect (main_window, "close-request",
 		    G_CALLBACK (overwitch_delete_window), NULL);

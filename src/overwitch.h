@@ -313,3 +313,5 @@ void ow_resampler_get_h2o_latency (struct ow_resampler *, size_t *, size_t *,
 
 void ow_resampler_get_o2h_latency (struct ow_resampler *, size_t *, size_t *,
 				   size_t *);
+
+double ow_resampler_get_target_delay_ms (struct ow_resampler *);

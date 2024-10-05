@@ -376,13 +376,13 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
             <property name="hexpand">1</property>
             <property name="spacing">6</property>
             <child>
-              <object class="GtkLabel">
+              <object class="GtkLabel" id="jack_status_label">
                 <property name="halign">start</property>
                 <property name="hexpand">1</property>
               </object>
             </child>
             <child>
-              <object class="GtkLabel" id="jack_status_label">
+              <object class="GtkLabel" id="target_delay_label">
                 <property name="halign">end</property>
                 <property name="hexpand">1</property>
               </object>
