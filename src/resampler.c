@@ -287,10 +287,30 @@ void
 ow_resampler_read_audio (struct ow_resampler *resampler)
 {
   long gen_frames;
+  int xruns;
 
-  gen_frames =
-    src_callback_read (resampler->o2h_state, resampler->o2h_ratio,
-		       resampler->bufsize, resampler->o2h_buf_out);
+  pthread_spin_lock (&resampler->lock);
+  xruns = resampler->o2h_xruns;
+  if (xruns)
+    {
+      resampler->o2h_xruns--;
+    }
+  pthread_spin_unlock (&resampler->lock);
+
+  if (xruns)
+    {
+      error_print ("Forcing o2h read (xrun)...");
+
+      pthread_spin_lock (&resampler->engine->lock);
+      resampler->engine->o2h_max_latency = 0;
+      pthread_spin_unlock (&resampler->engine->lock);
+
+      resampler->engine->context->read (resampler->engine->context->o2h_audio,
+					NULL, resampler->bufsize);
+    }
+
+  gen_frames = src_callback_read (resampler->o2h_state, resampler->o2h_ratio,
+				  resampler->bufsize, resampler->o2h_buf_out);
   if (gen_frames != resampler->bufsize)
     {
       error_print
@@ -305,6 +325,7 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
   long gen_frames;
   int inc;
   int frames;
+  int xruns;
   size_t bytes;
   size_t wsh2o;
   static double h2o_acc = .0;
@@ -313,6 +334,14 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
     {
       return;
     }
+
+  pthread_spin_lock (&resampler->lock);
+  xruns = resampler->h2o_xruns;
+  if (xruns)
+    {
+      resampler->h2o_xruns--;
+    }
+  pthread_spin_unlock (&resampler->lock);
 
   memcpy (&resampler->h2o_queue
 	  [resampler->h2o_queue_len *
@@ -341,10 +370,21 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
 
   if (bytes <= wsh2o)
     {
-      resampler->engine->context->write (resampler->engine->context->
-					 h2o_audio,
-					 (void *) resampler->h2o_buf_out,
-					 bytes);
+      if (xruns)
+	{
+	  error_print ("Skipping h2o write (xrun)...");
+
+	  pthread_spin_lock (&resampler->engine->lock);
+	  resampler->engine->h2o_max_latency = 0;
+	  pthread_spin_unlock (&resampler->engine->lock);
+	}
+      else
+	{
+	  resampler->engine->context->write (resampler->engine->
+					     context->h2o_audio,
+					     (void *) resampler->h2o_buf_out,
+					     bytes);
+	}
     }
   else
     {
@@ -363,7 +403,10 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 
   pthread_spin_lock (&resampler->lock);
   xruns = resampler->xruns;
-  resampler->xruns = 0;
+  if (xruns)
+    {
+      resampler->xruns--;
+    }
   pthread_spin_unlock (&resampler->lock);
 
   engine_status = ow_engine_get_status (resampler->engine);
@@ -405,14 +448,9 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 
   if (xruns)
     {
-      debug_print (2, "Fixing %d xruns...", xruns);
+      error_print ("Skipping DLL update (xrun)...");
 
-      //With this, we try to recover from the unreaded frames that are in the o2h buffer and...
-      resampler->o2h_ratio = dll->ratio * (1 + xruns);
-      resampler->h2o_ratio = 1.0 / resampler->o2h_ratio;
-      ow_resampler_read_audio (resampler);
-
-      //... we skip the current cycle DLL update as time masurements are not precise enough and would lead to errors.
+      //We skip the current cycle DLL update as time masurements are not precise enough and would lead to errors.
       return 0;
     }
 
@@ -498,6 +536,8 @@ ow_resampler_init_from_bus_address (struct ow_resampler **resampler_,
   resampler->samplerate = 0;
   resampler->bufsize = 0;
   resampler->xruns = 0;
+  resampler->o2h_xruns = 0;
+  resampler->h2o_xruns = 0;
   resampler->h2o_aux = NULL;
   resampler->status = OW_RESAMPLER_STATUS_STOP;
 
@@ -572,6 +612,8 @@ ow_resampler_inc_xruns (struct ow_resampler *resampler)
 {
   pthread_spin_lock (&resampler->lock);
   resampler->xruns++;
+  resampler->o2h_xruns++;
+  resampler->h2o_xruns++;
   pthread_spin_unlock (&resampler->lock);
 }
 
