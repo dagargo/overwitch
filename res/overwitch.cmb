@@ -152,6 +152,7 @@
 	(2,56,"GtkMenuButton","menu-model","1",None,None,None,None,None,None,None,None,None),
 	(2,56,"GtkWidget","valign","center",None,None,None,None,None,None,None,None,None),
 	(2,65,"GtkWindow","child",None,None,None,None,None,66,None,None,None,None),
+	(2,65,"GtkWindow","default-width","400",None,None,None,None,None,None,None,None,None),
 	(2,65,"GtkWindow","hide-on-close","True",None,None,None,None,None,None,None,None,None),
 	(2,65,"GtkWindow","modal","True",None,None,None,None,None,None,None,None,None),
 	(2,65,"GtkWindow","resizable","False",None,None,None,None,None,None,None,None,None),
