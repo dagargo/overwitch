@@ -516,10 +516,10 @@ jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
 	      plen = i + 1;
 	      jclient->j2o_ongoing_sysex = 0;
 
-	      error_print
-		("j2o: MIDI packet (%ld): %02x %02x %02x %02x @ %lu us", plen,
-		 oevent.packet.header, *start, *(start + 1), *(start + 2),
-		 oevent.time);
+	      debug_print (2,
+			   "j2o: MIDI packet (%ld): %02x %02x %02x %02x @ %lu us",
+			   plen, oevent.packet.header, *start, *(start + 1),
+			   *(start + 2), oevent.time);
 
 	      break;
 	    }
