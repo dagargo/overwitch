@@ -12,6 +12,8 @@ Overbridge 1 devices, which are Analog Four MKI, Analog Keys and Analog Rytm MKI
 
 Overwitch consists of 4 different binaries: `overwitch`, which is a GUI application, `overwitch-cli` which offers the same functionality for the command line; and `overwitch-play` and `overwitch-record` which do not integrate with JACK at all but stream the audio from and to a WAVE file.
 
+For a device manager application for Elektron devices, check [Elektroid](https://dagargo.github.io/elektroid/).
+
 ## Installation
 
 As with other autotools project, you need to run the commands below. There are a few options available.
@@ -326,6 +328,22 @@ $ uname -v
 With all this configuration I get no JACK xruns with 64 frames buffer (2 periods) and occasional xruns with 32 frames buffer (3 periods) with network enabled and under normal usage conditions.
 
 Although you can run Overwitch with verbose output this is **not recommended** unless you are debugging the application.
+
+## Usage with other MIDI devices
+
+While Overwitch is a JACK client, it is possible to connect its MIDI ports to ALSA MIDI ports. Among other things, this makes using [Elektroid](https://dagargo.github.io/elektroid/) with Overbridge possible.
+
+To achieve this, a virtual ALSA MIDI port is needed. You can create it with this.
+
+```
+sudo modprobe snd-virmidi midi_devs=1
+```
+
+Once this is available, ALSA connections thru Midi-Bridge from and to the Overwitch devices can be created. Keep in mind that [Elektroid](https://dagargo.github.io/elektroid/) will need to connect to the ALSA virtual port.
+
+### Tweaking the buffer size
+
+For devices allowinmg sample transfers, the PipeWire property `default.clock.quantum-limit` needs to be set to `16384` as some SysEx messages are longer than the default `8192` value.
 
 ## Adding devices
 
