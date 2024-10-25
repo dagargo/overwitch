@@ -22,7 +22,7 @@
 #include "utils.h"
 #include "dll.h"
 
-#define RATIO_DIFF_THRES 0.00001
+#define ERR_TUNED_THRES 2
 #define USEC_PER_SEC 1.0e6
 #define SEC_PER_USEC 1.0e-6
 
@@ -142,18 +142,6 @@ ow_dll_host_update (struct ow_dll *dll)
   dll->z2 += dll->w0 * (dll->z1 - dll->z2);
   dll->z3 += dll->w2 * dll->z2;
   dll->ratio = 1.0 - dll->z2 - dll->z3;
-
-  dll->ratio_sum += dll->ratio;
-  dll->ratio_avg_cycles++;
-}
-
-inline void
-ow_dll_host_calc_avg (struct ow_dll *dll)
-{
-  dll->last_ratio_avg = dll->ratio_avg;
-  dll->ratio_avg = dll->ratio_sum / dll->ratio_avg_cycles;
-  dll->ratio_sum = 0.0;
-  dll->ratio_avg_cycles = 0;
 }
 
 inline void
@@ -180,11 +168,6 @@ ow_dll_host_reset (struct ow_dll *dll, double output_samplerate,
   dll->z3 = 0.0;
 
   dll->ratio = output_samplerate / input_samplerate;
-
-  dll->ratio_sum = 0.0;
-  dll->ratio_avg = dll->ratio;
-  dll->ratio_avg_cycles = 0;
-  dll->last_ratio_avg = 0.0;
 
   dll->frames = -input_frames / dll->ratio;
 
@@ -213,6 +196,5 @@ ow_dll_host_load_dll_overbridge (struct ow_dll *dll)
 inline int
 ow_dll_tuned (struct ow_dll *dll)
 {
-  double diff = fabs (dll->ratio_avg - dll->last_ratio_avg);
-  return (diff < RATIO_DIFF_THRES);
+  return abs (dll->err) < ERR_TUNED_THRES;
 }

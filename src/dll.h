@@ -50,10 +50,6 @@ struct ow_dll
   double z2;
   double z3;
   double t_quantum;
-  double ratio_sum;
-  double ratio_avg;
-  int ratio_avg_cycles;
-  double last_ratio_avg;
   double err;
   struct instant i0;
   struct instant i1;
@@ -75,8 +71,6 @@ void ow_dll_host_set_loop_filter (struct ow_dll *, double, uint32_t, double);
 void ow_dll_host_update_error (struct ow_dll *, uint64_t);
 
 void ow_dll_host_update (struct ow_dll *);
-
-void ow_dll_host_calc_avg (struct ow_dll *);
 
 void ow_dll_host_load_dll_overbridge (struct ow_dll *);
 

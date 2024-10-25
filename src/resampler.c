@@ -26,6 +26,7 @@
 #define MAX_READ_FRAMES 5
 #define STARTUP_TIME 5
 #define DEFAULT_REPORT_PERIOD 2
+#define TUNING_PERIOD_US 5000000
 
 #define OB_PERIOD_MS (1000.0 / OB_SAMPLE_RATE)
 
@@ -94,10 +95,10 @@ ow_resampler_report_status (struct ow_resampler *resampler)
   if (debug_level)
     {
       printf
-	("%s: o2h latency: %4.1f [%4.1f, %4.1f] ms; h2o latency: %4.1f [%4.1f, %4.1f] ms, o2h ratio: %f, avg. %f\n",
+	("%s: o2h latency: %4.1f [%4.1f, %4.1f] ms; h2o latency: %4.1f [%4.1f, %4.1f] ms, o2h ratio: %f\n",
 	 resampler->engine->name, latency.o2h, latency.o2h_min,
 	 latency.o2h_max, latency.h2o, latency.h2o_min, latency.h2o_max,
-	 resampler->dll.ratio, resampler->dll.ratio_avg);
+	 resampler->dll.ratio);
     }
 
   if (resampler->reporter.callback)
@@ -182,9 +183,6 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
       && ow_engine_get_status (resampler->engine) == OW_ENGINE_STATUS_RUN)
     {
       debug_print (2, "Just adjusting DLL ratio...");
-      resampler->dll.ratio =
-	resampler->dll.last_ratio_avg * new_samplerate /
-	resampler->samplerate;
       resampler->log_cycles = 0;
       resampler->log_control_cycles =
 	STARTUP_TIME * new_samplerate / resampler->bufsize;
@@ -265,6 +263,11 @@ resampler_o2h_reader (void *cb_data, float **data)
 	  debug_print (2,
 		       "o2h: Audio ring buffer underflow (%zu < %zu). Replicating last samples...",
 		       rso2h, resampler->engine->o2h_transfer_size);
+
+	  pthread_spin_lock (&resampler->engine->lock);
+	  resampler->engine->o2h_max_latency = 0;	// Any maximum values is invalid at this point
+	  pthread_spin_unlock (&resampler->engine->lock);
+
 	  if (last_frames > 1)
 	    {
 	      uint64_t pos =
@@ -411,6 +414,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   int xruns;
   ow_engine_status_t engine_status;
   struct ow_dll *dll = &resampler->dll;
+  static uint64_t tuning_start_usecs;
 
   pthread_spin_lock (&resampler->lock);
   xruns = resampler->xruns;
@@ -484,41 +488,41 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   resampler->o2h_ratio = dll->ratio;
   resampler->h2o_ratio = 1.0 / resampler->o2h_ratio;
 
+  if (resampler->status == OW_RESAMPLER_STATUS_BOOT && ow_dll_tuned (dll))
+    {
+      debug_print (2, "Tuning resampler...");
+
+      ow_dll_host_set_loop_filter (dll, 0.5, resampler->bufsize,
+				   resampler->samplerate);
+
+      resampler->status = OW_RESAMPLER_STATUS_TUNE;
+
+      resampler->log_control_cycles =
+	resampler->reporter.period * resampler->samplerate /
+	resampler->bufsize;
+
+      tuning_start_usecs = current_usecs;
+    }
+
+  if (resampler->status == OW_RESAMPLER_STATUS_TUNE &&
+      current_usecs - tuning_start_usecs > TUNING_PERIOD_US)
+    {
+      debug_print (2, "Running resampler...");
+
+      ow_dll_host_set_loop_filter (dll, 0.05, resampler->bufsize,
+				   resampler->samplerate);
+
+      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_RUN);
+
+      resampler->status = OW_RESAMPLER_STATUS_RUN;
+
+      audio_running_cb (cb_data);
+    }
+
   resampler->log_cycles++;
   if (resampler->log_cycles == resampler->log_control_cycles)
     {
-      ow_dll_host_calc_avg (dll);
-
-      if (resampler->status == OW_RESAMPLER_STATUS_BOOT)
-	{
-	  debug_print (2, "Tuning resampler...");
-
-	  ow_dll_host_set_loop_filter (dll, 0.05, resampler->bufsize,
-				       resampler->samplerate);
-
-	  resampler->status = OW_RESAMPLER_STATUS_TUNE;
-
-	  resampler->log_control_cycles =
-	    resampler->reporter.period * resampler->samplerate /
-	    resampler->bufsize;
-	}
-
-      if (resampler->status == OW_RESAMPLER_STATUS_TUNE && ow_dll_tuned (dll))
-	{
-	  debug_print (2, "Running resampler...");
-
-	  ow_dll_host_set_loop_filter (dll, 0.02, resampler->bufsize,
-				       resampler->samplerate);
-
-	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_RUN);
-
-	  resampler->status = OW_RESAMPLER_STATUS_RUN;
-
-	  audio_running_cb (cb_data);
-	}
-
       ow_resampler_report_status (resampler);
-
       resampler->log_cycles = 0;
     }
 
