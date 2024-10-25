@@ -1016,11 +1016,11 @@ run_audio_o2h_midi (void *data)
   if (engine->context->options & OW_ENGINE_OPTION_O2P_MIDI)
     {
       prepare_cycle_in_midi (engine);
-    }
 
-  while (ow_engine_get_status (engine) == OW_ENGINE_STATUS_READY)
-    {
-      libusb_handle_events_completed (engine->usb.context, NULL);
+      while (ow_engine_get_status (engine) == OW_ENGINE_STATUS_READY)
+	{
+	  libusb_handle_events_completed (engine->usb.context, NULL);
+	}
     }
 
   //status == OW_ENGINE_STATUS_STEADY
