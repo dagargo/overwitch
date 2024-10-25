@@ -54,3 +54,6 @@ usb:v1935p1036*
 
 usb:v1935p001E*
  ID_MODEL_FROM_DATABASE=Syntakt Overbridge
+
+usb:v1935p0B2C*
+ ID_MODEL_FROM_DATABASE=Digitakt Overbridge
