@@ -643,6 +643,9 @@ ow_engine_init (struct ow_engine *engine, unsigned int blocks_per_transfer,
   engine->usb.xfr_timeout = xfr_timeout;
   debug_print (1, "USB transfer timeout: %u", engine->usb.xfr_timeout);
 
+  libusb_detach_kernel_driver (engine->usb.device_handle, 4);
+  libusb_detach_kernel_driver (engine->usb.device_handle, 5);
+
   err = libusb_set_configuration (engine->usb.device_handle, 1);
   if (LIBUSB_SUCCESS != err)
     {
