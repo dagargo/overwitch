@@ -414,7 +414,7 @@ cb_xfr_midi_in (struct libusb_transfer *xfr)
       if (xfr->status != LIBUSB_TRANSFER_TIMED_OUT)
 	{
 	  error_print ("Error on USB MIDI in transfer: %s",
-		       libusb_strerror (xfr->status));
+		       libusb_error_name (xfr->status));
 	}
     }
 
@@ -436,7 +436,7 @@ cb_xfr_midi_out (struct libusb_transfer *xfr)
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
     {
       error_print ("Error on USB MIDI out transfer: %s",
-		   libusb_strerror (xfr->status));
+		   libusb_error_name (xfr->status));
     }
 }
 
@@ -1415,7 +1415,7 @@ cb_xfr_control_out (struct libusb_transfer *xfr)
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
     {
       error_print ("Error on USB control out transfer: %s",
-		   libusb_strerror (xfr->status));
+		   libusb_error_name (xfr->status));
     }
 }
 
