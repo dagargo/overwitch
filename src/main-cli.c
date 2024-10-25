@@ -114,6 +114,8 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
   struct ow_usb_device *devices;
   struct ow_usb_device *device;
   struct jclient *jclient;
+  int jclient_init_count;
+
   ow_err_t err = ow_get_usb_device_list (&devices, &jclient_count);
 
   if (err)
@@ -125,7 +127,8 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
 
   device = devices;
   jclient = jclients;
-  for (int i = 0; i < jclient_count; i++, jclient++, device++)
+  jclient_init_count = 0;
+  for (int i = 0; i < jclient_count; i++, device++)
     {
       jclient->bus = device->bus;
       jclient->address = device->address;
@@ -140,12 +143,14 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
 	}
 
       jclient_start (jclient);
+      jclient++;
+      jclient_init_count++;
     }
 
   ow_free_usb_device_list (devices, jclient_count);
 
   jclient = jclients;
-  for (int i = 0; i < jclient_count; i++, jclient++)
+  for (int i = 0; i < jclient_init_count; i++, jclient++)
     {
       jclient_wait (jclient);
       jclient_destroy (jclient);
