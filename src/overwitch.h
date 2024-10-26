@@ -28,12 +28,6 @@
 #define OB_FRAMES_PER_BLOCK 7
 #define OB_BYTES_PER_SAMPLE sizeof(float)
 #define OB_MAX_TRACKS 64
-#define OB_MIDI_EVENT_SIZE sizeof(struct ow_midi_event_packet)
-#define OB_MIDI_EVENT_BYTES 3
-
-//SysEx messages are longer than 8 KB, let's say 16 KB. A message would then need 16 KB / 3 B parts repackaged in 16 B events per part or 87382 B.
-//The size of ow_midi_event_packet is 16 B and not 12 B due to alignment.
-#define OB_MIDI_BUF_LEN (128 * 1024)
 
 #define OW_DEFAULT_RT_PROPERTY 20
 
@@ -88,8 +82,6 @@ typedef enum
   OW_INIT_ERROR_NO_WRITE,
   OW_INIT_ERROR_NO_O2P_AUDIO_BUF,
   OW_INIT_ERROR_NO_P2O_AUDIO_BUF,
-  OW_INIT_ERROR_NO_O2P_MIDI_BUF,
-  OW_INIT_ERROR_NO_P2O_MIDI_BUF,
   OW_INIT_ERROR_NO_GET_TIME,
   OW_INIT_ERROR_NO_DLL
 } ow_err_t;
@@ -119,9 +111,7 @@ typedef enum
 typedef enum
 {
   OW_ENGINE_OPTION_O2P_AUDIO = 1,
-  OW_ENGINE_OPTION_P2O_AUDIO = 2,
-  OW_ENGINE_OPTION_O2P_MIDI = 4,
-  OW_ENGINE_OPTION_P2O_MIDI = 8
+  OW_ENGINE_OPTION_P2O_AUDIO = 2
 } ow_engine_option_t;
 
 struct ow_context
@@ -131,13 +121,11 @@ struct ow_context
   ow_buffer_write_t write;
   ow_buffer_rw_space_t read_space;
   ow_buffer_read_t read;
-  //Needed for MIDI and the DLL
+  //Needed for the DLL
   ow_get_time_t get_time;
   //Data
   void *h2o_audio;
   void *o2h_audio;
-  void *h2o_midi;
-  void *o2h_midi;
   //DLL
   struct ow_dll *dll;
   ow_dll_overbridge_init_t dll_overbridge_init;
@@ -176,25 +164,6 @@ struct ow_usb_device
   uint16_t pid;
   uint8_t bus;
   uint8_t address;
-};
-
-//This struct data similar to the USB MIDI packet with a timestamp.
-//Overbridge uses USB MIDI packets internally as they are delivered as such.
-
-struct ow_midi_event_packet
-{
-  uint8_t header;
-  uint8_t data[OB_MIDI_EVENT_BYTES];
-};
-
-struct ow_midi_event
-{
-  uint64_t time;
-  union
-  {
-    struct ow_midi_event_packet packet;
-    uint8_t raw[OB_MIDI_EVENT_SIZE];
-  };
 };
 
 struct ow_resampler_reporter
