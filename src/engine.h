@@ -172,8 +172,7 @@ struct ow_engine
   size_t h2o_latency;
   size_t h2o_min_latency;
   size_t h2o_max_latency;
-  pthread_t audio_o2h_midi_thread;
-  pthread_t h2o_midi_thread;
+  pthread_t audio_thread;
   struct ow_device_desc device_desc;
   size_t h2o_transfer_size;
   size_t o2h_transfer_size;
@@ -196,11 +195,6 @@ struct ow_engine
     size_t audio_out_blk_len;
     int xfr_audio_in_data_len;
     int xfr_audio_out_data_len;
-    //MIDI
-    struct libusb_transfer *xfr_midi_out;
-    struct libusb_transfer *xfr_midi_in;
-    uint8_t *xfr_midi_out_data;
-    uint8_t *xfr_midi_in_data;
     //Control
     struct libusb_transfer *xfr_control_out;
     struct libusb_transfer *xfr_control_in;
@@ -210,10 +204,7 @@ struct ow_engine
   //j2o resampler
   float *h2o_resampler_buf;
   SRC_DATA h2o_data;
-  //MIDI
   int reading_at_h2o_end;
-  pthread_spinlock_t h2o_midi_lock;
-  int h2o_midi_ready;
   struct ow_context *context;
 };
 
