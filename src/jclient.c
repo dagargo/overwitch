@@ -33,52 +33,7 @@
 
 #define MSG_ERROR_PORT_REGISTER "Error while registering JACK port"
 
-#define MAX_MIDI_BUF_LEN OB_MIDI_BUF_LEN
-
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
-
-void
-squeue_init (struct squeue *queue, uint32_t max_len)
-{
-  queue->max_len = max_len;
-  queue->data = malloc (max_len);
-  queue->len = 0;
-}
-
-void
-squeue_destroy (struct squeue *queue)
-{
-  free (queue->data);
-}
-
-inline int
-squeue_write (struct squeue *queue, void *data, uint32_t len)
-{
-  if (queue->len + len >= queue->max_len)
-    {
-      error_print ("o2j: Not enough space in queue. Resetting...");
-      queue->len = 0;
-      return 1;
-    }
-
-  memcpy (queue->data + queue->len, data, len);
-  queue->len += len;
-  return 0;
-}
-
-inline void
-squeue_read (struct squeue *queue, void *data)
-{
-  memcpy (data, queue->data, queue->len);
-  queue->len = 0;
-}
-
-void
-squeue_consume (struct squeue *queue, uint32_t consumed)
-{
-  queue->len -= consumed;
-  memcpy (queue->data, queue->data + consumed, queue->len);
-}
 
 size_t
 jclient_buffer_read (void *buffer, char *src, size_t size)
@@ -220,358 +175,6 @@ jclient_set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
   return 0;
 }
 
-static inline void
-jclient_o2j_midi (struct jclient *jclient, jack_nframes_t nframes)
-{
-  void *midi_port_buf;
-  jack_midi_data_t *jmidi;
-  struct ow_midi_event event;
-  jack_nframes_t last_frame, jack_frame;
-  int send = 0;
-  uint32_t len, lost_count;
-  int64_t frame;
-
-  midi_port_buf = jack_port_get_buffer (jclient->midi_output_port, nframes);
-  jack_midi_clear_buffer (midi_port_buf);
-
-  last_frame = jack_last_frame_time (jclient->client);
-
-  while (jack_ringbuffer_read_space (jclient->context.o2h_midi) >=
-	 sizeof (struct ow_midi_event))
-    {
-      jack_ringbuffer_peek (jclient->context.o2h_midi, (void *) &event,
-			    sizeof (struct ow_midi_event));
-
-      // We add 1 JACK cycle because it's the maximum delay we want to achieve
-      // as everyting generated during the previous cycle will always be played.
-      // If we tried to adjust it automatically we'd get 1 cycle delay.
-      jack_frame = jack_time_to_frames (jclient->client, event.time) +
-	nframes;
-
-      debug_print (3, "o2j: last frame: %u", last_frame);
-      debug_print (3, "o2j: JACK frame: %u", jack_frame);
-
-      if (jack_frame < last_frame)
-	{
-	  frame = 0;
-	  debug_print (2, "o2j: Processing missed event @ %lu us...", frame);
-	}
-      else
-	{
-	  frame = jack_frame - last_frame;
-	  if (frame >= nframes)
-	    {
-	      debug_print (2,
-			   "o2j: Skipping until the next cycle (event frames %lu)...",
-			   frame);
-	      break;
-	    }
-	}
-
-      debug_print (2, "o2j: Event frames: %lu", frame);
-
-      jack_ringbuffer_read_advance (jclient->context.o2h_midi,
-				    sizeof (struct ow_midi_event));
-      switch (event.packet.header)
-	{
-	case 0x04:
-	  len = 3;
-	  send = 0;
-	  if (jclient->o2j_midi_skipping)
-	    {
-	      continue;
-	    }
-	  break;
-	case 0x05:
-	  len = 1;
-	  send = 1;
-	  if (jclient->o2j_midi_skipping)
-	    {
-	      jclient->o2j_midi_skipping = 0;
-	      continue;
-	    }
-	  break;
-	case 0x06:
-	  len = 2;
-	  send = 1;
-	  if (jclient->o2j_midi_skipping)
-	    {
-	      jclient->o2j_midi_skipping = 0;
-	      continue;
-	    }
-	  break;
-	case 0x07:
-	  len = 3;
-	  send = 1;
-	  if (jclient->o2j_midi_skipping)
-	    {
-	      jclient->o2j_midi_skipping = 0;
-	      continue;
-	    }
-	  break;
-	case 0x0c:		//Program Change
-	case 0x0d:		//Channel Pressure (After-touch)
-	  len = 2;
-	  send = 1;
-	  jclient->o2j_midi_skipping = 0;
-	  break;
-	case 0x08:		//Note Off
-	case 0x09:		//Note On
-	case 0x0a:		//Polyphonic Key Pressure
-	case 0x0b:		//Control Change
-	case 0x0e:		//Pitch Bend Change
-	  len = 3;
-	  send = 1;
-	  jclient->o2j_midi_skipping = 0;
-	  break;
-	case 0x0f:		//Single Byte SysEx
-	  len = 1;
-	  send = 1;
-	  jclient->o2j_midi_skipping = 0;
-	  break;
-	default:
-	  error_print ("o2j: Message %02X not implemented",
-		       event.packet.header);
-	  jclient->o2j_midi_queue.len = 0;
-	  jclient->o2j_midi_skipping = 0;
-	  continue;
-	}
-
-      debug_print (3,
-		   "o2j MIDI packet: %02x %02x %02x %02x @ %lu us",
-		   event.packet.header, event.packet.data[0],
-		   event.packet.data[1], event.packet.data[2], event.time);
-
-      if (squeue_write (&jclient->o2j_midi_queue, event.packet.data, len))
-	{
-	  jclient->o2j_midi_skipping = 1;	//No space. We skip the current message being sent.
-	  continue;
-	}
-
-      if (send)
-	{
-	  jmidi = jack_midi_event_reserve (midi_port_buf, frame,
-					   jclient->o2j_midi_queue.len);
-	  if (jmidi)
-	    {
-	      debug_print (2, "o2j: Processing MIDI event @ %lu (%d B)",
-			   frame, jclient->o2j_midi_queue.len);
-	      squeue_read (&jclient->o2j_midi_queue, jmidi);
-	    }
-	  else
-	    {
-	      error_print ("o2j: JACK could not reserve event");
-	      jclient->o2j_midi_queue.len = 0;
-	    }
-	}
-
-      lost_count = jack_midi_get_lost_event_count (midi_port_buf);
-      if (lost_count > jclient->o2j_last_lost_count)
-	{
-	  jclient->o2j_last_lost_count = lost_count;
-	  error_print ("Lost event count: %d", jclient->o2j_last_lost_count);
-	}
-    }
-}
-
-static inline void
-jclient_j2o_midi_queue_event (struct jclient *jclient,
-			      struct ow_midi_event *event)
-{
-  if (jack_ringbuffer_write_space (jclient->context.h2o_midi) >=
-      sizeof (struct ow_midi_event))
-    {
-      debug_print (3,
-		   "j2o: MIDI packet: %02x %02x %02x %02x @ %lu us",
-		   event->packet.header, event->packet.data[0],
-		   event->packet.data[1], event->packet.data[2], event->time);
-
-      jack_ringbuffer_write (jclient->context.h2o_midi,
-			     (void *) event, sizeof (struct ow_midi_event));
-    }
-  else
-    {
-      error_print ("j2o: MIDI ring buffer overflow. Discarding data...");
-    }
-}
-
-static inline void
-jclient_copy_event_bytes (struct ow_midi_event *oevent,
-			  jack_midi_data_t *buffer, size_t len)
-{
-  memcpy (oevent->packet.data, buffer, len);
-  memset (oevent->packet.data + len, 0, OB_MIDI_EVENT_BYTES - len);
-}
-
-static inline void
-jclient_j2o_midi_msg (struct jclient *jclient, jack_midi_event_t *jevent,
-		      jack_time_t time)
-{
-  struct ow_midi_event oevent;
-  jack_midi_data_t status_byte = jevent->buffer[0];
-  jack_midi_data_t type = status_byte & 0xf0;
-
-  oevent.packet.header = 0;
-
-  debug_print (2, "j2o: Sending MIDI message...");
-
-  if (jevent->size == 1)
-    {
-      if (status_byte >= 0xf8 && status_byte <= 0xfc)
-	{
-	  oevent.packet.header = 0x0f;	//Single Byte SysEx
-	}
-    }
-  else if (jevent->size == 2)
-    {
-      switch (type)
-	{
-	case 0xc0:		//Program Change
-	  oevent.packet.header = 0x0c;
-	  break;
-	case 0xd0:		//Channel Pressure (After-touch)
-	  oevent.packet.header = 0x0d;
-	  break;
-	}
-    }
-  else				// jevent->size == 3
-    {
-      switch (type)
-	{
-	case 0x80:		//Note Off
-	  oevent.packet.header = 0x08;
-	  break;
-	case 0x90:		//Note On
-	  oevent.packet.header = 0x09;
-	  break;
-	case 0xa0:		//Polyphonic Key Pressure
-	  oevent.packet.header = 0x0a;
-	  break;
-	case 0xb0:		//Control Change
-	  oevent.packet.header = 0x0b;
-	  break;
-	case 0xe0:		//Pitch Bend Change
-	  oevent.packet.header = 0x0e;
-	  break;
-	}
-    }
-
-  if (oevent.packet.header)
-    {
-      oevent.time = time;
-      jclient_copy_event_bytes (&oevent, jevent->buffer, jevent->size);
-      jclient_j2o_midi_queue_event (jclient, &oevent);
-    }
-  else
-    {
-      error_print ("j2o: Message %02x not implemented", type);
-    }
-}
-
-//Multiple byte SysEx
-
-static inline void
-jclient_j2o_midi_sysex (struct jclient *jclient, jack_midi_event_t *jevent,
-			jack_time_t time)
-{
-  int consumed;
-  uint8_t *b;
-
-  if (squeue_write (&jclient->j2o_midi_queue, jevent->buffer, jevent->size))
-    {
-      return;
-    }
-
-  debug_print (2, "j2o: Sending MIDI SysEx packets...");
-
-  b = jclient->j2o_midi_queue.data;
-  consumed = 0;
-  while (consumed < jclient->j2o_midi_queue.len)
-    {
-      struct ow_midi_event oevent;
-      size_t plen = 0;
-      int end = 0;
-      uint8_t *start = b;
-      oevent.packet.header = 0x04;
-      oevent.time = time;
-
-      for (int i = 0; i < OB_MIDI_EVENT_BYTES &&
-	   consumed + i < jclient->j2o_midi_queue.len; i++, b++, plen++)
-	{
-	  if (*b == 0xf7)
-	    {
-	      switch (i)
-		{
-		case 0:
-		  oevent.packet.header = 0x05;
-		  break;
-		case 1:
-		  oevent.packet.header = 0x06;
-		  break;
-		default:	// 2
-		  oevent.packet.header = 0x07;
-		}
-
-	      end = 1;
-	      plen = i + 1;
-	      jclient->j2o_ongoing_sysex = 0;
-
-	      debug_print (2,
-			   "j2o: MIDI packet (%ld): %02x %02x %02x %02x @ %lu us",
-			   plen, oevent.packet.header, *start, *(start + 1),
-			   *(start + 2), oevent.time);
-
-	      break;
-	    }
-	}
-
-      if (!end && plen < OB_MIDI_EVENT_BYTES)
-	{
-	  break;
-	}
-
-      jclient_copy_event_bytes (&oevent, start, plen);
-      jclient_j2o_midi_queue_event (jclient, &oevent);
-      consumed += plen;
-    }
-
-  squeue_consume (&jclient->j2o_midi_queue, consumed);
-
-  debug_print (2, "j2o: SysEx message pending bytes: %d",
-	       jclient->j2o_midi_queue.len);
-}
-
-static inline void
-jclient_j2o_midi (struct jclient *jclient, jack_nframes_t nframes,
-		  jack_nframes_t current_frames)
-{
-  jack_midi_event_t jevent;
-  void *midi_port_buf;
-  jack_nframes_t event_count;
-  jack_time_t time = jack_frames_to_time (jclient->client, current_frames);
-
-  midi_port_buf = jack_port_get_buffer (jclient->midi_input_port, nframes);
-  event_count = jack_midi_get_event_count (midi_port_buf);
-
-  for (int i = 0; i < event_count; i++)
-    {
-      if (!jack_midi_event_get (&jevent, midi_port_buf, i))
-	{
-	  debug_print (2, "j2o: Processing MIDI event @ %u (%zu B)",
-		       jevent.time, jevent.size);
-	  if (jevent.buffer[0] == 0xf0 || jclient->j2o_ongoing_sysex)
-	    {
-	      jclient->j2o_ongoing_sysex = 1;
-	      jclient_j2o_midi_sysex (jclient, &jevent, time);
-	    }
-	  else
-	    {
-	      jclient_j2o_midi_msg (jclient, &jevent, time);
-	    }
-	}
-    }
-}
-
 inline void
 jclient_copy_o2j_audio (float *f, jack_nframes_t nframes,
 			jack_default_audio_sample_t *buffer[],
@@ -626,10 +229,6 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
     {
       error_print ("Error while getting JACK time");
     }
-
-  //MIDI runs independently of audio status
-  jclient_o2j_midi (jclient, nframes);
-  jclient_j2o_midi (jclient, nframes, current_frames);
 
   if (ow_resampler_compute_ratios (jclient->resampler, current_usecs,
 				   jclient_audio_running, jclient->client))
@@ -728,11 +327,8 @@ jclient_run (struct jclient *jclient)
 
   jclient->output_ports = NULL;
   jclient->input_ports = NULL;
-  jclient->j2o_ongoing_sysex = 0;
   jclient->context.h2o_audio = NULL;
   jclient->context.o2h_audio = NULL;
-  jclient->context.h2o_midi = NULL;
-  jclient->context.o2h_midi = NULL;
 
   engine = ow_resampler_get_engine (jclient->resampler);
   desc = ow_engine_get_device_desc (engine);
@@ -864,26 +460,6 @@ jclient_run (struct jclient *jclient)
 	}
     }
 
-  jclient->midi_output_port = jack_port_register (jclient->client, "MIDI out",
-						  JACK_DEFAULT_MIDI_TYPE,
-						  JackPortIsOutput, 0);
-
-  if (jclient->midi_output_port == NULL)
-    {
-      error_print (MSG_ERROR_PORT_REGISTER);
-      goto cleanup_jack;
-    }
-
-  jclient->midi_input_port = jack_port_register (jclient->client, "MIDI in",
-						 JACK_DEFAULT_MIDI_TYPE,
-						 JackPortIsInput, 0);
-
-  if (jclient->midi_input_port == NULL)
-    {
-      error_print (MSG_ERROR_PORT_REGISTER);
-      goto cleanup_jack;
-    }
-
   jclient->context.o2h_audio = jack_ringbuffer_create (MAX_LATENCY *
 						       ow_resampler_get_o2h_frame_size
 						       (jclient->resampler));
@@ -893,12 +469,6 @@ jclient_run (struct jclient *jclient)
 						       ow_resampler_get_h2o_frame_size
 						       (jclient->resampler));
   jack_ringbuffer_mlock (jclient->context.h2o_audio);
-
-  jclient->context.o2h_midi = jack_ringbuffer_create (OB_MIDI_BUF_LEN);
-  jack_ringbuffer_mlock (jclient->context.o2h_midi);
-
-  jclient->context.h2o_midi = jack_ringbuffer_create (OB_MIDI_BUF_LEN);
-  jack_ringbuffer_mlock (jclient->context.h2o_midi);
 
   jclient->context.read_space =
     (ow_buffer_rw_space_t) jack_ringbuffer_read_space;
@@ -911,14 +481,7 @@ jclient_run (struct jclient *jclient)
   jclient->context.set_rt_priority = set_rt_priority;
   jclient->context.priority = jclient->priority;
 
-  jclient->context.options = OW_ENGINE_OPTION_O2P_AUDIO |
-    OW_ENGINE_OPTION_O2P_MIDI | OW_ENGINE_OPTION_P2O_MIDI;
-
-  squeue_init (&jclient->o2j_midi_queue, MAX_MIDI_BUF_LEN);
-  squeue_init (&jclient->j2o_midi_queue, MAX_MIDI_BUF_LEN);
-
-  jclient->o2j_midi_skipping = 0;
-  jclient->o2j_last_lost_count = 0;
+  jclient->context.options = OW_ENGINE_OPTION_O2P_AUDIO;
 
   err = ow_resampler_start (jclient->resampler, &jclient->context);
   if (err)
@@ -941,10 +504,6 @@ jclient_run (struct jclient *jclient)
 cleanup_jack:
   jack_ringbuffer_free (jclient->context.h2o_audio);
   jack_ringbuffer_free (jclient->context.o2h_audio);
-  jack_ringbuffer_free (jclient->context.h2o_midi);
-  jack_ringbuffer_free (jclient->context.o2h_midi);
-  squeue_destroy (&jclient->o2j_midi_queue);
-  squeue_destroy (&jclient->j2o_midi_queue);
   jack_client_close (jclient->client);
   free (jclient->output_ports);
   free (jclient->input_ports);
