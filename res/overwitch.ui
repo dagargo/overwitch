@@ -49,7 +49,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
     <property name="copyright">Copyright © 2022 David García Goñi</property>
     <property name="hide-on-close">1</property>
     <property name="license-type">gpl-3-0</property>
-    <property name="logo-icon-name">overwitch</property>
+    <property name="logo-icon-name">io.github.dagargo.Overwitch</property>
     <property name="modal">1</property>
     <property name="program-name">Overwitch</property>
     <property name="transient-for">main_window</property>
@@ -391,7 +391,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
         </child>
       </object>
     </property>
-    <property name="icon-name">overwitch</property>
+    <property name="icon-name">io.github.dagargo.Overwitch</property>
     <property name="resizable">0</property>
     <property name="title">Overwitch</property>
     <child type="titlebar">

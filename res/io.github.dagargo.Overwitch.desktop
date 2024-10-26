@@ -7,5 +7,5 @@ Comment[es]=Cliente JACK para dispositivos Overbridge 2
 Categories=Music;AudioVideo;X-Sound;Audio;X-Alsa
 Keywords=music;alsa;realtime;standalone;
 Exec=overwitch
-Icon=overwitch
+Icon=io.github.dagargo.Overwitch
 Terminal=false
