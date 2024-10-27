@@ -22,7 +22,7 @@
     ]
   },
   {
-    "pid": 20,
+    "pid": 2870,
     "name": "Digitone",
     "input_track_names": [
       "Main L Input",
@@ -98,7 +98,7 @@
     ]
   },
   {
-    "pid": 28,
+    "pid": 2869,
     "name": "Digitone Keys",
     "input_track_names": [
       "Main L Input",
@@ -136,7 +136,7 @@
     ]
   },
   {
-    "pid": 22,
+    "pid": 2898,
     "name": "Analog Heat MKII",
     "input_track_names": [
       "Main L Input",
@@ -168,7 +168,7 @@
     ]
   },
   {
-    "pid": 30,
+    "pid": 2890,
     "name": "Syntakt",
     "input_track_names": [
       "Main L Input",
