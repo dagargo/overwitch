@@ -37,6 +37,9 @@ usb:v1935p1048*
 usb:v1935p000C*
  ID_MODEL_FROM_DATABASE=Digitakt Overbridge
 
+usb:v1935p0B2C*
+ ID_MODEL_FROM_DATABASE=Digitakt Overbridge
+
 usb:v1935p000D*
  ID_MODEL_FROM_DATABASE=Digitakt MIDI
 
@@ -44,6 +47,9 @@ usb:v1935p102C*
  ID_MODEL_FROM_DATABASE=Digitakt Audio/MIDI
 
 usb:v1935p0014*
+ ID_MODEL_FROM_DATABASE=Digitone Overbridge
+
+usb:v1935p0B36*
  ID_MODEL_FROM_DATABASE=Digitone Overbridge
 
 usb:v1935p0015*
@@ -55,5 +61,38 @@ usb:v1935p1036*
 usb:v1935p001E*
  ID_MODEL_FROM_DATABASE=Syntakt Overbridge
 
-usb:v1935p0B2C*
- ID_MODEL_FROM_DATABASE=Digitakt Overbridge
+usb:v1935p0B4A*
+ ID_MODEL_FROM_DATABASE=Syntakt Overbridge
+
+usb:v1935p001F*
+ ID_MODEL_FROM_DATABASE=Syntakt MIDI
+
+usb:v1935p104A*
+ ID_MODEL_FROM_DATABASE=Syntakt Audio/MIDI
+
+usb:v1935p0B35*
+ ID_MODEL_FROM_DATABASE=Digitone Keys Overbridge
+
+usb:v1935p001D*
+ ID_MODEL_FROM_DATABASE=Digitone Keys MIDI
+
+usb:v1935p1035*
+ ID_MODEL_FROM_DATABASE=Digitone Keys Audio/MIDI
+
+usb:v1935p0B2B*
+ ID_MODEL_FROM_DATABASE=Digitakt II Overbridge
+
+usb:v1935p012B*
+ ID_MODEL_FROM_DATABASE=Digitakt II MIDI
+
+usb:v1935p102B*
+ ID_MODEL_FROM_DATABASE=Digitakt II Audio/MIDI
+
+usb:v1935p0B52*
+ ID_MODEL_FROM_DATABASE=Analog Heat MKII Overbridge
+
+usb:v1935p0017*
+ ID_MODEL_FROM_DATABASE=Analog Heat MKII MIDI
+
+usb:v1935p1052*
+ ID_MODEL_FROM_DATABASE=Analog Heat MKII Audio/MIDI
