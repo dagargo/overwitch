@@ -292,8 +292,8 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
     }
   else
     {
-      error_print ("o2h: Error on USB audio transfer: %s",
-		   libusb_error_name (xfr->status));
+      error_print ("o2h: Error on USB audio transfer (%d B): %s",
+		   xfr->actual_length, libusb_error_name (xfr->status));
     }
 
   if (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP)
@@ -319,8 +319,8 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
     }
   else
     {
-      error_print ("h2o: Error on USB audio transfer: %s",
-		   libusb_error_name (xfr->status));
+      error_print ("h2o: Error on USB audio transfer (%d B): %s",
+		   xfr->actual_length, libusb_error_name (xfr->status));
     }
 
   set_usb_output_data_blks (xfr->user_data);
@@ -1074,8 +1074,8 @@ cb_xfr_control_out (struct libusb_transfer *xfr)
 {
   if (xfr->status != LIBUSB_TRANSFER_COMPLETED)
     {
-      error_print ("Error on USB control out transfer: %s",
-		   libusb_error_name (xfr->status));
+      error_print ("Error on USB control out transfer (%d B): %s",
+		   xfr->actual_length, libusb_error_name (xfr->status));
     }
 }
 
