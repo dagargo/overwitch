@@ -96,3 +96,6 @@ usb:v1935p0017*
 
 usb:v1935p1052*
  ID_MODEL_FROM_DATABASE=Analog Heat MKII Audio/MIDI
+
+usb:v1935p0B53*
+ ID_MODEL_FROM_DATABASE=Analog Heat +FX Overbridge
