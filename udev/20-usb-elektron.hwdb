@@ -19,6 +19,12 @@ usb:v1935p0004*
 usb:v1935p000E*
  ID_MODEL_FROM_DATABASE=Analog Four MKII Overbridge
 
+usb:v1935P0B47*
+ ID_MODEL_FROM_DATABASE=Analog Four MKII Overbridge
+
+usb:v1935p000F*
+ ID_MODEL_FROM_DATABASE=Analog Four MKII MIDI
+
 usb:v1935p100F*
  ID_MODEL_FROM_DATABASE=Analog Four MKII MIDI
 
@@ -26,6 +32,9 @@ usb:v1935p1047*
  ID_MODEL_FROM_DATABASE=Analog Four MKII Audio/MIDI
 
 usb:v1935p0010*
+ ID_MODEL_FROM_DATABASE=Analog Rytm MKII Overbridge
+
+usb:v1935p0B48*
  ID_MODEL_FROM_DATABASE=Analog Rytm MKII Overbridge
 
 usb:v1935p0011*
