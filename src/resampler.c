@@ -238,7 +238,6 @@ resampler_o2h_reader (void *cb_data, float **data)
   size_t rso2h;
   size_t bytes;
   long frames;
-  static int last_frames = 1;
   struct ow_resampler *resampler = cb_data;
 
   *data = resampler->o2h_buf_in;
@@ -260,21 +259,13 @@ resampler_o2h_reader (void *cb_data, float **data)
 	}
       else
 	{
-	  debug_print (2,
-		       "o2h: Audio ring buffer underflow (%zu < %zu). Replicating last samples...",
+	  debug_print (2, "o2h: Audio ring buffer underflow (%zu < %zu)",
 		       rso2h, resampler->engine->o2h_transfer_size);
 
 	  pthread_spin_lock (&resampler->engine->lock);
 	  resampler->engine->o2h_max_latency = 0;	// Any maximum values is invalid at this point
 	  pthread_spin_unlock (&resampler->engine->lock);
 
-	  if (last_frames > 1)
-	    {
-	      uint64_t pos =
-		(last_frames - 1) * resampler->engine->device_desc.outputs;
-	      memcpy (resampler->o2h_buf_in, &resampler->o2h_buf_in[pos],
-		      resampler->engine->o2h_frame_size);
-	    }
 	  frames = MAX_READ_FRAMES;
 	}
     }
@@ -293,7 +284,7 @@ resampler_o2h_reader (void *cb_data, float **data)
     }
 
   resampler->dll.frames += frames;
-  last_frames = frames;
+
   return frames;
 }
 
