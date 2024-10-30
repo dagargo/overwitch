@@ -24,7 +24,6 @@
 #include "resampler.h"
 
 #define MAX_READ_FRAMES 5
-#define STARTUP_TIME 5
 #define DEFAULT_REPORT_PERIOD 2
 #define TUNING_PERIOD_US 5000000
 
@@ -177,8 +176,6 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
     {
       debug_print (2, "Just adjusting DLL ratio...");
       resampler->log_cycles = 0;
-      resampler->log_control_cycles =
-	STARTUP_TIME * new_samplerate / resampler->bufsize;
     }
   else
     {
@@ -435,8 +432,6 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       ow_resampler_report_status (resampler);
 
       resampler->log_cycles = 0;
-      resampler->log_control_cycles =
-	STARTUP_TIME * resampler->samplerate / resampler->bufsize;
 
       return 0;
     }
