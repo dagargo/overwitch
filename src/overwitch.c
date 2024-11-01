@@ -48,7 +48,7 @@
 #define DEV_TAG_OUTPUT_TRACK_NAMES "output_track_names"
 
 #if !defined(JSON_DEVS_FILE) || defined(OW_TESTING)
-static const struct ow_device_desc_static DIGITAKT_DESC = {
+static const struct ow_device_desc DIGITAKT_DESC = {
   .pid = DTAKT_PID,
   .name = "Digitakt",
   .inputs = 2,
@@ -60,7 +60,7 @@ static const struct ow_device_desc_static DIGITAKT_DESC = {
      "Input R"}
 };
 
-static const struct ow_device_desc_static DIGITONE_DESC = {
+static const struct ow_device_desc DIGITONE_DESC = {
   .pid = DTONE_PID,
   .name = "Digitone",
   .inputs = 2,
@@ -72,7 +72,7 @@ static const struct ow_device_desc_static DIGITONE_DESC = {
      "Input L", "Input R"}
 };
 
-static const struct ow_device_desc_static AFMK2_DESC = {
+static const struct ow_device_desc AFMK2_DESC = {
   .pid = AFMK2_PID,
   .name = "Analog Four MKII",
   .inputs = 6,
@@ -85,7 +85,7 @@ static const struct ow_device_desc_static AFMK2_DESC = {
      "Synth Track 4", "Input L", "Input R"}
 };
 
-static const struct ow_device_desc_static ARMK2_DESC = {
+static const struct ow_device_desc ARMK2_DESC = {
   .pid = ARMK2_PID,
   .name = "Analog Rytm MKII",
   .inputs = 12,
@@ -99,7 +99,7 @@ static const struct ow_device_desc_static ARMK2_DESC = {
 			 "Input R"}
 };
 
-static const struct ow_device_desc_static DKEYS_DESC = {
+static const struct ow_device_desc DKEYS_DESC = {
   .pid = DKEYS_PID,
   .name = "Digitone Keys",
   .inputs = 2,
@@ -111,7 +111,7 @@ static const struct ow_device_desc_static DKEYS_DESC = {
      "Input L", "Input R"}
 };
 
-static const struct ow_device_desc_static AHMK1_DESC = {
+static const struct ow_device_desc AHMK1_DESC = {
   .pid = AHMK1_PID,
   .name = "Analog Heat",
   .inputs = 4,
@@ -121,7 +121,7 @@ static const struct ow_device_desc_static AHMK1_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct ow_device_desc_static AHMK2_DESC = {
+static const struct ow_device_desc AHMK2_DESC = {
   .pid = AHMK2_PID,
   .name = "Analog Heat MKII",
   .inputs = 4,
@@ -131,7 +131,7 @@ static const struct ow_device_desc_static AHMK2_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct ow_device_desc_static AHFX_DESC = {
+static const struct ow_device_desc AHFX_DESC = {
   .pid = AHFX_PID,
   .name = "Analog Heat +FX",
   .inputs = 4,
@@ -141,7 +141,7 @@ static const struct ow_device_desc_static AHFX_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct ow_device_desc_static STAKT_DESC = {
+static const struct ow_device_desc STAKT_DESC = {
   .pid = STAKT_PID,
   .name = "Syntakt",
   .inputs = 8,
@@ -156,7 +156,7 @@ static const struct ow_device_desc_static STAKT_DESC = {
      "Delay/Reverb L", "Delay/Reverb R", "Input L", "Input R"}
 };
 
-static const struct ow_device_desc_static *OB_DEVICE_DESCS[] = {
+static const struct ow_device_desc *OB_DEVICE_DESCS[] = {
   &DIGITAKT_DESC, &DIGITONE_DESC, &AFMK2_DESC, &ARMK2_DESC, &DKEYS_DESC,
   &AHMK1_DESC, &AHMK2_DESC, &AHFX_DESC, &STAKT_DESC, NULL
 };
@@ -168,18 +168,18 @@ ow_free_device_desc (struct ow_device_desc *desc)
   char **names;
 
   free (desc->name);
+
   names = desc->input_track_names;
   for (int i = 0; i < desc->inputs; i++, names++)
     {
       free (*names);
     }
-  free (desc->input_track_names);
+
   names = desc->output_track_names;
   for (int i = 0; i < desc->outputs; i++, names++)
     {
       free (*names);
     }
-  free (desc->output_track_names);
 }
 
 void
@@ -262,16 +262,12 @@ ow_get_usb_device_list (struct ow_usb_device **devices, size_t *size)
 
 void
 ow_copy_device_desc_static (struct ow_device_desc *device_desc,
-			    const struct ow_device_desc_static *d)
+			    const struct ow_device_desc *d)
 {
   device_desc->pid = d->pid;
   device_desc->name = strdup (d->name);
   device_desc->inputs = d->inputs;
   device_desc->outputs = d->outputs;
-  device_desc->input_track_names =
-    malloc (sizeof (char *) * device_desc->inputs);
-  device_desc->output_track_names =
-    malloc (sizeof (char *) * device_desc->outputs);
 
   for (int i = 0; i < device_desc->inputs; i++)
     {
@@ -302,8 +298,6 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 
   device_desc->inputs = 0;
   device_desc->outputs = 0;
-  device_desc->input_track_names = NULL;
-  device_desc->output_track_names = NULL;
 
   parser = json_parser_new ();
 
@@ -408,8 +402,7 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 	  err = -ENODEV;
 	  goto cleanup_reader;
 	}
-      device_desc->input_track_names =
-	malloc (sizeof (char *) * device_desc->inputs);
+
       for (int j = 0; j < device_desc->inputs; j++)
 	{
 	  device_desc->input_track_names[j] = NULL;
@@ -453,8 +446,7 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 	  err = -ENODEV;
 	  goto cleanup_reader;
 	}
-      device_desc->output_track_names =
-	malloc (sizeof (char *) * device_desc->outputs);
+
       for (int j = 0; j < device_desc->outputs; j++)
 	{
 	  device_desc->output_track_names[j] = NULL;
@@ -485,8 +477,7 @@ cleanup_parser:
   g_free (devices_filename);
   return err;
 #else
-  for (const struct ow_device_desc_static ** d = OB_DEVICE_DESCS; *d != NULL;
-       d++)
+  for (const struct ow_device_desc ** d = OB_DEVICE_DESCS; *d != NULL; d++)
     {
       if ((*d)->pid == pid)
 	{

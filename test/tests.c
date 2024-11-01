@@ -10,7 +10,7 @@
 #define TRACKS 6
 #define NFRAMES 64
 
-static const struct ow_device_desc_static TESTDEV_DESC = {
+static const struct ow_device_desc TESTDEV_DESC = {
   .pid = 0,
   .name = "Test",
   .inputs = TRACKS,
