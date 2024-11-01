@@ -41,9 +41,9 @@
 }
 
 #define error_print(format, ...) { \
-  gboolean tty = isatty(fileno(stderr)); \
-  const gchar * color_start = tty ? "\x1b[31m" : ""; \
-  const gchar * color_end = tty ? "\x1b[m" : ""; \
+  int tty = isatty(fileno(stderr)); \
+  const char * color_start = tty ? "\x1b[31m" : ""; \
+  const char * color_end = tty ? "\x1b[m" : ""; \
   fprintf(stderr, "%sERROR:" __FILE__ ":%d:%s: " format "%s\n", color_start, __LINE__, __FUNCTION__, ## __VA_ARGS__, color_end); \
 }
 

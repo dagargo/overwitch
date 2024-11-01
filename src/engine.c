@@ -1001,32 +1001,6 @@ ow_engine_stop (struct ow_engine *engine)
   ow_engine_set_status (engine, OW_ENGINE_STATUS_STOP);
 }
 
-//This function is for development purpouses only. It is not used but it is in the internal API.
-void
-ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
-{
-  int32_t *s, v;
-  struct ow_engine_usb_blk *blk;
-
-  for (int i = 0; i < engine->blocks_per_transfer; i++)
-    {
-      blk = GET_NTH_USB_BLK (blks, blk_len, i);
-      printf ("Block %d\n", i);
-      printf ("0x%04x | 0x%04x\n", be16toh (blk->header),
-	      be16toh (blk->frames));
-      s = blk->data;
-      for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
-	{
-	  for (int k = 0; k < engine->device_desc.outputs; k++)
-	    {
-	      v = be32toh (*s);
-	      printf ("Frame %2d, track %2d: %d\n", j, k, v);
-	      s++;
-	    }
-	}
-    }
-}
-
 static void
 ow_engine_load_overbridge_name (struct ow_engine *engine)
 {

@@ -225,5 +225,3 @@ void ow_engine_write_usb_output_blocks (struct ow_engine *);
 void ow_engine_init_mem (struct ow_engine *, unsigned int);
 
 void ow_engine_free_mem (struct ow_engine *);
-
-void ow_engine_print_blocks (struct ow_engine *, char *, size_t);

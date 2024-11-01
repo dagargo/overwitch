@@ -19,6 +19,31 @@ static const struct ow_device_desc_static TESTDEV_DESC = {
   .output_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"}
 };
 
+static void
+ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
+{
+  int32_t *s, v;
+  struct ow_engine_usb_blk *blk;
+
+  for (int i = 0; i < engine->blocks_per_transfer; i++)
+    {
+      blk = GET_NTH_USB_BLK (blks, blk_len, i);
+      printf ("Block %d\n", i);
+      printf ("0x%04x | 0x%04x\n", be16toh (blk->header),
+	      be16toh (blk->frames));
+      s = blk->data;
+      for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
+	{
+	  for (int k = 0; k < engine->device_desc.outputs; k++)
+	    {
+	      v = be32toh (*s);
+	      printf ("Frame %2d, track %2d: %d\n", j, k, v);
+	      s++;
+	    }
+	}
+    }
+}
+
 void
 test_sizes ()
 {
@@ -58,7 +83,7 @@ test_usb_blocks ()
   CU_ASSERT_EQUAL (engine.usb.audio_out_blk_len, blk_size);
   CU_ASSERT_EQUAL (engine.usb.audio_in_blk_len, blk_size);
 
-  a = engine.p2o_transfer_buf;
+  a = engine.h2o_transfer_buf;
   for (int i = 0; i < BLOCKS; i++)
     {
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
@@ -89,8 +114,8 @@ test_usb_blocks ()
 
   ow_engine_read_usb_input_blocks (&engine);
 
-  a = engine.p2o_transfer_buf;
-  b = engine.o2p_transfer_buf;
+  a = engine.h2o_transfer_buf;
+  b = engine.o2h_transfer_buf;
   for (int i = 0; i < BLOCKS; i++)
     {
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
