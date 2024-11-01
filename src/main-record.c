@@ -84,7 +84,7 @@ static size_t
 buffer_dummy_rw_space (void *data)
 {
   return OW_DEFAULT_BLOCKS * OB_FRAMES_PER_BLOCK * OB_MAX_TRACKS *
-    OB_BYTES_PER_SAMPLE;
+    OW_BYTES_PER_SAMPLE;
 }
 
 static buffer_status_t
@@ -131,19 +131,19 @@ buffer_write (void *data, const char *buf, size_t size)
   static size_t pos = 0;
   size_t new_pos;
   void *dst;
-  size_t frames = size / (desc->outputs * OB_BYTES_PER_SAMPLE);
+  size_t frames = size / (desc->outputs * OW_BYTES_PER_SAMPLE);
 
   debug_print (2, "Writing %ld bytes (%ld frames) to buffer...", size,
 	       frames);
-  new_pos = pos + frames * buffer.outputs * OB_BYTES_PER_SAMPLE;
+  new_pos = pos + frames * buffer.outputs * OW_BYTES_PER_SAMPLE;
   if (new_pos >= buffer.len)
     {
       pthread_spin_lock (&buffer.lock);
       buffer.status = READY;
-      buffer.disk_samples = pos / OB_BYTES_PER_SAMPLE;
+      buffer.disk_samples = pos / OW_BYTES_PER_SAMPLE;
       buffer.disk_frames = buffer.disk_samples / buffer.outputs;
       memcpy (buffer.disk, buffer.mem,
-	      buffer.disk_frames * buffer.outputs * OB_BYTES_PER_SAMPLE);
+	      buffer.disk_frames * buffer.outputs * OW_BYTES_PER_SAMPLE);
       pthread_spin_unlock (&buffer.lock);
       sfinfo.frames += buffer.disk_frames;
       pos = 0;
@@ -157,9 +157,9 @@ buffer_write (void *data, const char *buf, size_t size)
 	  if (!track_mask
 	      || (j < buffer.outputs_mask_len && (track_mask[j] != '0')))
 	    {
-	      memcpy (dst, buf, OB_BYTES_PER_SAMPLE);
-	      dst += OB_BYTES_PER_SAMPLE;
-	      pos += OB_BYTES_PER_SAMPLE;
+	      memcpy (dst, buf, OW_BYTES_PER_SAMPLE);
+	      dst += OW_BYTES_PER_SAMPLE;
+	      pos += OW_BYTES_PER_SAMPLE;
 	      float x = *((float *) buf);
 	      if (x >= 0.0)
 		{
@@ -176,7 +176,7 @@ buffer_write (void *data, const char *buf, size_t size)
 		    }
 		}
 	    }
-	  buf += OB_BYTES_PER_SAMPLE;
+	  buf += OW_BYTES_PER_SAMPLE;
 	}
     }
 
@@ -295,8 +295,8 @@ run_record (int device_num, const char *device_name,
     }
 
   buffer.len = track_buf_size_kb * 1000 * buffer.outputs;
-  buffer.mem = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
-  buffer.disk = malloc (buffer.len * OB_BYTES_PER_SAMPLE);
+  buffer.mem = malloc (buffer.len * OW_BYTES_PER_SAMPLE);
+  buffer.disk = malloc (buffer.len * OW_BYTES_PER_SAMPLE);
   buffer.outputs_mask_len = track_mask ? strlen (track_mask) : 0;
 
   for (int i = 0; i < desc->outputs; i++)

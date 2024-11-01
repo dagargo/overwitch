@@ -5,24 +5,39 @@
 #include "../src/jclient.h"
 #include "../src/engine.h"
 
-#define OW_CONV_SCALE_32 (1.0f / (float) INT_MAX)
 #define BLOCKS 4
 #define TRACKS 6
 #define NFRAMES 64
 
-static const struct ow_device_desc TESTDEV_DESC = {
+static const struct ow_device_desc TESTDEV_DESC_V1 = {
   .pid = 0,
+  .protocol = 1,
   .name = "Test",
   .inputs = TRACKS,
   .outputs = TRACKS,
   .input_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"},
-  .output_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"}
+  .custom_input_track_sizes = {4, 4, 4, 4, 4, 4},
+  .output_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"},
+  .custom_output_track_sizes = {4, 4, 4, 4, 4, 4},
+};
+
+static const struct ow_device_desc TESTDEV_DESC_V2 = {
+  .pid = 0,
+  .protocol = 2,
+  .name = "Test",
+  .inputs = TRACKS,
+  .outputs = TRACKS,
+  .input_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"},
+  .custom_input_track_sizes = {4, 4, 3, 3, 3, 3},
+  .output_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"},
+  .custom_output_track_sizes = {4, 4, 3, 3, 3, 3}
 };
 
 static void
 ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
 {
-  int32_t *s, v;
+  int32_t v;
+  unsigned char *s;
   struct ow_engine_usb_blk *blk;
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
@@ -31,27 +46,54 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
       printf ("Block %d\n", i);
       printf ("0x%04x | 0x%04x\n", be16toh (blk->header),
 	      be16toh (blk->frames));
-      s = blk->data;
+      s = (unsigned char *) blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < engine->device_desc.outputs; k++)
+	  if (engine->device_desc.protocol == OW_ENGINE_PROTOCOL_V1)
 	    {
-	      v = be32toh (*s);
-	      printf ("Frame %2d, track %2d: %d\n", j, k, v);
-	      s++;
+	      for (int k = 0; k < engine->device_desc.outputs; k++)
+		{
+		  v = be32toh (*((int32_t *) s));
+		  printf ("Frame %2d, track %2d: %d\n", j, k, v);
+		  s += sizeof (int32_t);
+		}
+	    }
+	  else
+	    {
+	      int *size = engine->device_desc.custom_output_track_sizes;
+	      for (int k = 0; k < engine->device_desc.outputs; k++)
+		{
+		  unsigned char *dst;
+		  if (*size == 4)
+		    {
+		      dst = (unsigned char *) &v;
+		      memcpy (dst, s, *size);
+		    }
+		  else
+		    {
+		      dst = &((unsigned char *) &v)[1];
+		      memcpy (dst, s, *size);
+		    }
+		  v = be32toh (v);
+		  v <<= 8;
+		  printf ("Frame %2d, track %2d: %d\n", j, k, v);
+		  s += *size;
+		  size++;
+		}
+
 	    }
 	}
     }
 }
 
-void
+static void
 test_sizes ()
 {
   struct ow_engine engine;
 
   printf ("\n");
 
-  ow_copy_device_desc_static (&engine.device_desc, &TESTDEV_DESC);
+  ow_copy_device_desc_static (&engine.device_desc, &TESTDEV_DESC_V1);
   engine.usb.audio_in_blk_len = 0;
   engine.usb.audio_out_blk_len = 0;
   ow_engine_init_mem (&engine, BLOCKS);
@@ -59,30 +101,26 @@ test_sizes ()
   printf ("\n");
 
   CU_ASSERT_EQUAL (engine.usb.audio_out_blk_len,
-		   TRACKS * OB_FRAMES_PER_BLOCK * OB_BYTES_PER_SAMPLE + 32);
+		   TRACKS * OB_FRAMES_PER_BLOCK * OW_BYTES_PER_SAMPLE + 32);
   CU_ASSERT_EQUAL (engine.usb.audio_in_blk_len,
-		   TRACKS * OB_FRAMES_PER_BLOCK * OB_BYTES_PER_SAMPLE + 32);
+		   TRACKS * OB_FRAMES_PER_BLOCK * OW_BYTES_PER_SAMPLE + 32);
 
   ow_engine_free_mem (&engine);
 }
 
-void
-test_usb_blocks ()
+static void
+test_usb_blocks (const struct ow_device_desc *device_desc, size_t blk_size,
+		 float max_error)
 {
   float *a, *b;
-  size_t blk_size;
   struct ow_engine engine;
 
   printf ("\n");
 
-  ow_copy_device_desc_static (&engine.device_desc, &TESTDEV_DESC);
+  ow_copy_device_desc_static (&engine.device_desc, device_desc);
   engine.usb.audio_in_blk_len = 0;
   engine.usb.audio_out_blk_len = 0;
   ow_engine_init_mem (&engine, BLOCKS);
-
-  blk_size =
-    sizeof (struct ow_engine_usb_blk) +
-    OB_FRAMES_PER_BLOCK * TRACKS * sizeof (float);
 
   CU_ASSERT_EQUAL (engine.usb.audio_out_blk_len, blk_size);
   CU_ASSERT_EQUAL (engine.usb.audio_in_blk_len, blk_size);
@@ -94,7 +132,7 @@ test_usb_blocks ()
 	{
 	  for (int k = 0; k < engine.device_desc.outputs; k++)
 	    {
-	      *a = 1e-8 * (i + 1) * (k + 1);
+	      *a = 1e-4 * (i + 1) * (k + 1);
 	      a++;
 	    }
 	}
@@ -127,7 +165,7 @@ test_usb_blocks ()
 	  for (int k = 0; k < engine.device_desc.outputs; k++)
 	    {
 	      float error = fabsf (*a - *b);
-	      CU_ASSERT_TRUE (error < 1e-8);
+	      CU_ASSERT_TRUE (error < max_error);
 	      printf ("%.10f =?= %.10f; error: %.10f\n", *a, *b, error);
 	      a++;
 	      b++;
@@ -138,7 +176,30 @@ test_usb_blocks ()
   ow_engine_free_mem (&engine);
 }
 
-void
+static void
+test_usb_blocks_v1 ()
+{
+  size_t blk_size = sizeof (struct ow_engine_usb_blk) +
+    OB_FRAMES_PER_BLOCK * TRACKS * sizeof (float);
+
+  test_usb_blocks (&TESTDEV_DESC_V1, blk_size, 1e-9);
+}
+
+static void
+test_usb_blocks_v2 ()
+{
+  size_t frame_size = 0;
+  for (int i = 0; i < TESTDEV_DESC_V2.inputs; i++)
+    {
+      frame_size += TESTDEV_DESC_V2.custom_input_track_sizes[i];
+    }
+  size_t blk_size = sizeof (struct ow_engine_usb_blk) +
+    OB_FRAMES_PER_BLOCK * frame_size;
+
+  test_usb_blocks (&TESTDEV_DESC_V2, blk_size, 1e-6);
+}
+
+static void
 test_jack_buffers ()
 {
   jack_default_audio_sample_t *jack_input[TRACKS];
@@ -149,7 +210,7 @@ test_jack_buffers ()
 
   printf ("\n");
 
-  ow_copy_device_desc_static (&engine.device_desc, &TESTDEV_DESC);
+  ow_copy_device_desc_static (&engine.device_desc, &TESTDEV_DESC_V1);
 
   for (int i = 0; i < TRACKS; i++)
     {
@@ -187,6 +248,8 @@ main (int argc, char *argv[])
 {
   int err;
 
+  debug_level = 2;
+
   if (CU_initialize_registry () != CUE_SUCCESS)
     {
       goto cleanup;
@@ -202,7 +265,12 @@ main (int argc, char *argv[])
       goto cleanup;
     }
 
-  if (!CU_add_test (suite, "test_usb_blocks", test_usb_blocks))
+  if (!CU_add_test (suite, "test_usb_blocks_v1", test_usb_blocks_v1))
+    {
+      goto cleanup;
+    }
+
+  if (!CU_add_test (suite, "test_usb_blocks_v2", test_usb_blocks_v2))
     {
       goto cleanup;
     }
