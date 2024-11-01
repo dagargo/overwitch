@@ -29,28 +29,35 @@
 
 #define ELEKTRON_VID 0x1935
 
-#define AFMK1_PID 0x0004
-#define AKEYS_PID 0x0006
-#define ARMK1_PID 0x0008
-#define AHMK1_PID 0x000a
-#define DTAKT_PID 0x000c
-#define AFMK2_PID 0x000e
-#define ARMK2_PID 0x0010
-#define DTONE_PID 0x0014
-#define AHMK2_PID 0x0016
-#define DKEYS_PID 0x001c
-#define STAKT_PID 0x001e
-#define AHFX_PID 0x0020
+#define ANALOG_FOUR_PID 0x0004
+#define ANALOG_KEYS_PID 0x0006
+#define ANALOG_RYTM_PID 0x0008
+#define ANALOG_HEAT_PID 0x000a
+#define DIGITAKT_PID 0x0b2c
+#define ANALOG_FOUR_MK2_PID 0x0b47
+#define ANALOG_RYTM_MK2_PID 0x0b48
+#define DIGITONE_PID 0x0b36
+#define ANALOG_HEAT_MK2_PID 0x0b52
+#define DIGITONE_KEYS_PID 0x0b35
+#define SYNTAKT_PID 0x0b4a
+#define ANALOG_HEAT_FX_PID 0x0b53
+#define DIGITAKT_II_PID 0x0b2b
 
 #define DEV_TAG_PID "pid"
 #define DEV_TAG_NAME "name"
+#define DEV_TAG_PROTOCOL "protocol"
 #define DEV_TAG_INPUT_TRACK_NAMES "input_track_names"
 #define DEV_TAG_OUTPUT_TRACK_NAMES "output_track_names"
+#define DEV_TAG_CUSTOM_INPUT_TRACK_SIZES "custom_input_track_sizes"
+#define DEV_TAG_CUSTOM_OUTPUT_TRACK_SIZES "custom_output_track_sizes"
+
+#define OB_DEFAULT_SAMPLE_SIZE 4
 
 #if !defined(JSON_DEVS_FILE) || defined(OW_TESTING)
 static const struct ow_device_desc DIGITAKT_DESC = {
-  .pid = DTAKT_PID,
+  .pid = DIGITAKT_PID,
   .name = "Digitakt",
+  .protocol = 1,
   .inputs = 2,
   .outputs = 12,
   .input_track_names = {"Main L Input", "Main R Input"},
@@ -61,8 +68,9 @@ static const struct ow_device_desc DIGITAKT_DESC = {
 };
 
 static const struct ow_device_desc DIGITONE_DESC = {
-  .pid = DTONE_PID,
+  .pid = DIGITONE_PID,
   .name = "Digitone",
+  .protocol = 1,
   .inputs = 2,
   .outputs = 12,
   .input_track_names = {"Main L Input", "Main R Input"},
@@ -72,9 +80,10 @@ static const struct ow_device_desc DIGITONE_DESC = {
      "Input L", "Input R"}
 };
 
-static const struct ow_device_desc AFMK2_DESC = {
-  .pid = AFMK2_PID,
+static const struct ow_device_desc ANALOG_FOUR_MK2_DESC = {
+  .pid = ANALOG_FOUR_MK2_PID,
   .name = "Analog Four MKII",
+  .protocol = 1,
   .inputs = 6,
   .outputs = 8,
   .input_track_names = {"Main L Input", "Main R Input", "Synth Track 1 Input",
@@ -85,9 +94,10 @@ static const struct ow_device_desc AFMK2_DESC = {
      "Synth Track 4", "Input L", "Input R"}
 };
 
-static const struct ow_device_desc ARMK2_DESC = {
-  .pid = ARMK2_PID,
+static const struct ow_device_desc ANALOG_RYTM_MK2_DESC = {
+  .pid = ANALOG_RYTM_MK2_PID,
   .name = "Analog Rytm MKII",
+  .protocol = 1,
   .inputs = 12,
   .outputs = 12,
   .input_track_names =
@@ -99,9 +109,10 @@ static const struct ow_device_desc ARMK2_DESC = {
 			 "Input R"}
 };
 
-static const struct ow_device_desc DKEYS_DESC = {
-  .pid = DKEYS_PID,
+static const struct ow_device_desc DIGITONE_KEYS_DESC = {
+  .pid = DIGITONE_KEYS_PID,
   .name = "Digitone Keys",
+  .protocol = 1,
   .inputs = 2,
   .outputs = 12,
   .input_track_names = {"Main L Input", "Main R Input"},
@@ -111,9 +122,10 @@ static const struct ow_device_desc DKEYS_DESC = {
      "Input L", "Input R"}
 };
 
-static const struct ow_device_desc AHMK1_DESC = {
-  .pid = AHMK1_PID,
+static const struct ow_device_desc ANALOG_HEAT_DESC = {
+  .pid = ANALOG_HEAT_PID,
   .name = "Analog Heat",
+  .protocol = 1,
   .inputs = 4,
   .outputs = 4,
   .input_track_names =
@@ -121,9 +133,10 @@ static const struct ow_device_desc AHMK1_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct ow_device_desc AHMK2_DESC = {
-  .pid = AHMK2_PID,
+static const struct ow_device_desc ANALOG_HEAT_MK2_DESC = {
+  .pid = ANALOG_HEAT_MK2_PID,
   .name = "Analog Heat MKII",
+  .protocol = 1,
   .inputs = 4,
   .outputs = 4,
   .input_track_names =
@@ -131,9 +144,10 @@ static const struct ow_device_desc AHMK2_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct ow_device_desc AHFX_DESC = {
-  .pid = AHFX_PID,
+static const struct ow_device_desc ANALOG_HEAT_FX_DESC = {
+  .pid = ANALOG_HEAT_FX_PID,
   .name = "Analog Heat +FX",
+  .protocol = 1,
   .inputs = 4,
   .outputs = 4,
   .input_track_names =
@@ -141,9 +155,10 @@ static const struct ow_device_desc AHFX_DESC = {
   .output_track_names = {"Main L", "Main R", "FX Return L", "FX Return R"}
 };
 
-static const struct ow_device_desc STAKT_DESC = {
-  .pid = STAKT_PID,
+static const struct ow_device_desc SYNTAKT_DESC = {
+  .pid = SYNTAKT_PID,
   .name = "Syntakt",
+  .protocol = 1,
   .inputs = 8,
   .outputs = 20,
   .input_track_names =
@@ -156,9 +171,36 @@ static const struct ow_device_desc STAKT_DESC = {
      "Delay/Reverb L", "Delay/Reverb R", "Input L", "Input R"}
 };
 
+static const struct ow_device_desc DIGITAKT_II_DESC = {
+  .pid = DIGITAKT_II_PID,
+  .name = "Digitakt II",
+  .protocol = 2,
+  .inputs = 8,
+  .outputs = 42,
+  .input_track_names =
+    {"Main L Input", "Main R Input", "Delay L Input", "Delay R Input",
+     "Reverb L Input", "Reverb R Input", "Chorus L Input", "Chorus R Input"},
+  .custom_input_track_sizes = {4, 4, 4, 4, 4, 4, 4, 4},
+  .output_track_names =
+    {"Main L", "Main R", "Track  1 L", "Track  1 R", "Track  2 L",
+     "Track  2 R", "Track  3 L", "Track  3 R", "Track  4 L", "Track  4 R",
+     "Track  5 L", "Track  5 R", "Track  6 L", "Track  6 R", "Track  7 L",
+     "Track  7 R", "Track  8 L", "Track  8 R", "Track  9 L", "Track  9 R",
+     "Track 10 L", "Track 10 R", "Track 11 L", "Track 11 R", "Track 12 L",
+     "Track 12 R", "Track 13 L", "Track 13 R", "Track 14 L", "Track 14 R",
+     "Track 15 L", "Track 15 R", "Track 16 L", "Track 16 R", "Delay L",
+     "Delay R", "Reverb L", "Reverb R", "Chorus L", "Chorus R", "Input L",
+     "Input R"},
+  .custom_output_track_sizes =
+    {4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}
+};
+
 static const struct ow_device_desc *OB_DEVICE_DESCS[] = {
-  &DIGITAKT_DESC, &DIGITONE_DESC, &AFMK2_DESC, &ARMK2_DESC, &DKEYS_DESC,
-  &AHMK1_DESC, &AHMK2_DESC, &AHFX_DESC, &STAKT_DESC, NULL
+  &DIGITAKT_DESC, &DIGITONE_DESC, &ANALOG_FOUR_MK2_DESC,
+  &ANALOG_RYTM_MK2_DESC, &DIGITONE_KEYS_DESC,
+  &ANALOG_HEAT_DESC, &ANALOG_HEAT_MK2_DESC, &ANALOG_HEAT_FX_DESC,
+  &SYNTAKT_DESC, &DIGITAKT_II_DESC, NULL
 };
 #endif
 
@@ -266,17 +308,22 @@ ow_copy_device_desc_static (struct ow_device_desc *device_desc,
 {
   device_desc->pid = d->pid;
   device_desc->name = strdup (d->name);
+  device_desc->protocol = d->protocol;
   device_desc->inputs = d->inputs;
   device_desc->outputs = d->outputs;
 
   for (int i = 0; i < device_desc->inputs; i++)
     {
       device_desc->input_track_names[i] = strdup (d->input_track_names[i]);
+      device_desc->custom_input_track_sizes[i] =
+	d->custom_input_track_sizes[i];
     }
 
   for (int i = 0; i < device_desc->outputs; i++)
     {
       device_desc->output_track_names[i] = strdup (d->output_track_names[i]);
+      device_desc->custom_output_track_sizes[i] =
+	d->custom_output_track_sizes[i];
     }
 }
 
@@ -381,6 +428,26 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
       device_desc->name = strdup (json_reader_get_string_value (reader));
       json_reader_end_member (reader);
 
+      if (!json_reader_read_member (reader, DEV_TAG_PROTOCOL))
+	{
+	  error_print ("Cannot read member '%s'. Stopping...",
+		       DEV_TAG_PROTOCOL);
+	  json_reader_end_element (reader);
+	  err = -ENODEV;
+	  break;
+	}
+      device_desc->protocol = json_reader_get_int_value (reader);
+      json_reader_end_member (reader);
+
+      if (device_desc->protocol < OW_ENGINE_PROTOCOL_V1 ||
+	  device_desc->protocol > OW_ENGINE_PROTOCOL_V2)
+	{
+	  error_print ("Invalid protocol version '%d'. Stopping...",
+		       device_desc->protocol);
+	  err = -ENODEV;
+	  break;
+	}
+
       if (!json_reader_read_member (reader, DEV_TAG_INPUT_TRACK_NAMES))
 	{
 	  error_print ("Cannot read member '%s'. Stopping...",
@@ -467,6 +534,94 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 	      goto cleanup_reader;
 	    }
 	}
+      json_reader_end_member (reader);
+
+      if (json_reader_read_member (reader, DEV_TAG_CUSTOM_INPUT_TRACK_SIZES))
+	{
+	  if (json_reader_is_array (reader))
+	    {
+	      for (int j = 0; j < device_desc->inputs; j++)
+		{
+		  if (json_reader_read_element (reader, j))
+		    {
+		      device_desc->custom_input_track_sizes[j] =
+			json_reader_get_int_value (reader);
+		      json_reader_end_element (reader);
+		    }
+		  else
+		    {
+		      error_print ("Cannot read custom input track size %d",
+				   j);
+		      ow_free_device_desc (device_desc);
+		      err = -ENODEV;
+		      goto cleanup_reader;
+		    }
+		}
+	      json_reader_end_member (reader);
+	    }
+	  else
+	    {
+	      error_print ("Not an array");
+	      err = -ENODEV;
+	      goto cleanup_reader;
+	    }
+	}
+      else
+	{
+	  debug_print (1, "Cannot read member '%s'. Using default value...",
+		       DEV_TAG_CUSTOM_INPUT_TRACK_SIZES);
+	  json_reader_end_element (reader);
+
+	  for (int j = 0; j < device_desc->inputs; j++)
+	    {
+	      device_desc->custom_input_track_sizes[j] =
+		OB_DEFAULT_SAMPLE_SIZE;
+	    }
+	}
+
+      if (json_reader_read_member (reader, DEV_TAG_CUSTOM_OUTPUT_TRACK_SIZES))
+	{
+	  if (json_reader_is_array (reader))
+	    {
+	      for (int j = 0; j < device_desc->outputs; j++)
+		{
+		  if (json_reader_read_element (reader, j))
+		    {
+		      device_desc->custom_output_track_sizes[j] =
+			json_reader_get_int_value (reader);
+		      json_reader_end_element (reader);
+		    }
+		  else
+		    {
+		      error_print ("Cannot read custom output track size %d",
+				   j);
+		      ow_free_device_desc (device_desc);
+		      err = -ENODEV;
+		      goto cleanup_reader;
+		    }
+		}
+	      json_reader_end_member (reader);
+	    }
+	  else
+	    {
+	      error_print ("Not an array");
+	      err = -ENODEV;
+	      goto cleanup_reader;
+	    }
+	}
+      else
+	{
+	  debug_print (1, "Cannot read member '%s'. Using default value...",
+		       DEV_TAG_CUSTOM_OUTPUT_TRACK_SIZES);
+	  json_reader_end_element (reader);
+
+	  for (int j = 0; j < device_desc->outputs; j++)
+	    {
+	      device_desc->custom_output_track_sizes[j] =
+		OB_DEFAULT_SAMPLE_SIZE;
+	    }
+	}
+
       break;
     }
 

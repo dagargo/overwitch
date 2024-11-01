@@ -55,7 +55,7 @@ print_status ()
 static size_t
 buffer_read_space (void *data)
 {
-  size_t rbsp = (sfinfo.frames - frames) * desc->inputs * OB_BYTES_PER_SAMPLE;
+  size_t rbsp = (sfinfo.frames - frames) * desc->inputs * OW_BYTES_PER_SAMPLE;
 
   if (!rbsp)
     {
@@ -68,7 +68,7 @@ buffer_read_space (void *data)
 static size_t
 buffer_read (void *data, char *buf, size_t size)
 {
-  int bytes_per_frame = desc->inputs * OB_BYTES_PER_SAMPLE;
+  int bytes_per_frame = desc->inputs * OW_BYTES_PER_SAMPLE;
   sf_count_t wanted_frames, read_frames;
 
   wanted_frames = size / bytes_per_frame;
@@ -102,7 +102,7 @@ buffer_read (void *data, char *buf, size_t size)
 		  min[j] = x;
 		}
 	    }
-	  buf += OB_BYTES_PER_SAMPLE;
+	  buf += OW_BYTES_PER_SAMPLE;
 	}
     }
 
