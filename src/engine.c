@@ -32,7 +32,12 @@
 #include "engine.h"
 
 #define AUDIO_OUT_EP 0x03
+#define AUDIO_OUT_INTERFACE 2
+#define AUDIO_OUT_ALT_SETTING 3
+
 #define AUDIO_IN_EP  (AUDIO_OUT_EP | 0x80)
+#define AUDIO_IN_INTERFACE 1
+#define AUDIO_IN_ALT_SETTING 3
 
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
@@ -377,6 +382,7 @@ usb_shutdown (struct ow_engine *engine)
   libusb_release_interface (engine->usb.device_handle, 1);
   libusb_release_interface (engine->usb.device_handle, 3);
   libusb_close (engine->usb.device_handle);
+  libusb_unref_device (engine->usb.device);
   libusb_free_transfer (engine->usb.xfr_audio_in);
   libusb_free_transfer (engine->usb.xfr_audio_out);
   libusb_free_transfer (engine->usb.xfr_control_in);
@@ -384,10 +390,11 @@ usb_shutdown (struct ow_engine *engine)
   libusb_exit (engine->usb.context);
 }
 
-void
+int
 ow_engine_init_mem (struct ow_engine *engine,
 		    unsigned int blocks_per_transfer)
 {
+  size_t size;
   struct ow_engine_usb_blk *blk;
 
   engine->context = NULL;
@@ -403,20 +410,40 @@ ow_engine_init_mem (struct ow_engine *engine,
   engine->o2h_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc.outputs;
   engine->h2o_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc.inputs;
 
-  engine->o2h_min_latency =
-    engine->frames_per_transfer * engine->o2h_frame_size;
-  engine->h2o_min_latency =
-    engine->frames_per_transfer * engine->h2o_frame_size;
-
   debug_print (2, "o2h: USB in frame size: %zu B", engine->o2h_frame_size);
   debug_print (2, "h2o: USB out frame size: %zu B", engine->h2o_frame_size);
 
-  engine->usb.audio_in_blk_len =
-    sizeof (struct ow_engine_usb_blk) +
-    OB_FRAMES_PER_BLOCK * engine->o2h_frame_size;
-  engine->usb.audio_out_blk_len =
-    sizeof (struct ow_engine_usb_blk) +
-    OB_FRAMES_PER_BLOCK * engine->h2o_frame_size;
+  size = sizeof (struct ow_engine_usb_blk) + OB_FRAMES_PER_BLOCK *
+    engine->o2h_frame_size;
+  if (engine->usb.audio_in_blk_len)
+    {
+      if (engine->usb.audio_in_blk_len != size)
+	{
+	  error_print ("Unexpected audio block size (%lu != %zu)",
+		       engine->usb.audio_in_blk_len, size);
+	  return OW_USB_UNEXPECTED_PACKET_SIZE;
+	}
+    }
+  else
+    {
+      engine->usb.audio_in_blk_len = size;
+    }
+
+  size = sizeof (struct ow_engine_usb_blk) + OB_FRAMES_PER_BLOCK *
+    engine->h2o_frame_size;
+  if (engine->usb.audio_out_blk_len)
+    {
+      if (engine->usb.audio_out_blk_len != size)
+	{
+	  error_print ("Unexpected audio block size (%lu != %zu)",
+		       engine->usb.audio_out_blk_len, size);
+	  return OW_USB_UNEXPECTED_PACKET_SIZE;
+	}
+    }
+  else
+    {
+      engine->usb.audio_out_blk_len = size;
+    }
 
   debug_print (2, "o2h: USB in block size: %zu B",
 	       engine->usb.audio_in_blk_len);
@@ -427,6 +454,9 @@ ow_engine_init_mem (struct ow_engine *engine,
     engine->frames_per_transfer * engine->o2h_frame_size;
   engine->h2o_transfer_size =
     engine->frames_per_transfer * engine->h2o_frame_size;
+
+  engine->o2h_min_latency = engine->o2h_transfer_size;
+  engine->h2o_min_latency = engine->h2o_transfer_size;
 
   debug_print (2, "o2h: audio transfer size: %zu B",
 	       engine->o2h_transfer_size);
@@ -469,6 +499,8 @@ ow_engine_init_mem (struct ow_engine *engine,
   //Control
   engine->usb.xfr_control_out_data = malloc (USB_CONTROL_LEN);
   engine->usb.xfr_control_in_data = malloc (OB_NAME_MAX_LEN);
+
+  return OW_OK;
 }
 
 // initialization taken from sniffed session
@@ -498,25 +530,31 @@ ow_engine_init (struct ow_engine *engine, unsigned int blocks_per_transfer,
       goto end;
     }
 
-  err = libusb_claim_interface (engine->usb.device_handle, 1);
+  err = libusb_claim_interface (engine->usb.device_handle,
+				AUDIO_IN_INTERFACE);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
-  err = libusb_set_interface_alt_setting (engine->usb.device_handle, 1, 3);
+  err = libusb_set_interface_alt_setting (engine->usb.device_handle,
+					  AUDIO_IN_INTERFACE,
+					  AUDIO_IN_ALT_SETTING);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_SET_ALT_SETTING;
       goto end;
     }
-  err = libusb_claim_interface (engine->usb.device_handle, 2);
+  err = libusb_claim_interface (engine->usb.device_handle,
+				AUDIO_OUT_INTERFACE);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
-  err = libusb_set_interface_alt_setting (engine->usb.device_handle, 2, 3);
+  err = libusb_set_interface_alt_setting (engine->usb.device_handle,
+					  AUDIO_OUT_INTERFACE,
+					  AUDIO_OUT_ALT_SETTING);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_SET_ALT_SETTING;
@@ -545,18 +583,33 @@ ow_engine_init (struct ow_engine *engine, unsigned int blocks_per_transfer,
   libusb_attach_kernel_driver (engine->usb.device_handle, 4);
   libusb_attach_kernel_driver (engine->usb.device_handle, 5);
 
+#if LIBUSB_API_VERSION >= 0x0100010A
+  engine->usb.audio_in_blk_len =
+    libusb_get_max_alt_packet_size (engine->usb.device, AUDIO_IN_INTERFACE,
+				    AUDIO_IN_ALT_SETTING, AUDIO_IN_EP);
+
+  engine->usb.audio_out_blk_len =
+    libusb_get_max_alt_packet_size (engine->usb.device, AUDIO_OUT_INTERFACE,
+				    AUDIO_OUT_ALT_SETTING, AUDIO_OUT_EP);
+#else
+  engine->usb.audio_in_blk_len = 0;
+  engine->usb.audio_out_blk_len = 0;
+#endif
+
 end:
   if (ret == OW_OK)
     {
-      ow_engine_init_mem (engine, blocks_per_transfer);
+      ret = ow_engine_init_mem (engine, blocks_per_transfer);
     }
-  else
+
+  if (ret != OW_OK)
     {
       usb_shutdown (engine);
       free (engine);
       error_print ("Error while initializing device: %s",
-		   libusb_error_name (err));
+		   ow_get_err_str (ret));
     }
+
   return ret;
 }
 
@@ -671,11 +724,13 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
 			   libusb_error_name (err));
 	    }
 
+	  libusb_ref_device (*device);
+	  engine->usb.device = *device;
 	  break;
 	}
     }
 
-  libusb_free_device_list (devices, total);
+  libusb_free_device_list (devices, 1);
 
   if (!engine->usb.device_handle)
     {
@@ -707,6 +762,7 @@ static const char *ob_err_strgs[] = {
   "can't cleat endpoint",
   "can't prepare transfer",
   "can't find a matching device",
+  "unexpected USB transfer size",
   "'read_space' not set in context",
   "'write_space' not set in context",
   "'read' not set in context",

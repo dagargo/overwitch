@@ -52,6 +52,8 @@ test_sizes ()
   printf ("\n");
 
   ow_copy_device_desc_static (&engine.device_desc, &TESTDEV_DESC);
+  engine.usb.audio_in_blk_len = 0;
+  engine.usb.audio_out_blk_len = 0;
   ow_engine_init_mem (&engine, BLOCKS);
 
   printf ("\n");
@@ -74,6 +76,8 @@ test_usb_blocks ()
   printf ("\n");
 
   ow_copy_device_desc_static (&engine.device_desc, &TESTDEV_DESC);
+  engine.usb.audio_in_blk_len = 0;
+  engine.usb.audio_out_blk_len = 0;
   ow_engine_init_mem (&engine, BLOCKS);
 
   blk_size =
