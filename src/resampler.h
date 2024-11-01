@@ -45,6 +45,11 @@ struct ow_resampler
   int o2h_xruns;
   pthread_spinlock_t lock;	//Used to synchronize access to xruns.
   int reading_at_o2h_end;
+  //These frame sizes can differ from the engine frame sizes when
+  //the device is using fewer than 4 bytes for tracks and are always
+  //based on sizeof(float).
+  size_t o2h_frame_size;
+  size_t h2o_frame_size;
   size_t o2h_bufsize;
   size_t h2o_bufsize;
   uint32_t bufsize;

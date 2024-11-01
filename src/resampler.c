@@ -57,21 +57,20 @@ ow_resampler_report_status (struct ow_resampler *resampler)
 
   if (status == OW_ENGINE_STATUS_RUN)
     {
-      latency.o2h = o2h_latency_s * OB_PERIOD_MS /
-	resampler->engine->o2h_frame_size;
+      latency.o2h = o2h_latency_s * OB_PERIOD_MS / resampler->o2h_frame_size;
       latency.o2h_max = o2h_max_latency_s * OB_PERIOD_MS /
-	resampler->engine->o2h_frame_size;
+	resampler->o2h_frame_size;
       latency.o2h_min = o2h_min_latency_s * OB_PERIOD_MS /
-	resampler->engine->o2h_frame_size;
+	resampler->o2h_frame_size;
 
       if (h2o_enabled)
 	{
 	  latency.h2o = h2o_latency_s * OB_PERIOD_MS /
-	    resampler->engine->h2o_frame_size;
+	    resampler->h2o_frame_size;
 	  latency.h2o_max = h2o_max_latency_s * OB_PERIOD_MS /
-	    resampler->engine->h2o_frame_size;
+	    resampler->h2o_frame_size;
 	  latency.h2o_min = h2o_min_latency_s * OB_PERIOD_MS /
-	    resampler->engine->h2o_frame_size;
+	    resampler->h2o_frame_size;
 	}
       else
 	{
@@ -122,8 +121,7 @@ ow_resampler_clear_buffers (struct ow_resampler *resampler)
   if (context && context->o2h_audio)
     {
       rso2h = context->read_space (context->o2h_audio);
-      bytes = ow_bytes_to_frame_bytes (rso2h,
-				       resampler->engine->o2h_frame_size);
+      bytes = ow_bytes_to_frame_bytes (rso2h, resampler->o2h_frame_size);
       context->read (context->o2h_audio, NULL, bytes);
     }
 
@@ -135,10 +133,8 @@ ow_resampler_reset_buffers (struct ow_resampler *resampler)
 {
   debug_print (2, "Resetting buffers...");
 
-  resampler->o2h_bufsize =
-    resampler->bufsize * resampler->engine->o2h_frame_size;
-  resampler->h2o_bufsize =
-    resampler->bufsize * resampler->engine->h2o_frame_size;
+  resampler->o2h_bufsize = resampler->bufsize * resampler->o2h_frame_size;
+  resampler->h2o_bufsize = resampler->bufsize * resampler->h2o_frame_size;
 
   if (resampler->h2o_aux)
     {
@@ -212,7 +208,7 @@ resampler_h2o_reader (void *cb_data, float **data)
 
   ret = resampler->h2o_queue_len;
   memcpy (resampler->h2o_aux, resampler->h2o_queue,
-	  ret * resampler->engine->h2o_frame_size);
+	  ret * resampler->h2o_frame_size);
   resampler->h2o_queue_len = 0;
 
   return ret;
@@ -233,13 +229,13 @@ resampler_o2h_reader (void *cb_data, float **data)
 					    o2h_audio);
   if (resampler->reading_at_o2h_end)
     {
-      if (rso2h >= resampler->engine->o2h_frame_size)
+      if (rso2h >= resampler->o2h_frame_size)
 	{
-	  frames = rso2h / resampler->engine->o2h_frame_size;
+	  frames = rso2h / resampler->o2h_frame_size;
 	  frames = frames > MAX_READ_FRAMES ? MAX_READ_FRAMES : frames;
-	  bytes = frames * resampler->engine->o2h_frame_size;
-	  resampler->engine->context->read (resampler->engine->
-					    context->o2h_audio,
+	  bytes = frames * resampler->o2h_frame_size;
+	  resampler->engine->context->read (resampler->engine->context->
+					    o2h_audio,
 					    (void *) resampler->o2h_buf_in,
 					    bytes);
 	}
@@ -336,7 +332,7 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
 
   memcpy (&resampler->h2o_queue
 	  [resampler->h2o_queue_len *
-	   resampler->engine->h2o_frame_size], resampler->h2o_buf_in,
+	   resampler->h2o_frame_size], resampler->h2o_buf_in,
 	  resampler->h2o_bufsize);
   resampler->h2o_queue_len += resampler->bufsize;
 
@@ -354,7 +350,7 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
 	 resampler->h2o_ratio, gen_frames, frames);
     }
 
-  bytes = gen_frames * resampler->engine->h2o_frame_size;
+  bytes = gen_frames * resampler->h2o_frame_size;
   wsh2o =
     resampler->engine->context->write_space (resampler->engine->context->
 					     h2o_audio);
@@ -528,6 +524,10 @@ ow_resampler_init_from_bus_address (struct ow_resampler **resampler_,
   resampler->xruns = 0;
   resampler->o2h_xruns = 0;
   resampler->h2o_xruns = 0;
+  resampler->o2h_frame_size =
+    resampler->engine->device_desc.outputs * OW_BYTES_PER_SAMPLE;
+  resampler->h2o_frame_size =
+    resampler->engine->device_desc.inputs * OW_BYTES_PER_SAMPLE;
   resampler->h2o_aux = NULL;
   resampler->status = OW_RESAMPLER_STATUS_STOP;
 
@@ -666,13 +666,13 @@ ow_resampler_reset (struct ow_resampler *resampler)
 inline size_t
 ow_resampler_get_o2h_frame_size (struct ow_resampler *resampler)
 {
-  return resampler->engine->o2h_frame_size;
+  return resampler->o2h_frame_size;
 }
 
 inline size_t
 ow_resampler_get_h2o_frame_size (struct ow_resampler *resampler)
 {
-  return resampler->engine->h2o_frame_size;
+  return resampler->h2o_frame_size;
 }
 
 inline float *

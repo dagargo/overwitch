@@ -41,7 +41,7 @@
 
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
-#define INT32_TO_FLOAT32_SCALE ((float) (1.0f / INT_MAX))
+#define INT32_TO_FLOAT32_SCALE ((float) (1.0f / INT32_MAX))
 
 static void prepare_cycle_in_audio ();
 static void prepare_cycle_out_audio ();
@@ -89,22 +89,33 @@ inline void
 ow_engine_read_usb_input_blocks (struct ow_engine *engine)
 {
   int32_t hv;
-  int32_t *s;
+  uint8_t *s;
   struct ow_engine_usb_blk *blk;
   float *f = engine->o2h_transfer_buf;
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
       blk = GET_NTH_INPUT_USB_BLK (engine, i);
-      s = blk->data;
+      s = (uint8_t *) blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
 	  for (int k = 0; k < engine->device_desc.outputs; k++)
 	    {
-	      hv = be32toh (*s);
-	      *f = INT32_TO_FLOAT32_SCALE * hv;
+	      int size = engine->device_desc.custom_output_track_sizes[k];
+
+	      memcpy (&hv, s, size);
+
+	      if (engine->device_desc.protocol == OW_ENGINE_PROTOCOL_V2
+		  && size == 4)
+		{
+		  hv >>= 8;
+		}
+
+	      hv = be32toh (hv);
+
+	      *f = hv / (float) INT32_MAX;
 	      f++;
-	      s++;
+	      s += size;
 	    }
 	}
     }
@@ -159,7 +170,7 @@ inline void
 ow_engine_write_usb_output_blocks (struct ow_engine *engine)
 {
   int32_t ov;
-  int32_t *s;
+  uint8_t *s;
   struct ow_engine_usb_blk *blk;
   float *f = engine->h2o_transfer_buf;
 
@@ -168,15 +179,26 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine)
       blk = GET_NTH_OUTPUT_USB_BLK (engine, i);
       blk->frames = htobe16 (engine->usb.audio_frames_counter);
       engine->usb.audio_frames_counter += OB_FRAMES_PER_BLOCK;
-      s = blk->data;
+      s = (uint8_t *) blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
 	  for (int k = 0; k < engine->device_desc.inputs; k++)
 	    {
-	      ov = htobe32 ((int32_t) (*f * INT_MAX));
-	      *s = ov;
+	      int size = engine->device_desc.custom_input_track_sizes[k];
+	      ov = (int32_t) (*f * INT32_MAX);
+
+	      if (engine->device_desc.protocol == OW_ENGINE_PROTOCOL_V2
+		  && size == 4)
+		{
+		  ov >>= 8;
+		}
+
+	      ov = htobe32 (ov);
+
+	      memcpy (s, &ov, size);
+
 	      f++;
-	      s++;
+	      s += size;
 	    }
 	}
     }
@@ -407,22 +429,30 @@ ow_engine_init_mem (struct ow_engine *engine,
   engine->frames_per_transfer =
     OB_FRAMES_PER_BLOCK * engine->blocks_per_transfer;
 
-  engine->o2h_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc.outputs;
-  engine->h2o_frame_size = OB_BYTES_PER_SAMPLE * engine->device_desc.inputs;
+  engine->o2h_frame_size = 0;
+  for (int i = 0; i < engine->device_desc.outputs; i++)
+    {
+      engine->o2h_frame_size +=
+	engine->device_desc.custom_output_track_sizes[i];
+    }
+
+  engine->h2o_frame_size = 0;
+  for (int i = 0; i < engine->device_desc.inputs; i++)
+    {
+      engine->h2o_frame_size +=
+	engine->device_desc.custom_input_track_sizes[i];
+    }
 
   debug_print (2, "o2h: USB in frame size: %zu B", engine->o2h_frame_size);
   debug_print (2, "h2o: USB out frame size: %zu B", engine->h2o_frame_size);
 
   size = sizeof (struct ow_engine_usb_blk) + OB_FRAMES_PER_BLOCK *
     engine->o2h_frame_size;
-  if (engine->usb.audio_in_blk_len)
+  if (engine->usb.audio_in_blk_len && engine->usb.audio_in_blk_len != size)
     {
-      if (engine->usb.audio_in_blk_len != size)
-	{
-	  error_print ("Unexpected audio block size (%lu != %zu)",
-		       engine->usb.audio_in_blk_len, size);
-	  return OW_USB_UNEXPECTED_PACKET_SIZE;
-	}
+      error_print ("Unexpected audio block size (%lu != %zu)",
+		   engine->usb.audio_in_blk_len, size);
+      return OW_USB_UNEXPECTED_PACKET_SIZE;
     }
   else
     {
@@ -431,14 +461,11 @@ ow_engine_init_mem (struct ow_engine *engine,
 
   size = sizeof (struct ow_engine_usb_blk) + OB_FRAMES_PER_BLOCK *
     engine->h2o_frame_size;
-  if (engine->usb.audio_out_blk_len)
+  if (engine->usb.audio_out_blk_len && engine->usb.audio_out_blk_len != size)
     {
-      if (engine->usb.audio_out_blk_len != size)
-	{
-	  error_print ("Unexpected audio block size (%lu != %zu)",
-		       engine->usb.audio_out_blk_len, size);
-	  return OW_USB_UNEXPECTED_PACKET_SIZE;
-	}
+      error_print ("Unexpected audio block size (%lu != %zu)",
+		   engine->usb.audio_out_blk_len, size);
+      return OW_USB_UNEXPECTED_PACKET_SIZE;
     }
   else
     {
@@ -450,13 +477,13 @@ ow_engine_init_mem (struct ow_engine *engine,
   debug_print (2, "h2o: USB out block size: %zu B",
 	       engine->usb.audio_out_blk_len);
 
-  engine->o2h_transfer_size =
-    engine->frames_per_transfer * engine->o2h_frame_size;
-  engine->h2o_transfer_size =
-    engine->frames_per_transfer * engine->h2o_frame_size;
+  engine->o2h_transfer_size = engine->frames_per_transfer *
+    engine->device_desc.outputs * OW_BYTES_PER_SAMPLE;
+  engine->h2o_transfer_size = engine->frames_per_transfer *
+    engine->device_desc.inputs * OW_BYTES_PER_SAMPLE;
 
-  engine->o2h_min_latency = engine->o2h_transfer_size;
-  engine->h2o_min_latency = engine->h2o_transfer_size;
+  engine->o2h_min_latency = engine->frames_per_transfer;
+  engine->h2o_min_latency = engine->frames_per_transfer;
 
   debug_print (2, "o2h: audio transfer size: %zu B",
 	       engine->o2h_transfer_size);
