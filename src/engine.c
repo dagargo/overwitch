@@ -749,6 +749,7 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
 	    {
 	      error_print ("Error while opening device: %s",
 			   libusb_error_name (err));
+	      continue;
 	    }
 
 	  libusb_ref_device (*device);
