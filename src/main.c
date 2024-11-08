@@ -43,7 +43,7 @@
 
 #define PIPEWIRE_PROPS_ENV_VAR "PIPEWIRE_PROPS"
 
-#define PAUSE_TO_BE_NOTIFIED_USECS (jack_sample_rate ? jack_buffer_size * 10 * 1000000 / (gdouble) jack_sample_rate : 0)
+#define PAUSE_TO_BE_NOTIFIED_USECS 500000
 
 struct overwitch_instance
 {
@@ -581,8 +581,6 @@ remove_stopped_instances ()
     }
 
   g_slist_free (to_delete);
-
-  set_dll_target_delay ();
 }
 
 static void
@@ -595,6 +593,8 @@ refresh_all (GtkWidget *object, gpointer data)
   ow_err_t err;
 
   remove_stopped_instances ();
+
+  set_dll_target_delay ();
 
   err = ow_get_usb_device_list (&devices, &devices_count);
   if (err || !devices_count)
