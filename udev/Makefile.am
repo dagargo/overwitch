@@ -1,4 +1,4 @@
-EXTRA_DIST = 20-usb-elektron.rules 20-usb-elektron.hwdb
+EXTRA_DIST = 91-usb-elektron.rules 91-usb-elektron.hwdb
 
 if UDEV_AVAIL
 
@@ -7,8 +7,8 @@ udevhome = $$(env pkg-config --variable=udevdir udev)
 udevrulesdir = $(udevhome)/rules.d
 udevhwdbdir = $(udevhome)/hwdb.d
 
-udevrules_DATA = 20-usb-elektron.rules
-udevhwdb_DATA = 20-usb-elektron.hwdb
+udevrules_DATA = 91-usb-elektron.rules
+udevhwdb_DATA = 91-usb-elektron.hwdb
 
 install-data-hook: update-udev
 
@@ -20,7 +20,7 @@ update-udev:
 	@systemd-hwdb update
 
 uninstall-local:
-	rm -f $(DESTDIR)$(udevrulesdir)/20-usb-elektron.rules
-	rm -f $(DESTDIR)$(udevhwdbdir)/20-usb-elektron.hwdb
+	rm -f $(DESTDIR)$(udevrulesdir)/91-usb-elektron.rules
+	rm -f $(DESTDIR)$(udevhwdbdir)/91-usb-elektron.hwdb
 
 endif
