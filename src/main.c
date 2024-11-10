@@ -42,7 +42,7 @@
 
 #define PIPEWIRE_PROPS_ENVV "PIPEWIRE_PROPS"
 
-#define PAUSE_TO_BE_NOTIFIED_USECS (jack_sample_rate ? jack_buffer_size * 10 * 1000000 / (gdouble) jack_sample_rate : 0)
+#define PAUSE_TO_BE_NOTIFIED_USECS 500000
 
 enum list_store_columns
 {
