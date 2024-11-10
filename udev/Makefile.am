@@ -19,4 +19,8 @@ update-udev:
 	@udevadm trigger
 	@systemd-hwdb update
 
+uninstall-local:
+	rm -f $(DESTDIR)$(udevrulesdir)/20-usb-elektron.rules
+	rm -f $(DESTDIR)$(udevhwdbdir)/20-usb-elektron.hwdb
+
 endif
