@@ -304,7 +304,7 @@ ow_resampler_read_audio (struct ow_resampler *resampler)
       pthread_spin_unlock (&resampler->engine->lock);
 
       resampler->engine->context->read (resampler->engine->context->o2h_audio,
-					NULL, resampler->bufsize);
+					NULL, resampler->o2h_bufsize);
     }
 
   gen_frames = src_callback_read (resampler->o2h_state, resampler->o2h_ratio,
