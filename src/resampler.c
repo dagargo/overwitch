@@ -40,7 +40,7 @@
 inline void
 ow_resampler_report_status (struct ow_resampler *resampler)
 {
-  size_t o2h_latency_s, o2h_min_latency_s, o2h_max_latency_s, h2o_latency_s,
+  uint32_t o2h_latency_s, o2h_min_latency_s, o2h_max_latency_s, h2o_latency_s,
     h2o_min_latency_s, h2o_max_latency_s;
   struct ow_resampler_latency latency;
   ow_engine_status_t status;
@@ -57,20 +57,15 @@ ow_resampler_report_status (struct ow_resampler *resampler)
 
   if (status == OW_ENGINE_STATUS_RUN)
     {
-      latency.o2h = o2h_latency_s * OB_PERIOD_MS / resampler->o2h_frame_size;
-      latency.o2h_max = o2h_max_latency_s * OB_PERIOD_MS /
-	resampler->o2h_frame_size;
-      latency.o2h_min = o2h_min_latency_s * OB_PERIOD_MS /
-	resampler->o2h_frame_size;
+      latency.o2h = o2h_latency_s * OB_PERIOD_MS;
+      latency.o2h_max = o2h_max_latency_s * OB_PERIOD_MS;
+      latency.o2h_min = o2h_min_latency_s * OB_PERIOD_MS;
 
       if (h2o_enabled)
 	{
-	  latency.h2o = h2o_latency_s * OB_PERIOD_MS /
-	    resampler->h2o_frame_size;
-	  latency.h2o_max = h2o_max_latency_s * OB_PERIOD_MS /
-	    resampler->h2o_frame_size;
-	  latency.h2o_min = h2o_min_latency_s * OB_PERIOD_MS /
-	    resampler->h2o_frame_size;
+	  latency.h2o = h2o_latency_s * OB_PERIOD_MS;
+	  latency.h2o_max = h2o_max_latency_s * OB_PERIOD_MS;
+	  latency.h2o_min = h2o_min_latency_s * OB_PERIOD_MS;
 	}
       else
 	{
@@ -644,26 +639,32 @@ ow_resampler_get_reporter (struct ow_resampler *resampler)
 
 inline void
 ow_resampler_get_h2o_latency (struct ow_resampler *resampler,
-			      size_t *h2o_latency, size_t *h2o_min_latency,
-			      size_t *h2o_max_latency)
+			      uint32_t *h2o_latency,
+			      uint32_t *h2o_min_latency,
+			      uint32_t *h2o_max_latency)
 {
   pthread_spin_lock (&resampler->engine->lock);
-  *h2o_latency = resampler->engine->h2o_latency;
+  *h2o_latency = resampler->engine->h2o_latency / resampler->h2o_frame_size;
   *h2o_min_latency = RESAMPLER_MAX (resampler->engine->h2o_min_latency,
-				    resampler->h2o_bufsize);
-  *h2o_max_latency = resampler->engine->h2o_max_latency;
+				    resampler->h2o_bufsize) /
+    resampler->h2o_frame_size;
+  *h2o_max_latency =
+    resampler->engine->h2o_max_latency / resampler->h2o_frame_size;
   pthread_spin_unlock (&resampler->engine->lock);
 }
 
 inline void
 ow_resampler_get_o2h_latency (struct ow_resampler *resampler,
-			      size_t *o2h_latency, size_t *o2h_min_latency,
-			      size_t *o2h_max_latency)
+			      uint32_t *o2h_latency,
+			      uint32_t *o2h_min_latency,
+			      uint32_t *o2h_max_latency)
 {
   pthread_spin_lock (&resampler->engine->lock);
-  *o2h_latency = resampler->engine->o2h_latency;
+  *o2h_latency = resampler->engine->o2h_latency / resampler->o2h_frame_size;
   *o2h_min_latency = RESAMPLER_MAX (resampler->engine->o2h_min_latency,
-				    resampler->o2h_bufsize);
-  *o2h_max_latency = resampler->engine->o2h_max_latency;
+				    resampler->o2h_bufsize) /
+    resampler->o2h_frame_size;
+  *o2h_max_latency =
+    resampler->engine->o2h_max_latency / resampler->o2h_frame_size;
   pthread_spin_unlock (&resampler->engine->lock);
 }
