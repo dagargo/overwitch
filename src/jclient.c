@@ -52,9 +52,9 @@ jclient_buffer_read (void *buffer, char *src, size_t size)
 static int
 jclient_thread_xrun_cb (void *cb_data)
 {
-  struct ow_resampler *resampler = cb_data;
+  struct jclient *jclient = cb_data;
   error_print ("JACK xrun");
-  ow_resampler_inc_xruns (resampler);
+  ow_resampler_reset_latencies (jclient->resampler);
   return 0;
 }
 
@@ -366,7 +366,7 @@ jclient_run (struct jclient *jclient)
     }
 
   if (jack_set_xrun_callback (jclient->client, jclient_thread_xrun_cb,
-			      jclient->resampler))
+			      jclient))
     {
       goto cleanup_jack;
     }

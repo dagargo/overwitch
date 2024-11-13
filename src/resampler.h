@@ -40,9 +40,6 @@ struct ow_resampler
   size_t h2o_queue_len;
   int log_control_cycles;
   int log_cycles;
-  int xruns;
-  int h2o_xruns;
-  int o2h_xruns;
   pthread_spinlock_t lock;	//Used to synchronize access to xruns.
   int reading_at_o2h_end;
   //These frame sizes can differ from the engine frame sizes when
