@@ -52,18 +52,18 @@ jclient_buffer_read (void *buffer, char *src, size_t size)
 static int
 jclient_thread_xrun_cb (void *cb_data)
 {
-  struct jclient *jclient = cb_data;
+  struct ow_resampler *resampler = cb_data;
   error_print ("JACK xrun");
-  ow_resampler_reset_latencies (jclient->resampler);
+  ow_resampler_reset_latencies (resampler);
   return 0;
 }
 
 static void
-jclient_thread_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
+jclient_set_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
 {
   jack_latency_range_t range;
   struct jclient *jclient = cb_data;
-  size_t latency, min_latency, max_latency;
+  uint32_t latency, min_latency, max_latency;
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
   const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
 
@@ -71,12 +71,13 @@ jclient_thread_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
 
   if (mode == JackPlaybackLatency)
     {
-      debug_print (2, "Recalculating input to output latency...");
+      ow_resampler_get_o2h_latency (jclient->resampler, &latency,
+				    &min_latency, &max_latency);
+      debug_print (2, "o2h latency: [ %d, %d ]", min_latency, max_latency);
+
       for (int i = 0; i < desc->outputs; i++)
 	{
 	  jack_port_get_latency_range (jclient->input_ports[0], mode, &range);
-	  ow_resampler_get_o2h_latency (jclient->resampler, &latency,
-					&min_latency, &max_latency);
 	  range.min += min_latency;
 	  range.max += max_latency;
 	  jack_port_set_latency_range (jclient->output_ports[i], mode,
@@ -85,13 +86,14 @@ jclient_thread_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
     }
   else if (mode == JackCaptureLatency)
     {
-      debug_print (2, "Recalculating output to input latency...");
+      ow_resampler_get_h2o_latency (jclient->resampler, &latency,
+				    &min_latency, &max_latency);
+      debug_print (2, "h2o latency: [ %d, %d ]", min_latency, max_latency);
+
       for (int i = 0; i < desc->inputs; i++)
 	{
 	  jack_port_get_latency_range (jclient->output_ports[0], mode,
 				       &range);
-	  ow_resampler_get_h2o_latency (jclient->resampler, &latency,
-					&min_latency, &max_latency);
 	  range.min += min_latency;
 	  range.max += max_latency;
 	  jack_port_set_latency_range (jclient->input_ports[i], mode, &range);
@@ -108,6 +110,8 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
   const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
 
+  debug_print (2, "JACK port connect request");
+
   for (int i = 0; i < desc->inputs; i++)
     {
       total_connections += jack_port_connected (jclient->input_ports[i]);
@@ -119,11 +123,6 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
   for (int i = 0; i < desc->outputs; i++)
     {
       total_connections += jack_port_connected (jclient->output_ports[i]);
-    }
-
-  if (!total_connections)
-    {
-      ow_resampler_clear_buffers (jclient->resampler);
     }
 }
 
@@ -145,7 +144,9 @@ jclient_jack_freewheel (int starting, void *cb_data)
 static int
 jclient_jack_graph_order_cb (void *cb_data)
 {
+  struct ow_resampler *resampler = cb_data;
   debug_print (1, "JACK calling graph order...");
+  ow_resampler_reset_latencies (resampler);
   return 0;
 }
 
@@ -366,12 +367,12 @@ jclient_run (struct jclient *jclient)
     }
 
   if (jack_set_xrun_callback (jclient->client, jclient_thread_xrun_cb,
-			      jclient))
+			      jclient->resampler))
     {
       goto cleanup_jack;
     }
 
-  if (jack_set_latency_callback (jclient->client, jclient_thread_latency_cb,
+  if (jack_set_latency_callback (jclient->client, jclient_set_latency_cb,
 				 jclient))
     {
       goto cleanup_jack;
@@ -393,7 +394,8 @@ jclient_run (struct jclient *jclient)
     }
 
   if (jack_set_graph_order_callback (jclient->client,
-				     jclient_jack_graph_order_cb, jclient))
+				     jclient_jack_graph_order_cb,
+				     jclient->resampler))
     {
       error_print ("Cannot set JACK graph order callback");
     }

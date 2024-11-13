@@ -166,6 +166,7 @@ struct ow_engine
   unsigned int blocks_per_transfer;
   unsigned int frames_per_transfer;
   pthread_spinlock_t lock;
+  //Latencies are measured in bytes
   size_t o2h_latency;
   size_t o2h_min_latency;
   size_t o2h_max_latency;

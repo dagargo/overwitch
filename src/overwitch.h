@@ -280,8 +280,8 @@ float *ow_resampler_get_h2o_audio_buffer (struct ow_resampler *);
 struct ow_resampler_reporter *ow_resampler_get_reporter (struct ow_resampler
 							 *);
 
-void ow_resampler_get_h2o_latency (struct ow_resampler *, size_t *, size_t *,
-				   size_t *);
+void ow_resampler_get_h2o_latency (struct ow_resampler *, uint32_t *,
+				   uint32_t *, uint32_t *);
 
-void ow_resampler_get_o2h_latency (struct ow_resampler *, size_t *, size_t *,
-				   size_t *);
+void ow_resampler_get_o2h_latency (struct ow_resampler *, uint32_t *,
+				   uint32_t *, uint32_t *);
