@@ -11,26 +11,42 @@
 
 static const struct ow_device_desc TESTDEV_DESC_V1 = {
   .pid = 0,
-  .protocol = 1,
+  .format = OW_ENGINE_FORMAT_V1,
   .name = "Test",
   .inputs = TRACKS,
   .outputs = TRACKS,
-  .input_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"},
-  .custom_input_track_sizes = {4, 4, 4, 4, 4, 4},
-  .output_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"},
-  .custom_output_track_sizes = {4, 4, 4, 4, 4, 4},
+  .input_tracks = {{.name = "T1",.size = 4},
+		   {.name = "T2",.size = 4},
+		   {.name = "T3",.size = 4},
+		   {.name = "T4",.size = 4},
+		   {.name = "T5",.size = 4},
+		   {.name = "T6",.size = 4}},
+  .output_tracks = {{.name = "T1",.size = 4},
+		    {.name = "T2",.size = 4},
+		    {.name = "T3",.size = 4},
+		    {.name = "T4",.size = 4},
+		    {.name = "T5",.size = 4},
+		    {.name = "T6",.size = 4}},
 };
 
 static const struct ow_device_desc TESTDEV_DESC_V2 = {
   .pid = 0,
-  .protocol = 2,
+  .format = OW_ENGINE_FORMAT_V2,
   .name = "Test",
   .inputs = TRACKS,
   .outputs = TRACKS,
-  .input_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"},
-  .custom_input_track_sizes = {4, 4, 3, 3, 3, 3},
-  .output_track_names = {"T1", "T2", "T3", "T4", "T5", "T6"},
-  .custom_output_track_sizes = {4, 4, 3, 3, 3, 3}
+  .input_tracks = {{.name = "T1",.size = 4},
+		   {.name = "T2",.size = 4},
+		   {.name = "T3",.size = 3},
+		   {.name = "T4",.size = 3},
+		   {.name = "T5",.size = 3},
+		   {.name = "T6",.size = 3}},
+  .output_tracks = {{.name = "T1",.size = 4},
+		    {.name = "T2",.size = 4},
+		    {.name = "T3",.size = 3},
+		    {.name = "T4",.size = 3},
+		    {.name = "T5",.size = 3},
+		    {.name = "T6",.size = 3}},
 };
 
 static void
@@ -49,7 +65,7 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
       s = (unsigned char *) blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  if (engine->device_desc.protocol == OW_ENGINE_PROTOCOL_V1)
+	  if (engine->device_desc.format == OW_ENGINE_FORMAT_V1)
 	    {
 	      for (int k = 0; k < engine->device_desc.outputs; k++)
 		{
@@ -60,27 +76,27 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
 	    }
 	  else
 	    {
-	      int *size = engine->device_desc.custom_output_track_sizes;
+	      struct ow_device_track *track =
+		engine->device_desc.output_tracks;
 	      for (int k = 0; k < engine->device_desc.outputs; k++)
 		{
 		  unsigned char *dst;
-		  if (*size == 4)
+		  if (track->size == 4)
 		    {
 		      dst = (unsigned char *) &v;
-		      memcpy (dst, s, *size);
+		      memcpy (dst, s, track->size);
 		    }
 		  else
 		    {
 		      dst = &((unsigned char *) &v)[1];
-		      memcpy (dst, s, *size);
+		      memcpy (dst, s, track->size);
 		    }
 		  v = be32toh (v);
 		  v <<= 8;
 		  printf ("Frame %2d, track %2d: %d\n", j, k, v);
-		  s += *size;
-		  size++;
+		  s += track->size;
+		  track++;
 		}
-
 	    }
 	}
     }
@@ -109,11 +125,21 @@ test_sizes ()
 }
 
 static void
-test_usb_blocks (const struct ow_device_desc *device_desc, size_t blk_size,
-		 float max_error)
+test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
 {
   float *a, *b;
+  size_t blk_size;
   struct ow_engine engine;
+  size_t frame_size;
+
+  frame_size = 0;
+  for (int i = 0; i < device_desc->inputs; i++)
+    {
+      frame_size += device_desc->input_tracks[i].size;
+    }
+
+  blk_size = sizeof (struct ow_engine_usb_blk) +
+    OB_FRAMES_PER_BLOCK * frame_size;
 
   printf ("\n");
 
@@ -179,24 +205,13 @@ test_usb_blocks (const struct ow_device_desc *device_desc, size_t blk_size,
 static void
 test_usb_blocks_v1 ()
 {
-  size_t blk_size = sizeof (struct ow_engine_usb_blk) +
-    OB_FRAMES_PER_BLOCK * TRACKS * sizeof (float);
-
-  test_usb_blocks (&TESTDEV_DESC_V1, blk_size, 1e-9);
+  test_usb_blocks (&TESTDEV_DESC_V1, 1e-9);
 }
 
 static void
 test_usb_blocks_v2 ()
 {
-  size_t frame_size = 0;
-  for (int i = 0; i < TESTDEV_DESC_V2.inputs; i++)
-    {
-      frame_size += TESTDEV_DESC_V2.custom_input_track_sizes[i];
-    }
-  size_t blk_size = sizeof (struct ow_engine_usb_blk) +
-    OB_FRAMES_PER_BLOCK * frame_size;
-
-  test_usb_blocks (&TESTDEV_DESC_V2, blk_size, 1e-6);
+  test_usb_blocks (&TESTDEV_DESC_V2, 1e-6);
 }
 
 static void

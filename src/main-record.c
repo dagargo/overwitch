@@ -27,7 +27,8 @@
 #include "common.h"
 
 #define TRACK_BUF_KB 256
-#define MAX_FILENAME_LEN 64
+#define MAX_FILENAME_LEN 128
+#define MAX_TIME_LEN 32
 
 static struct ow_context context;
 static struct ow_engine *engine;
@@ -205,7 +206,7 @@ signal_handler (int signo)
 	      || (i < buffer.outputs_mask_len && (track_mask[i] != '0')))
 	    {
 	      fprintf (stderr, "%s: max: %f; min: %f\n",
-		       desc->output_track_names[i], max[i], min[i]);
+		       desc->output_tracks[i].name, max[i], min[i]);
 	    }
 	}
     }
@@ -221,7 +222,7 @@ static int
 run_record (int device_num, const char *device_name,
 	    unsigned int blocks_per_transfer, unsigned int xfr_timeout)
 {
-  char curr_time_string[MAX_FILENAME_LEN >> 1];
+  char curr_time_string[MAX_TIME_LEN];
   time_t curr_time;
   struct tm tm;
   ow_err_t err;
@@ -273,7 +274,7 @@ run_record (int device_num, const char *device_name,
 
   curr_time = time (NULL);
   localtime_r (&curr_time, &tm);
-  strftime (curr_time_string, MAX_FILENAME_LEN, "%FT%T", &tm);
+  strftime (curr_time_string, MAX_TIME_LEN, "%FT%T", &tm);
 
   snprintf (filename, MAX_FILENAME_LEN, "%s_%s.wav", desc->name,
 	    curr_time_string);

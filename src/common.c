@@ -71,19 +71,19 @@ print_devices ()
 	  fprintf (stderr, "  Inputs:\n");
 	  for (int j = 0; j < device->desc.inputs; j++)
 	    {
-	      fprintf (stderr, "    %s\n", device->desc.input_track_names[j]);
+	      fprintf (stderr, "    %s\n", device->desc.input_tracks[j].name);
 	    }
 	  fprintf (stderr, "  Outputs:\n");
 	  for (int j = 0; j < device->desc.outputs; j++)
 	    {
 	      fprintf (stderr, "    %s\n",
-		       device->desc.output_track_names[j]);
+		       device->desc.output_tracks[j].name);
 	    }
 	}
 
     }
 
-  ow_free_usb_device_list (devices, total);
+  free (devices);
   return OW_OK;
 }
 

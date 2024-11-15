@@ -147,7 +147,7 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
       jclient_init_count++;
     }
 
-  ow_free_usb_device_list (devices, jclient_count);
+  free (devices);
 
   jclient = jclients;
   for (int i = 0; i < jclient_init_count; i++, jclient++)

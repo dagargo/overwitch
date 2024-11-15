@@ -2,317 +2,819 @@
   {
     "pid": 2860,
     "name": "Digitakt",
-    "protocol": 1,
-    "input_track_names": [
-      "Main L Input",
-      "Main R Input"
+    "format": 1,
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 4
+      },
+      {
+        "name": "Main R Input",
+        "size": 4
+      }
     ],
-    "output_track_names": [
-      "Main L",
-      "Main R",
-      "Track 1",
-      "Track 2",
-      "Track 3",
-      "Track 4",
-      "Track 5",
-      "Track 6",
-      "Track 7",
-      "Track 8",
-      "Input L",
-      "Input R"
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 4
+      },
+      {
+        "name": "Main R",
+        "size": 4
+      },
+      {
+        "name": "Track 1",
+        "size": 4
+      },
+      {
+        "name": "Track 2",
+        "size": 4
+      },
+      {
+        "name": "Track 3",
+        "size": 4
+      },
+      {
+        "name": "Track 4",
+        "size": 4
+      },
+      {
+        "name": "Track 5",
+        "size": 4
+      },
+      {
+        "name": "Track 6",
+        "size": 4
+      },
+      {
+        "name": "Track 7",
+        "size": 4
+      },
+      {
+        "name": "Track 8",
+        "size": 4
+      },
+      {
+        "name": "Input L",
+        "size": 4
+      },
+      {
+        "name": "Input R",
+        "size": 4
+      }
     ]
   },
   {
     "pid": 2870,
     "name": "Digitone",
-    "protocol": 1,
-    "input_track_names": [
-      "Main L Input",
-      "Main R Input"
+    "format": 1,
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 4
+      },
+      {
+        "name": "Main R Input",
+        "size": 4
+      }
     ],
-    "output_track_names": [
-      "Main L",
-      "Main R",
-      "Track 1 L",
-      "Track 1 R",
-      "Track 2 L",
-      "Track 2 R",
-      "Track 3 L",
-      "Track 3 R",
-      "Track 4 L",
-      "Track 4 R",
-      "Input L",
-      "Input R"
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 4
+      },
+      {
+        "name": "Main R",
+        "size": 4
+      },
+      {
+        "name": "Track 1 L",
+        "size": 4
+      },
+      {
+        "name": "Track 1 R",
+        "size": 4
+      },
+      {
+        "name": "Track 2 L",
+        "size": 4
+      },
+      {
+        "name": "Track 2 R",
+        "size": 4
+      },
+      {
+        "name": "Track 3 L",
+        "size": 4
+      },
+      {
+        "name": "Track 3 R",
+        "size": 4
+      },
+      {
+        "name": "Track 4 L",
+        "size": 4
+      },
+      {
+        "name": "Track 4 R",
+        "size": 4
+      },
+      {
+        "name": "Input L",
+        "size": 4
+      },
+      {
+        "name": "Input R",
+        "size": 4
+      }
     ]
   },
   {
     "pid": 2887,
     "name": "Analog Four MKII",
-    "protocol": 1,
-    "input_track_names": [
-      "Main L Input",
-      "Main R Input",
-      "Synth Track 1 Input",
-      "Synth Track 2 Input",
-      "Synth Track 3 Input",
-      "Synth Track 4 Input"
+    "format": 1,
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 4
+      },
+      {
+        "name": "Main R Input",
+        "size": 4
+      },
+      {
+        "name": "Synth Track 1 Input",
+        "size": 4
+      },
+      {
+        "name": "Synth Track 2 Input",
+        "size": 4
+      },
+      {
+        "name": "Synth Track 3 Input",
+        "size": 4
+      },
+      {
+        "name": "Synth Track 4 Input",
+        "size": 4
+      }
     ],
-    "output_track_names": [
-      "Main L",
-      "Main R",
-      "Synth Track 1",
-      "Synth Track 2",
-      "Synth Track 3",
-      "Synth Track 4",
-      "Input L",
-      "Input R"
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 4
+      },
+      {
+        "name": "Main R",
+        "size": 4
+      },
+      {
+        "name": "Synth Track 1",
+        "size": 4
+      },
+      {
+        "name": "Synth Track 2",
+        "size": 4
+      },
+      {
+        "name": "Synth Track 3",
+        "size": 4
+      },
+      {
+        "name": "Synth Track 4",
+        "size": 4
+      },
+      {
+        "name": "Input L",
+        "size": 4
+      },
+      {
+        "name": "Input R",
+        "size": 4
+      }
     ]
   },
   {
     "pid": 2888,
     "name": "Analog Rytm MKII",
-    "protocol": 1,
-    "input_track_names": [
-      "Main L Input",
-      "Main R Input",
-      "Main FX L Input",
-      "Main FX R Input",
-      "BD Input",
-      "SD Input",
-      "RS/CP Input",
-      "BT Input",
-      "LT Input",
-      "MT/HT Input",
-      "CH/OH Input",
-      "CY/CB Input"
+    "format": 1,
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 4
+      },
+      {
+        "name": "Main R Input",
+        "size": 4
+      },
+      {
+        "name": "Main FX L Input",
+        "size": 4
+      },
+      {
+        "name": "Main FX R Input",
+        "size": 4
+      },
+      {
+        "name": "BD Input",
+        "size": 4
+      },
+      {
+        "name": "SD Input",
+        "size": 4
+      },
+      {
+        "name": "RS/CP Input",
+        "size": 4
+      },
+      {
+        "name": "BT Input",
+        "size": 4
+      },
+      {
+        "name": "LT Input",
+        "size": 4
+      },
+      {
+        "name": "MT/HT Input",
+        "size": 4
+      },
+      {
+        "name": "CH/OH Input",
+        "size": 4
+      },
+      {
+        "name": "CY/CB Input",
+        "size": 4
+      }
     ],
-    "output_track_names": [
-      "Main L",
-      "Main R",
-      "BD",
-      "SD",
-      "RS/CP",
-      "BT",
-      "LT",
-      "MT/HT",
-      "CH/OH",
-      "CY/CB",
-      "Input L",
-      "Input R"
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 4
+      },
+      {
+        "name": "Main R",
+        "size": 4
+      },
+      {
+        "name": "BD",
+        "size": 4
+      },
+      {
+        "name": "SD",
+        "size": 4
+      },
+      {
+        "name": "RS/CP",
+        "size": 4
+      },
+      {
+        "name": "BT",
+        "size": 4
+      },
+      {
+        "name": "LT",
+        "size": 4
+      },
+      {
+        "name": "MT/HT",
+        "size": 4
+      },
+      {
+        "name": "CH/OH",
+        "size": 4
+      },
+      {
+        "name": "CY/CB",
+        "size": 4
+      },
+      {
+        "name": "Input L",
+        "size": 4
+      },
+      {
+        "name": "Input R",
+        "size": 4
+      }
     ]
   },
   {
     "pid": 2869,
     "name": "Digitone Keys",
-    "protocol": 1,
-    "input_track_names": [
-      "Main L Input",
-      "Main R Input"
+    "format": 1,
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 4
+      },
+      {
+        "name": "Main R Input",
+        "size": 4
+      }
     ],
-    "output_track_names": [
-      "Main L",
-      "Main R",
-      "Track 1 L",
-      "Track 1 R",
-      "Track 2 L",
-      "Track 2 R",
-      "Track 3 L",
-      "Track 3 R",
-      "Track 4 L",
-      "Track 4 R",
-      "Input L",
-      "Input R"
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 4
+      },
+      {
+        "name": "Main R",
+        "size": 4
+      },
+      {
+        "name": "Track 1 L",
+        "size": 4
+      },
+      {
+        "name": "Track 1 R",
+        "size": 4
+      },
+      {
+        "name": "Track 2 L",
+        "size": 4
+      },
+      {
+        "name": "Track 2 R",
+        "size": 4
+      },
+      {
+        "name": "Track 3 L",
+        "size": 4
+      },
+      {
+        "name": "Track 3 R",
+        "size": 4
+      },
+      {
+        "name": "Track 4 L",
+        "size": 4
+      },
+      {
+        "name": "Track 4 R",
+        "size": 4
+      },
+      {
+        "name": "Input L",
+        "size": 4
+      },
+      {
+        "name": "Input R",
+        "size": 4
+      }
     ]
   },
   {
     "pid": 10,
     "name": "Analog Heat",
-    "protocol": 1,
-    "input_track_names": [
-      "Main L Input",
-      "Main R Input",
-      "FX Send L",
-      "FX Send R"
+    "format": 1,
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 4
+      },
+      {
+        "name": "Main R Input",
+        "size": 4
+      },
+      {
+        "name": "FX Send L",
+        "size": 4
+      },
+      {
+        "name": "FX Send R",
+        "size": 4
+      }
     ],
-    "output_track_names": [
-      "Main L",
-      "Main R",
-      "FX Return L",
-      "FX Return R"
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 4
+      },
+      {
+        "name": "Main R",
+        "size": 4
+      },
+      {
+        "name": "FX Return L",
+        "size": 4
+      },
+      {
+        "name": "FX Return R",
+        "size": 4
+      }
     ]
   },
   {
     "pid": 2898,
     "name": "Analog Heat MKII",
-    "protocol": 1,
-    "input_track_names": [
-      "Main L Input",
-      "Main R Input",
-      "FX Send L",
-      "FX Send R"
+    "format": 1,
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 4
+      },
+      {
+        "name": "Main R Input",
+        "size": 4
+      },
+      {
+        "name": "FX Send L",
+        "size": 4
+      },
+      {
+        "name": "FX Send R",
+        "size": 4
+      }
     ],
-    "output_track_names": [
-      "Main L",
-      "Main R",
-      "FX Return L",
-      "FX Return R"
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 4
+      },
+      {
+        "name": "Main R",
+        "size": 4
+      },
+      {
+        "name": "FX Return L",
+        "size": 4
+      },
+      {
+        "name": "FX Return R",
+        "size": 4
+      }
     ]
   },
   {
     "pid": 2899,
     "name": "Analog Heat +FX",
-    "protocol": 1,
-    "input_track_names": [
-      "Main L Input",
-      "Main R Input",
-      "FX Send L",
-      "FX Send R"
+    "format": 1,
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 4
+      },
+      {
+        "name": "Main R Input",
+        "size": 4
+      },
+      {
+        "name": "FX Send L",
+        "size": 4
+      },
+      {
+        "name": "FX Send R",
+        "size": 4
+      }
     ],
-    "output_track_names": [
-      "Main L",
-      "Main R",
-      "FX Return L",
-      "FX Return R"
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 4
+      },
+      {
+        "name": "Main R",
+        "size": 4
+      },
+      {
+        "name": "FX Return L",
+        "size": 4
+      },
+      {
+        "name": "FX Return R",
+        "size": 4
+      }
     ]
   },
   {
     "pid": 2890,
     "name": "Syntakt",
-    "protocol": 1,
-    "input_track_names": [
-      "Main L Input",
-      "Main R Input",
-      "Analog FX L Input",
-      "Analog FX R Input",
-      "Track 9 Input",
-      "Track 10 Input",
-      "Track 11 Input",
-      "Track 12 Input"
+    "format": 1,
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 4
+      },
+      {
+        "name": "Main R Input",
+        "size": 4
+      },
+      {
+        "name": "Analog FX L Input",
+        "size": 4
+      },
+      {
+        "name": "Analog FX R Input",
+        "size": 4
+      },
+      {
+        "name": "Track 9 Input",
+        "size": 4
+      },
+      {
+        "name": "Track 10 Input",
+        "size": 4
+      },
+      {
+        "name": "Track 11 Input",
+        "size": 4
+      },
+      {
+        "name": "Track 12 Input",
+        "size": 4
+      }
     ],
-    "output_track_names": [
-      "Main L",
-      "Main R",
-      "Track  1",
-      "Track  2",
-      "Track  3",
-      "Track  4",
-      "Track  5",
-      "Track  6",
-      "Track  7",
-      "Track  8",
-      "Track  9",
-      "Track 10",
-      "Track 11",
-      "Track 12",
-      "Analog FX L",
-      "Analog FX R",
-      "Delay/Reverb L",
-      "Delay/Reverb R",
-      "Input L",
-      "Input R"
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 4
+      },
+      {
+        "name": "Main R",
+        "size": 4
+      },
+      {
+        "name": "Track  1",
+        "size": 4
+      },
+      {
+        "name": "Track  2",
+        "size": 4
+      },
+      {
+        "name": "Track  3",
+        "size": 4
+      },
+      {
+        "name": "Track  4",
+        "size": 4
+      },
+      {
+        "name": "Track  5",
+        "size": 4
+      },
+      {
+        "name": "Track  6",
+        "size": 4
+      },
+      {
+        "name": "Track  7",
+        "size": 4
+      },
+      {
+        "name": "Track  8",
+        "size": 4
+      },
+      {
+        "name": "Track  9",
+        "size": 4
+      },
+      {
+        "name": "Track 10",
+        "size": 4
+      },
+      {
+        "name": "Track 11",
+        "size": 4
+      },
+      {
+        "name": "Track 12",
+        "size": 4
+      },
+      {
+        "name": "Analog FX L",
+        "size": 4
+      },
+      {
+        "name": "Analog FX R",
+        "size": 4
+      },
+      {
+        "name": "Delay/Reverb L",
+        "size": 4
+      },
+      {
+        "name": "Delay/Reverb R",
+        "size": 4
+      },
+      {
+        "name": "Input L",
+        "size": 4
+      },
+      {
+        "name": "Input R",
+        "size": 4
+      }
     ]
   },
   {
     "pid": 2859,
     "name": "Digitakt II",
-    "protocol": 2,
-    "input_track_names": [
-      "Main L Input",
-      "Main R Input",
-      "Delay L Input",
-      "Delay R Input",
-      "Reverb L Input",
-      "Reverb R Input",
-      "Chorus L Input",
-      "Chorus R Input"
+    "format": 2,
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 4
+      },
+      {
+        "name": "Main R Input",
+        "size": 4
+      },
+      {
+        "name": "Delay L Input",
+        "size": 4
+      },
+      {
+        "name": "Delay R Input",
+        "size": 4
+      },
+      {
+        "name": "Reverb L Input",
+        "size": 4
+      },
+      {
+        "name": "Reverb R Input",
+        "size": 4
+      },
+      {
+        "name": "Chorus L Input",
+        "size": 4
+      },
+      {
+        "name": "Chorus R Input",
+        "size": 4
+      }
     ],
-    "output_track_names": [
-      "Main L",
-      "Main R",
-      "Track  1 L",
-      "Track  1 R",
-      "Track  2 L",
-      "Track  2 R",
-      "Track  3 L",
-      "Track  3 R",
-      "Track  4 L",
-      "Track  4 R",
-      "Track  5 L",
-      "Track  5 R",
-      "Track  6 L",
-      "Track  6 R",
-      "Track  7 L",
-      "Track  7 R",
-      "Track  8 L",
-      "Track  8 R",
-      "Track  9 L",
-      "Track  9 R",
-      "Track 10 L",
-      "Track 10 R",
-      "Track 11 L",
-      "Track 11 R",
-      "Track 12 L",
-      "Track 12 R",
-      "Track 13 L",
-      "Track 13 R",
-      "Track 14 L",
-      "Track 14 R",
-      "Track 15 L",
-      "Track 15 R",
-      "Track 16 L",
-      "Track 16 R",
-      "Delay L",
-      "Delay R",
-      "Reverb L",
-      "Reverb R",
-      "Chorus L",
-      "Chorus R",
-      "Input L",
-      "Input R"
-    ],
-    "custom_output_track_sizes": [
-      4,
-      4,
-      4,
-      4,
-      4,
-      4,
-      4,
-      4,
-      4,
-      4,
-      4,
-      4,
-      4,
-      4,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3,
-      3
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 4
+      },
+      {
+        "name": "Main R",
+        "size": 4
+      },
+      {
+        "name": "Track  1 L",
+        "size": 4
+      },
+      {
+        "name": "Track  1 R",
+        "size": 4
+      },
+      {
+        "name": "Track  2 L",
+        "size": 4
+      },
+      {
+        "name": "Track  2 R",
+        "size": 4
+      },
+      {
+        "name": "Track  3 L",
+        "size": 4
+      },
+      {
+        "name": "Track  3 R",
+        "size": 4
+      },
+      {
+        "name": "Track  4 L",
+        "size": 4
+      },
+      {
+        "name": "Track  4 R",
+        "size": 4
+      },
+      {
+        "name": "Track  5 L",
+        "size": 4
+      },
+      {
+        "name": "Track  5 R",
+        "size": 4
+      },
+      {
+        "name": "Track  6 L",
+        "size": 4
+      },
+      {
+        "name": "Track  6 R",
+        "size": 4
+      },
+      {
+        "name": "Track  7 L",
+        "size": 3
+      },
+      {
+        "name": "Track  7 R",
+        "size": 3
+      },
+      {
+        "name": "Track  8 L",
+        "size": 3
+      },
+      {
+        "name": "Track  8 R",
+        "size": 3
+      },
+      {
+        "name": "Track  9 L",
+        "size": 3
+      },
+      {
+        "name": "Track  9 R",
+        "size": 3
+      },
+      {
+        "name": "Track 10 L",
+        "size": 3
+      },
+      {
+        "name": "Track 10 R",
+        "size": 3
+      },
+      {
+        "name": "Track 11 L",
+        "size": 3
+      },
+      {
+        "name": "Track 11 R",
+        "size": 3
+      },
+      {
+        "name": "Track 12 L",
+        "size": 3
+      },
+      {
+        "name": "Track 12 R",
+        "size": 3
+      },
+      {
+        "name": "Track 13 L",
+        "size": 3
+      },
+      {
+        "name": "Track 13 R",
+        "size": 3
+      },
+      {
+        "name": "Track 14 L",
+        "size": 3
+      },
+      {
+        "name": "Track 14 R",
+        "size": 3
+      },
+      {
+        "name": "Track 15 L",
+        "size": 3
+      },
+      {
+        "name": "Track 15 R",
+        "size": 3
+      },
+      {
+        "name": "Track 16 L",
+        "size": 3
+      },
+      {
+        "name": "Track 16 R",
+        "size": 3
+      },
+      {
+        "name": "Delay L",
+        "size": 3
+      },
+      {
+        "name": "Delay R",
+        "size": 3
+      },
+      {
+        "name": "Reverb L",
+        "size": 3
+      },
+      {
+        "name": "Reverb R",
+        "size": 3
+      },
+      {
+        "name": "Chorus L",
+        "size": 3
+      },
+      {
+        "name": "Chorus R",
+        "size": 3
+      },
+      {
+        "name": "Input L",
+        "size": 3
+      },
+      {
+        "name": "Input R",
+        "size": 3
+      }
     ]
   }
 ]

@@ -119,7 +119,7 @@ signal_handler (int signo)
       for (int i = 0; i < desc->inputs; i++)
 	{
 	  fprintf (stderr, "%s: max: %f; min: %f\n",
-		   desc->input_track_names[i], max[i], min[i]);
+		   desc->input_tracks[i].name, max[i], min[i]);
 	}
     }
   if (signo == SIGHUP || signo == SIGINT || signo == SIGTERM

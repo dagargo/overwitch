@@ -158,9 +158,13 @@
 
 #define OB_NAME_MAX_LEN 32
 
+//This stores "%s @ %03d,%03d" where the string is OW_LABEL_MAX_LEN so more
+//space than OW_LABEL_MAX_LEN is needed.
+#define OW_ENGINE_NAME_MAX_LEN (OW_LABEL_MAX_LEN * 2)
+
 struct ow_engine
 {
-  char name[OW_LABEL_MAX_LEN];
+  char name[OW_ENGINE_NAME_MAX_LEN];
   char overbridge_name[OB_NAME_MAX_LEN];
   ow_engine_status_t status;
   unsigned int blocks_per_transfer;
