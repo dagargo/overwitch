@@ -34,7 +34,7 @@
 
 #define OW_DEFAULT_RT_PROPERTY 20
 
-#define OW_LABEL_MAX_LEN 64
+#define OW_LABEL_MAX_LEN 32
 
 #define OW_DEFAULT_XFR_TIMEOUT 10
 
@@ -120,9 +120,9 @@ typedef enum
 
 typedef enum
 {
-  OW_ENGINE_PROTOCOL_V1 = 1,
-  OW_ENGINE_PROTOCOL_V2 = 2
-} ow_engine_protocol_version_t;
+  OW_ENGINE_FORMAT_V1 = 1,
+  OW_ENGINE_FORMAT_V2 = 2
+} ow_engine_format_version_t;
 
 struct ow_context
 {
@@ -147,17 +147,21 @@ struct ow_context
   int options;
 };
 
+struct ow_device_track
+{
+  char name[OW_LABEL_MAX_LEN];
+  int size;
+};
+
 struct ow_device_desc
 {
   uint16_t pid;
-  char *name;
-  int protocol;
+  char name[OW_LABEL_MAX_LEN];
+  int format;
   int inputs;
   int outputs;
-  char *input_track_names[OB_MAX_TRACKS];
-  char *output_track_names[OB_MAX_TRACKS];
-  int custom_input_track_sizes[OB_MAX_TRACKS];
-  int custom_output_track_sizes[OB_MAX_TRACKS];
+  struct ow_device_track input_tracks[OB_MAX_TRACKS];
+  struct ow_device_track output_tracks[OB_MAX_TRACKS];
 };
 
 struct ow_usb_device
@@ -183,10 +187,6 @@ struct ow_resampler;
 const char *ow_get_err_str (ow_err_t);
 
 int ow_get_usb_device_list (struct ow_usb_device **, size_t *);
-
-void ow_free_usb_device_list (struct ow_usb_device *, size_t);
-
-void ow_free_device_desc (struct ow_device_desc *);
 
 int ow_get_device_desc_from_vid_pid (uint16_t, uint16_t,
 				     struct ow_device_desc *);

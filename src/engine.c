@@ -50,7 +50,7 @@ static void ow_engine_load_overbridge_name (struct ow_engine *);
 static void
 ow_engine_init_name (struct ow_engine *engine, uint8_t bus, uint8_t address)
 {
-  snprintf (engine->name, OW_LABEL_MAX_LEN, "%s @ %03d,%03d",
+  snprintf (engine->name, OW_ENGINE_NAME_MAX_LEN, "%s @ %03d,%03d",
 	    engine->device_desc.name, bus, address);
   ow_engine_load_overbridge_name (engine);
 }
@@ -101,11 +101,11 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine)
 	{
 	  for (int k = 0; k < engine->device_desc.outputs; k++)
 	    {
-	      int size = engine->device_desc.custom_output_track_sizes[k];
+	      int size = engine->device_desc.output_tracks[k].size;
 
 	      memcpy (&hv, s, size);
 
-	      if (engine->device_desc.protocol == OW_ENGINE_PROTOCOL_V2
+	      if (engine->device_desc.format == OW_ENGINE_FORMAT_V2
 		  && size == 4)
 		{
 		  hv >>= 8;
@@ -184,10 +184,10 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine)
 	{
 	  for (int k = 0; k < engine->device_desc.inputs; k++)
 	    {
-	      int size = engine->device_desc.custom_input_track_sizes[k];
+	      int size = engine->device_desc.input_tracks[k].size;
 	      ov = (int32_t) (*f * INT32_MAX);
 
-	      if (engine->device_desc.protocol == OW_ENGINE_PROTOCOL_V2
+	      if (engine->device_desc.format == OW_ENGINE_FORMAT_V2
 		  && size == 4)
 		{
 		  ov >>= 8;
@@ -432,15 +432,13 @@ ow_engine_init_mem (struct ow_engine *engine,
   engine->o2h_frame_size = 0;
   for (int i = 0; i < engine->device_desc.outputs; i++)
     {
-      engine->o2h_frame_size +=
-	engine->device_desc.custom_output_track_sizes[i];
+      engine->o2h_frame_size += engine->device_desc.output_tracks[i].size;
     }
 
   engine->h2o_frame_size = 0;
   for (int i = 0; i < engine->device_desc.inputs; i++)
     {
-      engine->h2o_frame_size +=
-	engine->device_desc.custom_input_track_sizes[i];
+      engine->h2o_frame_size += engine->device_desc.input_tracks[i].size;
     }
 
   debug_print (2, "o2h: USB in frame size: %zu B", engine->o2h_frame_size);
@@ -1014,7 +1012,6 @@ ow_engine_free_mem (struct ow_engine *engine)
   free (engine->usb.xfr_control_out_data);
   free (engine->usb.xfr_control_in_data);
   pthread_spin_destroy (&engine->lock);
-  ow_free_device_desc (&engine->device_desc);
 }
 
 inline ow_engine_status_t

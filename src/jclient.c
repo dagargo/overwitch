@@ -429,7 +429,7 @@ jclient_run (struct jclient *jclient)
   jclient->output_ports = malloc (sizeof (jack_port_t *) * desc->outputs);
   for (int i = 0; i < desc->outputs; i++)
     {
-      const char *name = desc->output_track_names[i];
+      const char *name = desc->output_tracks[i].name;
       debug_print (2, "Registering output port %s...", name);
       jclient->output_ports[i] = jack_port_register (jclient->client,
 						     name,
@@ -447,7 +447,7 @@ jclient_run (struct jclient *jclient)
   jclient->input_ports = malloc (sizeof (jack_port_t *) * desc->inputs);
   for (int i = 0; i < desc->inputs; i++)
     {
-      const char *name = desc->input_track_names[i];
+      const char *name = desc->input_tracks[i].name;
       debug_print (2, "Registering input port %s...", name);
       jclient->input_ports[i] = jack_port_register (jclient->client,
 						    name,

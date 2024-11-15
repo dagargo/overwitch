@@ -660,7 +660,7 @@ refresh_all (GtkWidget *object, gpointer data)
       set_widgets_to_running_state (TRUE);
     }
 
-  ow_free_usb_device_list (devices, devices_count);
+  free (devices);
 }
 
 static gboolean
