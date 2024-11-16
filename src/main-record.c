@@ -287,7 +287,7 @@ run_record (int device_num, const char *device_name,
   context.read_space = buffer_dummy_rw_space;
   context.write = buffer_write;
   context.o2h_audio = sf;
-  context.options = OW_ENGINE_OPTION_O2P_AUDIO;
+  context.options = OW_ENGINE_OPTION_O2H_AUDIO;
 
   err = ow_engine_start (engine, &context);
   if (err)

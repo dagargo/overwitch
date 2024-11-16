@@ -53,7 +53,7 @@ ow_resampler_report_status (struct ow_resampler *resampler)
   status = resampler->engine->status;
 
   int h2o_enabled = ow_engine_is_option (resampler->engine,
-					 OW_ENGINE_OPTION_P2O_AUDIO);
+					 OW_ENGINE_OPTION_H2O_AUDIO);
 
   if (status == OW_ENGINE_STATUS_RUN)
     {
