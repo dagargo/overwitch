@@ -46,6 +46,7 @@ struct jclient
   struct ow_resampler *resampler;
   struct ow_context context;
   // Thread stuff
+  pthread_spinlock_t lock;
   int running;
   pthread_t thread;
 };
