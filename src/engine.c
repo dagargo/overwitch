@@ -211,7 +211,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
   size_t bytes;
   long frames;
   int res;
-  int h2o_enabled = ow_engine_is_option (engine, OW_ENGINE_OPTION_P2O_AUDIO);
+  int h2o_enabled = ow_engine_is_option (engine, OW_ENGINE_OPTION_H2O_AUDIO);
 
   if (h2o_enabled)
     {
@@ -312,7 +312,7 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
 	}
 
       struct ow_engine *engine = xfr->user_data;
-      if (engine->context->options & OW_ENGINE_OPTION_O2P_AUDIO)
+      if (engine->context->options & OW_ENGINE_OPTION_O2H_AUDIO)
 	{
 	  set_usb_input_data_blks (engine);
 	}
@@ -909,7 +909,7 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
       return OW_GENERIC_ERROR;
     }
 
-  if (context->options & OW_ENGINE_OPTION_O2P_AUDIO)
+  if (context->options & OW_ENGINE_OPTION_O2H_AUDIO)
     {
       audio_thread = 1;
       if (!context->read_space)
@@ -926,11 +926,11 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 	}
       if (!context->o2h_audio)
 	{
-	  return OW_INIT_ERROR_NO_O2P_AUDIO_BUF;
+	  return OW_INIT_ERROR_NO_O2H_AUDIO_BUF;
 	}
     }
 
-  if (context->options & OW_ENGINE_OPTION_P2O_AUDIO)
+  if (context->options & OW_ENGINE_OPTION_H2O_AUDIO)
     {
       audio_thread = 1;
       if (!context->read_space)
@@ -943,7 +943,7 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 	}
       if (!context->h2o_audio)
 	{
-	  return OW_INIT_ERROR_NO_P2O_AUDIO_BUF;
+	  return OW_INIT_ERROR_NO_H2O_AUDIO_BUF;
 	}
     }
 

@@ -119,7 +119,7 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
       total_connections += jack_port_connected (jclient->input_ports[i]);
     }
 
-  ow_engine_set_option (engine, OW_ENGINE_OPTION_P2O_AUDIO,
+  ow_engine_set_option (engine, OW_ENGINE_OPTION_H2O_AUDIO,
 			total_connections != 0);
 
   for (int i = 0; i < desc->outputs; i++)
@@ -252,7 +252,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 
   //h2o
 
-  if (ow_engine_is_option (engine, OW_ENGINE_OPTION_P2O_AUDIO))
+  if (ow_engine_is_option (engine, OW_ENGINE_OPTION_H2O_AUDIO))
     {
       for (int i = 0; i < desc->inputs; i++)
 	{
@@ -487,7 +487,7 @@ jclient_run (struct jclient *jclient)
   jclient->context.set_rt_priority = set_rt_priority;
   jclient->context.priority = jclient->priority;
 
-  jclient->context.options = OW_ENGINE_OPTION_O2P_AUDIO;
+  jclient->context.options = OW_ENGINE_OPTION_O2H_AUDIO;
 
   err = ow_resampler_start (jclient->resampler, &jclient->context);
   if (err)
