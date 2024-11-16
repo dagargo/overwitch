@@ -27,8 +27,10 @@
 
 #define DEFAULT_QUALITY 2
 
+static int stop_all;
 static size_t jclient_count;
 static struct jclient *jclients;
+static pthread_spinlock_t lock;	//Needed for signal handling
 
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
@@ -43,14 +45,22 @@ static struct option options[] = {
   {NULL, 0, NULL, 0}
 };
 
+
 static void
 signal_handler (int signum)
 {
   if (signum == SIGHUP || signum == SIGINT || signum == SIGTERM
       || signum == SIGTSTP)
     {
+      ssize_t count;
       struct jclient *jclient = jclients;
-      for (int i = 0; i < jclient_count; i++, jclient++)
+
+      pthread_spin_unlock (&lock);
+      stop_all = 1;
+      count = jclient_count;
+      pthread_spin_unlock (&lock);
+
+      for (int i = 0; i < count; i++, jclient++)
 	{
 	  jclient_stop (jclient);
 	}
@@ -81,6 +91,12 @@ run_single (int device_num, const char *device_name,
       return OW_GENERIC_ERROR;
     }
 
+  pthread_spin_lock (&lock);
+  if (stop_all)
+    {
+      return 0;
+    }
+
   jclient_count = 1;
   jclients = malloc (sizeof (struct jclient));
   jclients->bus = device->bus;
@@ -90,8 +106,6 @@ run_single (int device_num, const char *device_name,
   jclients->quality = quality;
   jclients->priority = priority;
 
-  free (device);
-
   if (jclient_init (jclients))
     {
       err = OW_GENERIC_ERROR;
@@ -99,6 +113,16 @@ run_single (int device_num, const char *device_name,
     }
 
   jclient_start (jclients);
+  pthread_spin_unlock (&lock);
+
+  free (device);
+
+  if (stop_all)
+    {
+      struct jclient *jclient = jclients;
+      jclient_stop (jclient);
+    }
+
   jclient_wait (jclients);
   jclient_destroy (jclients);
 
@@ -114,21 +138,27 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
   struct ow_usb_device *devices;
   struct ow_usb_device *device;
   struct jclient *jclient;
-  int jclient_init_count;
+  size_t jclient_total_count;
 
-  ow_err_t err = ow_get_usb_device_list (&devices, &jclient_count);
+  ow_err_t err = ow_get_usb_device_list (&devices, &jclient_total_count);
 
   if (err)
     {
       return err;
     }
 
-  jclients = malloc (sizeof (struct jclient) * jclient_count);
+  pthread_spin_lock (&lock);
+  if (stop_all)
+    {
+      return 0;
+    }
+
+  jclients = malloc (sizeof (struct jclient) * jclient_total_count);
 
   device = devices;
   jclient = jclients;
-  jclient_init_count = 0;
-  for (int i = 0; i < jclient_count; i++, device++)
+  jclient_count = 0;
+  for (int i = 0; i < jclient_total_count; i++, device++)
     {
       jclient->bus = device->bus;
       jclient->address = device->address;
@@ -144,14 +174,19 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
 
       jclient_start (jclient);
       jclient++;
-      jclient_init_count++;
+      jclient_count++;
     }
+  pthread_spin_unlock (&lock);
 
   free (devices);
 
   jclient = jclients;
-  for (int i = 0; i < jclient_init_count; i++, jclient++)
+  for (int i = 0; i < jclient_count; i++, jclient++)
     {
+      if (stop_all)
+	{
+	  jclient_stop (jclient);
+	}
       jclient_wait (jclient);
       jclient_destroy (jclient);
     }
@@ -164,7 +199,7 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
 int
 main (int argc, char *argv[])
 {
-  int opt;
+  int opt, err = EXIT_SUCCESS;
   int vflg = 0, lflg = 0, dflg = 0, bflg = 0, pflg = 0, tflg = 0, nflg =
     0, errflg = 0;
   char *endstr;
@@ -177,6 +212,8 @@ main (int argc, char *argv[])
   int quality = DEFAULT_QUALITY;
   int priority = JCLIENT_DEFAULT_PRIORITY;
   int xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
+
+  pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
 
   action.sa_handler = signal_handler;
   sigemptyset (&action.sa_mask);
@@ -241,7 +278,7 @@ main (int argc, char *argv[])
 	  break;
 	case 'h':
 	  print_help (argv[0], PACKAGE_STRING, options, NULL);
-	  exit (EXIT_SUCCESS);
+	  err = EXIT_SUCCESS;
 	case '?':
 	  errflg++;
 	}
@@ -250,7 +287,8 @@ main (int argc, char *argv[])
   if (errflg > 0)
     {
       print_help (argv[0], PACKAGE_STRING, options, NULL);
-      exit (EXIT_FAILURE);
+      err = EXIT_FAILURE;
+      goto cleanup;
     }
 
   if (vflg)
@@ -264,7 +302,8 @@ main (int argc, char *argv[])
       if (ow_err)
 	{
 	  fprintf (stderr, "USB error: %s\n", ow_get_err_str (ow_err));
-	  exit (EXIT_FAILURE);
+	  err = EXIT_FAILURE;
+	  goto cleanup;
 	}
       exit (EXIT_SUCCESS);
     }
@@ -272,19 +311,22 @@ main (int argc, char *argv[])
   if (bflg > 1)
     {
       fprintf (stderr, "Undetermined blocks\n");
-      exit (EXIT_FAILURE);
+      err = EXIT_FAILURE;
+      goto cleanup;
     }
 
   if (pflg > 1)
     {
       fprintf (stderr, "Undetermined priority\n");
-      exit (EXIT_FAILURE);
+      err = EXIT_FAILURE;
+      goto cleanup;
     }
 
   if (tflg > 1)
     {
       fprintf (stderr, "Undetermined timeout\n");
-      exit (EXIT_FAILURE);
+      err = EXIT_FAILURE;
+      goto cleanup;
     }
 
   if (nflg + dflg == 0)
@@ -299,8 +341,11 @@ main (int argc, char *argv[])
   else
     {
       fprintf (stderr, "Device not provided properly\n");
-      exit (EXIT_FAILURE);
+      err = EXIT_FAILURE;
     }
 
-  return EXIT_SUCCESS;
+cleanup:
+  pthread_spin_destroy (&lock);
+
+  return err;
 }
