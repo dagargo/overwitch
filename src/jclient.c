@@ -35,6 +35,8 @@
 
 #define MAX_LATENCY (8192 * 2)	//This is twice the maximum JACK latency.
 
+#define JCLIENT_WAIT_TIME_US 500000
+
 size_t
 jclient_buffer_read (void *buffer, char *src, size_t size)
 {
@@ -279,11 +281,9 @@ void
 jclient_stop (struct jclient *jclient)
 {
   debug_print (1, "Stopping client...");
-  if (jclient->client)
-    {
-      ow_resampler_report_status (jclient->resampler);
-      ow_resampler_stop (jclient->resampler);
-    }
+
+  ow_resampler_report_status (jclient->resampler);
+  ow_resampler_stop (jclient->resampler);
 }
 
 int
@@ -291,6 +291,9 @@ jclient_init (struct jclient *jclient)
 {
   struct ow_resampler *resampler;
   struct ow_engine *engine;
+
+  pthread_spin_init (&jclient->lock, PTHREAD_PROCESS_PRIVATE);
+
   ow_err_t err = ow_resampler_init_from_bus_address (&resampler, jclient->bus,
 						     jclient->address,
 						     jclient->blocks_per_transfer,
@@ -315,6 +318,7 @@ void
 jclient_destroy (struct jclient *jclient)
 {
   ow_resampler_destroy (jclient->resampler);
+  pthread_spin_destroy (&jclient->lock);
 }
 
 int
@@ -497,6 +501,12 @@ jclient_run (struct jclient *jclient)
       err = -1;
       goto cleanup_jack;
     }
+  else
+    {
+      pthread_spin_lock (&jclient->lock);
+      jclient->running = 1;
+      pthread_spin_unlock (&jclient->lock);
+    }
 
   ow_resampler_wait (jclient->resampler);
 
@@ -523,18 +533,52 @@ jclient_thread_runner (void *data)
 int
 jclient_start (struct jclient *jclient)
 {
-  int err = pthread_create (&jclient->thread, NULL, jclient_thread_runner,
-			    jclient);
-  jclient->running = err ? 0 : 1;
-  return err;
+  int running, err;
+
+  debug_print (1, "Starting thread...");
+
+  err = pthread_create (&jclient->thread, NULL, jclient_thread_runner,
+			jclient);
+
+  if (err)
+    {
+      return err;
+    }
+
+  while (1)
+    {
+      pthread_spin_lock (&jclient->lock);
+      running = jclient->running;
+      pthread_spin_unlock (&jclient->lock);
+
+      if (running)
+	{
+	  break;
+	}
+
+      debug_print (2, "Waiting for the thread to be ready...");
+
+      usleep (JCLIENT_WAIT_TIME_US);
+    }
+
+  return 0;
 }
 
 void
 jclient_wait (struct jclient *jclient)
 {
-  if (jclient->running)
+  int running;
+
+  pthread_spin_lock (&jclient->lock);
+  running = jclient->running;
+  pthread_spin_unlock (&jclient->lock);
+
+  if (running)
     {
       pthread_join (jclient->thread, NULL);
+
+      pthread_spin_lock (&jclient->lock);
       jclient->running = 0;
+      pthread_spin_unlock (&jclient->lock);
     }
 }
