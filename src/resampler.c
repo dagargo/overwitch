@@ -473,8 +473,6 @@ ow_resampler_init_from_bus_address (struct ow_resampler **resampler_,
 		      resampler->engine->device_desc.outputs, NULL,
 		      resampler);
 
-  pthread_spin_init (&resampler->lock, PTHREAD_PROCESS_SHARED);
-
   resampler->reporter.callback = NULL;
   resampler->reporter.data = NULL;
   resampler->reporter.period = DEFAULT_REPORT_PERIOD;
@@ -498,7 +496,6 @@ ow_resampler_destroy (struct ow_resampler *resampler)
       free (resampler->o2h_buf_in);
       free (resampler->o2h_buf_out);
     }
-  pthread_spin_destroy (&resampler->lock);
   ow_engine_destroy (resampler->engine);
   free (resampler);
 }
