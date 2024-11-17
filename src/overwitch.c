@@ -676,6 +676,7 @@ cleanup_parser:
 
 int
 ow_get_usb_device_from_device_attrs (int device_num, const char *device_name,
+				     uint8_t bus, uint8_t address,
 				     struct ow_usb_device **device)
 {
   int i;
@@ -699,9 +700,16 @@ ow_get_usb_device_from_device_attrs (int device_num, const char *device_name,
 	      break;
 	    }
 	}
-      else
+      else if (device_name)
 	{
 	  if (strcmp (usb_device->desc.name, device_name) == 0)
+	    {
+	      break;
+	    }
+	}
+      else
+	{
+	  if (usb_device->bus == bus && usb_device->address == address)
 	    {
 	      break;
 	    }

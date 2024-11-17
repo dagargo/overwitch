@@ -65,6 +65,7 @@ static struct
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
   {"use-device", 1, NULL, 'd'},
+  {"bus-device-address", 1, NULL, 'a'},
   {"track-mask", 1, NULL, 'm'},
   {"track-buffer-size-kilobytes", 1, NULL, 's'},
   {"blocks-per-transfer", 1, NULL, 'b'},
@@ -219,8 +220,9 @@ signal_handler (int signo)
 }
 
 static int
-run_record (int device_num, const char *device_name,
-	    unsigned int blocks_per_transfer, unsigned int xfr_timeout)
+run_record (int device_num, const char *device_name, uint8_t bus,
+	    uint8_t address, unsigned int blocks_per_transfer,
+	    unsigned int xfr_timeout)
 {
   char curr_time_string[MAX_TIME_LEN];
   time_t curr_time;
@@ -228,7 +230,8 @@ run_record (int device_num, const char *device_name,
   ow_err_t err;
   struct ow_usb_device *device;
 
-  if (ow_get_usb_device_from_device_attrs (device_num, device_name, &device))
+  if (ow_get_usb_device_from_device_attrs (device_num, device_name, bus,
+					   address, &device))
     {
       return OW_GENERIC_ERROR;
     }
@@ -342,9 +345,10 @@ main (int argc, char *argv[])
 {
   int opt;
   int lflg = 0, vflg = 0, errflg = 0;
-  int nflg = 0, dflg = 0, mflg = 0, sflg = 0, bflg = 0, tflg = 0;
+  int nflg = 0, dflg = 0, aflg = 0, mflg = 0, sflg = 0, bflg = 0, tflg = 0;
   char *endstr;
   const char *device_name = NULL;
+  uint8_t bus = 0, address = 0;
   int long_index = 0;
   ow_err_t ow_err;
   struct sigaction action;
@@ -361,7 +365,7 @@ main (int argc, char *argv[])
   sigaction (SIGUSR1, &action, NULL);
   sigaction (SIGTSTP, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "n:d:m:s:b:t:lvh",
+  while ((opt = getopt_long (argc, argv, "n:d:a:m:s:b:t:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
@@ -373,6 +377,10 @@ main (int argc, char *argv[])
 	case 'd':
 	  device_name = optarg;
 	  dflg++;
+	  break;
+	case 'a':
+	  get_bus_address_from_str (optarg, &bus, &address);
+	  aflg++;
 	  break;
 	case 'm':
 	  track_mask = optarg;
@@ -444,10 +452,10 @@ main (int argc, char *argv[])
       exit (EXIT_FAILURE);
     }
 
-  if (nflg + dflg == 1)
+  if (nflg + dflg + aflg == 1)
     {
-      return run_record (device_num, device_name, blocks_per_transfer,
-			 xfr_timeout);
+      return run_record (device_num, device_name, bus, address,
+			 blocks_per_transfer, xfr_timeout);
     }
   else
     {
