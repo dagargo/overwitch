@@ -124,3 +124,12 @@ get_ow_blocks_per_transfer_argument (const char *optarg)
     }
   return blocks_per_transfer;
 }
+
+void
+get_bus_address_from_str (char *str, uint8_t *bus, uint8_t *address)
+{
+  char *endstr;
+
+  *bus = (uint8_t) strtol (str, &endstr, 10);
+  *address = (uint8_t) strtol (endstr + 1, &endstr, 10);
+}

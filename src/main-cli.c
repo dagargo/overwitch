@@ -56,6 +56,7 @@ static struct option options[] = {
   {"run-as-service", 0, NULL, 's'},
   {"use-device-number", 1, NULL, 'n'},
   {"use-device", 1, NULL, 'd'},
+  {"bus-device-address", 1, NULL, 'a'},
   {"resampling-quality", 1, NULL, 'q'},
   {"blocks-per-transfer", 1, NULL, 'b'},
   {"usb-transfer-timeout", 1, NULL, 't'},
@@ -124,13 +125,15 @@ jclient_runner (void *data)
 }
 
 static int
-run_single (int device_num, const char *device_name)
+run_single (int device_num, const char *device_name, uint8_t bus,
+	    uint8_t address)
 {
   struct ow_usb_device *device;
   struct pooled_jclient *pjc;
   int err;
 
-  if (ow_get_usb_device_from_device_attrs (device_num, device_name, &device))
+  if (ow_get_usb_device_from_device_attrs (device_num, device_name, bus,
+					   address, &device))
     {
       return EXIT_FAILURE;
     }
@@ -310,9 +313,10 @@ main (int argc, char *argv[])
 {
   int opt, err = EXIT_SUCCESS;
   int vflg = 0, lflg = 0, dflg = 0, bflg = 0, pflg = 0, tflg = 0, nflg =
-    0, sflg = 0, errflg = 0;
+    0, sflg = 0, aflg = 0, errflg = 0;
   char *endstr;
   char *device_name = NULL;
+  uint8_t bus = 0, address = 0;
   int long_index = 0;
   ow_err_t ow_err;
   struct sigaction action;
@@ -330,7 +334,7 @@ main (int argc, char *argv[])
   sigaction (SIGUSR1, &action, NULL);
   sigaction (SIGUSR2, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "sn:d:q:b:t:p:lvh",
+  while ((opt = getopt_long (argc, argv, "sn:d:a:q:b:t:p:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
@@ -345,6 +349,10 @@ main (int argc, char *argv[])
 	case 'd':
 	  device_name = optarg;
 	  dflg++;
+	  break;
+	case 'a':
+	  get_bus_address_from_str (optarg, &bus, &address);
+	  aflg++;
 	  break;
 	case 'q':
 	  errno = 0;
@@ -437,7 +445,7 @@ main (int argc, char *argv[])
       goto cleanup;
     }
 
-  if (sflg && (nflg + dflg == 0))
+  if (sflg && (nflg + dflg + aflg == 0))
     {
       if (start_all ())
 	{
@@ -450,7 +458,7 @@ main (int argc, char *argv[])
 
       wait_all ();
     }
-  else if (nflg + dflg == 0)
+  else if (nflg + dflg + aflg == 0)
     {
       if (start_all ())
 	{
@@ -460,9 +468,9 @@ main (int argc, char *argv[])
 
       wait_all ();
     }
-  else if (nflg + dflg == 1)
+  else if (nflg + dflg + aflg == 1)
     {
-      return run_single (device_num, device_name);
+      return run_single (device_num, device_name, bus, address);
     }
   else
     {

@@ -195,8 +195,8 @@ int ow_get_usb_device_list (struct ow_usb_device **, size_t *);
 int ow_get_device_desc_from_vid_pid (uint16_t, uint16_t,
 				     struct ow_device_desc *);
 
-int ow_get_usb_device_from_device_attrs (int, const char *,
-					 struct ow_usb_device **);
+int ow_get_usb_device_from_device_attrs (int, const char *, uint8_t,
+					 uint8_t, struct ow_usb_device **);
 
 void ow_set_thread_rt_priority (pthread_t, int);
 

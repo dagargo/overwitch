@@ -33,3 +33,5 @@ ow_err_t print_devices ();
 int get_ow_xfr_timeout_argument (const char *);
 
 int get_ow_blocks_per_transfer_argument (const char *);
+
+void get_bus_address_from_str (char *str, uint8_t *, uint8_t *);
