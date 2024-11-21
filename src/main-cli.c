@@ -55,7 +55,7 @@ signal_handler (int signum)
       ssize_t count;
       struct jclient *jclient = jclients;
 
-      pthread_spin_unlock (&lock);
+      pthread_spin_lock (&lock);
       stop_all = 1;
       count = jclient_count;
       pthread_spin_unlock (&lock);
@@ -94,6 +94,7 @@ run_single (int device_num, const char *device_name,
   pthread_spin_lock (&lock);
   if (stop_all)
     {
+      pthread_spin_unlock (&lock);
       return 0;
     }
 
@@ -109,6 +110,7 @@ run_single (int device_num, const char *device_name,
   if (jclient_init (jclients))
     {
       err = OW_GENERIC_ERROR;
+      pthread_spin_unlock (&lock);
       goto end;
     }
 
@@ -150,6 +152,7 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
   pthread_spin_lock (&lock);
   if (stop_all)
     {
+      pthread_spin_unlock (&lock);
       return 0;
     }
 
