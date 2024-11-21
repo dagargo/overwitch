@@ -26,10 +26,16 @@
 #include "common.h"
 
 #define DEFAULT_QUALITY 2
+#define POOLED_JCLIENT_LEN 64
+
+struct pooled_jclient
+{
+  int used;
+  struct jclient jclient;
+};
 
 static int stop_all;
-static size_t jclient_count;
-static struct jclient *jclients;
+static struct pooled_jclient jcpool[POOLED_JCLIENT_LEN];
 static pthread_spinlock_t lock;	//Needed for signal handling
 
 static struct option options[] = {
@@ -52,18 +58,19 @@ signal_handler (int signum)
   if (signum == SIGHUP || signum == SIGINT || signum == SIGTERM
       || signum == SIGTSTP)
     {
-      ssize_t count;
-      struct jclient *jclient = jclients;
+      struct pooled_jclient *pjc = jcpool;
 
       pthread_spin_lock (&lock);
       stop_all = 1;
-      count = jclient_count;
-      pthread_spin_unlock (&lock);
 
-      for (int i = 0; i < count; i++, jclient++)
+      for (int i = 0; i < POOLED_JCLIENT_LEN; i++, pjc++)
 	{
-	  jclient_stop (jclient);
+	  if (pjc->used)
+	    {
+	      jclient_stop (&pjc->jclient);
+	    }
 	}
+      pthread_spin_unlock (&lock);
     }
   else if (signum == SIGUSR1)
     {
@@ -84,52 +91,55 @@ run_single (int device_num, const char *device_name,
 	    int quality, int priority)
 {
   struct ow_usb_device *device;
-  ow_err_t err = OW_OK;
+  struct pooled_jclient *pjc;
+  int err;
 
   if (ow_get_usb_device_from_device_attrs (device_num, device_name, &device))
     {
-      return OW_GENERIC_ERROR;
+      return EXIT_FAILURE;
     }
 
   pthread_spin_lock (&lock);
   if (stop_all)
     {
       pthread_spin_unlock (&lock);
-      return 0;
-    }
-
-  jclient_count = 1;
-  jclients = malloc (sizeof (struct jclient));
-  jclients->bus = device->bus;
-  jclients->address = device->address;
-  jclients->blocks_per_transfer = blocks_per_transfer;
-  jclients->xfr_timeout = xfr_timeout;
-  jclients->quality = quality;
-  jclients->priority = priority;
-
-  if (jclient_init (jclients))
-    {
-      err = OW_GENERIC_ERROR;
-      pthread_spin_unlock (&lock);
       goto end;
     }
 
-  jclient_start (jclients);
-  pthread_spin_unlock (&lock);
+  pjc = jcpool;
+  pjc->jclient = jcpool->jclient;
+  pjc->jclient.bus = device->bus;
+  pjc->jclient.address = device->address;
+  pjc->jclient.blocks_per_transfer = blocks_per_transfer;
+  pjc->jclient.xfr_timeout = xfr_timeout;
+  pjc->jclient.quality = quality;
+  pjc->jclient.priority = priority;
 
-  free (device);
+  if (jclient_init (&pjc->jclient))
+    {
+      pthread_spin_unlock (&lock);
+      err = EXIT_FAILURE;
+      goto end;
+    }
+
+  pjc->used = 1;
+  jclient_start (&pjc->jclient);
+  pthread_spin_unlock (&lock);
 
   if (stop_all)
     {
-      struct jclient *jclient = jclients;
-      jclient_stop (jclient);
+      jclient_stop (&pjc->jclient);
     }
 
-  jclient_wait (jclients);
-  jclient_destroy (jclients);
+  jclient_wait (&pjc->jclient);
+  jclient_destroy (&pjc->jclient);
+
+  pthread_spin_lock (&lock);
+  pjc->used = 0;
+  pthread_spin_unlock (&lock);
 
 end:
-  free (jclients);
+  free (device);
   return err;
 }
 
@@ -139,64 +149,74 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
 {
   struct ow_usb_device *devices;
   struct ow_usb_device *device;
-  struct jclient *jclient;
+  struct pooled_jclient *pjc;
   size_t jclient_total_count;
 
-  ow_err_t err = ow_get_usb_device_list (&devices, &jclient_total_count);
-
-  if (err)
+  if (ow_get_usb_device_list (&devices, &jclient_total_count))
     {
-      return err;
+      return EXIT_FAILURE;
     }
 
   pthread_spin_lock (&lock);
   if (stop_all)
     {
       pthread_spin_unlock (&lock);
-      return 0;
+      goto end;
     }
 
-  jclients = malloc (sizeof (struct jclient) * jclient_total_count);
-
   device = devices;
-  jclient = jclients;
-  jclient_count = 0;
+  pjc = jcpool;
+  jclient_total_count =
+    jclient_total_count >
+    POOLED_JCLIENT_LEN ? POOLED_JCLIENT_LEN : jclient_total_count;
   for (int i = 0; i < jclient_total_count; i++, device++)
     {
-      jclient->bus = device->bus;
-      jclient->address = device->address;
-      jclient->blocks_per_transfer = blocks_per_transfer;
-      jclient->xfr_timeout = xfr_timeout;
-      jclient->quality = quality;
-      jclient->priority = priority;
+      pjc->jclient.bus = device->bus;
+      pjc->jclient.address = device->address;
+      pjc->jclient.blocks_per_transfer = blocks_per_transfer;
+      pjc->jclient.xfr_timeout = xfr_timeout;
+      pjc->jclient.quality = quality;
+      pjc->jclient.priority = priority;
 
-      if (jclient_init (jclient))
+      if (jclient_init (&pjc->jclient))
 	{
 	  continue;
 	}
 
-      jclient_start (jclient);
-      jclient++;
-      jclient_count++;
+      pjc->used = 1;
+      jclient_start (&pjc->jclient);
+      pjc++;
     }
   pthread_spin_unlock (&lock);
 
-  free (devices);
-
-  jclient = jclients;
-  for (int i = 0; i < jclient_count; i++, jclient++)
+  pjc = jcpool;
+  for (int i = 0; i < POOLED_JCLIENT_LEN; i++, pjc++)
     {
-      if (stop_all)
+      int used;
+
+      pthread_spin_lock (&lock);
+      used = pjc->used;
+      pthread_spin_unlock (&lock);
+
+      if (used)
 	{
-	  jclient_stop (jclient);
+	  if (stop_all)
+	    {
+	      jclient_stop (&pjc->jclient);
+	    }
+
+	  jclient_wait (&pjc->jclient);
+	  jclient_destroy (&pjc->jclient);
+
+	  pthread_spin_lock (&lock);
+	  pjc->used = 0;
+	  pthread_spin_unlock (&lock);
 	}
-      jclient_wait (jclient);
-      jclient_destroy (jclient);
     }
 
-  free (jclients);
-
-  return OW_OK;
+end:
+  free (devices);
+  return EXIT_SUCCESS;
 }
 
 int
