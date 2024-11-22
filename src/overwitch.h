@@ -196,8 +196,8 @@ int ow_get_usb_device_from_device_attrs (int, const char *,
 
 void ow_set_thread_rt_priority (pthread_t, int);
 
-void ow_copy_device_desc_static (struct ow_device_desc *,
-				 const struct ow_device_desc *);
+void ow_copy_device_desc (struct ow_device_desc *,
+			  const struct ow_device_desc *);
 
 //Engine
 ow_err_t ow_engine_init_from_bus_address (struct ow_engine **, uint8_t,
