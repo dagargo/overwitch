@@ -1166,3 +1166,99 @@ ow_engine_get_overbridge_name (struct ow_engine *engine)
 {
   return engine->overbridge_name;
 }
+
+static int
+ow_hotplug_callback (struct libusb_context *ctx, struct libusb_device *dev,
+		     libusb_hotplug_event event, void *user_data)
+{
+  ow_hotplug_callback_t cb = user_data;
+  static libusb_device_handle *dev_handle = NULL;
+  struct libusb_device_descriptor desc;
+  int rc;
+
+  libusb_get_device_descriptor (dev, &desc);
+
+  if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == event)
+    {
+      debug_print (1, "USB hotplug: device arrived");
+      rc = libusb_open (dev, &dev_handle);
+      if (rc == LIBUSB_SUCCESS)
+	{
+	  cb (libusb_get_bus_number (dev), libusb_get_device_address (dev));
+	}
+      else
+	{
+	  error_print ("Could not open USB device\n");
+	}
+    }
+  else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event)
+    {
+      debug_print (1, "USB hotplug: device left");
+    }
+  else
+    {
+      debug_print (1, "Unhandled event %d", event);
+    }
+
+  return 0;
+}
+
+int
+ow_hotplug_loop (int *running, pthread_spinlock_t *lock,
+		 ow_hotplug_callback_t cb)
+{
+  libusb_hotplug_callback_handle callback_handle;
+  int rc, end;
+
+#if LIBUSBX_API_VERSION >= 0x0100010A
+  if (libusb_init_context (NULL, NULL, 0))
+    {
+      return OW_USB_ERROR_LIBUSB_INIT_FAILED;
+    }
+#else
+  if (libusb_init (NULL) != LIBUSB_SUCCESS)
+    {
+      return OW_USB_ERROR_LIBUSB_INIT_FAILED;
+    }
+#endif
+
+  debug_print (1, "Registering USB hotplug callback...");
+
+  rc = libusb_hotplug_register_callback (NULL,
+					 LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED |
+					 LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0,
+					 ELEKTRON_VID,
+					 LIBUSB_HOTPLUG_MATCH_ANY,
+					 LIBUSB_HOTPLUG_MATCH_ANY,
+					 ow_hotplug_callback, cb,
+					 &callback_handle);
+  if (LIBUSB_SUCCESS != rc)
+    {
+      error_print ("Error creating a hotplug callback");
+      libusb_exit (NULL);
+      return OW_USB_ERROR_LIBUSB_INIT_FAILED;
+    }
+
+  while (1)
+    {
+      libusb_handle_events_completed (NULL, NULL);
+
+      pthread_spin_lock (lock);
+      end = !*running;
+      pthread_spin_unlock (lock);
+
+      if (end)
+	{
+	  break;
+	}
+
+      usleep (10000);
+    }
+
+  debug_print (1, "Deregistering USB hotplug callback...");
+
+  libusb_hotplug_deregister_callback (NULL, callback_handle);
+  libusb_exit (NULL);
+
+  return 0;
+}

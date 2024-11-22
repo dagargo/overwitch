@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+#define ELEKTRON_VID 0x1935
+
 #define OB_SAMPLE_RATE 48000.0
 #define OB_FRAMES_PER_BLOCK 7
 #define OB_MAX_TRACKS 64
@@ -180,6 +182,8 @@ struct ow_resampler_reporter
   void *data;
 };
 
+typedef void (*ow_hotplug_callback_t) (uint8_t, uint8_t);
+
 struct ow_engine;
 struct ow_resampler;
 
@@ -232,6 +236,9 @@ void ow_engine_stop (struct ow_engine *);
 void ow_engine_set_overbridge_name (struct ow_engine *, const char *);
 
 const char *ow_engine_get_overbridge_name (struct ow_engine *);
+
+int ow_hotplug_loop (int *running, pthread_spinlock_t * lock,
+		     ow_hotplug_callback_t cb);
 
 //Resampler
 ow_err_t ow_resampler_init_from_bus_address (struct ow_resampler **, uint8_t,
