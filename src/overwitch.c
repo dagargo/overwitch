@@ -27,8 +27,6 @@
 
 #define DEVICES_FILE "/devices.json"
 
-#define ELEKTRON_VID 0x1935
-
 #define ANALOG_FOUR_PID 0x0004
 #define ANALOG_KEYS_PID 0x0006
 #define ANALOG_RYTM_PID 0x0008

@@ -28,17 +28,32 @@
 #define DEFAULT_QUALITY 2
 #define POOLED_JCLIENT_LEN 64
 
+typedef enum
+{
+  PJC_AVAILABLE = 0,
+  PJC_RUNNING = 1,
+  PJC_STOPPED = 2,
+} pooled_jclient_status_t;
+
 struct pooled_jclient
 {
-  int used;
+  pooled_jclient_status_t status;
+  pthread_t thread;
   struct jclient jclient;
 };
+
+static int blocks_per_transfer = OW_DEFAULT_BLOCKS;
+static int quality = DEFAULT_QUALITY;
+static int priority = JCLIENT_DEFAULT_PRIORITY;
+static int xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
 
 static int stop_all;
 static struct pooled_jclient jcpool[POOLED_JCLIENT_LEN];
 static pthread_spinlock_t lock;	//Needed for signal handling
+static int hotplug_running;
 
 static struct option options[] = {
+  {"run-as-service", 0, NULL, 's'},
   {"use-device-number", 1, NULL, 'n'},
   {"use-device", 1, NULL, 'd'},
   {"resampling-quality", 1, NULL, 'q'},
@@ -62,10 +77,11 @@ signal_handler (int signum)
 
       pthread_spin_lock (&lock);
       stop_all = 1;
+      hotplug_running = 0;
 
       for (int i = 0; i < POOLED_JCLIENT_LEN; i++, pjc++)
 	{
-	  if (pjc->used)
+	  if (pjc->status == PJC_RUNNING)
 	    {
 	      jclient_stop (&pjc->jclient);
 	    }
@@ -85,10 +101,30 @@ signal_handler (int signum)
     }
 }
 
+void *
+jclient_runner (void *data)
+{
+  struct pooled_jclient *pjc = data;
+
+  jclient_start (&pjc->jclient);
+
+  if (stop_all)
+    {
+      jclient_stop (&pjc->jclient);
+    }
+
+  jclient_wait (&pjc->jclient);
+  jclient_destroy (&pjc->jclient);
+
+  pthread_spin_unlock (&lock);
+  pjc->status = PJC_STOPPED;
+  pthread_spin_unlock (&lock);
+
+  return NULL;
+}
+
 static int
-run_single (int device_num, const char *device_name,
-	    unsigned int blocks_per_transfer, unsigned int xfr_timeout,
-	    int quality, int priority)
+run_single (int device_num, const char *device_name)
 {
   struct ow_usb_device *device;
   struct pooled_jclient *pjc;
@@ -116,21 +152,10 @@ run_single (int device_num, const char *device_name,
       goto end;
     }
 
-  pjc->used = 1;
-  jclient_start (&pjc->jclient);
+  pjc->status = PJC_RUNNING;
   pthread_spin_unlock (&lock);
 
-  if (stop_all)
-    {
-      jclient_stop (&pjc->jclient);
-    }
-
-  jclient_wait (&pjc->jclient);
-  jclient_destroy (&pjc->jclient);
-
-  pthread_spin_lock (&lock);
-  pjc->used = 0;
-  pthread_spin_unlock (&lock);
+  jclient_runner (pjc);
 
 end:
   free (device);
@@ -138,8 +163,7 @@ end:
 }
 
 static int
-run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
-	 int quality, int priority)
+start_all ()
 {
   struct ow_usb_device *devices;
   struct ow_usb_device *device;
@@ -171,40 +195,114 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
 	  continue;
 	}
 
-      pjc->used = 1;
-      jclient_start (&pjc->jclient);
+      debug_print (1, "Starting pooled jclient %d...", i);
+      pjc->status = PJC_RUNNING;
+      pthread_create (&pjc->thread, NULL, jclient_runner, pjc);
       pjc++;
     }
   pthread_spin_unlock (&lock);
 
-  pjc = jcpool;
-  for (int i = 0; i < POOLED_JCLIENT_LEN; i++, pjc++)
-    {
-      int used;
-
-      pthread_spin_lock (&lock);
-      used = pjc->used;
-      pthread_spin_unlock (&lock);
-
-      if (used)
-	{
-	  if (stop_all)
-	    {
-	      jclient_stop (&pjc->jclient);
-	    }
-
-	  jclient_wait (&pjc->jclient);
-	  jclient_destroy (&pjc->jclient);
-
-	  pthread_spin_lock (&lock);
-	  pjc->used = 0;
-	  pthread_spin_unlock (&lock);
-	}
-    }
-
 end:
   free (devices);
   return EXIT_SUCCESS;
+}
+
+static void
+wait_all ()
+{
+  struct pooled_jclient *pjc = jcpool;
+
+  for (int i = 0; i < POOLED_JCLIENT_LEN; i++)
+    {
+      pooled_jclient_status_t status;
+
+      pthread_spin_lock (&lock);
+      status = pjc->status;
+      pthread_spin_unlock (&lock);
+
+      if (status != PJC_AVAILABLE)
+	{
+	  debug_print (2, "Waiting pooled jclient %d...", i);
+	  pthread_join (pjc->thread, NULL);
+	}
+
+      pjc++;
+    }
+}
+
+static void
+hotplug_callback (uint8_t bus, uint8_t address)
+{
+  int i;
+  struct pooled_jclient *pjc;
+
+  debug_print (2, "Starting new jclient for bus %03d and address %03d...",
+	       bus, address);
+
+  pjc = jcpool;
+
+  for (i = 0; i < POOLED_JCLIENT_LEN; i++)
+    {
+      pooled_jclient_status_t status;
+
+      pthread_spin_lock (&lock);
+      status = pjc->status;
+      pthread_spin_unlock (&lock);
+
+      if (status == PJC_STOPPED)
+	{
+	  debug_print (2, "Recycling pooled jclient %d...", i);
+	  pthread_join (pjc->thread, NULL);
+	}
+
+      pthread_spin_lock (&lock);
+      pjc->status = PJC_AVAILABLE;
+      pthread_spin_unlock (&lock);
+
+      pjc++;
+    }
+
+  pjc = jcpool;
+
+  for (i = 0; i < POOLED_JCLIENT_LEN; i++)
+    {
+      pooled_jclient_status_t status;
+
+      pthread_spin_lock (&lock);
+      status = pjc->status;
+      pthread_spin_unlock (&lock);
+
+      if (status == PJC_AVAILABLE)
+	{
+	  debug_print (2, "Pooled jclient %d available...", i);
+	  break;
+	}
+    }
+
+  if (i == POOLED_JCLIENT_LEN)
+    {
+      error_print ("No pooled jclients available");
+      return;
+    }
+
+  pthread_spin_lock (&lock);
+  if (stop_all)
+    {
+      pthread_spin_unlock (&lock);
+      return;
+    }
+
+  if (jclient_init (&pjc->jclient, bus, address, blocks_per_transfer,
+		    xfr_timeout, quality, priority))
+    {
+      pthread_spin_unlock (&lock);
+      return;
+    }
+
+  pjc->status = PJC_RUNNING;
+  pthread_spin_unlock (&lock);
+
+  pthread_create (&pjc->thread, NULL, jclient_runner, pjc);
 }
 
 int
@@ -212,17 +310,13 @@ main (int argc, char *argv[])
 {
   int opt, err = EXIT_SUCCESS;
   int vflg = 0, lflg = 0, dflg = 0, bflg = 0, pflg = 0, tflg = 0, nflg =
-    0, errflg = 0;
+    0, sflg = 0, errflg = 0;
   char *endstr;
   char *device_name = NULL;
   int long_index = 0;
   ow_err_t ow_err;
   struct sigaction action;
   int device_num = -1;
-  int blocks_per_transfer = OW_DEFAULT_BLOCKS;
-  int quality = DEFAULT_QUALITY;
-  int priority = JCLIENT_DEFAULT_PRIORITY;
-  int xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
 
   pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
 
@@ -236,11 +330,14 @@ main (int argc, char *argv[])
   sigaction (SIGUSR1, &action, NULL);
   sigaction (SIGUSR2, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "n:d:q:b:t:p:lvh",
+  while ((opt = getopt_long (argc, argv, "sn:d:q:b:t:p:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
 	{
+	case 's':
+	  sflg = 1;
+	  break;
 	case 'n':
 	  device_num = (int) strtol (optarg, &endstr, 10);
 	  nflg++;
@@ -340,14 +437,32 @@ main (int argc, char *argv[])
       goto cleanup;
     }
 
-  if (nflg + dflg == 0)
+  if (sflg && (nflg + dflg == 0))
     {
-      return run_all (blocks_per_transfer, xfr_timeout, quality, priority);
+      if (start_all ())
+	{
+	  err = EXIT_FAILURE;
+	  goto cleanup;
+	}
+
+      hotplug_running = 1;
+      ow_hotplug_loop (&hotplug_running, &lock, hotplug_callback);
+
+      wait_all ();
+    }
+  else if (nflg + dflg == 0)
+    {
+      if (start_all ())
+	{
+	  err = EXIT_FAILURE;
+	  goto cleanup;
+	}
+
+      wait_all ();
     }
   else if (nflg + dflg == 1)
     {
-      return run_single (device_num, device_name, blocks_per_transfer,
-			 xfr_timeout, quality, priority);
+      return run_single (device_num, device_name);
     }
   else
     {
