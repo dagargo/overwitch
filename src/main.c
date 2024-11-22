@@ -647,15 +647,6 @@ refresh_all (GtkWidget *object, gpointer data)
 	}
 
       instance = g_malloc (sizeof (struct overwitch_instance));
-      instance->jclient.bus = device->bus;
-      instance->jclient.address = device->address;
-      instance->jclient.blocks_per_transfer =
-	gtk_spin_button_get_value_as_int (blocks_spin_button);
-      instance->jclient.xfr_timeout =
-	gtk_spin_button_get_value_as_int (timeout_spin_button);
-      instance->jclient.quality =
-	gtk_combo_box_get_active (quality_combo_box);
-      instance->jclient.priority = -1;
 
       instance->latency.o2h = 0.0;
       instance->latency.h2o = 0.0;
@@ -668,7 +659,11 @@ refresh_all (GtkWidget *object, gpointer data)
 	  gtk_main_iteration ();
 	}
 
-      if (jclient_init (&instance->jclient))
+      if (jclient_init (&instance->jclient, device->bus, device->address,
+			gtk_spin_button_get_value_as_int (blocks_spin_button),
+			gtk_spin_button_get_value_as_int
+			(timeout_spin_button),
+			gtk_combo_box_get_active (quality_combo_box), -1))
 	{
 	  g_free (instance);
 	  continue;
