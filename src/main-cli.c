@@ -107,15 +107,9 @@ run_single (int device_num, const char *device_name,
     }
 
   pjc = jcpool;
-  pjc->jclient = jcpool->jclient;
-  pjc->jclient.bus = device->bus;
-  pjc->jclient.address = device->address;
-  pjc->jclient.blocks_per_transfer = blocks_per_transfer;
-  pjc->jclient.xfr_timeout = xfr_timeout;
-  pjc->jclient.quality = quality;
-  pjc->jclient.priority = priority;
 
-  if (jclient_init (&pjc->jclient))
+  if (jclient_init (&pjc->jclient, device->bus, device->address,
+		    blocks_per_transfer, xfr_timeout, quality, priority))
     {
       pthread_spin_unlock (&lock);
       err = EXIT_FAILURE;
@@ -171,14 +165,8 @@ run_all (unsigned int blocks_per_transfer, unsigned int xfr_timeout,
     POOLED_JCLIENT_LEN ? POOLED_JCLIENT_LEN : jclient_total_count;
   for (int i = 0; i < jclient_total_count; i++, device++)
     {
-      pjc->jclient.bus = device->bus;
-      pjc->jclient.address = device->address;
-      pjc->jclient.blocks_per_transfer = blocks_per_transfer;
-      pjc->jclient.xfr_timeout = xfr_timeout;
-      pjc->jclient.quality = quality;
-      pjc->jclient.priority = priority;
-
-      if (jclient_init (&pjc->jclient))
+      if (jclient_init (&pjc->jclient, device->bus, device->address,
+			blocks_per_transfer, xfr_timeout, quality, priority))
 	{
 	  continue;
 	}

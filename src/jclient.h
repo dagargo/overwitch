@@ -53,7 +53,9 @@ struct jclient
 
 void jclient_check_jack_server (jclient_notify_status_t);
 
-int jclient_init (struct jclient *);
+int jclient_init (struct jclient *jclient, uint8_t bus, uint8_t address,
+		  unsigned int blocks_per_transfer, unsigned int xfr_timeout,
+		  int quality, int priority);
 
 int jclient_start (struct jclient *);
 

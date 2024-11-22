@@ -287,10 +287,19 @@ jclient_stop (struct jclient *jclient)
 }
 
 int
-jclient_init (struct jclient *jclient)
+jclient_init (struct jclient *jclient, uint8_t bus, uint8_t address,
+	      unsigned int blocks_per_transfer, unsigned int xfr_timeout,
+	      int quality, int priority)
 {
   struct ow_resampler *resampler;
   struct ow_engine *engine;
+
+  jclient->bus = bus;
+  jclient->address = address;
+  jclient->blocks_per_transfer = blocks_per_transfer;
+  jclient->xfr_timeout = xfr_timeout;
+  jclient->quality = quality;
+  jclient->priority = priority;
 
   pthread_spin_init (&jclient->lock, PTHREAD_PROCESS_PRIVATE);
 
