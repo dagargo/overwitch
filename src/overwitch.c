@@ -390,8 +390,8 @@ ow_get_usb_device_list (struct ow_usb_device **devices, size_t *size)
 }
 
 void
-ow_copy_device_desc_static (struct ow_device_desc *device_desc,
-			    const struct ow_device_desc *d)
+ow_copy_device_desc (struct ow_device_desc *device_desc,
+		     const struct ow_device_desc *d)
 {
   device_desc->pid = d->pid;
   strncpy (device_desc->name, d->name, OW_LABEL_MAX_LEN);
@@ -668,7 +668,7 @@ cleanup_parser:
     {
       if ((*d)->pid == pid)
 	{
-	  ow_copy_device_desc_static (device_desc, *d);
+	  ow_copy_device_desc (device_desc, *d);
 	  return 0;
 	}
     }
