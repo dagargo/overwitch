@@ -394,7 +394,7 @@ main (int argc, char *argv[])
 	  break;
 	case 'h':
 	  print_help (argv[0], PACKAGE_STRING, options, NULL);
-	  err = EXIT_SUCCESS;
+	  goto cleanup;
 	case '?':
 	  errflg++;
 	}
@@ -402,7 +402,6 @@ main (int argc, char *argv[])
 
   if (errflg > 0)
     {
-      print_help (argv[0], PACKAGE_STRING, options, NULL);
       err = EXIT_FAILURE;
       goto cleanup;
     }
