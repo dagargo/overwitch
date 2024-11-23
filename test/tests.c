@@ -109,7 +109,7 @@ test_sizes ()
 
   printf ("\n");
 
-  ow_copy_device_desc_static (&engine.device_desc, &TESTDEV_DESC_V1);
+  ow_copy_device_desc (&engine.device_desc, &TESTDEV_DESC_V1);
   engine.usb.audio_in_blk_len = 0;
   engine.usb.audio_out_blk_len = 0;
   ow_engine_init_mem (&engine, BLOCKS);
@@ -143,7 +143,7 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
 
   printf ("\n");
 
-  ow_copy_device_desc_static (&engine.device_desc, device_desc);
+  ow_copy_device_desc (&engine.device_desc, device_desc);
   engine.usb.audio_in_blk_len = 0;
   engine.usb.audio_out_blk_len = 0;
   ow_engine_init_mem (&engine, BLOCKS);
@@ -225,7 +225,7 @@ test_jack_buffers ()
 
   printf ("\n");
 
-  ow_copy_device_desc_static (&engine.device_desc, &TESTDEV_DESC_V1);
+  ow_copy_device_desc (&engine.device_desc, &TESTDEV_DESC_V1);
 
   for (int i = 0; i < TRACKS; i++)
     {
