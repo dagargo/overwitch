@@ -412,20 +412,15 @@ ow_copy_device_desc (struct ow_device_desc *device_desc,
     }
 }
 
-int
-ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
-				 struct ow_device_desc *device_desc)
-{
-  if (vid != ELEKTRON_VID)
-    {
-      return 1;
-    }
-
 #if defined(JSON_DEVS_FILE) && !defined(OW_TESTING)
+int
+ow_get_device_desc_from_vid_pid_file (uint16_t vid, uint16_t pid,
+				      struct ow_device_desc *device_desc,
+				      const char *file)
+{
   gint dpid, err, devices;
   JsonParser *parser;
   JsonReader *reader;
-  gchar *devices_filename;
   GError *error = NULL;
 
   device_desc->inputs = 0;
@@ -433,25 +428,12 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 
   parser = json_parser_new ();
 
-  devices_filename = get_expanded_dir (CONF_DIR DEVICES_FILE);
-
-  if (!json_parser_load_from_file (parser, devices_filename, &error))
+  if (!json_parser_load_from_file (parser, file, &error))
     {
       debug_print (1, "%s", error->message);
       g_clear_error (&error);
-
-      g_free (devices_filename);
-      devices_filename = strdup (DATADIR DEVICES_FILE);
-
-      debug_print (1, "Falling back to %s...", devices_filename);
-
-      if (!json_parser_load_from_file (parser, devices_filename, &error))
-	{
-	  error_print ("%s", error->message);
-	  g_clear_error (&error);
-	  err = -ENODEV;
-	  goto cleanup_parser;
-	}
+      err = -ENODEV;
+      goto cleanup_parser;
     }
 
   reader = json_reader_new (json_parser_get_root (parser));
@@ -659,7 +641,43 @@ cleanup_reader:
   g_object_unref (reader);
 cleanup_parser:
   g_object_unref (parser);
-  g_free (devices_filename);
+  return err;
+}
+#endif
+
+int
+ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
+				 struct ow_device_desc *device_desc)
+{
+  if (vid != ELEKTRON_VID)
+    {
+      return 1;
+    }
+
+#if defined(JSON_DEVS_FILE) && !defined(OW_TESTING)
+  char *filename;
+  int err;
+
+  filename = get_expanded_dir (CONF_DIR DEVICES_FILE);
+
+  debug_print (1, "Searching device in %s", filename);
+
+  err = ow_get_device_desc_from_vid_pid_file (vid, pid, device_desc,
+					      filename);
+  if (err)
+    {
+      g_free (filename);
+
+      filename = strdup (DATADIR DEVICES_FILE);
+
+      debug_print (1, "Searching device in %s...", filename);
+
+      err = ow_get_device_desc_from_vid_pid_file (vid, pid, device_desc,
+						  filename);
+    }
+
+  g_free (filename);
+
   return err;
 #else
   for (const struct ow_device_desc ** d = OB_DEVICE_DESCS; *d != NULL; d++)

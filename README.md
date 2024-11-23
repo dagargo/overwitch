@@ -392,7 +392,7 @@ There are 2 types of formats, depending on how many bytes are used to store samp
 }
 ```
 
-If the file `~/.config/elektroid/elektron-devices.json` is found, it will take precedence over the installed one.
+If the `~/.config/elektroid/elektron-devices.json` is found and the device is defined there, the definition will take precedence over the device defined in the included JSON file. This allows working with devices not included in the distributed file without the need of defining all of them.
 
 ### Inside the library
 
