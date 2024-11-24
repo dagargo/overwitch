@@ -351,7 +351,12 @@ main (int argc, char *argv[])
 	  dflg++;
 	  break;
 	case 'a':
-	  get_bus_address_from_str (optarg, &bus, &address);
+	  err = get_bus_address_from_str (optarg, &bus, &address);
+	  if (err)
+	    {
+	      error_print ("Bus and address not provided properly");
+	      goto cleanup;
+	    }
 	  aflg++;
 	  break;
 	case 'q':

@@ -125,11 +125,34 @@ get_ow_blocks_per_transfer_argument (const char *optarg)
   return blocks_per_transfer;
 }
 
-void
-get_bus_address_from_str (char *str, uint8_t *bus, uint8_t *address)
+int
+get_bus_address_from_str (char *input, uint8_t *bus, uint8_t *address)
 {
   char *endstr;
+  char *str = input;
 
+  *bus = 0;
+  *address = 0;
+
+  errno = 0;
   *bus = (uint8_t) strtol (str, &endstr, 10);
-  *address = (uint8_t) strtol (endstr + 1, &endstr, 10);
+  if (errno == EINVAL || str == endstr)
+    {
+      return -EINVAL;
+    }
+
+  if (strlen (endstr) < 2)
+    {
+      return -EINVAL;
+    }
+
+  errno = 0;
+  str = endstr + 1;
+  *address = (uint8_t) strtol (str, &endstr, 10);
+  if (errno == EINVAL || str == endstr)
+    {
+      return -EINVAL;
+    }
+
+  return 0;
 }

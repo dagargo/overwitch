@@ -130,17 +130,17 @@ DEBUG:jclient.c:158:(jclient_jack_client_registration_cb): JACK client Digitakt 
 
 ```
 
-To limit latency to the lowest possible value, audio is not sent through during the first seconds.
-
 You can list all the available options with `-h`.
 
 ```
 $ overwitch-cli -h
-overwitch 1.1
+overwitch 2.0
 Usage: overwitch-cli [options]
 Options:
+  --run-as-service, -s
   --use-device-number, -n value
   --use-device, -d value
+  --bus-device-address, -a value
   --resampling-quality, -q value
   --blocks-per-transfer, -b value
   --usb-transfer-timeout, -t value
