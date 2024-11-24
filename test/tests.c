@@ -4,6 +4,7 @@
 #include <CUnit/Basic.h>
 #include "../src/jclient.h"
 #include "../src/engine.h"
+#include "../src/common.h"
 
 #define BLOCKS 4
 #define TRACKS 6
@@ -258,6 +259,22 @@ test_jack_buffers ()
     }
 }
 
+static void
+test_get_bus_address_from_str ()
+{
+  uint8_t bus, address;
+
+  CU_ASSERT_EQUAL (get_bus_address_from_str ("a", &bus, &address), -EINVAL);
+  CU_ASSERT_EQUAL (get_bus_address_from_str ("a,", &bus, &address), -EINVAL);
+  CU_ASSERT_EQUAL (get_bus_address_from_str ("a,b", &bus, &address), -EINVAL);
+  CU_ASSERT_EQUAL (get_bus_address_from_str ("1,b", &bus, &address), -EINVAL);
+  CU_ASSERT_EQUAL (get_bus_address_from_str ("a,2", &bus, &address), -EINVAL);
+  CU_ASSERT_EQUAL (get_bus_address_from_str ("1,2", &bus, &address), 0);
+  CU_ASSERT_EQUAL (bus, 1);
+  CU_ASSERT_EQUAL (address, 2);
+
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -291,6 +308,12 @@ main (int argc, char *argv[])
     }
 
   if (!CU_add_test (suite, "test_jack_buffers", test_jack_buffers))
+    {
+      goto cleanup;
+    }
+
+  if (!CU_add_test
+      (suite, "get_bus_address_from_str", test_get_bus_address_from_str))
     {
       goto cleanup;
     }

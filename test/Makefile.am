@@ -15,7 +15,8 @@ tests_SOURCES = tests.c ../src/engine.c ../src/engine.h \
 	../src/overwitch.c ../src/overwitch.h \
 	../src/dll.c ../src/dll.h \
 	../src/jclient.c ../src/jclient.h \
-	../src/resampler.c ../src/resampler.h
+	../src/resampler.c ../src/resampler.h \
+	../src/common.c ../src/common.h
 
 SAMPLERATE_CFLAGS = @SAMPLERATE_CFLAGS@
 SAMPLERATE_LIBS = @SAMPLERATE_LIBS@
