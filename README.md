@@ -150,6 +150,32 @@ Options:
   --help, -h
 ```
 
+It is possible to run `overwitch-cli` as a service. It uses USB hotplug to be notified when an Elektron device is plugged in. This is very useful for embedded systems.
+
+```
+$ overwitch-cli -s -vv
+DEBUG:engine.c:1225:ow_hotplug_loop: Registering USB hotplug callback...
+[...]
+DEBUG:engine.c:1183:ow_hotplug_callback: USB hotplug: device arrived
+DEBUG:main-cli.c:242:hotplug_callback: Starting new jclient for bus 003 and address 009...
+DEBUG:main-cli.c:280:hotplug_callback: Pooled jclient 0 available...
+[...]
+```
+
+This way, having a systemd unit works and there is no need for service restarts when plugging in devices.
+
+```
+/etc/systemd/user$ cat overwitch.service
+[Unit]
+Description=Overwitch service
+
+[Service]
+GuessMainPID=true
+ExecStart=overwitch-cli -b 8 -s
+Restart=on-failure
+```
+
+Obviously, when running the service there is no need for the GUI whatsoever.
 
 ### overwitch-play
 
