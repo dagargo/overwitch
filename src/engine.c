@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -974,6 +975,7 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 	  error_print ("Could not start audio thread");
 	  return OW_GENERIC_ERROR;
 	}
+      pthread_setname_np (engine->audio_thread, "engine-worker");
       context->set_rt_priority (engine->audio_thread,
 				engine->context->priority);
     }

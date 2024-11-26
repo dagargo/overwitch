@@ -18,6 +18,7 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 #include <signal.h>
 #include <sndfile.h>
 #include <unistd.h>
@@ -316,6 +317,8 @@ run_record (int device_num, const char *device_name, uint8_t bus,
       error_print ("Could not start recording thread");
       goto cleanup;
     }
+
+  pthread_setname_np (buffer.pthread, "recorder-worker");
   ow_set_thread_rt_priority (buffer.pthread, OW_DEFAULT_RT_PROPERTY);
 
   ow_engine_wait (engine);

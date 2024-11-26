@@ -18,6 +18,7 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 #include <signal.h>
 #include <errno.h>
 #include "../config.h"
@@ -200,7 +201,12 @@ start_all ()
 
       debug_print (1, "Starting pooled jclient %d...", i);
       pjc->status = PJC_RUNNING;
-      pthread_create (&pjc->thread, NULL, jclient_runner, pjc);
+      if (pthread_create (&pjc->thread, NULL, jclient_runner, pjc))
+	{
+	  error_print ("Could not start thread");
+	  goto end;
+	}
+      pthread_setname_np (pjc->thread, "cli-worker");
       pjc++;
     }
   pthread_spin_unlock (&lock);
