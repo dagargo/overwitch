@@ -18,6 +18,7 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 #include <errno.h>
 #include <libusb.h>
 #include <string.h>
@@ -94,6 +95,10 @@ static GtkTreeViewColumn *j2o_ratio_column;
 static GtkListStore *status_list_store;
 static GtkLabel *jack_status_label;
 static GtkPopover *main_popover;
+
+static pthread_spinlock_t lock;	//Needed for signal handling
+static gint hotplug_running;
+static pthread_t hotplug_thread;
 
 static struct option options[] = {
   {"verbose", 0, NULL, 'v'},
@@ -834,6 +839,11 @@ open_preferences (GtkWidget *object, gpointer data)
 static void
 quit ()
 {
+  pthread_spin_lock (&lock);
+  hotplug_running = 0;
+  pthread_spin_unlock (&lock);
+  pthread_join (hotplug_thread, NULL);
+
   stop_all (NULL, NULL);
   usleep (PAUSE_TO_BE_NOTIFIED_USECS);	//Time to let the devices notify us.
   while (gtk_events_pending ())
@@ -871,6 +881,20 @@ signal_handler (int signum)
     {
       quit ();
     }
+}
+
+static void
+hotplug_callback (uint8_t bus, uint8_t address)
+{
+  g_idle_add (refresh_all_sourcefunc, NULL);
+}
+
+static void *
+hotplug_runner (void *data)
+{
+  hotplug_running = 1;
+  ow_hotplug_loop (&hotplug_running, &lock, hotplug_callback);
+  return NULL;
 }
 
 int
@@ -1019,6 +1043,17 @@ main (int argc, char *argv[])
   g_object_get (G_OBJECT (refresh_at_startup_button), "active", &refresh,
 		NULL);
 
+  pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
+
+  if (pthread_create (&hotplug_thread, NULL, hotplug_runner, NULL))
+    {
+      error_print ("Could not start hotplug thread");
+    }
+  else
+    {
+      pthread_setname_np (hotplug_thread, "hotplug-worker");
+    }
+
   pipewire_venv_set = getenv (PIPEWIRE_PROPS_ENVV) != NULL;
   set_pipewire_props ();
 
@@ -1030,6 +1065,8 @@ main (int argc, char *argv[])
 
   gtk_widget_show (main_window);
   gtk_main ();
+
+  pthread_spin_destroy (&lock);
 
   return 0;
 }
