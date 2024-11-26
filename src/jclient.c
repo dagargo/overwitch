@@ -18,6 +18,7 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -546,13 +547,12 @@ jclient_start (struct jclient *jclient)
 
   debug_print (1, "Starting thread...");
 
-  err = pthread_create (&jclient->thread, NULL, jclient_thread_runner,
-			jclient);
-
-  if (err)
+  if (pthread_create (&jclient->thread, NULL, jclient_thread_runner, jclient))
     {
       return err;
     }
+
+  pthread_setname_np (jclient->thread, "jclient-worker");
 
   while (1)
     {
