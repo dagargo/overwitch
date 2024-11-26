@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<!-- Created with Cambalache 0.92.1 -->
+<!-- Created with Cambalache 0.92.2 -->
 <interface>
   <!-- interface-name overwitch.ui -->
   <requires lib="gio" version="2.44"/>
-  <requires lib="gtk" version="4.16"/>
+  <requires lib="gtk" version="4.14"/>
   <menu id="main_popover_model">
     <section>
       <item>

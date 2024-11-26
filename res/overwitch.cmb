@@ -6,7 +6,7 @@
   </ui>
   <ui_library>
 	(2,"gio","2.44",None),
-	(2,"gtk","4.16",None)
+	(2,"gtk","4.14",None)
   </ui_library>
   <object>
 	(2,1,"(menu)","main_popover_model",None,None,None,None,0,None,None),

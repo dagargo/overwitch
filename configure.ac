@@ -17,7 +17,7 @@ AC_PROG_CC
 AM_CONDITIONAL([CLI_ONLY], [test "${CLI_ONLY}" == yes])
 AM_CONDITIONAL([GUI], [test "${CLI_ONLY}" != yes])
 
-AM_COND_IF(GUI, [PKG_CHECK_MODULES(GTK4, gtk4 >= 4.16)])
+AM_COND_IF(GUI, [PKG_CHECK_MODULES(GTK4, gtk4 >= 4.14)])
 
 AM_CONDITIONAL([JSON_DEVS_FILE], [test "${JSON_DEVS_FILE}" != no])
 AS_IF([test "${JSON_DEVS_FILE}" != "no"], [AC_DEFINE([JSON_DEVS_FILE], [1], ["Use JSON devices file"])])
