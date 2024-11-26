@@ -311,7 +311,10 @@ hotplug_callback (uint8_t bus, uint8_t address)
   pjc->status = PJC_RUNNING;
   pthread_spin_unlock (&lock);
 
-  pthread_create (&pjc->thread, NULL, jclient_runner, pjc);
+  if (!pthread_create (&pjc->thread, NULL, jclient_runner, pjc))
+    {
+      pthread_setname_np (pjc->thread, "cli-worker");
+    }
 }
 
 int

@@ -1212,6 +1212,8 @@ ow_hotplug_loop (int *running, pthread_spinlock_t *lock,
   libusb_hotplug_callback_handle callback_handle;
   int rc, end;
 
+  struct timeval tv = { 1, 0UL };
+
 #if LIBUSBX_API_VERSION >= 0x0100010A
   if (libusb_init_context (NULL, NULL, 0))
     {
@@ -1243,7 +1245,7 @@ ow_hotplug_loop (int *running, pthread_spinlock_t *lock,
 
   while (1)
     {
-      libusb_handle_events_completed (NULL, NULL);
+      libusb_handle_events_timeout_completed (NULL, &tv, NULL);
 
       pthread_spin_lock (lock);
       end = !*running;
@@ -1253,8 +1255,6 @@ ow_hotplug_loop (int *running, pthread_spinlock_t *lock,
 	{
 	  break;
 	}
-
-      usleep (10000);
     }
 
   debug_print (1, "Deregistering USB hotplug callback...");

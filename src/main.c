@@ -18,6 +18,7 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 #include <errno.h>
 #include <libusb.h>
 #include <string.h>
@@ -82,6 +83,10 @@ static GtkColumnViewColumn *j2o_ratio_column;
 static GListStore *status_list_store;
 static GtkLabel *jack_status_label;
 static GtkLabel *target_delay_label;
+
+static pthread_spinlock_t lock;	//Needed for signal handling
+static gint hotplug_running;
+static pthread_t hotplug_thread;
 
 static struct option options[] = {
   {"verbose", 0, NULL, 'v'},
@@ -773,6 +778,11 @@ overwitch_exit ()
 {
   debug_print (1, "Exiting Overwitch...");
 
+  pthread_spin_lock (&lock);
+  hotplug_running = 0;
+  pthread_spin_unlock (&lock);
+  pthread_join (hotplug_thread, NULL);
+
   stop_all (NULL, NULL);
   usleep (PAUSE_TO_BE_NOTIFIED_USECS);	//Time to let the devices notify us.
   while (g_main_context_pending (NULL))
@@ -902,6 +912,20 @@ overwitch_build_ui ()
 }
 
 static void
+hotplug_callback (uint8_t bus, uint8_t address)
+{
+  g_idle_add (refresh_all_sourcefunc, NULL);
+}
+
+static void *
+hotplug_runner (void *data)
+{
+  hotplug_running = 1;
+  ow_hotplug_loop (&hotplug_running, &lock, hotplug_callback);
+  return NULL;
+}
+
+static void
 overwitch_activate (GApplication *gapp, gpointer *user_data)
 {
   gboolean refresh_at_startup;
@@ -926,6 +950,15 @@ overwitch_activate (GApplication *gapp, gpointer *user_data)
   if (refresh_at_startup)
     {
       refresh_all (NULL, NULL);
+    }
+
+  if (pthread_create (&hotplug_thread, NULL, hotplug_runner, NULL))
+    {
+      error_print ("Could not start hotplug thread");
+    }
+  else
+    {
+      pthread_setname_np (hotplug_thread, "hotplug-worker");
     }
 
   gtk_window_present (GTK_WINDOW (main_window));
@@ -1005,6 +1038,8 @@ main (int argc, char *argv[])
   bindtextdomain (PACKAGE, LOCALEDIR);
   textdomain (PACKAGE);
 
+  pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
+
   gtk_init ();
 
   app = gtk_application_new ("io.github.dagargo.Overwitch",
@@ -1013,6 +1048,8 @@ main (int argc, char *argv[])
 
   status = g_application_run (G_APPLICATION (app), 0, NULL);
   overwitch_free_ui ();
+
+  pthread_spin_destroy (&lock);
 
   return status;
 }
