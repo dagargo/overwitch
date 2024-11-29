@@ -432,9 +432,8 @@ main (int argc, char *argv[])
 	{
 	  fprintf (stderr, "USB error: %s\n", ow_get_err_str (ow_err));
 	  err = EXIT_FAILURE;
-	  goto cleanup;
 	}
-      exit (EXIT_SUCCESS);
+      goto cleanup;
     }
 
   if (bflg > 1)
