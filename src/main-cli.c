@@ -262,11 +262,11 @@ hotplug_callback (uint8_t bus, uint8_t address)
 	{
 	  debug_print (2, "Recycling pooled jclient %d...", i);
 	  pthread_join (pjc->thread, NULL);
-	}
 
-      pthread_spin_lock (&lock);
-      pjc->status = PJC_AVAILABLE;
-      pthread_spin_unlock (&lock);
+	  pthread_spin_lock (&lock);
+	  pjc->status = PJC_AVAILABLE;
+	  pthread_spin_unlock (&lock);
+	}
 
       pjc++;
     }
@@ -286,6 +286,8 @@ hotplug_callback (uint8_t bus, uint8_t address)
 	  debug_print (2, "Pooled jclient %d available...", i);
 	  break;
 	}
+
+      pjc++;
     }
 
   if (i == POOLED_JCLIENT_LEN)
