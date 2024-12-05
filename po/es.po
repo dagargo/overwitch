@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2024-08-26 09:22+0200\n"
+"POT-Creation-Date: 2024-12-05 12:27+0100\n"
 "PO-Revision-Date: 2022-09-21 19:06+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: Spanish\n"
@@ -17,164 +17,168 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/main.c:110
+#: src/main.c:115
 msgid "Error"
 msgstr "Error"
 
-#: src/main.c:112
+#: src/main.c:117
 msgid "Stopped"
 msgstr "Parado"
 
-#: src/main.c:114
+#: src/main.c:119
 msgid "Ready"
 msgstr "Preparado"
 
-#: src/main.c:116
+#: src/main.c:121
 msgid "Booting"
 msgstr "Arrancando"
 
-#: src/main.c:118
+#: src/main.c:123
 msgid "Tuning"
 msgstr "Ajustando"
 
-#: src/main.c:120
+#: src/main.c:125
 msgid "Running"
 msgstr "Ejecutando"
 
-#: src/main.c:511
+#: src/main.c:516
 #, c-format
 msgid "JACK at %.5g kHz, %d period"
 msgstr "JACK a %.5g kHz, periodo de %d"
 
-#: src/main.c:516
+#: src/main.c:521
 #, c-format
 msgid "JACK not found"
 msgstr "JACK no encontrado"
 
-#: res/gui.glade:19
+#: src/main.c:973
+msgid "Acknowledgements"
+msgstr "Agradecimientos"
+
+#: res/overwitch.ui:19
 msgid "Highest"
 msgstr "Máxima"
 
-#: res/gui.glade:22
+#: res/overwitch.ui:22
 msgid "High"
 msgstr "Alta"
 
-#: res/gui.glade:25
+#: res/overwitch.ui:25
 msgid "Medium"
 msgstr "Media"
 
-#: res/gui.glade:28
+#: res/overwitch.ui:28
 msgid "Low"
 msgstr "Baja"
 
-#: res/gui.glade:31
+#: res/overwitch.ui:31
 msgid "Lowest"
 msgstr "Mínima"
 
-#: res/gui.glade:71
+#: res/overwitch.ui:73
 msgid "Overbridge 2 device client for JACK"
 msgstr "Cliente JACK para dispositivos Overbridge 2"
 
-#: res/gui.glade:75
+#: res/overwitch.ui:77
 msgid "translator-credits"
 msgstr "David García Goñi <dagargo@gmail.com>"
 
-#: res/gui.glade:123
+#: res/overwitch.ui:125
 msgid "Refresh At Startup"
 msgstr "Actualizar al arrancar"
 
-#: res/gui.glade:136
+#: res/overwitch.ui:138
 msgid "Show All Columns"
 msgstr "Mostrar todas las columnas"
 
-#: res/gui.glade:160 res/gui.glade:598
+#: res/overwitch.ui:162 res/overwitch.ui:600
 msgid "Preferences"
 msgstr "Preferencias"
 
-#: res/gui.glade:184
+#: res/overwitch.ui:186
 msgid "About"
 msgstr "Acerca de"
 
-#: res/gui.glade:225
+#: res/overwitch.ui:227
 msgid "Overbridge Blocks (7 frames) per USB Transfer"
 msgstr "Bloques Overbridge (7 muestras) por transferencia USB"
 
-#: res/gui.glade:226
+#: res/overwitch.ui:228
 msgid "Blocks per Transfer"
 msgstr "Bloques por transferencia"
 
-#: res/gui.glade:264
+#: res/overwitch.ui:266
 msgid "Resampler quality to balance out the CPU usage"
 msgstr "Calidad de remuestreo para equilibrar el uso de CPU"
 
-#: res/gui.glade:265
+#: res/overwitch.ui:267
 msgid "Resampler Quality"
 msgstr "Calidad de remuestreo"
 
-#: res/gui.glade:308
+#: res/overwitch.ui:310
 msgid "USB Transfer Timeout (ms)"
 msgstr "Tiempo de expiración de la transferencia USB (ms)"
 
-#: res/gui.glade:309
+#: res/overwitch.ui:311
 msgid "Transfer Timeout"
 msgstr "Tiempo de expiración"
 
-#: res/gui.glade:359
+#: res/overwitch.ui:361
 msgid "Name"
 msgstr "Nombre"
 
-#: res/gui.glade:373
+#: res/overwitch.ui:375
 msgid "Status"
 msgstr "Estado"
 
-#: res/gui.glade:385
+#: res/overwitch.ui:387
 msgid "Device"
 msgstr "Dispositivo"
 
-#: res/gui.glade:397
+#: res/overwitch.ui:399
 msgid "Bus"
 msgstr "Bus"
 
-#: res/gui.glade:409
+#: res/overwitch.ui:411
 msgid "Address"
 msgstr "Dirección"
 
-#: res/gui.glade:421
+#: res/overwitch.ui:423
 msgid "Overbridge to JACK latency"
 msgstr "Latencia de Overbridge a JACK"
 
-#: res/gui.glade:433
+#: res/overwitch.ui:435
 msgid "JACK to Overbridge latency"
 msgstr "Latencia de JACK a Overbridge"
 
-#: res/gui.glade:445
+#: res/overwitch.ui:447
 msgid "Overbridge to JACK ratio"
 msgstr "Ratio entre Overbridge y JACK"
 
-#: res/gui.glade:457
+#: res/overwitch.ui:459
 msgid "JACK to Overbridge ratio"
 msgstr "Ratio entre JACK y Overbridge"
 
-#: res/gui.glade:535
+#: res/overwitch.ui:537
 msgid "Stop All Devices"
 msgstr "Parar todos los dispositivos"
 
-#: res/gui.glade:555
+#: res/overwitch.ui:557
 msgid "Refresh Devices"
 msgstr "Actualizar dispositivos"
 
-#: res/gui.glade:619
+#: res/overwitch.ui:621
 msgid "_Cancel"
 msgstr "Cancelar"
 
-#: res/gui.glade:633
+#: res/overwitch.ui:635
 msgid "_Save"
 msgstr "Guardar"
 
-#: res/gui.glade:664
+#: res/overwitch.ui:666
 msgid "Value of the \"PIPEWIRE_PROPS\" environment variable"
 msgstr "Valor de la variable de entorno «PIPEWIRE_PROPS»"
 
-#: res/gui.glade:665
+#: res/overwitch.ui:667
 msgid "PipeWire Properties"
 msgstr "Propiedades de PipeWire"

@@ -905,6 +905,7 @@ main (int argc, char *argv[])
   GtkBuilder *builder;
   struct sigaction action;
   gboolean refresh;
+  gchar * thanks;
 
   while ((opt = getopt_long (argc, argv, "vh", options, &long_index)) != -1)
     {
@@ -962,6 +963,18 @@ main (int argc, char *argv[])
   about_dialog =
     GTK_ABOUT_DIALOG (gtk_builder_get_object (builder, "about_dialog"));
   gtk_about_dialog_set_version (about_dialog, PACKAGE_VERSION);
+
+  if (g_file_get_contents (DATADIR "/THANKS", &thanks, NULL, NULL))
+    {
+      gchar * last_new_line = strrchr (thanks, '\n');
+      *last_new_line = 0;
+      gchar **lines = g_strsplit (thanks, "\n", 0);
+      gtk_about_dialog_add_credit_section (about_dialog,
+					   _("Acknowledgements"),
+					   (const gchar **) lines);
+      g_free (thanks);
+      g_strfreev (lines);
+    }
 
   refresh_at_startup_button =
     GTK_WIDGET (gtk_builder_get_object
