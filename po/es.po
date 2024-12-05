@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2024-10-05 18:33+0200\n"
+"POT-Creation-Date: 2024-12-05 12:23+0100\n"
 "PO-Revision-Date: 2022-09-21 19:06+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: Spanish\n"
@@ -17,44 +17,48 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/main.c:98
+#: src/main.c:103
 msgid "Error"
 msgstr "Error"
 
-#: src/main.c:100
+#: src/main.c:105
 msgid "Stopped"
 msgstr "Parado"
 
-#: src/main.c:102
+#: src/main.c:107
 msgid "Ready"
 msgstr "Preparado"
 
-#: src/main.c:104
+#: src/main.c:109
 msgid "Booting"
 msgstr "Arrancando"
 
-#: src/main.c:106
+#: src/main.c:111
 msgid "Tuning"
 msgstr "Ajustando"
 
-#: src/main.c:108
+#: src/main.c:113
 msgid "Running"
 msgstr "Ejecutando"
 
-#: src/main.c:126
+#: src/main.c:131
 #, c-format
 msgid "Target latency: %.1f ms"
 msgstr "Latencia objetivo: %.1f ms"
 
-#: src/main.c:478
+#: src/main.c:483
 #, c-format
 msgid "JACK at %.5g kHz, %d period"
 msgstr "JACK a %.5g kHz, periodo de %d"
 
-#: src/main.c:483
+#: src/main.c:488
 #, c-format
 msgid "JACK not found"
 msgstr "JACK no encontrado"
+
+#: src/main.c:868
+msgid "Acknowledgements"
+msgstr "Agradecimientos"
 
 #: res/overwitch.ui:11
 msgid "Refresh At Startup"
@@ -64,7 +68,7 @@ msgstr "Actualizar al arrancar"
 msgid "Show All Columns"
 msgstr "Mostrar todas las columnas"
 
-#: res/overwitch.ui:21 res/overwitch.ui:494
+#: res/overwitch.ui:21 res/overwitch.ui:495
 msgid "Preferences"
 msgstr "Preferencias"
 
@@ -164,22 +168,22 @@ msgstr "Cancelar"
 msgid "_Save"
 msgstr "Guardar"
 
-#: res/overwitch.ui:499
+#: res/overwitch.ui:500
 msgid "Highest"
 msgstr "Máxima"
 
-#: res/overwitch.ui:500
+#: res/overwitch.ui:501
 msgid "High"
 msgstr "Alta"
 
-#: res/overwitch.ui:501
+#: res/overwitch.ui:502
 msgid "Medium"
 msgstr "Media"
 
-#: res/overwitch.ui:502
+#: res/overwitch.ui:503
 msgid "Low"
 msgstr "Baja"
 
-#: res/overwitch.ui:503
+#: res/overwitch.ui:504
 msgid "Lowest"
 msgstr "Mínima"

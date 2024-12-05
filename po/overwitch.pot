@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: overwitch 1.1\n"
+"Project-Id-Version: overwitch 2.0\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2024-10-05 18:33+0200\n"
+"POT-Creation-Date: 2024-12-05 12:23+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,43 +17,47 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/main.c:98
+#: src/main.c:103
 msgid "Error"
 msgstr ""
 
-#: src/main.c:100
+#: src/main.c:105
 msgid "Stopped"
 msgstr ""
 
-#: src/main.c:102
+#: src/main.c:107
 msgid "Ready"
 msgstr ""
 
-#: src/main.c:104
+#: src/main.c:109
 msgid "Booting"
 msgstr ""
 
-#: src/main.c:106
+#: src/main.c:111
 msgid "Tuning"
 msgstr ""
 
-#: src/main.c:108
+#: src/main.c:113
 msgid "Running"
 msgstr ""
 
-#: src/main.c:126
+#: src/main.c:131
 #, c-format
 msgid "Target latency: %.1f ms"
 msgstr ""
 
-#: src/main.c:478
+#: src/main.c:483
 #, c-format
 msgid "JACK at %.5g kHz, %d period"
 msgstr ""
 
-#: src/main.c:483
+#: src/main.c:488
 #, c-format
 msgid "JACK not found"
+msgstr ""
+
+#: src/main.c:868
+msgid "Acknowledgements"
 msgstr ""
 
 #: res/overwitch.ui:11
@@ -64,7 +68,7 @@ msgstr ""
 msgid "Show All Columns"
 msgstr ""
 
-#: res/overwitch.ui:21 res/overwitch.ui:494
+#: res/overwitch.ui:21 res/overwitch.ui:495
 msgid "Preferences"
 msgstr ""
 
@@ -164,22 +168,22 @@ msgstr ""
 msgid "_Save"
 msgstr ""
 
-#: res/overwitch.ui:499
+#: res/overwitch.ui:500
 msgid "Highest"
 msgstr ""
 
-#: res/overwitch.ui:500
+#: res/overwitch.ui:501
 msgid "High"
 msgstr ""
 
-#: res/overwitch.ui:501
+#: res/overwitch.ui:502
 msgid "Medium"
 msgstr ""
 
-#: res/overwitch.ui:502
+#: res/overwitch.ui:503
 msgid "Low"
 msgstr ""
 
-#: res/overwitch.ui:503
+#: res/overwitch.ui:504
 msgid "Lowest"
 msgstr ""

@@ -832,6 +832,7 @@ overwitch_device_name_changed (GtkEditableLabel *label, GParamSpec *pspec,
 static void
 overwitch_build_ui ()
 {
+  gchar *thanks;
   GtkBuilderScope *scope = gtk_builder_cscope_new ();
   gtk_builder_cscope_add_callback (scope, overwitch_device_name_changed);
 
@@ -857,6 +858,18 @@ overwitch_build_ui ()
   about_dialog =
     GTK_ABOUT_DIALOG (gtk_builder_get_object (builder, "about_dialog"));
   gtk_about_dialog_set_version (about_dialog, PACKAGE_VERSION);
+
+  if (g_file_get_contents (DATADIR "/THANKS", &thanks, NULL, NULL))
+    {
+      gchar *last_new_line = strrchr (thanks, '\n');
+      *last_new_line = 0;
+      gchar **lines = g_strsplit (thanks, "\n", 0);
+      gtk_about_dialog_add_credit_section (about_dialog,
+					   _("Acknowledgements"),
+					   (const gchar **) lines);
+      g_free (thanks);
+      g_strfreev (lines);
+    }
 
   blocks_spin_button =
     GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "blocks_spin_button"));

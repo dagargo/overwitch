@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2024-10-05 18:33+0200\n"
+"POT-Creation-Date: 2024-12-05 12:23+0100\n"
 "PO-Revision-Date: 2022-09-21 19:08+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: Catalan\n"
@@ -17,44 +17,48 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/main.c:98
+#: src/main.c:103
 msgid "Error"
 msgstr "Error"
 
-#: src/main.c:100
+#: src/main.c:105
 msgid "Stopped"
 msgstr "Parat"
 
-#: src/main.c:102
+#: src/main.c:107
 msgid "Ready"
 msgstr "Preparat"
 
-#: src/main.c:104
+#: src/main.c:109
 msgid "Booting"
 msgstr "Arrancant"
 
-#: src/main.c:106
+#: src/main.c:111
 msgid "Tuning"
 msgstr "Ajustant"
 
-#: src/main.c:108
+#: src/main.c:113
 msgid "Running"
 msgstr "Executant"
 
-#: src/main.c:126
+#: src/main.c:131
 #, c-format
 msgid "Target latency: %.1f ms"
 msgstr "Latència objectiu: %.1f ms"
 
-#: src/main.c:478
+#: src/main.c:483
 #, c-format
 msgid "JACK at %.5g kHz, %d period"
 msgstr "JACK a %.5g kHz, període de %d"
 
-#: src/main.c:483
+#: src/main.c:488
 #, c-format
 msgid "JACK not found"
 msgstr "JACK no trobat"
+
+#: src/main.c:868
+msgid "Acknowledgements"
+msgstr "Agraïments"
 
 #: res/overwitch.ui:11
 msgid "Refresh At Startup"
@@ -64,7 +68,7 @@ msgstr "Actualitza a l'arrancament"
 msgid "Show All Columns"
 msgstr "Mostra totes les columnes"
 
-#: res/overwitch.ui:21 res/overwitch.ui:494
+#: res/overwitch.ui:21 res/overwitch.ui:495
 msgid "Preferences"
 msgstr "Preferències"
 
@@ -164,22 +168,22 @@ msgstr "_Cancel·la"
 msgid "_Save"
 msgstr "_Alça"
 
-#: res/overwitch.ui:499
+#: res/overwitch.ui:500
 msgid "Highest"
 msgstr "Màxima"
 
-#: res/overwitch.ui:500
+#: res/overwitch.ui:501
 msgid "High"
 msgstr "Alta"
 
-#: res/overwitch.ui:501
+#: res/overwitch.ui:502
 msgid "Medium"
 msgstr "Mitja"
 
-#: res/overwitch.ui:502
+#: res/overwitch.ui:503
 msgid "Low"
 msgstr "Baixa"
 
-#: res/overwitch.ui:503
+#: res/overwitch.ui:504
 msgid "Lowest"
 msgstr "Mínima"

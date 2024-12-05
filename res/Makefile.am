@@ -1,5 +1,5 @@
 resdir = $(datadir)/overwitch
-res_DATA = overwitch.ui
+res_DATA = overwitch.ui THANKS
 
 if JSON_DEVS_FILE
 res_DATA += devices.json
