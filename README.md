@@ -162,18 +162,27 @@ DEBUG:main-cli.c:280:hotplug_callback: Pooled jclient 0 available...
 [...]
 ```
 
-This way, having a systemd unit works and there is no need for service restarts when plugging in devices.
+### systemd service
+
+Using `overwitch-cli -s` allows having a systemd unit which does not need for a service restart when plugging in devices.
 
 ```
 /etc/systemd/user$ cat overwitch.service
 [Unit]
 Description=Overwitch service
+After=pipewire.service
+Requires=pipewire.service
 
 [Service]
 GuessMainPID=true
 ExecStart=overwitch-cli -b 8 -s
 Restart=on-failure
+
+[Install]
+WantedBy=default.target
 ```
+
+Running `systemctl --user enable overwitch.service` is needed to allow the service to be started at boot.
 
 Obviously, when running the service there is no need for the GUI whatsoever.
 
