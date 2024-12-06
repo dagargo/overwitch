@@ -46,6 +46,21 @@ AM_GNU_GETTEXT([external])
 AM_GNU_GETTEXT_VERSION([0.19])
 ])
 
+AC_ARG_WITH([systemduserconfdir],
+     [AS_HELP_STRING([--with-systemduserconfdir=DIR], [Directory for systemd service files])],,
+     [with_systemduserconfdir=auto])
+AS_IF([test "x$with_systemduserconfdir" = "xyes" -o "x$with_systemduserconfdir" = "xauto"], [
+     def_systemduserconfdir=$($PKG_CONFIG --variable=systemduserconfdir systemd)
+
+     AS_IF([test "x$def_systemduserconfdir" = "x"],
+   [AS_IF([test "x$with_systemduserconfdir" = "xyes"],
+    [AC_MSG_ERROR([systemd support requested but pkg-config unable to query systemd package])])
+    with_systemduserconfdir=no],
+   [with_systemduserconfdir="$def_systemduserconfdir"])])
+AS_IF([test "x$with_systemduserconfdir" != "xno"],
+      [AC_SUBST([systemduserconfdir], [$with_systemduserconfdir])])
+AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$with_systemduserconfdir" != "xno"])
+
 # Checks for typedefs, structures, and compiler characteristics.
 
 # Checks for library functions.
@@ -53,5 +68,5 @@ AC_FUNC_MALLOC
 
 AM_CONDITIONAL([UDEV_AVAIL], [test "`pkg-config --variable=udevdir udev`" != ""])
 
-AC_CONFIG_FILES([Makefile src/Makefile udev/Makefile res/Makefile test/Makefile po/Makefile.in po/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile udev/Makefile res/Makefile test/Makefile po/Makefile.in po/Makefile systemd/Makefile])
 AC_OUTPUT

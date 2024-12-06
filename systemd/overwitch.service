@@ -1,0 +1,12 @@
+[Unit]
+Description=Overwitch service
+After=pipewire.service
+Requires=pipewire.service
+
+[Service]
+GuessMainPID=true
+ExecStart=overwitch-cli -b 8 -s
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
