@@ -18,7 +18,6 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _GNU_SOURCE
 #include <signal.h>
 #include <errno.h>
 #include "../config.h"
@@ -27,34 +26,18 @@
 #include "common.h"
 
 #define DEFAULT_QUALITY 2
-#define POOLED_JCLIENT_LEN 64
-
-typedef enum
-{
-  PJC_AVAILABLE = 0,
-  PJC_RUNNING = 1,
-  PJC_STOPPED = 2,
-} pooled_jclient_status_t;
-
-struct pooled_jclient
-{
-  pooled_jclient_status_t status;
-  pthread_t thread;
-  struct jclient jclient;
-};
 
 static int blocks_per_transfer = OW_DEFAULT_BLOCKS;
 static int quality = DEFAULT_QUALITY;
 static int priority = JCLIENT_DEFAULT_PRIORITY;
 static int xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
 
-static int stop_all;
-static struct pooled_jclient jcpool[POOLED_JCLIENT_LEN];
+struct jclient jclient;
+static int stop;
+static int running;
 static pthread_spinlock_t lock;	//Needed for signal handling
-static int hotplug_running;
 
 static struct option options[] = {
-  {"run-as-service", 0, NULL, 's'},
   {"use-device-number", 1, NULL, 'n'},
   {"use-device", 1, NULL, 'd'},
   {"bus-device-address", 1, NULL, 'a'},
@@ -68,69 +51,41 @@ static struct option options[] = {
   {NULL, 0, NULL, 0}
 };
 
-
 static void
 signal_handler (int signum)
 {
-  if (signum == SIGHUP || signum == SIGINT || signum == SIGTERM
-      || signum == SIGTSTP)
+  switch (signum)
     {
-      struct pooled_jclient *pjc = jcpool;
-
+    case SIGHUP:
+    case SIGINT:
+    case SIGTERM:
+    case SIGTSTP:
+      int r;
       pthread_spin_lock (&lock);
-      stop_all = 1;
-      hotplug_running = 0;
-
-      for (int i = 0; i < POOLED_JCLIENT_LEN; i++, pjc++)
-	{
-	  if (pjc->status == PJC_RUNNING)
-	    {
-	      jclient_stop (&pjc->jclient);
-	    }
-	}
+      stop = 1;
+      r = running;
       pthread_spin_unlock (&lock);
-    }
-  else if (signum == SIGUSR1)
-    {
+      if (r)
+	{
+	  jclient_stop (&jclient);
+	}
+      break;
+    case SIGUSR1:
       debug_level++;
       debug_print (1, "Debug level: %d", debug_level);
-    }
-  else if (signum == SIGUSR2)
-    {
+      break;
+    case SIGUSR2:
       debug_level--;
       debug_level = debug_level < 0 ? 0 : debug_level;
       debug_print (1, "Debug level: %d", debug_level);
     }
 }
 
-void *
-jclient_runner (void *data)
-{
-  struct pooled_jclient *pjc = data;
-
-  jclient_start (&pjc->jclient);
-
-  if (stop_all)
-    {
-      jclient_stop (&pjc->jclient);
-    }
-
-  jclient_wait (&pjc->jclient);
-  jclient_destroy (&pjc->jclient);
-
-  pthread_spin_unlock (&lock);
-  pjc->status = PJC_STOPPED;
-  pthread_spin_unlock (&lock);
-
-  return NULL;
-}
-
 static int
-run_single (int device_num, const char *device_name, uint8_t bus,
-	    uint8_t address)
+run_jclient (int device_num, const char *device_name, uint8_t bus,
+	     uint8_t address)
 {
   struct ow_usb_device *device;
-  struct pooled_jclient *pjc;
   int err;
 
   if (ow_get_usb_device_from_device_attrs (device_num, device_name, bus,
@@ -140,183 +95,39 @@ run_single (int device_num, const char *device_name, uint8_t bus,
     }
 
   pthread_spin_lock (&lock);
-  if (stop_all)
+  if (stop)
     {
       pthread_spin_unlock (&lock);
       goto end;
     }
+  pthread_spin_unlock (&lock);
 
-  pjc = jcpool;
-
-  if (jclient_init (&pjc->jclient, device->bus, device->address,
+  if (jclient_init (&jclient, device->bus, device->address,
 		    blocks_per_transfer, xfr_timeout, quality, priority))
     {
-      pthread_spin_unlock (&lock);
       err = EXIT_FAILURE;
       goto end;
     }
 
-  pjc->status = PJC_RUNNING;
+  jclient_start (&jclient);
+
+  pthread_spin_lock (&lock);
+  if (stop)
+    {
+      jclient_stop (&jclient);
+    }
+  else
+    {
+      running = 1;
+    }
   pthread_spin_unlock (&lock);
 
-  jclient_runner (pjc);
+  jclient_wait (&jclient);
+  jclient_destroy (&jclient);
 
 end:
   free (device);
   return err;
-}
-
-static int
-start_all ()
-{
-  struct ow_usb_device *devices;
-  struct ow_usb_device *device;
-  struct pooled_jclient *pjc;
-  size_t jclient_total_count;
-
-  if (ow_get_usb_device_list (&devices, &jclient_total_count))
-    {
-      return EXIT_FAILURE;
-    }
-
-  pthread_spin_lock (&lock);
-  if (stop_all)
-    {
-      pthread_spin_unlock (&lock);
-      goto end;
-    }
-
-  device = devices;
-  pjc = jcpool;
-  jclient_total_count =
-    jclient_total_count >
-    POOLED_JCLIENT_LEN ? POOLED_JCLIENT_LEN : jclient_total_count;
-  for (int i = 0; i < jclient_total_count; i++, device++)
-    {
-      if (jclient_init (&pjc->jclient, device->bus, device->address,
-			blocks_per_transfer, xfr_timeout, quality, priority))
-	{
-	  continue;
-	}
-
-      debug_print (1, "Starting pooled jclient %d...", i);
-      pjc->status = PJC_RUNNING;
-      if (pthread_create (&pjc->thread, NULL, jclient_runner, pjc))
-	{
-	  error_print ("Could not start thread");
-	  goto end;
-	}
-      pthread_setname_np (pjc->thread, "cli-worker");
-      pjc++;
-    }
-  pthread_spin_unlock (&lock);
-
-end:
-  free (devices);
-  return EXIT_SUCCESS;
-}
-
-static void
-wait_all ()
-{
-  struct pooled_jclient *pjc = jcpool;
-
-  for (int i = 0; i < POOLED_JCLIENT_LEN; i++)
-    {
-      pooled_jclient_status_t status;
-
-      pthread_spin_lock (&lock);
-      status = pjc->status;
-      pthread_spin_unlock (&lock);
-
-      if (status != PJC_AVAILABLE)
-	{
-	  debug_print (2, "Waiting pooled jclient %d...", i);
-	  pthread_join (pjc->thread, NULL);
-	}
-
-      pjc++;
-    }
-}
-
-static void
-hotplug_callback (uint8_t bus, uint8_t address)
-{
-  int i;
-  struct pooled_jclient *pjc;
-
-  debug_print (2, "Starting new jclient for bus %03d and address %03d...",
-	       bus, address);
-
-  pjc = jcpool;
-
-  for (i = 0; i < POOLED_JCLIENT_LEN; i++)
-    {
-      pooled_jclient_status_t status;
-
-      pthread_spin_lock (&lock);
-      status = pjc->status;
-      pthread_spin_unlock (&lock);
-
-      if (status == PJC_STOPPED)
-	{
-	  debug_print (2, "Recycling pooled jclient %d...", i);
-	  pthread_join (pjc->thread, NULL);
-
-	  pthread_spin_lock (&lock);
-	  pjc->status = PJC_AVAILABLE;
-	  pthread_spin_unlock (&lock);
-	}
-
-      pjc++;
-    }
-
-  pjc = jcpool;
-
-  for (i = 0; i < POOLED_JCLIENT_LEN; i++)
-    {
-      pooled_jclient_status_t status;
-
-      pthread_spin_lock (&lock);
-      status = pjc->status;
-      pthread_spin_unlock (&lock);
-
-      if (status == PJC_AVAILABLE)
-	{
-	  debug_print (2, "Pooled jclient %d available...", i);
-	  break;
-	}
-
-      pjc++;
-    }
-
-  if (i == POOLED_JCLIENT_LEN)
-    {
-      error_print ("No pooled jclients available");
-      return;
-    }
-
-  pthread_spin_lock (&lock);
-  if (stop_all)
-    {
-      pthread_spin_unlock (&lock);
-      return;
-    }
-
-  if (jclient_init (&pjc->jclient, bus, address, blocks_per_transfer,
-		    xfr_timeout, quality, priority))
-    {
-      pthread_spin_unlock (&lock);
-      return;
-    }
-
-  pjc->status = PJC_RUNNING;
-  pthread_spin_unlock (&lock);
-
-  if (!pthread_create (&pjc->thread, NULL, jclient_runner, pjc))
-    {
-      pthread_setname_np (pjc->thread, "cli-worker");
-    }
 }
 
 int
@@ -324,7 +135,7 @@ main (int argc, char *argv[])
 {
   int opt, err = EXIT_SUCCESS;
   int vflg = 0, lflg = 0, dflg = 0, bflg = 0, pflg = 0, tflg = 0, nflg =
-    0, sflg = 0, aflg = 0, errflg = 0;
+    0, aflg = 0, errflg = 0;
   char *endstr;
   char *device_name = NULL;
   uint8_t bus = 0, address = 0;
@@ -333,6 +144,7 @@ main (int argc, char *argv[])
   struct sigaction action;
   int device_num = -1;
 
+  running = 0;
   pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
 
   action.sa_handler = signal_handler;
@@ -350,9 +162,6 @@ main (int argc, char *argv[])
     {
       switch (opt)
 	{
-	case 's':
-	  sflg = 1;
-	  break;
 	case 'n':
 	  device_num = (int) strtol (optarg, &endstr, 10);
 	  nflg++;
@@ -459,32 +268,9 @@ main (int argc, char *argv[])
       goto cleanup;
     }
 
-  if (sflg && (nflg + dflg + aflg == 0))
+  if (nflg + dflg + aflg == 1)
     {
-      if (start_all ())
-	{
-	  err = EXIT_FAILURE;
-	  goto cleanup;
-	}
-
-      hotplug_running = 1;
-      ow_hotplug_loop (&hotplug_running, &lock, hotplug_callback);
-
-      wait_all ();
-    }
-  else if (nflg + dflg + aflg == 0)
-    {
-      if (start_all ())
-	{
-	  err = EXIT_FAILURE;
-	  goto cleanup;
-	}
-
-      wait_all ();
-    }
-  else if (nflg + dflg + aflg == 1)
-    {
-      return run_single (device_num, device_name, bus, address);
+      return run_jclient (device_num, device_name, bus, address);
     }
   else
     {

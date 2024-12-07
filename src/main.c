@@ -33,8 +33,6 @@
 #include "config.h"
 #include "overwitch_device.h"
 
-#define PIPEWIRE_PROPS_ENV_VAR "PIPEWIRE_PROPS"
-
 #define PAUSE_TO_BE_NOTIFIED_USECS 500000
 
 struct overwitch_instance

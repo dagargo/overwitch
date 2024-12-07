@@ -52,7 +52,7 @@ As this will install `jackd2`, you would be asked to configure it to be run with
 
 ## Usage
 
-Overwitch contains two JACK clients, one for the desktop and one for the command line and a recording and playing utility for the command line.
+Overwitch contains three JACK clients, one for the desktop, one for the command line and one to be used as a service. Additionally, a recording and playing utilities for the command line are also included.
 
 Regarding the JACK clients, latency needs to be under control and it can be tuned with the following parameters.
 
@@ -65,7 +65,7 @@ The GUI is self explanatory and does not requiere any parameter passed from the 
 
 ```
 $ overwitch -h
-overwitch 1.0
+overwitch 2.0
 Usage: overwitch [options]
 Options:
   --verbose, -v
@@ -79,6 +79,8 @@ Notice that once an Overbridge device is running the options can not be changed 
 It is possible to rename Overbridge devices by simply editing its name on the list. Still, as JACK devices can not be renamed while running, the device will be restarted.
 
 ### overwitch-cli
+
+The CLI interface allows the user to create a single JACK client and have full control the options to be used.
 
 First, list the available devices. The first element is an internal ID that allows to identify the devices.
 
@@ -97,37 +99,34 @@ $ overwitch-cli -d Digitakt
 To stop, just press `Ctrl+C`. You'll see an oputput like the one below. Notice that we are using the verbose option here but it is **not recommended** to use it and it is showed here for illustrative purposes only.
 
 ```
-$ overwitch-cli -d Digitakt -v -b 4
-DEBUG:overwitch.c:314:(ow_get_device_desc_from_vid_pid): Failed to open file “/home/david/.config/overwitch/devices.json”: No such file or directory
-DEBUG:overwitch.c:320:(ow_get_device_desc_from_vid_pid): Falling back to /usr/local/share/overwitch/devices.json...
-DEBUG:overwitch.c:379:(ow_get_device_desc_from_vid_pid): Device with PID 12 found
-DEBUG:overwitch.c:240:(ow_get_usb_device_list): Found Digitakt (bus 003, address 007, ID 1935:000c)
-DEBUG:overwitch.c:314:(ow_get_device_desc_from_vid_pid): Failed to open file “/home/david/.config/overwitch/devices.json”: No such file or directory
-DEBUG:overwitch.c:320:(ow_get_device_desc_from_vid_pid): Falling back to /usr/local/share/overwitch/devices.json...
-DEBUG:overwitch.c:379:(ow_get_device_desc_from_vid_pid): Device with PID 12 found
-DEBUG:engine.c:619:(ow_engine_init): USB transfer timeout: 10
-DEBUG:engine.c:526:(ow_engine_init_mem): Blocks per transfer: 4
-DEBUG:engine.c:1322:(ow_engine_load_overbridge_name): USB control in data (32 B): Digitakt
-DEBUG:engine.c:1342:(ow_engine_load_overbridge_name): USB control in data (16 B): 0089       1.51A
-DEBUG:jclient.c:166:(jclient_set_buffer_size_cb): JACK buffer size: 64
-DEBUG:resampler.c:578:(ow_resampler_set_buffer_size): Setting resampler buffer size to 64
-DEBUG:jclient.c:176:(jclient_set_sample_rate_cb): JACK sample rate: 48000
-DEBUG:resampler.c:591:(ow_resampler_set_samplerate): Setting resampler sample rate to 48000
-DEBUG:jclient.c:176:(jclient_set_sample_rate_cb): JACK sample rate: 48000
-DEBUG:jclient.c:598:(jclient_run): Using RT priority 77...
-DEBUG:jclient.c:600:(jclient_run): Registering ports...
-DEBUG:engine.c:1147:(ow_engine_start): Starting p2o MIDI thread...
-DEBUG:engine.c:1160:(ow_engine_start): Starting audio and o2p MIDI thread...
-DEBUG:jclient.c:166:(jclient_set_buffer_size_cb): JACK buffer size: 64
-Digitakt @ 003,007: o2p latency: -1.0 [-1.0, -1.0] ms; p2o latency: -1.0 [-1.0, -1.0] ms, o2p ratio: 0.998679, avg. 1.013469
+$ overwitch-cli -n 0 -vv -b 8
 [...]
-Digitakt @ 003,007: o2p latency:  2.6 [ 1.3,  3.1] ms; p2o latency: -1.0 [-1.0, -1.0] ms, o2p ratio: 0.999967, avg. 0.999987
-^CDEBUG:jclient.c:446:(jclient_stop): Stopping client...
-Digitakt @ 003,007: o2p latency:  1.6 [ 1.3,  3.8] ms; p2o latency: -1.0 [-1.0, -1.0] ms, o2p ratio: 0.999926, avg. 0.999934
-Digitakt @ 003,007: o2p latency: -1.0 [-1.0, -1.0] ms; p2o latency: -1.0 [-1.0, -1.0] ms, o2p ratio: 0.999926, avg. 0.999934
-DEBUG:jclient.c:703:(jclient_run): Exiting...
-DEBUG:jclient.c:158:(jclient_jack_client_registration_cb): JACK client Digitakt is being unregistered...
-
+DEBUG:engine.c:972:ow_engine_start: Starting audio thread...
+DEBUG:dll.c:57:ow_dll_overbridge_init: Initializing Overbridge side of DLL...
+DEBUG:jclient.c:167:jclient_set_buffer_size_cb: JACK buffer size: 64
+DEBUG:resampler.c:584:ow_resampler_set_buffer_size: Setting resampler buffer size to 64
+DEBUG:resampler.c:129:ow_resampler_reset_buffers: Resetting buffers...
+DEBUG:resampler.c:111:ow_resampler_clear_buffers: Clearing buffers...
+DEBUG:dll.c:163:ow_dll_host_reset: Resetting the DLL...
+DEBUG:resampler.c:185:ow_resampler_reset_dll: DLL target delay: 208 frames (4.333333 ms)
+DEBUG:engine.c:872:run_audio: Clearing buffers...
+DEBUG:resampler.c:380:ow_resampler_compute_ratios: Digitakt @ 003,009 (Digitakt OG): Starting up resampler...
+Digitakt @ 003,009: o2h latency: -1.0 [-1.0, -1.0] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000000
+DEBUG:resampler.c:418:ow_resampler_compute_ratios: Digitakt @ 003,009 (Digitakt OG): Tuning resampler...
+Digitakt @ 003,009: o2h latency: -1.0 [-1.0, -1.0] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 0.999754
+Digitakt @ 003,009: o2h latency: -1.0 [-1.0, -1.0] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000129
+DEBUG:resampler.c:436:ow_resampler_compute_ratios: Digitakt @ 003,009 (Digitakt OG): Running resampler...
+DEBUG:jclient.c:73:jclient_set_latency_cb: JACK latency request
+DEBUG:jclient.c:79:jclient_set_latency_cb: o2h latency: [ 64, 0 ]
+DEBUG:resampler.c:265:resampler_o2h_reader: o2h: Emptying buffer (3072 B) and running...
+Digitakt @ 003,009: o2h latency:  2.3 [ 1.3,  2.7] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000031
+^C
+DEBUG:jclient.c:284:jclient_stop: Stopping client...
+Digitakt @ 003,009: o2h latency:  1.7 [ 1.3,  2.7] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000009
+DEBUG:engine.c:884:run_audio: Processing remaining event...
+Digitakt @ 003,009: o2h latency: -1.0 [-1.0, -1.0] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000009
+DEBUG:jclient.c:523:jclient_run: Exiting...
+DEBUG:jclient.c:159:jclient_jack_client_registration_cb: JACK client Digitakt OG is being unregistered...
 ```
 
 You can list all the available options with `-h`.
@@ -137,7 +136,6 @@ $ overwitch-cli -h
 overwitch 2.0
 Usage: overwitch-cli [options]
 Options:
-  --run-as-service, -s
   --use-device-number, -n value
   --use-device, -d value
   --bus-device-address, -a value
@@ -150,24 +148,25 @@ Options:
   --help, -h
 ```
 
-It is possible to run `overwitch-cli` as a service. It uses USB hotplug to be notified when an Elektron device is plugged in. This is very useful for embedded systems.
+### overwitch-service
+
+Using `overwitch-service` allows having a systemd unit which uses device hotplugging. This will load the configuration from the same config file the GUI uses.
+
+This is a configuration example with the recommended properties. Not all the properties are used here.
 
 ```
-$ overwitch-cli -s -vv
-DEBUG:engine.c:1225:ow_hotplug_loop: Registering USB hotplug callback...
-[...]
-DEBUG:engine.c:1183:ow_hotplug_callback: USB hotplug: device arrived
-DEBUG:main-cli.c:242:hotplug_callback: Starting new jclient for bus 003 and address 009...
-DEBUG:main-cli.c:280:hotplug_callback: Pooled jclient 0 available...
-[...]
+$ cat ~/.config/overwitch/preferences.json
+{
+  "blocks" : 8,
+  "timeout" : 10,
+  "quality" : 2,
+  "pipewireProps" : "{ node.group = \"pro-audio-0\" }"
+}
 ```
 
-### systemd service
-
-Using `overwitch-cli -s` allows having a systemd unit which does not need for a service restart when plugging in devices.
+This is a service example.
 
 ```
-/etc/systemd/user$ cat overwitch.service
 [Unit]
 Description=Overwitch service
 After=pipewire.service
@@ -175,14 +174,16 @@ Requires=pipewire.service
 
 [Service]
 GuessMainPID=true
-ExecStart=overwitch-cli -b 8 -s
+ExecStart=overwitch-service
 Restart=on-failure
 
 [Install]
 WantedBy=default.target
 ```
 
-Running `systemctl --user enable overwitch.service` is needed to allow the service to be started at boot.
+Running `sudo make install` from the `systemd` directory will install the above service.
+
+To allow the service to be started at boot, running `systemctl --user enable overwitch.service` is needed.
 
 Obviously, when running the service there is no need for the GUI whatsoever.
 
@@ -198,11 +199,12 @@ You can list all the available options with `-h`.
 
 ```
 $ overwitch-play -h
-overwitch 1.1
+overwitch 2.0
 Usage: overwitch-play [options] file
 Options:
   --use-device-number, -n value
   --use-device, -d value
+  --bus-device-address, -a value
   --blocks-per-transfer, -b value
   --usb-transfer-timeout, -t value
   --list-devices, -l
@@ -260,11 +262,12 @@ You can list all the available options with `-h`.
 
 ```
 $ overwitch-record -h
-overwitch 1.1
+overwitch 2.0
 Usage: overwitch-record [options]
 Options:
   --use-device-number, -n value
   --use-device, -d value
+  --bus-device-address, -a value
   --track-mask, -m value
   --track-buffer-size-kilobytes, -s value
   --blocks-per-transfer, -b value
@@ -365,10 +368,6 @@ $ uname -v
 With all this configuration I get no JACK xruns with 64 frames buffer (2 periods) and occasional xruns with 32 frames buffer (3 periods) with network enabled and under normal usage conditions.
 
 Although you can run Overwitch with verbose output this is **not recommended** unless you are debugging the application.
-
-### Tweaking the buffer size
-
-For devices allowinmg sample transfers, the PipeWire property `default.clock.quantum-limit` needs to be set to `16384` as some SysEx messages are longer than the default `8192` value.
 
 ## Adding devices
 
