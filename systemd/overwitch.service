@@ -5,7 +5,7 @@ Requires=pipewire.service
 
 [Service]
 GuessMainPID=true
-ExecStart=overwitch-cli -b 8 -s
+ExecStart=overwitch-service
 Restart=on-failure
 
 [Install]

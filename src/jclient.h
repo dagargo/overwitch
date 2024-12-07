@@ -22,6 +22,8 @@
 #include <jack/types.h>
 #include "overwitch.h"
 
+#define PIPEWIRE_PROPS_ENV_VAR "PIPEWIRE_PROPS"
+
 #define JCLIENT_DEFAULT_PRIORITY -1
 
 typedef void (*jclient_end_notifier_t) (uint8_t, uint8_t);

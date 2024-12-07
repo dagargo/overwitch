@@ -85,13 +85,13 @@ ow_resampler_report_status (struct ow_resampler *resampler)
       latency.h2o_min = -1.0;
     }
 
-  if (debug_level)
+  if (debug_level > 1)
     {
-      printf
-	("%s: o2h latency: %4.1f [%4.1f, %4.1f] ms; h2o latency: %4.1f [%4.1f, %4.1f] ms, o2h ratio: %f\n",
-	 resampler->engine->name, latency.o2h, latency.o2h_min,
-	 latency.o2h_max, latency.h2o, latency.h2o_min, latency.h2o_max,
-	 resampler->dll.ratio);
+      fprintf (stderr,
+	       "%s (%s): o2h latency: %4.1f [%4.1f, %4.1f] ms; h2o latency: %4.1f [%4.1f, %4.1f] ms, o2h ratio: %f\n",
+	       resampler->engine->name, resampler->engine->overbridge_name,
+	       latency.o2h, latency.o2h_min, latency.o2h_max, latency.h2o,
+	       latency.h2o_min, latency.h2o_max, resampler->dll.ratio);
     }
 
   if (resampler->reporter.callback)
@@ -348,7 +348,9 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
     {
       if (engine_status == OW_ENGINE_STATUS_READY)
 	{
-	  debug_print (2, "Booting Overbridge side...");
+	  debug_print (1, "%s (%s): Booting Overbridge side...",
+		       resampler->engine->name,
+		       resampler->engine->overbridge_name);
 
 	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_STEADY);
 	}
@@ -364,7 +366,9 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   if (resampler->status == OW_RESAMPLER_STATUS_READY
       && engine_status == OW_ENGINE_STATUS_WAIT)
     {
-      debug_print (2, "Starting up resampler...");
+      debug_print (1, "%s (%s): Starting up resampler...",
+		   resampler->engine->name,
+		   resampler->engine->overbridge_name);
 
       ow_dll_host_set_loop_filter (dll, 1.0, resampler->bufsize,
 				   resampler->samplerate);
@@ -382,8 +386,10 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   if (dll->ratio < resampler->min_target_ratio ||
       dll->ratio > resampler->max_target_ratio)
     {
-      error_print ("Invalid ratio %f detected. Stopping resampler...",
-		   dll->ratio);
+      error_print
+	("%s (%s): Invalid ratio %f detected. Stopping resampler...",
+	 resampler->engine->name, resampler->engine->overbridge_name,
+	 dll->ratio);
 
       ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_ERROR);
 
@@ -398,7 +404,8 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 
   if (resampler->status == OW_RESAMPLER_STATUS_BOOT && ow_dll_tuned (dll))
     {
-      debug_print (2, "Tuning resampler...");
+      debug_print (1, "%s (%s): Tuning resampler...", resampler->engine->name,
+		   resampler->engine->overbridge_name);
 
       ow_dll_host_set_loop_filter (dll, 0.5, resampler->bufsize,
 				   resampler->samplerate);
@@ -415,7 +422,9 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   if (resampler->status == OW_RESAMPLER_STATUS_TUNE &&
       current_usecs - tuning_start_usecs > TUNING_PERIOD_US)
     {
-      debug_print (2, "Running resampler...");
+      debug_print (1, "%s (%s): Running resampler...",
+		   resampler->engine->name,
+		   resampler->engine->overbridge_name);
 
       ow_dll_host_set_loop_filter (dll, 0.05, resampler->bufsize,
 				   resampler->samplerate);

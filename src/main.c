@@ -33,8 +33,6 @@
 #include "utils.h"
 #include "config.h"
 
-#define PIPEWIRE_PROPS_ENVV "PIPEWIRE_PROPS"
-
 #define PAUSE_TO_BE_NOTIFIED_USECS 500000
 
 enum list_store_columns
@@ -629,20 +627,20 @@ set_pipewire_props ()
   if (pipewire_venv_set)
     {
       debug_print (1, "%s was '%s' at launch. Ignoring user value '%s'...",
-		   PIPEWIRE_PROPS_ENVV, getenv (PIPEWIRE_PROPS_ENVV),
+		   PIPEWIRE_PROPS_ENV_VAR, getenv (PIPEWIRE_PROPS_ENV_VAR),
 		   pipewire_props);
       return;
     }
 
   if (pipewire_props)
     {
-      debug_print (1, "Setting %s to '%s'...", PIPEWIRE_PROPS_ENVV,
+      debug_print (1, "Setting %s to '%s'...", PIPEWIRE_PROPS_ENV_VAR,
 		   pipewire_props);
-      setenv (PIPEWIRE_PROPS_ENVV, pipewire_props, TRUE);
+      setenv (PIPEWIRE_PROPS_ENV_VAR, pipewire_props, TRUE);
     }
   else
     {
-      unsetenv (PIPEWIRE_PROPS_ENVV);
+      unsetenv (PIPEWIRE_PROPS_ENV_VAR);
     }
 }
 
@@ -902,7 +900,7 @@ main (int argc, char *argv[])
       pthread_setname_np (hotplug_thread, "hotplug-worker");
     }
 
-  pipewire_venv_set = getenv (PIPEWIRE_PROPS_ENVV) != NULL;
+  pipewire_venv_set = getenv (PIPEWIRE_PROPS_ENV_VAR) != NULL;
   set_pipewire_props ();
 
   start_control_client ();
