@@ -25,22 +25,13 @@
 #include <sched.h>
 #include <gtk/gtk.h>
 #include <jack/jack.h>
-#include <sys/stat.h>
 #include <json-glib/json-glib.h>
 #include <glib/gi18n.h>
 #include "common.h"
 #include "jclient.h"
 #include "utils.h"
+#include "config.h"
 #include "overwitch_device.h"
-
-#define CONF_FILE "/preferences.json"
-
-#define CONF_REFRESH_AT_STARTUP "refreshAtStartup"
-#define CONF_SHOW_ALL_COLUMNS "showAllColumns"
-#define CONF_BLOCKS "blocks"
-#define CONF_QUALITY "quality"
-#define CONF_TIMEOUT "timeout"
-#define CONF_PIPEWIRE_PROPS "pipewireProps"
 
 #define PIPEWIRE_PROPS_ENV_VAR "PIPEWIRE_PROPS"
 
@@ -249,203 +240,52 @@ overwitch_show_all_columns (GSimpleAction *action,
   update_all_metrics (show_all_columns);
 }
 
-gint
-save_file_char (const gchar *path, const guint8 *data, ssize_t len)
-{
-  gint res;
-  long bytes;
-  FILE *file;
-
-  file = fopen (path, "w");
-
-  if (!file)
-    {
-      return -errno;
-    }
-
-  debug_print (1, "Saving file %s...", path);
-
-  res = 0;
-  bytes = fwrite (data, 1, len, file);
-  if (bytes == len)
-    {
-      debug_print (1, "%zu bytes written", bytes);
-    }
-  else
-    {
-      error_print ("Error while writing to file %s", path);
-      res = -EIO;
-    }
-
-  fclose (file);
-
-  return res;
-}
-
 static void
 save_preferences ()
 {
-  size_t n;
-  gchar *preferences_path;
-  JsonBuilder *builder;
-  JsonGenerator *gen;
-  JsonNode *root;
-  gchar *json;
-  gboolean show_all_columns, refresh_at_startup;
+  struct ow_config config;
   GVariant *v;
   GAction *a;
 
-  preferences_path = get_expanded_dir (CONF_DIR);
-  if (g_mkdir_with_parents (preferences_path,
-			    S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH |
-			    S_IXOTH))
-    {
-      error_print ("Error wile creating dir `%s'", CONF_DIR);
-      return;
-    }
-
-  n = PATH_MAX - strlen (preferences_path) - 1;
-  strncat (preferences_path, CONF_FILE, n);
-  preferences_path[PATH_MAX - 1] = 0;
-
-  debug_print (1, "Saving preferences to '%s'...", preferences_path);
-
-  builder = json_builder_new ();
-
-  json_builder_begin_object (builder);
-
-  json_builder_set_member_name (builder, CONF_REFRESH_AT_STARTUP);
   a = g_action_map_lookup_action (G_ACTION_MAP (app), "refresh_at_startup");
   v = g_action_get_state (a);
-  g_variant_get (v, "b", &refresh_at_startup);
-  json_builder_add_boolean_value (builder, refresh_at_startup);
+  g_variant_get (v, "b", &config.refresh_at_startup);
 
-  json_builder_set_member_name (builder, CONF_SHOW_ALL_COLUMNS);
   a = g_action_map_lookup_action (G_ACTION_MAP (app), "show_all_columns");
   v = g_action_get_state (a);
-  g_variant_get (v, "b", &show_all_columns);
-  json_builder_add_boolean_value (builder, show_all_columns);
+  g_variant_get (v, "b", &config.show_all_columns);
 
-  json_builder_set_member_name (builder, CONF_BLOCKS);
-  json_builder_add_int_value (builder,
-			      gtk_spin_button_get_value_as_int
-			      (blocks_spin_button));
+  config.blocks = gtk_spin_button_get_value_as_int (blocks_spin_button);
+  config.timeout = gtk_spin_button_get_value_as_int (timeout_spin_button);
+  config.quality = gtk_drop_down_get_selected (quality_drop_down);
+  config.pipewire_props = pipewire_props;
 
-  json_builder_set_member_name (builder, CONF_TIMEOUT);
-  json_builder_add_int_value (builder,
-			      gtk_spin_button_get_value_as_int
-			      (timeout_spin_button));
-
-  json_builder_set_member_name (builder, CONF_QUALITY);
-  json_builder_add_int_value (builder,
-			      gtk_drop_down_get_selected (quality_drop_down));
-
-  json_builder_set_member_name (builder, CONF_PIPEWIRE_PROPS);
-  json_builder_add_string_value (builder, pipewire_props);
-
-  json_builder_end_object (builder);
-
-  gen = json_generator_new ();
-  root = json_builder_get_root (builder);
-  json_generator_set_root (gen, root);
-  json_generator_set_pretty (gen, TRUE);
-  json = json_generator_to_data (gen, NULL);
-
-  save_file_char (preferences_path, (guint8 *) json, strlen (json));
-
-  g_free (json);
-  json_node_free (root);
-  g_object_unref (gen);
-  g_object_unref (builder);
-  g_free (preferences_path);
+  ow_save_config (&config);
 }
 
 static void
 load_preferences ()
 {
-  GError *error;
-  JsonReader *reader;
-  JsonParser *parser = json_parser_new ();
-  gchar *preferences_file = get_expanded_dir (CONF_DIR CONF_FILE);
-  gboolean show_all_columns = FALSE;
-  gboolean refresh_at_startup = FALSE;
-  gint64 blocks = 24;
-  gint64 quality = 2;
-  gint64 timeout = 10;
+  struct ow_config config;
   GVariant *v;
   GAction *a;
 
-  error = NULL;
-  json_parser_load_from_file (parser, preferences_file, &error);
-  if (error)
-    {
-      error_print ("Error wile loading preferences from `%s': %s",
-		   CONF_DIR CONF_FILE, error->message);
-      g_error_free (error);
-      g_object_unref (parser);
-      goto end;
-    }
+  ow_load_config (&config);
 
-  reader = json_reader_new (json_parser_get_root (parser));
+  pipewire_props = config.pipewire_props;
 
-  if (json_reader_read_member (reader, CONF_REFRESH_AT_STARTUP))
-    {
-      refresh_at_startup = json_reader_get_boolean_value (reader);
-    }
-  json_reader_end_member (reader);
-
-  if (json_reader_read_member (reader, CONF_SHOW_ALL_COLUMNS))
-    {
-      show_all_columns = json_reader_get_boolean_value (reader);
-    }
-  json_reader_end_member (reader);
-
-  if (json_reader_read_member (reader, CONF_BLOCKS))
-    {
-      blocks = json_reader_get_int_value (reader);
-    }
-  json_reader_end_member (reader);
-
-  if (json_reader_read_member (reader, CONF_TIMEOUT))
-    {
-      timeout = json_reader_get_int_value (reader);
-    }
-  json_reader_end_member (reader);
-
-  if (json_reader_read_member (reader, CONF_QUALITY))
-    {
-      quality = json_reader_get_int_value (reader);
-    }
-  json_reader_end_member (reader);
-
-  if (json_reader_read_member (reader, CONF_PIPEWIRE_PROPS))
-    {
-      const gchar *v = json_reader_get_string_value (reader);
-      if (v && strlen (v))
-	{
-	  pipewire_props = strdup (v);
-	}
-    }
-  json_reader_end_member (reader);
-
-  g_object_unref (reader);
-  g_object_unref (parser);
-
-  g_free (preferences_file);
-
-end:
   a = g_action_map_lookup_action (G_ACTION_MAP (app), "refresh_at_startup");
-  v = g_variant_new_boolean (refresh_at_startup);
+  v = g_variant_new_boolean (config.refresh_at_startup);
   g_action_change_state (a, v);
 
   a = g_action_map_lookup_action (G_ACTION_MAP (app), "show_all_columns");
-  v = g_variant_new_boolean (show_all_columns);
+  v = g_variant_new_boolean (config.show_all_columns);
   g_action_change_state (a, v);
 
-  gtk_spin_button_set_value (blocks_spin_button, blocks);
-  gtk_spin_button_set_value (timeout_spin_button, timeout);
-  gtk_drop_down_set_selected (quality_drop_down, quality);
-  update_all_metrics (show_all_columns);
+  gtk_spin_button_set_value (blocks_spin_button, config.blocks);
+  gtk_spin_button_set_value (timeout_spin_button, config.timeout);
+  gtk_drop_down_set_selected (quality_drop_down, config.quality);
+  update_all_metrics (config.show_all_columns);
 }
 
 static gboolean
