@@ -665,6 +665,10 @@ overwitch_device_name_changed (GtkEditableLabel *label, GParamSpec *pspec,
 	{
 	  debug_print (1, "Renaming device to '%s'...", new_name);
 	  ow_engine_set_overbridge_name (engine, new_name);
+	  stop_instance (instance);
+	  usleep (PAUSE_TO_BE_NOTIFIED_USECS);
+	  remove_stopped_instances ();
+	  refresh_all (NULL, NULL);
 	}
     }
 }
