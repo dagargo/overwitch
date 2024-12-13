@@ -46,7 +46,9 @@ static struct ow_config config;
 static struct pooled_jclient jcpool[POOLED_JCLIENT_LEN];
 static pthread_spinlock_t lock;	//Needed for signal handling
 static gint hotplug_running;
+static pthread_t hotplug_thread;
 static gint stop_all;
+static GApplication *app;
 
 static void
 signal_handler (int signum)
@@ -65,6 +67,8 @@ signal_handler (int signum)
 	}
     }
   pthread_spin_unlock (&lock);
+
+  g_application_release (app);
 }
 
 static void *
@@ -245,9 +249,43 @@ hotplug_callback (uint8_t bus, uint8_t address)
     }
 }
 
-int
-main (int argc, char *argv[])
+static void *
+hotplug_runner (void *data)
 {
+  hotplug_running = 1;
+  ow_hotplug_loop (&hotplug_running, &lock, hotplug_callback);
+  return NULL;
+}
+
+static void
+overwitch_startup (GApplication *app, gpointer *user_data)
+{
+  if (start_all ())
+    {
+      return;
+    }
+
+  g_application_hold (app);
+
+  if (pthread_create (&hotplug_thread, NULL, hotplug_runner, NULL))
+    {
+      error_print ("Could not start hotplug thread");
+    }
+  else
+    {
+      pthread_setname_np (hotplug_thread, "hotplug-worker");
+    }
+}
+
+static void
+overwitch_activate (GApplication *app, gpointer *user_data)
+{
+}
+
+gint
+main (gint argc, gchar *argv[])
+{
+  gint status;
   struct sigaction action;
 
   debug_level = 1;
@@ -268,17 +306,23 @@ main (int argc, char *argv[])
 
   pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
 
-  if (start_all ())
-    {
-      return EXIT_FAILURE;
-    }
+  app = g_application_new (PACKAGE_SERVICE_NAME, G_APPLICATION_DEFAULT_FLAGS);
 
-  hotplug_running = 1;
-  ow_hotplug_loop (&hotplug_running, &lock, hotplug_callback);
+  g_signal_connect (app, "startup", G_CALLBACK (overwitch_startup), NULL);
+  g_signal_connect (app, "activate", G_CALLBACK (overwitch_activate), NULL);
+
+  status = g_application_run (G_APPLICATION (app), argc, argv);
+
+  g_object_unref (app);
 
   wait_all ();
 
+  if (hotplug_thread)
+    {
+      pthread_join (hotplug_thread, NULL);
+    }
+
   pthread_spin_destroy (&lock);
 
-  return EXIT_SUCCESS;
+  return status;
 }

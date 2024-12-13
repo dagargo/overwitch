@@ -50,7 +50,6 @@ static gchar *pipewire_props;
 static gboolean pipewire_env_var_set;
 
 static GtkApplication *app;
-static GtkBuilder *builder;
 
 static GtkWidget *main_window;
 static GtkAboutDialog *about_dialog;
@@ -76,12 +75,6 @@ static GtkLabel *target_delay_label;
 static pthread_spinlock_t lock;	//Needed for signal handling
 static gint hotplug_running;
 static pthread_t hotplug_thread;
-
-static struct option options[] = {
-  {"verbose", 0, NULL, 'v'},
-  {"help", 0, NULL, 'h'},
-  {NULL, 0, NULL, 0}
-};
 
 static const char *
 get_status_string (ow_resampler_status_t status)
@@ -619,7 +612,6 @@ overwitch_exit ()
   pthread_spin_lock (&lock);
   hotplug_running = 0;
   pthread_spin_unlock (&lock);
-  pthread_join (hotplug_thread, NULL);
 
   stop_all (NULL, NULL);
   usleep (PAUSE_TO_BE_NOTIFIED_USECS);	//Time to let the devices notify us.
@@ -675,6 +667,7 @@ static void
 overwitch_build_ui ()
 {
   gchar *thanks;
+  static GtkBuilder *builder;
   GtkBuilderScope *scope = gtk_builder_cscope_new ();
   gtk_builder_cscope_add_callback (scope, overwitch_device_name_changed);
 
@@ -764,6 +757,8 @@ overwitch_build_ui ()
 
   g_action_map_add_action_entries (G_ACTION_MAP (app), APP_ENTRIES,
 				   G_N_ELEMENTS (APP_ENTRIES), app);
+
+  g_object_unref (builder);
 }
 
 static void
@@ -781,7 +776,7 @@ hotplug_runner (void *data)
 }
 
 static void
-overwitch_activate (GApplication *gapp, gpointer *user_data)
+overwitch_startup (GApplication *gapp, gpointer *user_data)
 {
   gboolean refresh_at_startup;
   GVariant *v;
@@ -815,69 +810,25 @@ overwitch_activate (GApplication *gapp, gpointer *user_data)
     {
       pthread_setname_np (hotplug_thread, "hotplug-worker");
     }
-
-  gtk_window_present (GTK_WINDOW (main_window));
 }
 
 static void
-overwitch_free_ui ()
+overwitch_activate (GApplication *gapp, gpointer *user_data)
 {
-  g_object_unref (app);
-  g_object_unref (builder);
+  gtk_window_present (GTK_WINDOW (main_window));
 }
 
 static void
 signal_handler (int signum)
 {
-  if (signum == SIGUSR1)
-    {
-      debug_level++;
-      debug_print (1, "Debug level: %d", debug_level);
-    }
-  else if (signum == SIGUSR2)
-    {
-      debug_level--;
-      debug_level = debug_level < 0 ? 0 : debug_level;
-      debug_print (1, "Debug level: %d", debug_level);
-    }
-  else
-    {
-      overwitch_exit ();
-    }
+  overwitch_exit ();
 }
 
-int
-main (int argc, char *argv[])
+gint
+main (gint argc, gchar *argv[])
 {
-  int status, opt, long_index = 0;
-  int vflg = 0, errflg = 0;
+  gint status;
   struct sigaction action;
-
-  while ((opt = getopt_long (argc, argv, "vh", options, &long_index)) != -1)
-    {
-      switch (opt)
-	{
-	case 'v':
-	  vflg++;
-	  break;
-	case 'h':
-	  print_help (argv[0], PACKAGE_STRING, options, NULL);
-	  exit (EXIT_SUCCESS);
-	case '?':
-	  errflg++;
-	}
-    }
-
-  if (errflg > 0)
-    {
-      print_help (argv[0], PACKAGE_STRING, options, NULL);
-      exit (EXIT_FAILURE);
-    }
-
-  if (vflg)
-    {
-      debug_level = vflg;
-    }
 
   action.sa_handler = signal_handler;
   sigemptyset (&action.sa_mask);
@@ -886,8 +837,6 @@ main (int argc, char *argv[])
   sigaction (SIGINT, &action, NULL);
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGTSTP, &action, NULL);
-  sigaction (SIGUSR1, &action, NULL);
-  sigaction (SIGUSR2, &action, NULL);
 
   setlocale (LC_ALL, "");
   bindtextdomain (PACKAGE, LOCALEDIR);
@@ -895,14 +844,20 @@ main (int argc, char *argv[])
 
   pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
 
-  gtk_init ();
-
-  app = gtk_application_new ("io.github.dagargo.Overwitch",
+  app = gtk_application_new (PACKAGE_SERVICE_NAME,
 			     G_APPLICATION_DEFAULT_FLAGS);
+
+  g_signal_connect (app, "startup", G_CALLBACK (overwitch_startup), NULL);
   g_signal_connect (app, "activate", G_CALLBACK (overwitch_activate), NULL);
 
-  status = g_application_run (G_APPLICATION (app), 0, NULL);
-  overwitch_free_ui ();
+  status = g_application_run (G_APPLICATION (app), argc, argv);
+
+  g_object_unref (app);
+
+  if (hotplug_thread)
+    {
+      pthread_join (hotplug_thread, NULL);
+    }
 
   pthread_spin_destroy (&lock);
 

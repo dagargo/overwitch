@@ -7,6 +7,7 @@ LIB_LIBS += json-glib-1.0
 endif
 
 CLI_LIBS = jack $(LIB_LIBS)
+SRV_LIBS = glib-2.0 $(CLI_LIBS)
 GUI_LIBS = gtk4 $(CLI_LIBS)
 
 if ! JSON_DEVS_FILE
@@ -16,8 +17,8 @@ endif
 overwitch_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(GUI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
 overwitch_LDFLAGS = `$(PKG_CONFIG) --libs $(GUI_LIBS)` $(SAMPLERATE_LIBS)
 
-overwitch_service_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(CLI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
-overwitch_service_LDFLAGS = `$(PKG_CONFIG) --libs $(GUI_LIBS)` $(SAMPLERATE_LIBS)
+overwitch_service_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(SRV_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
+overwitch_service_LDFLAGS = `$(PKG_CONFIG) --libs $(SRV_LIBS)` $(SAMPLERATE_LIBS)
 
 overwitch_cli_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(CLI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
 overwitch_cli_LDFLAGS = `$(PKG_CONFIG) --libs $(CLI_LIBS)` $(SAMPLERATE_LIBS)
