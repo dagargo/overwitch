@@ -92,6 +92,29 @@ static pthread_spinlock_t lock;	//Needed for signal handling
 static gint hotplug_running;
 static pthread_t hotplug_thread;
 
+static gboolean
+overwitch_increment_debug_level (const gchar *option_name,
+				 const gchar *value,
+				 gpointer data, GError **error)
+{
+  debug_level++;
+  return TRUE;
+}
+
+const GOptionEntry CMD_PARAMS[] = {
+  {
+   .long_name = "verbosity",
+   .short_name = 'v',
+   .flags = G_OPTION_FLAG_NO_ARG,
+   .arg = G_OPTION_ARG_CALLBACK,
+   .arg_data = overwitch_increment_debug_level,
+   .description =
+   "Increase verbosity. For more verbosity use it more than once.",
+   .arg_description = NULL,
+   },
+  {NULL}
+};
+
 static const char *
 get_status_string (ow_resampler_status_t status)
 {
@@ -887,6 +910,8 @@ main (gint argc, gchar *argv[])
 
   g_signal_connect (app, "startup", G_CALLBACK (overwitch_startup), NULL);
   g_signal_connect (app, "activate", G_CALLBACK (overwitch_activate), NULL);
+
+  g_application_add_main_option_entries (G_APPLICATION (app), CMD_PARAMS);
 
   status = g_application_run (G_APPLICATION (app), argc, argv);
 
