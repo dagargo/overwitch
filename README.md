@@ -63,15 +63,6 @@ Regarding the JACK clients, latency needs to be under control and it can be tune
 
 The GUI is self explanatory and does not requiere any parameter passed from the command line.
 
-```
-$ overwitch -h
-overwitch 2.0
-Usage: overwitch [options]
-Options:
-  --verbose, -v
-  --help, -h
-```
-
 If you are running PipeWire, go to the [PipeWire section](#PipeWire) for additional information.
 
 Notice that once an Overbridge device is running the options can not be changed so you will need to stop the running instances and refresh the list.

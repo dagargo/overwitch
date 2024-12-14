@@ -10,6 +10,8 @@ AC_SEARCH_LIBS([sqrt], [m])
 AC_CONFIG_MACRO_DIRS([m4])
 AM_INIT_AUTOMAKE([subdir-objects])
 
+AC_DEFINE([PACKAGE_SERVICE_NAME], ["io.github.dagargo.Overwitch"], "Service name for D-Bus")
+
 # Checks for programs.
 AC_PROG_CC
 

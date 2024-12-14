@@ -7,6 +7,7 @@ LIB_LIBS += json-glib-1.0
 endif
 
 CLI_LIBS = jack $(LIB_LIBS)
+SRV_LIBS = glib-2.0 $(CLI_LIBS)
 GUI_LIBS = gtk+-3.0 $(CLI_LIBS)
 
 if ! JSON_DEVS_FILE
@@ -16,8 +17,8 @@ endif
 overwitch_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(GUI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
 overwitch_LDFLAGS = `$(PKG_CONFIG) --libs $(GUI_LIBS)` $(SAMPLERATE_LIBS)
 
-overwitch_service_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(CLI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
-overwitch_service_LDFLAGS = `$(PKG_CONFIG) --libs $(GUI_LIBS)` $(SAMPLERATE_LIBS)
+overwitch_service_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(SRV_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
+overwitch_service_LDFLAGS = `$(PKG_CONFIG) --libs $(SRV_LIBS)` $(SAMPLERATE_LIBS)
 
 overwitch_cli_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(CLI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
 overwitch_cli_LDFLAGS = `$(PKG_CONFIG) --libs $(CLI_LIBS)` $(SAMPLERATE_LIBS)
@@ -42,7 +43,7 @@ liboverwitch_la_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(LIB_LIBS)
 liboverwitch_la_LDFLAGS = `$(PKG_CONFIG) --libs $(LIB_LIBS)` $(SAMPLERATE_LIBS)
 include_HEADERS = overwitch.h
 
-overwitch_SOURCES = main.c jclient.c jclient.h config.c config.h common.c common.h
+overwitch_SOURCES = main.c jclient.c jclient.h config.c config.h
 overwitch_service_SOURCES = main-service.c jclient.c jclient.h config.c config.h
 overwitch_cli_SOURCES = main-cli.c jclient.c jclient.h common.c common.h
 overwitch_play_SOURCES = main-play.c common.c common.h

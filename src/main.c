@@ -61,7 +61,9 @@ static jack_client_t *control_client;
 static jack_nframes_t jack_sample_rate;
 static jack_nframes_t jack_buffer_size;
 static gchar *pipewire_props;
-static gboolean pipewire_venv_set;
+static gboolean pipewire_env_var_set;
+
+static GtkApplication *app;
 
 static GtkWidget *main_window;
 static GtkAboutDialog *about_dialog;
@@ -89,12 +91,6 @@ static GtkPopover *main_popover;
 static pthread_spinlock_t lock;	//Needed for signal handling
 static gint hotplug_running;
 static pthread_t hotplug_thread;
-
-static struct option options[] = {
-  {"verbose", 0, NULL, 'v'},
-  {"help", 0, NULL, 'h'},
-  {NULL, 0, NULL, 0}
-};
 
 static const char *
 get_status_string (ow_resampler_status_t status)
@@ -624,7 +620,7 @@ set_overbridge_name (GtkCellRendererText *self,
 static void
 set_pipewire_props ()
 {
-  if (pipewire_venv_set)
+  if (pipewire_env_var_set)
     {
       debug_print (1, "%s was '%s' at launch. Ignoring user value '%s'...",
 		   PIPEWIRE_PROPS_ENV_VAR, getenv (PIPEWIRE_PROPS_ENV_VAR),
@@ -670,7 +666,7 @@ open_preferences (GtkWidget *object, gpointer data)
 }
 
 static void
-quit ()
+overwitch_exit ()
 {
   pthread_spin_lock (&lock);
   hotplug_running = 0;
@@ -685,35 +681,14 @@ quit ()
     }
   stop_control_client ();
   save_preferences ();
-  debug_print (1, "Quitting GTK+...");
-  gtk_main_quit ();
+  g_application_quit (G_APPLICATION(app));
 }
 
 static gboolean
 overwitch_delete_window (GtkWidget *widget, GdkEvent *event, gpointer data)
 {
-  quit ();
+  overwitch_exit ();
   return FALSE;
-}
-
-static void
-signal_handler (int signum)
-{
-  if (signum == SIGUSR1)
-    {
-      debug_level++;
-      debug_print (1, "Debug level: %d", debug_level);
-    }
-  else if (signum == SIGUSR2)
-    {
-      debug_level--;
-      debug_level = debug_level < 0 ? 0 : debug_level;
-      debug_print (1, "Debug level: %d", debug_level);
-    }
-  else
-    {
-      quit ();
-    }
 }
 
 static void
@@ -730,58 +705,11 @@ hotplug_runner (void *data)
   return NULL;
 }
 
-int
-main (int argc, char *argv[])
+static void
+overwitch_build_ui ()
 {
-  int opt, long_index = 0;
-  int vflg = 0, errflg = 0;
-  GtkBuilder *builder;
-  struct sigaction action;
-  gboolean refresh;
   gchar *thanks;
-
-  while ((opt = getopt_long (argc, argv, "vh", options, &long_index)) != -1)
-    {
-      switch (opt)
-	{
-	case 'v':
-	  vflg++;
-	  break;
-	case 'h':
-	  print_help (argv[0], PACKAGE_STRING, options, NULL);
-	  exit (EXIT_SUCCESS);
-	case '?':
-	  errflg++;
-	}
-    }
-
-  if (errflg > 0)
-    {
-      print_help (argv[0], PACKAGE_STRING, options, NULL);
-      exit (EXIT_FAILURE);
-    }
-
-  if (vflg)
-    {
-      debug_level = vflg;
-    }
-
-  action.sa_handler = signal_handler;
-  sigemptyset (&action.sa_mask);
-  action.sa_flags = 0;
-  sigaction (SIGHUP, &action, NULL);
-  sigaction (SIGINT, &action, NULL);
-  sigaction (SIGTERM, &action, NULL);
-  sigaction (SIGTSTP, &action, NULL);
-  sigaction (SIGUSR1, &action, NULL);
-  sigaction (SIGUSR2, &action, NULL);
-
-  setlocale (LC_ALL, "");
-  bindtextdomain (PACKAGE, LOCALEDIR);
-  textdomain (PACKAGE);
-
-  gtk_init (&argc, &argv);
-  builder = gtk_builder_new ();
+  GtkBuilder *builder = gtk_builder_new ();
   gtk_builder_add_from_file (builder, DATADIR "/overwitch.ui", NULL);
 
   main_window = GTK_WIDGET (gtk_builder_get_object (builder, "main_window"));
@@ -886,10 +814,31 @@ main (int argc, char *argv[])
 
   load_preferences ();
 
-  g_object_get (G_OBJECT (refresh_at_startup_button), "active", &refresh,
-		NULL);
+  g_object_unref (builder);
+}
 
-  pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
+static void
+overwitch_startup (GApplication *gapp, gpointer *user_data)
+{
+  gboolean refresh_at_startup;
+
+  overwitch_build_ui ();
+
+  gtk_application_add_window (app, GTK_WINDOW (main_window));
+
+  load_preferences ();
+
+  pipewire_env_var_set = getenv (PIPEWIRE_PROPS_ENV_VAR) != NULL;
+  set_pipewire_props ();
+
+  g_object_get (G_OBJECT (refresh_at_startup_button), "active",
+		&refresh_at_startup, NULL);
+
+  start_control_client ();
+  if (refresh_at_startup)
+    {
+      refresh_all (NULL, NULL);
+    }
 
   if (pthread_create (&hotplug_thread, NULL, hotplug_runner, NULL))
     {
@@ -899,20 +848,56 @@ main (int argc, char *argv[])
     {
       pthread_setname_np (hotplug_thread, "hotplug-worker");
     }
+}
 
-  pipewire_venv_set = getenv (PIPEWIRE_PROPS_ENV_VAR) != NULL;
-  set_pipewire_props ();
+static void
+overwitch_activate (GApplication *gapp, gpointer *user_data)
+{
+  gtk_window_present (GTK_WINDOW (main_window));
+}
 
-  start_control_client ();
-  if (refresh)
+static void
+signal_handler (int signum)
+{
+  overwitch_exit ();
+}
+
+gint
+main (gint argc, gchar *argv[])
+{
+  gint status;
+  struct sigaction action;
+
+  action.sa_handler = signal_handler;
+  sigemptyset (&action.sa_mask);
+  action.sa_flags = 0;
+  sigaction (SIGHUP, &action, NULL);
+  sigaction (SIGINT, &action, NULL);
+  sigaction (SIGTERM, &action, NULL);
+  sigaction (SIGTSTP, &action, NULL);
+
+  setlocale (LC_ALL, "");
+  bindtextdomain (PACKAGE, LOCALEDIR);
+  textdomain (PACKAGE);
+
+  pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
+
+  app = gtk_application_new (PACKAGE_SERVICE_NAME,
+			     G_APPLICATION_DEFAULT_FLAGS);
+
+  g_signal_connect (app, "startup", G_CALLBACK (overwitch_startup), NULL);
+  g_signal_connect (app, "activate", G_CALLBACK (overwitch_activate), NULL);
+
+  status = g_application_run (G_APPLICATION (app), argc, argv);
+
+  g_object_unref (app);
+
+  if (hotplug_thread)
     {
-      refresh_all (NULL, NULL);
+      pthread_join (hotplug_thread, NULL);
     }
-
-  gtk_widget_show (main_window);
-  gtk_main ();
 
   pthread_spin_destroy (&lock);
 
-  return 0;
+  return status;
 }
