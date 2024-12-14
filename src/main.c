@@ -31,15 +31,7 @@
 #include "common.h"
 #include "jclient.h"
 #include "utils.h"
-
-#define CONF_FILE "/preferences.json"
-
-#define CONF_REFRESH_AT_STARTUP "refreshAtStartup"
-#define CONF_SHOW_ALL_COLUMNS "showAllColumns"
-#define CONF_BLOCKS "blocks"
-#define CONF_QUALITY "quality"
-#define CONF_TIMEOUT "timeout"
-#define CONF_PIPEWIRE_PROPS "pipewireProps"
+#include "config.h"
 
 #define PIPEWIRE_PROPS_ENVV "PIPEWIRE_PROPS"
 
@@ -281,196 +273,39 @@ show_all_columns (GtkWidget *object, gpointer data)
   gtk_widget_hide (GTK_WIDGET (main_popover));
 }
 
-gint
-save_file_char (const gchar *path, const guint8 *data, ssize_t len)
-{
-  gint res;
-  long bytes;
-  FILE *file;
-
-  file = fopen (path, "w");
-
-  if (!file)
-    {
-      return -errno;
-    }
-
-  debug_print (1, "Saving file %s...", path);
-
-  res = 0;
-  bytes = fwrite (data, 1, len, file);
-  if (bytes == len)
-    {
-      debug_print (1, "%zu bytes written", bytes);
-    }
-  else
-    {
-      error_print ("Error while writing to file %s", path);
-      res = -EIO;
-    }
-
-  fclose (file);
-
-  return res;
-}
-
 static void
 save_preferences ()
 {
-  size_t n;
-  gchar *preferences_path;
-  JsonBuilder *builder;
-  JsonGenerator *gen;
-  JsonNode *root;
-  gchar *json;
-  gboolean show_all_columns, refresh_at_startup;
+  struct ow_config config;
 
-  preferences_path = get_expanded_dir (CONF_DIR);
-  if (g_mkdir_with_parents (preferences_path,
-			    S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH |
-			    S_IXOTH))
-    {
-      error_print ("Error wile creating dir `%s'", CONF_DIR);
-      return;
-    }
-
-  n = PATH_MAX - strlen (preferences_path) - 1;
-  strncat (preferences_path, CONF_FILE, n);
-  preferences_path[PATH_MAX - 1] = 0;
-
-  debug_print (1, "Saving preferences to '%s'...", preferences_path);
-
-  builder = json_builder_new ();
-
-  json_builder_begin_object (builder);
-
-  json_builder_set_member_name (builder, CONF_REFRESH_AT_STARTUP);
   g_object_get (G_OBJECT (refresh_at_startup_button), "active",
-		&refresh_at_startup, NULL);
-  json_builder_add_boolean_value (builder, refresh_at_startup);
-
-  json_builder_set_member_name (builder, CONF_SHOW_ALL_COLUMNS);
+		&config.refresh_at_startup, NULL);
   g_object_get (G_OBJECT (show_all_columns_button), "active",
-		&show_all_columns, NULL);
-  json_builder_add_boolean_value (builder, show_all_columns);
+		&config.show_all_columns, NULL);
+  config.blocks = gtk_spin_button_get_value_as_int (blocks_spin_button);
+  config.timeout = gtk_spin_button_get_value_as_int (timeout_spin_button);
+  config.quality = gtk_combo_box_get_active (quality_combo_box);
+  config.pipewire_props = pipewire_props;
 
-  json_builder_set_member_name (builder, CONF_BLOCKS);
-  json_builder_add_int_value (builder,
-			      gtk_spin_button_get_value_as_int
-			      (blocks_spin_button));
-
-  json_builder_set_member_name (builder, CONF_TIMEOUT);
-  json_builder_add_int_value (builder,
-			      gtk_spin_button_get_value_as_int
-			      (timeout_spin_button));
-
-  json_builder_set_member_name (builder, CONF_QUALITY);
-  json_builder_add_int_value (builder,
-			      gtk_combo_box_get_active (quality_combo_box));
-
-  json_builder_set_member_name (builder, CONF_QUALITY);
-  json_builder_add_int_value (builder,
-			      gtk_combo_box_get_active (quality_combo_box));
-
-  json_builder_set_member_name (builder, CONF_PIPEWIRE_PROPS);
-  json_builder_add_string_value (builder, pipewire_props);
-
-  json_builder_end_object (builder);
-
-  gen = json_generator_new ();
-  root = json_builder_get_root (builder);
-  json_generator_set_root (gen, root);
-  json = json_generator_to_data (gen, NULL);
-
-  save_file_char (preferences_path, (guint8 *) json, strlen (json));
-
-  g_free (json);
-  json_node_free (root);
-  g_object_unref (gen);
-  g_object_unref (builder);
-  g_free (preferences_path);
+  ow_save_config (&config);
 }
 
 static void
 load_preferences ()
 {
-  GError *error;
-  JsonReader *reader;
-  JsonParser *parser = json_parser_new ();
-  gchar *preferences_file = get_expanded_dir (CONF_DIR CONF_FILE);
-  gboolean show_all_columns = FALSE;
-  gboolean refresh_at_startup = FALSE;
-  gint64 blocks = 24;
-  gint64 quality = 2;
-  gint64 timeout = 10;
+  struct ow_config config;
 
-  error = NULL;
-  json_parser_load_from_file (parser, preferences_file, &error);
-  if (error)
-    {
-      error_print ("Error wile loading preferences from `%s': %s",
-		   CONF_DIR CONF_FILE, error->message);
-      g_error_free (error);
-      g_object_unref (parser);
-      goto end;
-    }
+  ow_load_config (&config);
 
-  reader = json_reader_new (json_parser_get_root (parser));
-
-  if (json_reader_read_member (reader, CONF_REFRESH_AT_STARTUP))
-    {
-      refresh_at_startup = json_reader_get_boolean_value (reader);
-    }
-  json_reader_end_member (reader);
-
-  if (json_reader_read_member (reader, CONF_SHOW_ALL_COLUMNS))
-    {
-      show_all_columns = json_reader_get_boolean_value (reader);
-    }
-  json_reader_end_member (reader);
-
-  if (json_reader_read_member (reader, CONF_BLOCKS))
-    {
-      blocks = json_reader_get_int_value (reader);
-    }
-  json_reader_end_member (reader);
-
-  if (json_reader_read_member (reader, CONF_TIMEOUT))
-    {
-      timeout = json_reader_get_int_value (reader);
-    }
-  json_reader_end_member (reader);
-
-  if (json_reader_read_member (reader, CONF_QUALITY))
-    {
-      quality = json_reader_get_int_value (reader);
-    }
-  json_reader_end_member (reader);
-
-  if (json_reader_read_member (reader, CONF_PIPEWIRE_PROPS))
-    {
-      const gchar *v = json_reader_get_string_value (reader);
-      if (v && strlen (v))
-	{
-	  pipewire_props = strdup (v);
-	}
-    }
-  json_reader_end_member (reader);
-
-  g_object_unref (reader);
-  g_object_unref (parser);
-
-  g_free (preferences_file);
-
-end:
   g_object_set (G_OBJECT (refresh_at_startup_button), "active",
-		refresh_at_startup, NULL);
+		config.refresh_at_startup, NULL);
   g_object_set (G_OBJECT (show_all_columns_button), "active",
-		show_all_columns, NULL);
-  gtk_spin_button_set_value (blocks_spin_button, blocks);
-  gtk_spin_button_set_value (timeout_spin_button, timeout);
-  gtk_combo_box_set_active (quality_combo_box, quality);
-  update_all_metrics (show_all_columns);
+		config.show_all_columns, NULL);
+  gtk_spin_button_set_value (blocks_spin_button, config.blocks);
+  gtk_spin_button_set_value (timeout_spin_button, config.timeout);
+  gtk_combo_box_set_active (quality_combo_box, config.quality);
+
+  update_all_metrics (config.show_all_columns);
 }
 
 static gboolean
@@ -905,7 +740,7 @@ main (int argc, char *argv[])
   GtkBuilder *builder;
   struct sigaction action;
   gboolean refresh;
-  gchar * thanks;
+  gchar *thanks;
 
   while ((opt = getopt_long (argc, argv, "vh", options, &long_index)) != -1)
     {
@@ -966,7 +801,7 @@ main (int argc, char *argv[])
 
   if (g_file_get_contents (DATADIR "/THANKS", &thanks, NULL, NULL))
     {
-      gchar * last_new_line = strrchr (thanks, '\n');
+      gchar *last_new_line = strrchr (thanks, '\n');
       *last_new_line = 0;
       gchar **lines = g_strsplit (thanks, "\n", 0);
       gtk_about_dialog_add_credit_section (about_dialog,
