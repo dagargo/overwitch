@@ -40,6 +40,8 @@
 #define AUDIO_IN_INTERFACE 1
 #define AUDIO_IN_ALT_SETTING 3
 
+#define PAUSE_TO_BE_WAITING_USECS 500000
+
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
 #define INT32_TO_FLOAT32_SCALE ((float) (1.0f / INT32_MAX))
@@ -901,18 +903,10 @@ ow_engine_clear_buffers (struct ow_engine *engine)
 ow_err_t
 ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 {
-  int audio_thread = 0;
-
   engine->context = context;
-
-  if (!context->options)
-    {
-      return OW_GENERIC_ERROR;
-    }
 
   if (context->options & OW_ENGINE_OPTION_O2H_AUDIO)
     {
-      audio_thread = 1;
       if (!context->read_space)
 	{
 	  return OW_INIT_ERROR_NO_READ_SPACE;
@@ -929,11 +923,15 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 	{
 	  return OW_INIT_ERROR_NO_O2H_AUDIO_BUF;
 	}
+      if (!context->set_rt_priority)
+	{
+	  context->set_rt_priority = ow_set_thread_rt_priority;
+	  context->priority = OW_DEFAULT_RT_PROPERTY;
+	}
     }
 
   if (context->options & OW_ENGINE_OPTION_H2O_AUDIO)
     {
-      audio_thread = 1;
       if (!context->read_space)
 	{
 	  return OW_INIT_ERROR_NO_READ_SPACE;
@@ -945,6 +943,11 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
       if (!context->h2o_audio)
 	{
 	  return OW_INIT_ERROR_NO_H2O_AUDIO_BUF;
+	}
+      if (!context->set_rt_priority)
+	{
+	  context->set_rt_priority = ow_set_thread_rt_priority;
+	  context->priority = OW_DEFAULT_RT_PROPERTY;
 	}
     }
 
@@ -961,23 +964,22 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
       engine->status = OW_ENGINE_STATUS_READY;
     }
 
-  if (!context->set_rt_priority)
+  debug_print (1, "Starting thread...");
+  if (pthread_create (&engine->thread, NULL, run_audio, engine))
     {
-      context->set_rt_priority = ow_set_thread_rt_priority;
-      context->priority = OW_DEFAULT_RT_PROPERTY;
+      error_print ("Could not start thread");
+      return OW_GENERIC_ERROR;
+    }
+  pthread_setname_np (engine->thread, "engine-worker");
+  if (context->set_rt_priority)
+    {
+      context->set_rt_priority (engine->thread, engine->context->priority);
     }
 
-  if (audio_thread)
+  //Wait till the thread has reached the USB loop
+  while (ow_engine_get_status (engine) < OW_ENGINE_STATUS_WAIT)
     {
-      debug_print (1, "Starting audio thread...");
-      if (pthread_create (&engine->audio_thread, NULL, run_audio, engine))
-	{
-	  error_print ("Could not start audio thread");
-	  return OW_GENERIC_ERROR;
-	}
-      pthread_setname_np (engine->audio_thread, "engine-worker");
-      context->set_rt_priority (engine->audio_thread,
-				engine->context->priority);
+      usleep (PAUSE_TO_BE_WAITING_USECS);
     }
 
   return OW_OK;
@@ -986,7 +988,7 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 inline void
 ow_engine_wait (struct ow_engine *engine)
 {
-  pthread_join (engine->audio_thread, NULL);
+  pthread_join (engine->thread, NULL);
 }
 
 const char *

@@ -177,7 +177,7 @@ struct ow_engine
   size_t h2o_latency;
   size_t h2o_min_latency;
   size_t h2o_max_latency;
-  pthread_t audio_thread;
+  pthread_t thread;
   struct ow_device_desc device_desc;
   size_t h2o_transfer_size;
   size_t o2h_transfer_size;

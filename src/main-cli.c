@@ -45,6 +45,7 @@ static struct option options[] = {
   {"blocks-per-transfer", 1, NULL, 'b'},
   {"usb-transfer-timeout", 1, NULL, 't'},
   {"rt-priority", 1, NULL, 'p'},
+  {"rename", 1, NULL, 'r'},
   {"list-devices", 0, NULL, 'l'},
   {"verbose", 0, NULL, 'v'},
   {"help", 0, NULL, 'h'},
@@ -98,6 +99,7 @@ run_jclient (int device_num, const char *device_name, uint8_t bus,
   if (stop)
     {
       pthread_spin_unlock (&lock);
+      err = EXIT_SUCCESS;
       goto end;
     }
   pthread_spin_unlock (&lock);
@@ -130,14 +132,66 @@ end:
   return err;
 }
 
+static int
+rename_device (int device_num, const char *device_name, uint8_t bus,
+	       uint8_t address, const char *name)
+{
+  struct ow_usb_device *device;
+  struct ow_engine *engine;
+  struct ow_context context;
+  int err;
+
+  if (ow_get_usb_device_from_device_attrs
+      (device_num, device_name, bus, address, &device))
+    {
+      return EXIT_FAILURE;
+    }
+
+  err = ow_engine_init_from_bus_address (&engine, device->bus,
+					 device->address, OW_DEFAULT_BLOCKS,
+					 OW_DEFAULT_XFR_TIMEOUT);
+  free (device);
+  if (err)
+    {
+      goto end;
+    }
+
+  pthread_spin_lock (&lock);
+  if (stop)
+    {
+      pthread_spin_unlock (&lock);
+      err = EXIT_SUCCESS;
+      goto end;
+    }
+  pthread_spin_unlock (&lock);
+
+  context.dll = NULL;
+  context.read_space = NULL;
+  context.read = NULL;
+  context.h2o_audio = NULL;
+  context.options = 0;
+  context.set_rt_priority = NULL;
+
+  err = ow_engine_start (engine, &context);
+  if (!err)
+    {
+      ow_engine_set_overbridge_name (engine, name);
+      ow_engine_stop (engine);
+      ow_engine_wait (engine);
+    }
+
+end:
+  return err;
+}
+
 int
 main (int argc, char *argv[])
 {
   int opt, err = EXIT_SUCCESS;
   int vflg = 0, lflg = 0, dflg = 0, bflg = 0, pflg = 0, tflg = 0, nflg =
-    0, aflg = 0, errflg = 0;
+    0, aflg = 0, rflg = 0, errflg = 0;
   char *endstr;
-  char *device_name = NULL;
+  char *device_name = NULL, *name = NULL;
   uint8_t bus = 0, address = 0;
   int long_index = 0;
   ow_err_t ow_err;
@@ -157,7 +211,7 @@ main (int argc, char *argv[])
   sigaction (SIGUSR1, &action, NULL);
   sigaction (SIGUSR2, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "sn:d:a:q:b:t:p:lvh",
+  while ((opt = getopt_long (argc, argv, "sn:d:a:q:b:t:p:r:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
@@ -210,6 +264,10 @@ main (int argc, char *argv[])
 		       "Priority value must be in [0..99]. Using default JACK value...\n");
 	    }
 	  pflg++;
+	  break;
+	case 'r':
+	  name = optarg;
+	  rflg++;
 	  break;
 	case 'l':
 	  lflg++;
@@ -268,9 +326,23 @@ main (int argc, char *argv[])
       goto cleanup;
     }
 
+  if (rflg > 1)
+    {
+      fprintf (stderr, "Undetermined name\n");
+      err = EXIT_FAILURE;
+      goto cleanup;
+    }
+
   if (nflg + dflg + aflg == 1)
     {
-      return run_jclient (device_num, device_name, bus, address);
+      if (rflg)
+	{
+	  err = rename_device (device_num, device_name, bus, address, name);
+	}
+      else
+	{
+	  err = run_jclient (device_num, device_name, bus, address);
+	}
     }
   else
     {
