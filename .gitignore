@@ -20,7 +20,6 @@ missing
 stamp-h1
 test-driver
 *~
-*.html
 *.log
 *.o
 *.la
@@ -50,6 +49,11 @@ config.sub
 ltmain.sh
 ABOUT-NLS
 config.rpath
+docs/_site/
+docs/.sass-cache/
+docs/.jekyll-cache/
+docs/.jekyll-metadata
+docs/.bundle/
 po/Makefile
 po/Makefile.in
 po/Makefile.in.in

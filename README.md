@@ -1,5 +1,8 @@
 # Overwitch
 
+[//]: # (Do not modify this file manually.)
+[//]: # (This file is generated from the docs directory by executing `make`.)
+
 Overwitch is an Overbridge 2 device client for JACK (JACK Audio Connection Kit).
 
 This project is based on the Overbridge USB reverse engineering done by Stefan Rehm in [dtdump](https://github.com/droelfdroelf/dtdump).
@@ -268,7 +271,9 @@ Options:
   --help, -h
 ```
 
-## PipeWire
+## Configuration
+
+### PipeWire
 
 Depending on your PipeWire configuration, you might want to pass some additional information to Overwitch by setting the `PIPEWIRE_PROPS` environment variable. This value can be set in the GUI settings directly but any value passed at command launch will always take precedence over that configuration.
 
@@ -288,7 +293,7 @@ $ pw-cli info all | grep -i node.group
 $ PIPEWIRE_PROPS='{ node.group = "pro-audio-0" }' overwitch
 ```
 
-## Latency
+### Latency
 
 Device to JACK latency is different from JACK to device latency though they are very close. These latencies are the transferred frames to and from the device and, by default, these are performed in 24 blocks of 7 frames (168 frames).
 
@@ -296,7 +301,7 @@ Thus, the minimum theoretical latency is the device frames plus the JACK buffer 
 
 To keep latency as low as possible, the amount of blocks can be configured in the JACK clients. Values between 2 and 32 can be used.
 
-## Tuning
+### Tuning
 
 Although this is a matter of JACK, Ardour and OS tuning, Here you have some tips.
 
