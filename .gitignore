@@ -1,7 +1,7 @@
 /autom4te.cache/
 /config/
-Makefile
-Makefile.in
+/Makefile
+/Makefile.in
 aclocal.m4
 app.info
 compile
@@ -33,10 +33,16 @@ test-driver
 *.gcno
 *.gcda
 *.dirstamp
+res/Makefile
+res/Makefile.in
 res/overwitch.cmb.db
+src/Makefile
+src/Makefile.in
 src/overwitch
 src/overwitch-*
 src/.libs/*
+test/Makefile
+test/Makefile.in
 test/tests
 test/*.trs
 config.guess
@@ -44,6 +50,8 @@ config.sub
 ltmain.sh
 ABOUT-NLS
 config.rpath
+po/Makefile
+po/Makefile.in
 po/Makefile.in.in
 po/Makevars.template
 po/POTFILES
@@ -57,3 +65,7 @@ po/quot.sed
 po/remove-potcdate.sin
 po/stamp-po
 po/remove-potcdate.sed
+systemd/Makefile
+systemd/Makefile.in
+udev/Makefile
+udev/Makefile.in
