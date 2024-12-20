@@ -1,16 +1,23 @@
 title: Overwitch
-author: David García Goñi
-email: dagargo@gmail.com
-description: >-
-  JACK client for Overbridge devices
+author:
+  name: David García Goñi
+  email: "dagargo@gmail.com"
+description: JACK client for Overbridge devices
 baseurl: "/overwitch/"
 url: "https://dagargo.github.io/overwitch/"
-github_username:  dagargo
 
 # Build settings
 remote_theme: jekyll/minima
 plugins:
-  - jekyll-feed
   - jekyll-remote-theme
+
 minima:
   skin: auto
+  social_links:
+    - { platform: github,  user_url: "https://github.com/dagargo" }
+
+header_pages:
+  - installation.md
+  - usage.md
+  - configuration.md
+  - adding.md

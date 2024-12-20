@@ -2,16 +2,29 @@
 layout: home
 ---
 
-Overwitch is an Overbridge 2 device client for JACK (JACK Audio Connection Kit).
+Overwitch is a set of JACK (JACK Audio Connection Kit) clients for Overbridge 2 devices. Since PipeWire is ABI compatible with JACK, Overwitch works with PipeWire too.
+
+![Overwitch GUI screenshot](images/screenshot.png "Overwitch GUI")
 
 This project is based on the Overbridge USB reverse engineering done by Stefan Rehm in [dtdump](https://github.com/droelfdroelf/dtdump).
 
 The papers [Controlling adaptive resampling](https://kokkinizita.linuxaudio.org/papers/adapt-resamp.pdf) and [Using a DLL to filter time](https://kokkinizita.linuxaudio.org/papers/usingdll.pdf) by Fons Adriaensen have been very helpful and inspiring, as well as his own implementation done in the zita resamplers found in the [alsa tools](https://github.com/jackaudio/tools) project.
 
-At the moment, it provides support for all Overbridge 2 devices, which are Analog Four MKII, Analog Rytm MKII, Digitakt, Digitone, Digitone Keys, Analog Heat, Analog Heat MKII and Syntakt.
+At the moment, it provides support for all Overbridge 2 devices, which are Analog Four MKII, Analog Rytm MKII, Digitakt, Digitakt II, Digitone, Digitone Keys, Analog Heat, Analog Heat MKII, Analog Heat +FX and Syntakt.
 
 Overbridge 1 devices, which are Analog Four MKI, Analog Keys and Analog Rytm MKI, are not supported yet.
 
-Overwitch consists of 4 different binaries: `overwitch`, which is a GUI application, `overwitch-cli` which offers the same functionality for the command line; and `overwitch-play` and `overwitch-record` which do not integrate with JACK at all but stream the audio from and to a WAVE file.
+Overwitch consists of 5 different binaries divided in 2 categories: multi-device applications (they can **not** be used simultaneously) and single-device utilities.
+
+Multi-device applications:
+
+* `overwitch`, which is a GUI application.
+* `overwitch-service`, which is a CLI application meant to be used as a systemd service.
+
+Utilities:
+
+* `overwitch-cli`, which is a single-client program.
+* `overwitch-play`, which plays multitrack audio thru Overbridge devices.
+* `overwitch-record`, which records multitrack audio from Overbridge devices.
 
 For a device manager application for Elektron devices, check [Elektroid](https://dagargo.github.io/elektroid/).

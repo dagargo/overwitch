@@ -3,17 +3,30 @@
 [//]: # (Do not modify this file manually.)
 [//]: # (This file is generated from the docs directory by executing `make`.)
 
-Overwitch is an Overbridge 2 device client for JACK (JACK Audio Connection Kit).
+Overwitch is a set of JACK (JACK Audio Connection Kit) clients for Overbridge 2 devices. Since PipeWire is ABI compatible with JACK, Overwitch works with PipeWire too.
+
+![Overwitch GUI screenshot](docs/images/screenshot.png "Overwitch GUI")
 
 This project is based on the Overbridge USB reverse engineering done by Stefan Rehm in [dtdump](https://github.com/droelfdroelf/dtdump).
 
 The papers [Controlling adaptive resampling](https://kokkinizita.linuxaudio.org/papers/adapt-resamp.pdf) and [Using a DLL to filter time](https://kokkinizita.linuxaudio.org/papers/usingdll.pdf) by Fons Adriaensen have been very helpful and inspiring, as well as his own implementation done in the zita resamplers found in the [alsa tools](https://github.com/jackaudio/tools) project.
 
-At the moment, it provides support for all Overbridge 2 devices, which are Analog Four MKII, Analog Rytm MKII, Digitakt, Digitone, Digitone Keys, Analog Heat, Analog Heat MKII and Syntakt.
+At the moment, it provides support for all Overbridge 2 devices, which are Analog Four MKII, Analog Rytm MKII, Digitakt, Digitakt II, Digitone, Digitone Keys, Analog Heat, Analog Heat MKII, Analog Heat +FX and Syntakt.
 
 Overbridge 1 devices, which are Analog Four MKI, Analog Keys and Analog Rytm MKI, are not supported yet.
 
-Overwitch consists of 4 different binaries: `overwitch`, which is a GUI application, `overwitch-cli` which offers the same functionality for the command line; and `overwitch-play` and `overwitch-record` which do not integrate with JACK at all but stream the audio from and to a WAVE file.
+Overwitch consists of 5 different binaries divided in 2 categories: multi-device applications (they can **not** be used simultaneously) and single-device utilities.
+
+Multi-device applications:
+
+* `overwitch`, which is a GUI application.
+* `overwitch-service`, which is a CLI application meant to be used as a systemd service.
+
+Utilities:
+
+* `overwitch-cli`, which is a single-client program.
+* `overwitch-play`, which plays multitrack audio thru Overbridge devices.
+* `overwitch-record`, which records multitrack audio from Overbridge devices.
 
 For a device manager application for Elektron devices, check [Elektroid](https://dagargo.github.io/elektroid/).
 
@@ -22,7 +35,7 @@ For a device manager application for Elektron devices, check [Elektroid](https:/
 As with other autotools project, you need to run the commands below. There are a few options available.
 
 * If you just want to compile the command line applications, pass `CLI_ONLY=yes` to `./configure`.
-* If you do not want to use the JSON devices files, pass `JSON_DEVS_FILE=no` to `./configure`. This is useful to eliminate GLIB dependencies when building the library. In this case, the devices configuration used are the ones in the source code. See the [`adding devices`](#adding-devices) section for more information.
+* If you do not want to use the JSON devices files, pass `JSON_DEVS_FILE=no` to `./configure`. This is useful to eliminate GLIB dependencies when building the library. In this case, the devices configuration used are the ones in the source code.
 
 ```
 autoreconf --install
@@ -53,6 +66,12 @@ For Fedora, run `sudo yum install automake libtool libusb1-devel jack-audio-conn
 
 As this will install `jackd2`, you would be asked to configure it to be run with real time priority. Be sure to answer yes. With this, the `audio` group would be able to run processes with real time priority. Be sure to be in the `audio` group too.
 
+### systemd service
+
+For embedded systems or users not wanting to use the GUI, it is recommended to install the systemd service unit by running `sudo make install` from the `systemd` directory.
+
+To allow the service to be started at boot, running `systemctl --user enable overwitch.service` is needed.
+
 ## Usage
 
 Overwitch contains three JACK clients, one for the desktop, one for the command line and one to be used as a service. Additionally, a recording and playing utilities for the command line are also included.
@@ -64,13 +83,29 @@ Regarding the JACK clients, latency needs to be under control and it can be tune
 
 ### overwitch
 
-The GUI is self explanatory and does not requiere any parameter passed from the command line.
-
-If you are running PipeWire, go to the [PipeWire section](#PipeWire) for additional information.
+The GUI is self explanatory and does not requiere any parameter passed from the command line. It runs all found Overbridge device in different JACK clients.
 
 Notice that once an Overbridge device is running the options can not be changed so you will need to stop the running instances and refresh the list.
 
 It is possible to rename Overbridge devices by simply editing its name on the list. Still, as JACK devices can not be renamed while running, the device will be restarted.
+
+### overwitch-service
+
+Using `overwitch-service` allows having a systemd unit which uses device hotplugging. This will load the configuration from the same config file the GUI uses.
+
+This is a configuration example with the recommended properties. Not all the properties are shown here.
+
+```
+$ cat ~/.config/overwitch/preferences.json
+{
+  "blocks" : 8,
+  "timeout" : 10,
+  "quality" : 2,
+  "pipewireProps" : "{ node.group = \"pro-audio-0\" }"
+}
+```
+
+Obviously, when running the service there is no need for the GUI whatsoever.
 
 ### overwitch-cli
 
@@ -126,8 +161,7 @@ DEBUG:jclient.c:159:jclient_jack_client_registration_cb: JACK client Digitakt OG
 You can list all the available options with `-h`.
 
 ```
-$ overwitch-cli -h
-overwitch 2.0
+$ overwitch 2.0
 Usage: overwitch-cli [options]
 Options:
   --use-device-number, -n value
@@ -137,49 +171,11 @@ Options:
   --blocks-per-transfer, -b value
   --usb-transfer-timeout, -t value
   --rt-priority, -p value
+  --rename, -r value
   --list-devices, -l
   --verbose, -v
   --help, -h
 ```
-
-### overwitch-service
-
-Using `overwitch-service` allows having a systemd unit which uses device hotplugging. This will load the configuration from the same config file the GUI uses.
-
-This is a configuration example with the recommended properties. Not all the properties are used here.
-
-```
-$ cat ~/.config/overwitch/preferences.json
-{
-  "blocks" : 8,
-  "timeout" : 10,
-  "quality" : 2,
-  "pipewireProps" : "{ node.group = \"pro-audio-0\" }"
-}
-```
-
-This is a service example.
-
-```
-[Unit]
-Description=Overwitch service
-After=pipewire.service
-Requires=pipewire.service
-
-[Service]
-GuessMainPID=true
-ExecStart=overwitch-service
-Restart=on-failure
-
-[Install]
-WantedBy=default.target
-```
-
-Running `sudo make install` from the `systemd` directory will install the above service.
-
-To allow the service to be started at boot, running `systemctl --user enable overwitch.service` is needed.
-
-Obviously, when running the service there is no need for the GUI whatsoever.
 
 ### overwitch-play
 
@@ -275,9 +271,13 @@ Options:
 
 ### PipeWire
 
-Depending on your PipeWire configuration, you might want to pass some additional information to Overwitch by setting the `PIPEWIRE_PROPS` environment variable. This value can be set in the GUI settings directly but any value passed at command launch will always take precedence over that configuration.
+Depending on your PipeWire configuration, you might want to pass some additional information to the different binaries by setting the `PIPEWIRE_PROPS` environment variable.
 
-Under PipeWire, a JACK client always follows a driver and when no connections are created it follows the "Dummy-Driver". This might cause some latency issues when making connections as the clients will transit to a new driver, making the timing measurements to wobble for a moment and ultimately increasing the latency.
+This value can be set in the GUI settings directly but any value passed at command launch will always take precedence over that configuration.
+
+The proper way of setting this when using `overwitch-service` is in `~/.config/overwitch/preferences.json`, which is the same file the GUI uses.
+
+Under PipeWire, a JACK client always follows a driver and when no connections are created it follows the "Dummy-Driver". This might cause some latency issues when making connections as the clients will transit to a new driver, making the timing measurements to wobble for a moment and ultimately increasing the latency,
 
 To avoid that, here are some recommendations. Still, always try to follow the official PipeWire documentation.
 
@@ -370,7 +370,7 @@ Although you can run Overwitch with verbose output this is **not recommended** u
 Devices can be specified in two ways.
 
 * Outside the library, in `JSON` files. Useful for a typical desktop usage as devices can be user-defined, so no need to recompile the code or wait for new releases.
-* Inside the library, in `C` code. Useful when using the `liboverwitch` library and `GLib` dependencies are unwanted. Notice that the library is compiled with `JSON` support by default. See the [`Installation`](#Installation) section.
+* Inside the library, in `C` code. Useful when using the `liboverwitch` library and `GLib` dependencies are unwanted. Notice that the library is compiled with `JSON` support by default.
 
 ### Outside the library
 

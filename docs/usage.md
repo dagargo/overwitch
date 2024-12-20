@@ -15,13 +15,29 @@ Regarding the JACK clients, latency needs to be under control and it can be tune
 
 ### overwitch
 
-The GUI is self explanatory and does not requiere any parameter passed from the command line.
-
-If you are running PipeWire, go to the [PipeWire section](#PipeWire) for additional information.
+The GUI is self explanatory and does not requiere any parameter passed from the command line. It runs all found Overbridge device in different JACK clients.
 
 Notice that once an Overbridge device is running the options can not be changed so you will need to stop the running instances and refresh the list.
 
 It is possible to rename Overbridge devices by simply editing its name on the list. Still, as JACK devices can not be renamed while running, the device will be restarted.
+
+### overwitch-service
+
+Using `overwitch-service` allows having a systemd unit which uses device hotplugging. This will load the configuration from the same config file the GUI uses.
+
+This is a configuration example with the recommended properties. Not all the properties are shown here.
+
+```
+$ cat ~/.config/overwitch/preferences.json
+{
+  "blocks" : 8,
+  "timeout" : 10,
+  "quality" : 2,
+  "pipewireProps" : "{ node.group = \"pro-audio-0\" }"
+}
+```
+
+Obviously, when running the service there is no need for the GUI whatsoever.
 
 ### overwitch-cli
 
@@ -77,8 +93,7 @@ DEBUG:jclient.c:159:jclient_jack_client_registration_cb: JACK client Digitakt OG
 You can list all the available options with `-h`.
 
 ```
-$ overwitch-cli -h
-overwitch 2.0
+$ overwitch 2.0
 Usage: overwitch-cli [options]
 Options:
   --use-device-number, -n value
@@ -88,49 +103,11 @@ Options:
   --blocks-per-transfer, -b value
   --usb-transfer-timeout, -t value
   --rt-priority, -p value
+  --rename, -r value
   --list-devices, -l
   --verbose, -v
   --help, -h
 ```
-
-### overwitch-service
-
-Using `overwitch-service` allows having a systemd unit which uses device hotplugging. This will load the configuration from the same config file the GUI uses.
-
-This is a configuration example with the recommended properties. Not all the properties are used here.
-
-```
-$ cat ~/.config/overwitch/preferences.json
-{
-  "blocks" : 8,
-  "timeout" : 10,
-  "quality" : 2,
-  "pipewireProps" : "{ node.group = \"pro-audio-0\" }"
-}
-```
-
-This is a service example.
-
-```
-[Unit]
-Description=Overwitch service
-After=pipewire.service
-Requires=pipewire.service
-
-[Service]
-GuessMainPID=true
-ExecStart=overwitch-service
-Restart=on-failure
-
-[Install]
-WantedBy=default.target
-```
-
-Running `sudo make install` from the `systemd` directory will install the above service.
-
-To allow the service to be started at boot, running `systemctl --user enable overwitch.service` is needed.
-
-Obviously, when running the service there is no need for the GUI whatsoever.
 
 ### overwitch-play
 
