@@ -644,6 +644,7 @@ overwitch_exit ()
     }
   stop_control_client ();
   save_preferences ();
+  g_free (pipewire_props);
   gtk_window_destroy (GTK_WINDOW (main_window));
 }
 
