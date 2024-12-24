@@ -314,6 +314,8 @@ load_preferences ()
 
   ow_load_config (&config);
 
+  pipewire_props = config.pipewire_props;
+
   g_object_set (G_OBJECT (refresh_at_startup_button), "active",
 		config.refresh_at_startup, NULL);
   g_object_set (G_OBJECT (show_all_columns_button), "active",
@@ -704,6 +706,7 @@ overwitch_exit ()
     }
   stop_control_client ();
   save_preferences ();
+  g_free (pipewire_props);
   g_application_quit (G_APPLICATION(app));
 }
 

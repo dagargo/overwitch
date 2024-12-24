@@ -260,6 +260,15 @@ hotplug_runner (void *data)
 static void
 overwitch_startup (GApplication *app, gpointer *user_data)
 {
+  ow_load_config (&config);
+
+  if (config.pipewire_props)
+    {
+      debug_print (1, "Setting %s to '%s'...", PIPEWIRE_PROPS_ENV_VAR,
+		   config.pipewire_props);
+      setenv (PIPEWIRE_PROPS_ENV_VAR, config.pipewire_props, TRUE);
+    }
+
   if (start_all ())
     {
       return;
@@ -295,15 +304,6 @@ main (gint argc, gchar *argv[])
   action.sa_flags = 0;
   sigaction (SIGTERM, &action, NULL);
 
-  ow_load_config (&config);
-
-  if (config.pipewire_props)
-    {
-      debug_print (1, "Setting %s to '%s'...", PIPEWIRE_PROPS_ENV_VAR,
-		   config.pipewire_props);
-      setenv (PIPEWIRE_PROPS_ENV_VAR, config.pipewire_props, TRUE);
-    }
-
   pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
 
   app = g_application_new (PACKAGE_SERVICE_NAME, G_APPLICATION_DEFAULT_FLAGS);
@@ -314,6 +314,8 @@ main (gint argc, gchar *argv[])
   status = g_application_run (G_APPLICATION (app), argc, argv);
 
   g_object_unref (app);
+
+  g_free(config.pipewire_props);
 
   wait_all ();
 
