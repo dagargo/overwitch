@@ -49,8 +49,8 @@ struct _OverwitchDeviceClass
 };
 
 OverwitchDevice *overwitch_device_new (const gpointer instance,
+				       const gchar * overbridge_name,
 				       const gchar * name,
-				       const gchar * device,
 				       const guint bus, const guint address);
 
 void overwitch_device_set_state (OverwitchDevice * d, const gchar * status,

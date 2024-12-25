@@ -291,7 +291,6 @@ jclient_init (struct jclient *jclient, struct ow_device *device,
 {
   ow_err_t err;
   struct ow_resampler *resampler;
-  struct ow_engine *engine;
 
   jclient->device = device;
   jclient->priority = priority;
@@ -310,8 +309,6 @@ jclient_init (struct jclient *jclient, struct ow_device *device,
     }
 
   jclient->resampler = resampler;
-  engine = ow_resampler_get_engine (jclient->resampler);
-  jclient->name = ow_engine_get_overbridge_name (engine);
 
   return 0;
 }
@@ -329,6 +326,7 @@ jclient_run (struct jclient *jclient)
   jack_status_t status;
   ow_err_t err = OW_OK;
   char *client_name;
+  const char *name;
   struct ow_engine *engine;
   const struct ow_device_desc *desc;
 
@@ -339,9 +337,9 @@ jclient_run (struct jclient *jclient)
 
   engine = ow_resampler_get_engine (jclient->resampler);
   desc = &ow_engine_get_device (engine)->desc;
+  name = ow_engine_get_overbridge_name (engine);
 
-  jclient->client = jack_client_open (jclient->name, JackNoStartServer,
-				      &status, NULL);
+  jclient->client = jack_client_open (name, JackNoStartServer, &status, NULL);
   if (jclient->client == NULL)
     {
       if (status & JackServerFailed)

@@ -439,8 +439,10 @@ refresh_all (GtkWidget *object, gpointer data)
   struct ow_device *devices, *device;
   struct ow_resampler_reporter *reporter;
   struct overwitch_instance *instance;
+  struct ow_engine *engine;
   guint blocks, xfr_timeout, quality;
   size_t devices_count;
+  const gchar *name;
   ow_err_t err;
 
   remove_stopped_instances ();
@@ -498,10 +500,12 @@ refresh_all (GtkWidget *object, gpointer data)
       reporter->callback = (ow_resampler_report_t) set_report_data;
       reporter->data = instance;
 
-      debug_print (1, "Adding %s...", instance->jclient.name);
+      engine = ow_resampler_get_engine (instance->jclient.resampler);
+      name = ow_engine_get_overbridge_name (engine);
 
-      OverwitchDevice *dev = overwitch_device_new (instance,
-						   instance->jclient.name,
+      debug_print (1, "Adding %s...", name);
+
+      OverwitchDevice *dev = overwitch_device_new (instance, name,
 						   device->desc.name,
 						   device->bus,
 						   device->address);
@@ -533,10 +537,12 @@ stop_all (GtkWidget *object, gpointer data)
       OverwitchDevice *dev = g_list_model_get_item (model, i);
       struct overwitch_instance *instance = dev->instance;
       struct ow_resampler *resampler = instance->jclient.resampler;
+      struct ow_engine *engine = ow_resampler_get_engine (resampler);
       ow_resampler_status_t status = ow_resampler_get_status (resampler);
+      const gchar *name = ow_engine_get_overbridge_name (engine);
       if (status != OW_RESAMPLER_STATUS_ERROR)
 	{
-	  debug_print (1, "Stopping %s...", instance->jclient.name);
+	  debug_print (1, "Stopping %s...", name);
 	  stop_instance (instance);
 	}
       jclient_wait (&instance->jclient);

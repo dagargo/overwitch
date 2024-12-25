@@ -25,6 +25,7 @@
 #include "jclient.h"
 #include "utils.h"
 #include "preferences.h"
+#include "message.h"
 
 #define POOLED_JCLIENT_LEN 64
 
@@ -49,6 +50,15 @@ static gint hotplug_running;
 static pthread_t hotplug_thread;
 static gint stop_all;
 static GApplication *app;
+
+static GDBusNodeInfo *introspection_data = NULL;
+
+static const gchar introspection_xml[] =
+  "<node>"
+  "  <interface name='" PACKAGE_SERVICE_NAME "Service" "'>"
+  "    <method name='GetState'>"
+  "      <arg type='s' name='status' direction='out'/>"
+  "    </method>" "  </interface>" "</node>";
 
 static void
 signal_handler (int signum)
@@ -259,8 +269,70 @@ hotplug_runner (void *data)
 }
 
 static void
+handle_method_call (GDBusConnection *connection, const gchar *sender,
+		    const gchar *object_path, const gchar *interface_name,
+		    const gchar *method_name, GVariant *parameters,
+		    GDBusMethodInvocation *invocation, gpointer user_data)
+{
+  if (g_strcmp0 (method_name, "GetState") == 0)
+    {
+      struct pooled_jclient *pjc = jcpool;
+      struct ow_resampler *resampler = NULL;
+
+      JsonBuilder *builder = message_state_builder_start ();
+
+      for (guint i = 0; i < POOLED_JCLIENT_LEN; i++)
+	{
+	  pthread_spin_lock (&lock);
+	  if (pjc->status == PJC_RUNNING)
+	    {
+	      struct ow_resampler_state state;
+	      resampler = pjc->jclient.resampler;
+	      struct ow_engine *engine = ow_resampler_get_engine (resampler);
+	      const struct ow_device *device = ow_engine_get_device (engine);
+	      const gchar *name = ow_engine_get_overbridge_name (engine);
+	      ow_resampler_get_state (resampler, &state);
+	      message_state_builder_add_device (builder, i, name, device,
+						&state);
+	    }
+	  pthread_spin_unlock (&lock);
+
+	  pjc++;
+	}
+
+      gint64 bufsize = 0;
+      gint64 samplerate = 0;
+      gdouble target_delay_ms = 0;
+
+      if (resampler)
+	{
+	  samplerate = ow_resampler_get_samplerate (resampler);
+	  bufsize = ow_resampler_get_buffer_size (resampler);
+	  target_delay_ms = ow_resampler_get_target_delay_ms (resampler);
+	}
+
+      gchar *response = message_state_builder_end (builder, samplerate,
+						   bufsize, target_delay_ms);
+
+      GVariant *v = g_variant_new ("(s)", response);
+      g_dbus_method_invocation_return_value (invocation, v);
+
+      g_free (response);
+    }
+}
+
+static const GDBusInterfaceVTable interface_vtable = {
+  handle_method_call,
+  NULL,
+  NULL,
+};
+
+static void
 overwitch_startup (GApplication *app, gpointer *user_data)
 {
+  guint err;
+  GDBusConnection *conn;
+
   ow_load_preferences (&preferences);
 
   if (preferences.pipewire_props)
@@ -270,9 +342,21 @@ overwitch_startup (GApplication *app, gpointer *user_data)
       setenv (PIPEWIRE_PROPS_ENV_VAR, preferences.pipewire_props, TRUE);
     }
 
+  introspection_data = g_dbus_node_info_new_for_xml (introspection_xml, NULL);
+  conn = g_application_get_dbus_connection (app);
+  err = g_dbus_connection_register_object (conn,
+					   "/io/github/dagargo/OverwitchService",
+					   introspection_data->interfaces[0],
+					   &interface_vtable, NULL,
+					   NULL, NULL);
+  if (!err)
+    {
+      goto end;
+    }
+
   if (start_all ())
     {
-      return;
+      goto end;
     }
 
   g_application_hold (app);
@@ -285,6 +369,9 @@ overwitch_startup (GApplication *app, gpointer *user_data)
     {
       pthread_setname_np (hotplug_thread, "hotplug-worker");
     }
+
+end:
+  g_dbus_node_info_unref (introspection_data);
 }
 
 static void
@@ -307,7 +394,8 @@ main (gint argc, gchar *argv[])
 
   pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
 
-  app = g_application_new (PACKAGE_SERVICE_NAME, G_APPLICATION_DEFAULT_FLAGS);
+  app = g_application_new (PACKAGE_SERVICE_NAME "Service",
+			   G_APPLICATION_DEFAULT_FLAGS);
 
   g_signal_connect (app, "startup", G_CALLBACK (overwitch_startup), NULL);
   g_signal_connect (app, "activate", G_CALLBACK (overwitch_activate), NULL);

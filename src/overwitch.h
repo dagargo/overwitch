@@ -285,7 +285,11 @@ void ow_resampler_stop (struct ow_resampler *resampler);
 
 void ow_resampler_set_buffer_size (struct ow_resampler *resampler, uint32_t);
 
+uint32_t ow_resampler_get_buffer_size (struct ow_resampler *resampler);
+
 void ow_resampler_set_samplerate (struct ow_resampler *resampler, uint32_t);
+
+uint32_t ow_resampler_get_samplerate (struct ow_resampler *resampler);
 
 size_t ow_resampler_get_o2h_frame_size (struct ow_resampler *resampler);
 

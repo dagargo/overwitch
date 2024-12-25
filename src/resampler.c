@@ -624,6 +624,12 @@ ow_resampler_set_buffer_size (struct ow_resampler *resampler,
     }
 }
 
+uint32_t
+ow_resampler_get_buffer_size (struct ow_resampler *resampler)
+{
+  return resampler->bufsize;
+}
+
 inline void
 ow_resampler_set_samplerate (struct ow_resampler *resampler,
 			     uint32_t samplerate)
@@ -640,6 +646,12 @@ ow_resampler_set_samplerate (struct ow_resampler *resampler,
 	  resampler->samplerate = samplerate;
 	}
     }
+}
+
+uint32_t
+ow_resampler_get_samplerate (struct ow_resampler *resampler)
+{
+  return resampler->samplerate;
 }
 
 inline void

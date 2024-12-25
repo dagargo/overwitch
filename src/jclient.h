@@ -32,7 +32,6 @@ typedef void (*jclient_notify_status_t) (int, jack_nframes_t, jack_nframes_t);
 struct jclient
 {
   //JACK stuff
-  const char *name;
   jack_client_t *client;
   jack_port_t **output_ports;
   jack_port_t **input_ports;
