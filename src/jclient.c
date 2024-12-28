@@ -282,8 +282,6 @@ void
 jclient_stop (struct jclient *jclient)
 {
   debug_print (1, "Stopping client...");
-
-  ow_resampler_report_status (jclient->resampler);
   ow_resampler_stop (jclient->resampler);
 }
 

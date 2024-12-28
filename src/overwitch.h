@@ -56,18 +56,9 @@ typedef void (*ow_dll_overbridge_update_t) (void *, uint32_t, uint64_t);
 
 typedef void (*ow_set_rt_priority_t) (pthread_t, int);
 
-struct ow_resampler_latency
-{
-  double o2h;
-  double o2h_min;
-  double o2h_max;
-  double h2o;
-  double h2o_min;
-  double h2o_max;
-};
+struct ow_resampler_state;
 
-typedef void (*ow_resampler_report_t) (void *, struct ow_resampler_latency *,
-				       double, double);
+typedef void (*ow_resampler_report_t) (void *, struct ow_resampler_state *);
 
 typedef enum
 {
@@ -182,6 +173,19 @@ struct ow_resampler_reporter
   void *data;
 };
 
+struct ow_resampler_state
+{
+  double latency_o2h;
+  double latency_o2h_min;
+  double latency_o2h_max;
+  double latency_h2o;
+  double latency_h2o_min;
+  double latency_h2o_max;
+  double ratio_o2h;
+  double ratio_h2o;
+  ow_resampler_status_t status;
+};
+
 typedef void (*ow_hotplug_callback_t) (uint8_t, uint8_t);
 
 struct ow_engine;
@@ -250,8 +254,6 @@ ow_err_t ow_resampler_start (struct ow_resampler *, struct ow_context *);
 void ow_resampler_wait (struct ow_resampler *);
 
 void ow_resampler_destroy (struct ow_resampler *);
-
-void ow_resampler_report_status (struct ow_resampler *);
 
 void ow_resampler_clear_buffers (struct ow_resampler *);
 

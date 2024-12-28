@@ -37,12 +37,12 @@
 
 #define RESAMPLER_MAX(a,b) (((a) > (b)) ? (a) : (b))
 
-inline void
-ow_resampler_report_status (struct ow_resampler *resampler)
+static inline void
+ow_resampler_report_state (struct ow_resampler *resampler)
 {
   uint32_t o2h_latency_s, o2h_min_latency_s, o2h_max_latency_s, h2o_latency_s,
     h2o_min_latency_s, h2o_max_latency_s;
-  struct ow_resampler_latency latency;
+  struct ow_resampler_state state;
   ow_engine_status_t status;
 
   ow_resampler_get_o2h_latency (resampler, &o2h_latency_s, &o2h_min_latency_s,
@@ -57,48 +57,52 @@ ow_resampler_report_status (struct ow_resampler *resampler)
 
   if (status == OW_ENGINE_STATUS_RUN)
     {
-      latency.o2h = o2h_latency_s * OB_PERIOD_MS;
-      latency.o2h_max = o2h_max_latency_s * OB_PERIOD_MS;
-      latency.o2h_min = o2h_min_latency_s * OB_PERIOD_MS;
+      state.latency_o2h = o2h_latency_s * OB_PERIOD_MS;
+      state.latency_o2h_max = o2h_max_latency_s * OB_PERIOD_MS;
+      state.latency_o2h_min = o2h_min_latency_s * OB_PERIOD_MS;
 
       if (h2o_enabled)
 	{
-	  latency.h2o = h2o_latency_s * OB_PERIOD_MS;
-	  latency.h2o_max = h2o_max_latency_s * OB_PERIOD_MS;
-	  latency.h2o_min = h2o_min_latency_s * OB_PERIOD_MS;
+	  state.latency_h2o = h2o_latency_s * OB_PERIOD_MS;
+	  state.latency_h2o_max = h2o_max_latency_s * OB_PERIOD_MS;
+	  state.latency_h2o_min = h2o_min_latency_s * OB_PERIOD_MS;
 	}
       else
 	{
-	  latency.h2o = -1.0;
-	  latency.h2o_max = -1.0;
-	  latency.h2o_min = -1.0;
+	  state.latency_h2o = -1.0;
+	  state.latency_h2o_max = -1.0;
+	  state.latency_h2o_min = -1.0;
 	}
     }
   else
     {
-      latency.o2h = -1.0;
-      latency.o2h_max = -1.0;
-      latency.o2h_min = -1.0;
+      state.latency_o2h = -1.0;
+      state.latency_o2h_max = -1.0;
+      state.latency_o2h_min = -1.0;
 
-      latency.h2o = -1.0;
-      latency.h2o_max = -1.0;
-      latency.h2o_min = -1.0;
+      state.latency_h2o = -1.0;
+      state.latency_h2o_max = -1.0;
+      state.latency_h2o_min = -1.0;
     }
+
+  state.ratio_o2h = resampler->o2h_ratio;
+  state.ratio_h2o = resampler->h2o_ratio;
+
+  state.status = resampler->status;
 
   if (debug_level > 1)
     {
       fprintf (stderr,
 	       "%s (%s): o2h latency: %4.1f [%4.1f, %4.1f] ms; h2o latency: %4.1f [%4.1f, %4.1f] ms, o2h ratio: %f\n",
 	       resampler->engine->name, resampler->engine->overbridge_name,
-	       latency.o2h, latency.o2h_min, latency.o2h_max, latency.h2o,
-	       latency.h2o_min, latency.h2o_max, resampler->dll.ratio);
+	       state.latency_o2h, state.latency_o2h_min,
+	       state.latency_o2h_max, state.latency_h2o,
+	       state.latency_h2o_min, state.latency_h2o_max, state.ratio_o2h);
     }
 
   if (resampler->reporter.callback)
     {
-      resampler->reporter.callback (resampler->reporter.data, &latency,
-				    resampler->o2h_ratio,
-				    resampler->h2o_ratio);
+      resampler->reporter.callback (resampler->reporter.data, &state);
     }
 }
 
@@ -385,7 +389,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 				   resampler->samplerate);
 
       resampler->status = OW_RESAMPLER_STATUS_BOOT;
-      ow_resampler_report_status (resampler);
+      ow_resampler_report_state (resampler);
 
       resampler->log_cycles = 0;
 
@@ -405,7 +409,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_ERROR);
 
       resampler->status = OW_RESAMPLER_STATUS_ERROR;
-      ow_resampler_report_status (resampler);
+      ow_resampler_report_state (resampler);
 
       return 1;
     }
@@ -450,7 +454,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   resampler->log_cycles++;
   if (resampler->log_cycles == resampler->log_control_cycles)
     {
-      ow_resampler_report_status (resampler);
+      ow_resampler_report_state (resampler);
       resampler->log_cycles = 0;
     }
 
@@ -545,7 +549,7 @@ ow_resampler_wait (struct ow_resampler *resampler)
     {
       resampler->status = OW_RESAMPLER_STATUS_STOP;
     }
-  ow_resampler_report_status (resampler);
+  ow_resampler_report_state (resampler);
 }
 
 inline void

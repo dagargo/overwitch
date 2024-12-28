@@ -37,9 +37,7 @@
 
 struct overwitch_instance
 {
-  struct ow_resampler_latency latency;
-  gdouble o2j_ratio;
-  gdouble j2o_ratio;
+  struct ow_resampler_state state;
   struct jclient jclient;
 };
 
@@ -170,7 +168,6 @@ set_overwitch_instance_status (gpointer data)
   struct overwitch_instance *instance = data;
   static gchar o2j_latency_s[OW_LABEL_MAX_LEN];
   static gchar j2o_latency_s[OW_LABEL_MAX_LEN];
-  ow_resampler_status_t status;
   const char *status_string;
 
   GListModel *model = G_LIST_MODEL (status_list_store);
@@ -182,35 +179,35 @@ set_overwitch_instance_status (gpointer data)
       if (instance->jclient.bus == dev->bus
 	  && instance->jclient.address == dev->address)
 	{
-	  if (instance->latency.o2h >= 0)
+	  if (instance->state.latency_o2h >= 0)
 	    {
 	      g_snprintf (o2j_latency_s, OW_LABEL_MAX_LEN,
-			  "%.1f [%.1f, %.1f] ms", instance->latency.o2h,
-			  instance->latency.o2h_min,
-			  instance->latency.o2h_max);
+			  "%.1f [%.1f, %.1f] ms", instance->state.latency_o2h,
+			  instance->state.latency_o2h_min,
+			  instance->state.latency_o2h_max);
 	    }
 	  else
 	    {
 	      o2j_latency_s[0] = '\0';
 	    }
 
-	  if (instance->latency.h2o >= 0)
+	  if (instance->state.latency_h2o >= 0)
 	    {
 	      g_snprintf (j2o_latency_s, OW_LABEL_MAX_LEN,
-			  "%.1f [%.1f, %.1f] ms", instance->latency.h2o,
-			  instance->latency.h2o_min,
-			  instance->latency.h2o_max);
+			  "%.1f [%.1f, %.1f] ms", instance->state.latency_h2o,
+			  instance->state.latency_h2o_min,
+			  instance->state.latency_h2o_max);
 	    }
 	  else
 	    {
 	      j2o_latency_s[0] = '\0';
 	    }
 
-	  status = ow_resampler_get_status (instance->jclient.resampler);
-	  status_string = get_status_string (status);
+	  status_string = get_status_string (instance->state.status);
 	  overwitch_device_set_status (dev, status_string, o2j_latency_s,
-				       j2o_latency_s, instance->o2j_ratio,
-				       instance->j2o_ratio);
+				       j2o_latency_s,
+				       instance->state.ratio_o2h,
+				       instance->state.ratio_h2o);
 
 	  break;
 	}
@@ -221,17 +218,9 @@ set_overwitch_instance_status (gpointer data)
 
 static void
 set_report_data (struct overwitch_instance *instance,
-		 struct ow_resampler_latency *latency, gdouble o2j_ratio,
-		 gdouble j2o_ratio)
+		 struct ow_resampler_state *state)
 {
-  instance->latency.o2h = latency->o2h;
-  instance->latency.o2h_min = latency->o2h_min;
-  instance->latency.o2h_max = latency->o2h_max;
-  instance->latency.h2o = latency->h2o;
-  instance->latency.h2o_min = latency->h2o_min;
-  instance->latency.h2o_max = latency->h2o_max;
-  instance->o2j_ratio = o2j_ratio;
-  instance->j2o_ratio = j2o_ratio;
+  instance->state = *state;
   g_idle_add (set_overwitch_instance_status, instance);
 }
 
@@ -476,10 +465,10 @@ refresh_all (GtkWidget *object, gpointer data)
 
       instance = g_malloc (sizeof (struct overwitch_instance));
 
-      instance->latency.o2h = 0.0;
-      instance->latency.h2o = 0.0;
-      instance->o2j_ratio = 1.0;
-      instance->j2o_ratio = 1.0;
+      instance->state.latency_o2h = 0.0;
+      instance->state.latency_h2o = 0.0;
+      instance->state.ratio_o2h = 1.0;
+      instance->state.ratio_h2o = 1.0;
 
       //Needed because jclient_init will momentarily block the GUI.
       while (g_main_context_pending (NULL))
