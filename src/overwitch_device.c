@@ -214,10 +214,10 @@ overwitch_device_new (const gchar *name, const gchar *device, const guint bus,
 }
 
 void
-overwitch_device_set_status (OverwitchDevice *d, const gchar *status,
-			     const gchar *o2j_latency,
-			     const gchar *j2o_latency,
-			     const gdouble o2j_ratio, const gdouble j2o_ratio)
+overwitch_device_set_state (OverwitchDevice *d, const gchar *status,
+			    const gchar *o2j_latency,
+			    const gchar *j2o_latency,
+			    const gdouble o2j_ratio, const gdouble j2o_ratio)
 {
   g_free (d->status);
   g_free (d->o2j_latency);

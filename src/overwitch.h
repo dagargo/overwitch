@@ -255,6 +255,9 @@ void ow_resampler_wait (struct ow_resampler *);
 
 void ow_resampler_destroy (struct ow_resampler *);
 
+void ow_resampler_get_state (struct ow_resampler *resampler,
+			     struct ow_resampler_state *state);
+
 void ow_resampler_clear_buffers (struct ow_resampler *);
 
 void ow_resampler_reset (struct ow_resampler *);

@@ -55,10 +55,10 @@ OverwitchDevice *overwitch_device_new (const gchar * name,
 				       const guint address,
 				       const gpointer instance);
 
-void overwitch_device_set_status (OverwitchDevice * d, const gchar * status,
-				  const gchar * o2j_latency,
-				  const gchar * j2o_latency,
-				  const gdouble o2j_ratio,
-				  const gdouble j2o_ratio);
+void overwitch_device_set_state (OverwitchDevice * d, const gchar * status,
+				 const gchar * o2j_latency,
+				 const gchar * j2o_latency,
+				 const gdouble o2j_ratio,
+				 const gdouble j2o_ratio);
 
 G_END_DECLS

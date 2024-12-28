@@ -37,12 +37,31 @@
 
 #define RESAMPLER_MAX(a,b) (((a) > (b)) ? (a) : (b))
 
-static inline void
-ow_resampler_report_state (struct ow_resampler *resampler)
+inline ow_resampler_status_t
+ow_resampler_get_status (struct ow_resampler *resampler)
+{
+  ow_resampler_status_t status;
+  pthread_spin_lock (&resampler->lock);
+  status = resampler->status;
+  pthread_spin_unlock (&resampler->lock);
+  return status;
+}
+
+inline void
+ow_resampler_set_status (struct ow_resampler *resampler,
+			 ow_resampler_status_t status)
+{
+  pthread_spin_lock (&resampler->lock);
+  resampler->status = status;
+  pthread_spin_unlock (&resampler->lock);
+}
+
+inline void
+ow_resampler_get_state (struct ow_resampler *resampler,
+			struct ow_resampler_state *state)
 {
   uint32_t o2h_latency_s, o2h_min_latency_s, o2h_max_latency_s, h2o_latency_s,
     h2o_min_latency_s, h2o_max_latency_s;
-  struct ow_resampler_state state;
   ow_engine_status_t status;
 
   ow_resampler_get_o2h_latency (resampler, &o2h_latency_s, &o2h_min_latency_s,
@@ -50,45 +69,53 @@ ow_resampler_report_state (struct ow_resampler *resampler)
   ow_resampler_get_h2o_latency (resampler, &h2o_latency_s, &h2o_min_latency_s,
 				&h2o_max_latency_s);
 
-  status = resampler->engine->status;
+  status = ow_engine_get_status (resampler->engine);
 
   int h2o_enabled = ow_engine_is_option (resampler->engine,
 					 OW_ENGINE_OPTION_H2O_AUDIO);
 
   if (status == OW_ENGINE_STATUS_RUN)
     {
-      state.latency_o2h = o2h_latency_s * OB_PERIOD_MS;
-      state.latency_o2h_max = o2h_max_latency_s * OB_PERIOD_MS;
-      state.latency_o2h_min = o2h_min_latency_s * OB_PERIOD_MS;
+      state->latency_o2h = o2h_latency_s * OB_PERIOD_MS;
+      state->latency_o2h_max = o2h_max_latency_s * OB_PERIOD_MS;
+      state->latency_o2h_min = o2h_min_latency_s * OB_PERIOD_MS;
 
       if (h2o_enabled)
 	{
-	  state.latency_h2o = h2o_latency_s * OB_PERIOD_MS;
-	  state.latency_h2o_max = h2o_max_latency_s * OB_PERIOD_MS;
-	  state.latency_h2o_min = h2o_min_latency_s * OB_PERIOD_MS;
+	  state->latency_h2o = h2o_latency_s * OB_PERIOD_MS;
+	  state->latency_h2o_max = h2o_max_latency_s * OB_PERIOD_MS;
+	  state->latency_h2o_min = h2o_min_latency_s * OB_PERIOD_MS;
 	}
       else
 	{
-	  state.latency_h2o = -1.0;
-	  state.latency_h2o_max = -1.0;
-	  state.latency_h2o_min = -1.0;
+	  state->latency_h2o = -1.0;
+	  state->latency_h2o_max = -1.0;
+	  state->latency_h2o_min = -1.0;
 	}
     }
   else
     {
-      state.latency_o2h = -1.0;
-      state.latency_o2h_max = -1.0;
-      state.latency_o2h_min = -1.0;
+      state->latency_o2h = -1.0;
+      state->latency_o2h_max = -1.0;
+      state->latency_o2h_min = -1.0;
 
-      state.latency_h2o = -1.0;
-      state.latency_h2o_max = -1.0;
-      state.latency_h2o_min = -1.0;
+      state->latency_h2o = -1.0;
+      state->latency_h2o_max = -1.0;
+      state->latency_h2o_min = -1.0;
     }
 
-  state.ratio_o2h = resampler->o2h_ratio;
-  state.ratio_h2o = resampler->h2o_ratio;
+  state->ratio_o2h = resampler->o2h_ratio;
+  state->ratio_h2o = resampler->h2o_ratio;
 
-  state.status = resampler->status;
+  state->status = ow_resampler_get_status (resampler);
+}
+
+static inline void
+ow_resampler_report_state (struct ow_resampler *resampler)
+{
+  struct ow_resampler_state state;
+
+  ow_resampler_get_state (resampler, &state);
 
   if (debug_level > 1)
     {
@@ -192,6 +219,7 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
 
   ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_BOOT);
 
+  pthread_spin_lock (&resampler->lock);
   resampler->status = OW_RESAMPLER_STATUS_READY;
 
   resampler->o2h_ratio = resampler->dll.ratio;
@@ -200,6 +228,7 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
   target_ratio = new_samplerate / OB_SAMPLE_RATE;
   resampler->max_target_ratio = target_ratio * RATIO_ERROR_TOLERANCE;
   resampler->min_target_ratio = target_ratio / RATIO_ERROR_TOLERANCE;
+  pthread_spin_unlock (&resampler->lock);
 }
 
 static long
@@ -304,8 +333,9 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
   size_t bytes;
   size_t wsh2o;
   static double h2o_acc = .0;
+  ow_resampler_status_t status = ow_resampler_get_status (resampler);
 
-  if (resampler->status < OW_RESAMPLER_STATUS_RUN)
+  if (status < OW_RESAMPLER_STATUS_RUN)
     {
       return;
     }
@@ -356,10 +386,13 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   ow_engine_status_t engine_status;
   struct ow_dll *dll = &resampler->dll;
   static uint64_t tuning_start_usecs;
+  ow_resampler_status_t status;
 
   engine_status = ow_engine_get_status (resampler->engine);
-  if (resampler->status == OW_RESAMPLER_STATUS_READY
-      && engine_status <= OW_ENGINE_STATUS_BOOT)
+  status = ow_resampler_get_status (resampler);
+
+  if (status == OW_RESAMPLER_STATUS_READY &&
+      engine_status <= OW_ENGINE_STATUS_BOOT)
     {
       if (engine_status == OW_ENGINE_STATUS_READY)
 	{
@@ -378,8 +411,8 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 
   ow_dll_host_update_error (dll, current_usecs);
 
-  if (resampler->status == OW_RESAMPLER_STATUS_READY
-      && engine_status == OW_ENGINE_STATUS_WAIT)
+  if (status == OW_RESAMPLER_STATUS_READY &&
+      engine_status == OW_ENGINE_STATUS_WAIT)
     {
       debug_print (1, "%s (%s): Starting up resampler...",
 		   resampler->engine->name,
@@ -388,7 +421,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       ow_dll_host_set_loop_filter (dll, 1.0, resampler->bufsize,
 				   resampler->samplerate);
 
-      resampler->status = OW_RESAMPLER_STATUS_BOOT;
+      ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_BOOT);
       ow_resampler_report_state (resampler);
 
       resampler->log_cycles = 0;
@@ -408,7 +441,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 
       ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_ERROR);
 
-      resampler->status = OW_RESAMPLER_STATUS_ERROR;
+      ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_ERROR);
       ow_resampler_report_state (resampler);
 
       return 1;
@@ -417,7 +450,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   resampler->o2h_ratio = dll->ratio;
   resampler->h2o_ratio = 1.0 / resampler->o2h_ratio;
 
-  if (resampler->status == OW_RESAMPLER_STATUS_BOOT && ow_dll_tuned (dll))
+  if (status == OW_RESAMPLER_STATUS_BOOT && ow_dll_tuned (dll))
     {
       debug_print (1, "%s (%s): Tuning resampler...", resampler->engine->name,
 		   resampler->engine->overbridge_name);
@@ -425,7 +458,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       ow_dll_host_set_loop_filter (dll, 0.5, resampler->bufsize,
 				   resampler->samplerate);
 
-      resampler->status = OW_RESAMPLER_STATUS_TUNE;
+      ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_TUNE);
 
       resampler->log_control_cycles =
 	resampler->reporter.period * resampler->samplerate /
@@ -434,7 +467,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       tuning_start_usecs = current_usecs;
     }
 
-  if (resampler->status == OW_RESAMPLER_STATUS_TUNE &&
+  if (status == OW_RESAMPLER_STATUS_TUNE &&
       current_usecs - tuning_start_usecs > TUNING_PERIOD_US)
     {
       debug_print (1, "%s (%s): Running resampler...",
@@ -446,7 +479,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 
       ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_RUN);
 
-      resampler->status = OW_RESAMPLER_STATUS_RUN;
+      ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_RUN);
 
       audio_running_cb (cb_data);
     }
@@ -480,6 +513,8 @@ ow_resampler_init_from_bus_address (struct ow_resampler **resampler_,
 
   *resampler_ = resampler;
 
+  pthread_spin_init (&resampler->lock, PTHREAD_PROCESS_SHARED);
+
   resampler->samplerate = 0;
   resampler->bufsize = 0;
   resampler->o2h_frame_size =
@@ -511,6 +546,7 @@ ow_resampler_destroy (struct ow_resampler *resampler)
 {
   src_delete (resampler->h2o_state);
   src_delete (resampler->o2h_state);
+  pthread_spin_destroy (&resampler->lock);
   if (resampler->h2o_aux)
     {
       free (resampler->h2o_aux);
@@ -532,7 +568,7 @@ ow_resampler_start (struct ow_resampler *resampler,
   context->dll_overbridge_init = ow_dll_overbridge_init;
   context->dll_overbridge_update = ow_dll_overbridge_update;
 
-  resampler->status = OW_RESAMPLER_STATUS_READY;
+  ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_READY);
 
   return ow_engine_start (resampler->engine, context);
 }
@@ -540,15 +576,20 @@ ow_resampler_start (struct ow_resampler *resampler,
 void
 ow_resampler_wait (struct ow_resampler *resampler)
 {
+  ow_resampler_status_t status;
+
   ow_engine_wait (resampler->engine);
-  if (resampler->engine->status == OW_ENGINE_STATUS_ERROR)
+
+  if (ow_engine_get_status (resampler->engine) == OW_ENGINE_STATUS_ERROR)
     {
-      resampler->status = OW_RESAMPLER_STATUS_ERROR;
+      status = OW_RESAMPLER_STATUS_ERROR;
     }
   else
     {
-      resampler->status = OW_RESAMPLER_STATUS_STOP;
+      status = OW_RESAMPLER_STATUS_STOP;
     }
+  ow_resampler_set_status (resampler, status);
+
   ow_resampler_report_state (resampler);
 }
 
@@ -559,12 +600,6 @@ ow_resampler_reset_latencies (struct ow_resampler *resampler)
   resampler->engine->o2h_max_latency = 0;
   resampler->engine->h2o_max_latency = 0;
   pthread_spin_unlock (&resampler->engine->lock);
-}
-
-inline ow_resampler_status_t
-ow_resampler_get_status (struct ow_resampler *resampler)
-{
-  return resampler->status;
 }
 
 inline struct ow_engine *

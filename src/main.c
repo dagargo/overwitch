@@ -163,7 +163,7 @@ stop_instance (struct overwitch_instance *instance)
 }
 
 static gboolean
-set_overwitch_instance_status (gpointer data)
+set_overwitch_instance_state (gpointer data)
 {
   struct overwitch_instance *instance = data;
   static gchar o2j_latency_s[OW_LABEL_MAX_LEN];
@@ -204,10 +204,10 @@ set_overwitch_instance_status (gpointer data)
 	    }
 
 	  status_string = get_status_string (instance->state.status);
-	  overwitch_device_set_status (dev, status_string, o2j_latency_s,
-				       j2o_latency_s,
-				       instance->state.ratio_o2h,
-				       instance->state.ratio_h2o);
+          overwitch_device_set_state (dev, status_string, o2j_latency_s,
+				      j2o_latency_s,
+                                      instance->state.ratio_o2h,
+				      instance->state.ratio_h2o);
 
 	  break;
 	}
@@ -221,7 +221,7 @@ set_report_data (struct overwitch_instance *instance,
 		 struct ow_resampler_state *state)
 {
   instance->state = *state;
-  g_idle_add (set_overwitch_instance_status, instance);
+  g_idle_add (set_overwitch_instance_state, instance);
 }
 
 static void
