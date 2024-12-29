@@ -37,10 +37,12 @@
 
 struct overwitch_instance
 {
+  guint id;
   struct ow_resampler_state state;
   struct jclient jclient;
 };
 
+static guint next_id;
 static jack_client_t *control_client;
 static jack_nframes_t jack_sample_rate;
 static jack_nframes_t jack_buffer_size;
@@ -175,9 +177,9 @@ set_overwitch_instance_state (gpointer data)
   for (guint i = 0; i < g_list_model_get_n_items (model); i++)
     {
       OverwitchDevice *dev = g_list_model_get_item (model, i);
+      struct overwitch_instance *dev_instance = dev->instance;
 
-      if (instance->jclient.bus == dev->bus
-	  && instance->jclient.address == dev->address)
+      if (instance->id == dev_instance->id)
 	{
 	  if (instance->state.latency_o2h >= 0)
 	    {
@@ -204,9 +206,9 @@ set_overwitch_instance_state (gpointer data)
 	    }
 
 	  status_string = get_status_string (instance->state.status);
-          overwitch_device_set_state (dev, status_string, o2j_latency_s,
+	  overwitch_device_set_state (dev, status_string, o2j_latency_s,
 				      j2o_latency_s,
-                                      instance->state.ratio_o2h,
+				      instance->state.ratio_o2h,
 				      instance->state.ratio_h2o);
 
 	  break;
@@ -292,7 +294,7 @@ load_preferences ()
 }
 
 static gboolean
-is_device_at_bus_address (uint8_t bus, uint8_t address, GtkTreeIter *iter)
+is_device_at_bus_address (uint8_t bus, uint8_t address)
 {
   GListModel *model = G_LIST_MODEL (status_list_store);
 
@@ -434,9 +436,10 @@ remove_stopped_instances ()
 static void
 refresh_all (GtkWidget *object, gpointer data)
 {
-  struct ow_usb_device *devices, *device;
+  struct ow_device *devices, *device;
   struct ow_resampler_reporter *reporter;
   struct overwitch_instance *instance;
+  guint blocks, xfr_timeout, quality;
   size_t devices_count;
   ow_err_t err;
 
@@ -444,7 +447,7 @@ refresh_all (GtkWidget *object, gpointer data)
 
   set_dll_target_delay ();
 
-  err = ow_get_usb_device_list (&devices, &devices_count);
+  err = ow_get_device_list (&devices, &devices_count);
   if (err || !devices_count)
     {
       set_widgets_to_running_state (FALSE);
@@ -455,8 +458,7 @@ refresh_all (GtkWidget *object, gpointer data)
 
   for (gint i = 0; i < devices_count; i++, device++)
     {
-      GtkTreeIter iter;
-      if (is_device_at_bus_address (device->bus, device->address, &iter))
+      if (is_device_at_bus_address (device->bus, device->address))
 	{
 	  debug_print (2, "Device at %03d:%03d already running. Skipping...",
 		       device->bus, device->address);
@@ -465,6 +467,7 @@ refresh_all (GtkWidget *object, gpointer data)
 
       instance = g_malloc (sizeof (struct overwitch_instance));
 
+      instance->id = next_id++;
       instance->state.latency_o2h = 0.0;
       instance->state.latency_h2o = 0.0;
       instance->state.ratio_o2h = 1.0;
@@ -476,12 +479,17 @@ refresh_all (GtkWidget *object, gpointer data)
 	  g_main_context_iteration (NULL, FALSE);
 	}
 
-      if (jclient_init (&instance->jclient, device->bus, device->address,
-			gtk_spin_button_get_value_as_int (blocks_spin_button),
-			gtk_spin_button_get_value_as_int
-			(timeout_spin_button),
-			gtk_drop_down_get_selected (quality_drop_down), -1))
+      blocks = gtk_spin_button_get_value_as_int (blocks_spin_button);
+      xfr_timeout = gtk_spin_button_get_value_as_int (timeout_spin_button);
+      quality = gtk_drop_down_get_selected (quality_drop_down);
+
+      struct ow_device *copy = malloc (sizeof (struct ow_device));
+      memcpy (copy, device, sizeof (struct ow_device));
+
+      if (jclient_init (&instance->jclient, copy, blocks, xfr_timeout,
+			quality, -1))
 	{
+	  g_free (copy);
 	  g_free (instance);
 	  continue;
 	}
@@ -492,12 +500,14 @@ refresh_all (GtkWidget *object, gpointer data)
 
       debug_print (1, "Adding %s...", instance->jclient.name);
 
-      g_list_store_append (status_list_store,
-			   overwitch_device_new (instance->jclient.name,
-						 device->desc.name,
-						 instance->jclient.bus,
-						 instance->jclient.address,
-						 instance));
+      OverwitchDevice *dev = overwitch_device_new (instance,
+						   instance->jclient.name,
+						   device->desc.name,
+						   device->bus,
+						   device->address);
+
+      g_list_store_append (status_list_store, dev);
+
 
       start_instance (instance);
       set_widgets_to_running_state (TRUE);
@@ -775,8 +785,9 @@ overwitch_build_ui ()
 }
 
 static void
-hotplug_callback (uint8_t bus, uint8_t address)
+hotplug_callback (struct ow_device *device)
 {
+  g_free (device);
   g_idle_add (refresh_all_sourcefunc, NULL);
 }
 

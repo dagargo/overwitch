@@ -229,24 +229,23 @@ run_record (int device_num, const char *device_name, uint8_t bus,
   time_t curr_time;
   struct tm tm;
   ow_err_t err;
-  struct ow_usb_device *device;
+  struct ow_device *device;
 
-  if (ow_get_usb_device_from_device_attrs (device_num, device_name, bus,
-					   address, &device))
+  if (ow_get_device_from_device_attrs (device_num, device_name, bus,
+				       address, &device))
     {
       return OW_GENERIC_ERROR;
     }
 
-  err = ow_engine_init_from_bus_address (&engine, device->bus,
-					 device->address, blocks_per_transfer,
-					 xfr_timeout);
-  free (device);
+  err = ow_engine_init_from_device (&engine, device, blocks_per_transfer,
+				    xfr_timeout);
   if (err)
     {
+      free (device);
       goto end;
     }
 
-  desc = ow_engine_get_device_desc (engine);
+  desc = &ow_engine_get_device (engine)->desc;
 
   if (track_mask)
     {
@@ -262,7 +261,7 @@ run_record (int device_num, const char *device_name, uint8_t bus,
     }
   else
     {
-      buffer.outputs = desc->outputs;
+      buffer.outputs = device->desc.outputs;
     }
 
   if (buffer.outputs == 0)
@@ -280,7 +279,7 @@ run_record (int device_num, const char *device_name, uint8_t bus,
   localtime_r (&curr_time, &tm);
   strftime (curr_time_string, MAX_TIME_LEN, "%FT%T", &tm);
 
-  snprintf (filename, MAX_FILENAME_LEN, "%s_%s.wav", desc->name,
+  snprintf (filename, MAX_FILENAME_LEN, "%s_%s.wav", device->desc.name,
 	    curr_time_string);
 
   debug_print (1, "Creating sample (%d channels)...", buffer.outputs);
@@ -304,7 +303,7 @@ run_record (int device_num, const char *device_name, uint8_t bus,
   buffer.disk = malloc (buffer.len * OW_BYTES_PER_SAMPLE);
   buffer.outputs_mask_len = track_mask ? strlen (track_mask) : 0;
 
-  for (int i = 0; i < desc->outputs; i++)
+  for (int i = 0; i < device->desc.outputs; i++)
     {
       max[i] = 0.0f;
       min[i] = 0.0f;

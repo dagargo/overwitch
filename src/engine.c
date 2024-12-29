@@ -51,10 +51,11 @@ static void prepare_cycle_out_audio ();
 static void ow_engine_load_overbridge_name (struct ow_engine *);
 
 static void
-ow_engine_init_name (struct ow_engine *engine, uint8_t bus, uint8_t address)
+ow_engine_init_name (struct ow_engine *engine)
 {
   snprintf (engine->name, OW_ENGINE_NAME_MAX_LEN, "%s @ %03d,%03d",
-	    engine->device_desc.name, bus, address);
+	    engine->device->desc.name, engine->device->bus,
+	    engine->device->address);
   ow_engine_load_overbridge_name (engine);
 }
 
@@ -102,13 +103,13 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine)
       s = (uint8_t *) blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < engine->device_desc.outputs; k++)
+	  for (int k = 0; k < engine->device->desc.outputs; k++)
 	    {
-	      int size = engine->device_desc.output_tracks[k].size;
+	      int size = engine->device->desc.output_tracks[k].size;
 
 	      memcpy (&hv, s, size);
 
-	      if (engine->device_desc.format == OW_ENGINE_FORMAT_V2
+	      if (engine->device->desc.format == OW_ENGINE_FORMAT_V2
 		  && size == 4)
 		{
 		  hv >>= 8;
@@ -185,12 +186,12 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine)
       s = (uint8_t *) blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < engine->device_desc.inputs; k++)
+	  for (int k = 0; k < engine->device->desc.inputs; k++)
 	    {
-	      int size = engine->device_desc.input_tracks[k].size;
+	      int size = engine->device->desc.input_tracks[k].size;
 	      ov = (int32_t) (*f * INT32_MAX);
 
-	      if (engine->device_desc.format == OW_ENGINE_FORMAT_V2
+	      if (engine->device->desc.format == OW_ENGINE_FORMAT_V2
 		  && size == 4)
 		{
 		  ov >>= 8;
@@ -274,7 +275,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
 	(double) engine->frames_per_transfer / frames;
       //We should NOT use the simple API but since this only happens very occasionally and mostly at startup, this has very low impact on audio quality.
       res = src_simple (&engine->h2o_data, SRC_SINC_FASTEST,
-			engine->device_desc.inputs);
+			engine->device->desc.inputs);
       if (res)
 	{
 	  error_print
@@ -433,15 +434,15 @@ ow_engine_init_mem (struct ow_engine *engine,
     OB_FRAMES_PER_BLOCK * engine->blocks_per_transfer;
 
   engine->o2h_frame_size = 0;
-  for (int i = 0; i < engine->device_desc.outputs; i++)
+  for (int i = 0; i < engine->device->desc.outputs; i++)
     {
-      engine->o2h_frame_size += engine->device_desc.output_tracks[i].size;
+      engine->o2h_frame_size += engine->device->desc.output_tracks[i].size;
     }
 
   engine->h2o_frame_size = 0;
-  for (int i = 0; i < engine->device_desc.inputs; i++)
+  for (int i = 0; i < engine->device->desc.inputs; i++)
     {
-      engine->h2o_frame_size += engine->device_desc.input_tracks[i].size;
+      engine->h2o_frame_size += engine->device->desc.input_tracks[i].size;
     }
 
   debug_print (2, "o2h: USB in frame size: %zu B", engine->o2h_frame_size);
@@ -479,9 +480,9 @@ ow_engine_init_mem (struct ow_engine *engine,
 	       engine->usb.audio_out_blk_len);
 
   engine->o2h_transfer_size = engine->frames_per_transfer *
-    engine->device_desc.outputs * OW_BYTES_PER_SAMPLE;
+    engine->device->desc.outputs * OW_BYTES_PER_SAMPLE;
   engine->h2o_transfer_size = engine->frames_per_transfer *
-    engine->device_desc.inputs * OW_BYTES_PER_SAMPLE;
+    engine->device->desc.inputs * OW_BYTES_PER_SAMPLE;
 
   engine->o2h_min_latency = engine->frames_per_transfer;
   engine->h2o_min_latency = engine->frames_per_transfer;
@@ -534,12 +535,13 @@ ow_engine_init_mem (struct ow_engine *engine,
 // initialization taken from sniffed session
 
 static ow_err_t
-ow_engine_init (struct ow_engine *engine, unsigned int blocks_per_transfer,
-		unsigned int xfr_timeout)
+ow_engine_init (struct ow_engine *engine, struct ow_device *device,
+		unsigned int blocks_per_transfer, unsigned int xfr_timeout)
 {
   int err;
   ow_err_t ret = OW_OK;
 
+  engine->device = device;
   engine->usb.xfr_audio_in = NULL;
   engine->usb.xfr_audio_out = NULL;
   engine->usb.xfr_control_in = NULL;
@@ -642,74 +644,10 @@ end:
 }
 
 ow_err_t
-ow_engine_init_from_libusb_device_descriptor (struct ow_engine **engine_,
-					      int libusb_device_descriptor,
-					      unsigned int blks_per_transfer,
-					      unsigned int xfr_timeout)
-{
-#ifdef LIBUSB_OPTION_WEAK_AUTHORITY
-  ow_err_t err;
-  uint8_t bus, address;
-  struct ow_engine *engine;
-  struct libusb_device *device;
-  struct libusb_device_descriptor desc;
-
-  if (libusb_set_option (NULL, LIBUSB_OPTION_WEAK_AUTHORITY, NULL) !=
-      LIBUSB_SUCCESS)
-    {
-      return OW_USB_ERROR_LIBUSB_INIT_FAILED;
-    }
-
-  engine = malloc (sizeof (struct ow_engine));
-
-  if (libusb_init (&engine->usb.context) != LIBUSB_SUCCESS)
-    {
-      err = OW_USB_ERROR_LIBUSB_INIT_FAILED;
-      goto error;
-    }
-
-  if (libusb_wrap_sys_device (NULL, (intptr_t) libusb_device_descriptor,
-			      &engine->usb.device_handle))
-    {
-      err = OW_USB_ERROR_LIBUSB_INIT_FAILED;
-      goto error;
-    }
-
-  device = libusb_get_device (engine->usb.device_handle);
-  libusb_get_device_descriptor (device, &desc);
-  if (ow_get_device_desc_from_vid_pid (desc.idVendor, desc.idProduct,
-				       &engine->device_desc))
-    {
-      err = OW_USB_ERROR_LIBUSB_INIT_FAILED;
-      goto error;
-    }
-
-  *engine_ = engine;
-  err = ow_engine_init (engine, blks_per_transfer, xfr_timeout);
-  if (!err)
-    {
-      bus = libusb_get_bus_number (device);
-      address = libusb_get_device_address (device);
-      ow_engine_init_name (engine, bus, address);
-      return err;
-    }
-
-error:
-  free (engine);
-  return err;
-#else
-  error_print
-    ("The libusb version 0x%.8x does not support opening a device descriptor",
-     LIBUSB_API_VERSION);
-  return OW_GENERIC_ERROR;
-#endif
-}
-
-ow_err_t
-ow_engine_init_from_bus_address (struct ow_engine **engine_,
-				 uint8_t bus, uint8_t address,
-				 unsigned int blocks_per_transfer,
-				 unsigned int xfr_timeout)
+ow_engine_init_from_device (struct ow_engine **engine_,
+			    struct ow_device *ow_device,
+			    unsigned int blocks_per_transfer,
+			    unsigned int xfr_timeout)
 {
   int err;
   ow_err_t ret;
@@ -740,10 +678,8 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
 	  continue;
 	}
 
-      if (!ow_get_device_desc_from_vid_pid (desc.idVendor, desc.idProduct,
-					    &engine->device_desc)
-	  && libusb_get_bus_number (*device) == bus
-	  && libusb_get_device_address (*device) == address)
+      if (libusb_get_bus_number (*device) == ow_device->bus &&
+	  libusb_get_device_address (*device) == ow_device->address)
 	{
 	  err = libusb_open (*device, &engine->usb.device_handle);
 	  if (err)
@@ -768,10 +704,10 @@ ow_engine_init_from_bus_address (struct ow_engine **engine_,
     }
 
   *engine_ = engine;
-  ret = ow_engine_init (engine, blocks_per_transfer, xfr_timeout);
+  ret = ow_engine_init (engine, ow_device, blocks_per_transfer, xfr_timeout);
   if (!ret)
     {
-      ow_engine_init_name (engine, bus, address);
+      ow_engine_init_name (engine);
     }
   return ret;
 
@@ -1002,6 +938,7 @@ ow_engine_destroy (struct ow_engine *engine)
 {
   usb_shutdown (engine);
   ow_engine_free_mem (engine);
+  free (engine->device);
   free (engine);
 }
 
@@ -1074,10 +1011,10 @@ ow_bytes_to_frame_bytes (int bytes, int bytes_per_frame)
   return frames * bytes_per_frame;
 }
 
-struct ow_device_desc *
-ow_engine_get_device_desc (struct ow_engine *engine)
+const struct ow_device *
+ow_engine_get_device (struct ow_engine *engine)
 {
-  return &engine->device_desc;
+  return engine->device;
 }
 
 inline void
@@ -1172,7 +1109,7 @@ ow_engine_get_overbridge_name (struct ow_engine *engine)
 }
 
 static int
-ow_hotplug_callback (struct libusb_context *ctx, struct libusb_device *dev,
+ow_hotplug_callback (struct libusb_context *ctx, struct libusb_device *device,
 		     libusb_hotplug_event event, void *user_data)
 {
   ow_hotplug_callback_t cb = user_data;
@@ -1180,15 +1117,23 @@ ow_hotplug_callback (struct libusb_context *ctx, struct libusb_device *dev,
   struct libusb_device_descriptor desc;
   int rc;
 
-  libusb_get_device_descriptor (dev, &desc);
+  libusb_get_device_descriptor (device, &desc);
 
   if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == event)
     {
       debug_print (1, "USB hotplug: device arrived");
-      rc = libusb_open (dev, &dev_handle);
+      rc = libusb_open (device, &dev_handle);
       if (rc == LIBUSB_SUCCESS)
 	{
-	  cb (libusb_get_bus_number (dev), libusb_get_device_address (dev));
+	  struct ow_device *ow_device;
+	  if (!ow_get_device_from_device_attrs (-1, NULL,
+						libusb_get_bus_number
+						(device),
+						libusb_get_device_address
+						(device), &ow_device))
+	    {
+	      cb (ow_device);
+	    }
 	}
       else
 	{

@@ -23,10 +23,9 @@
 #include <glib-object.h>
 
 G_BEGIN_DECLS
-
 #define OVERWITCH_TYPE_DEVICE (overwitch_device_get_type())
 G_DECLARE_FINAL_TYPE (OverwitchDevice, overwitch_device, OVERWITCH, DEVICE,
-		      GObject)
+		      GObject);
 
 struct _OverwitchDevice
 {
@@ -49,11 +48,10 @@ struct _OverwitchDeviceClass
   GObjectClass parent_class;
 };
 
-OverwitchDevice *overwitch_device_new (const gchar * name,
+OverwitchDevice *overwitch_device_new (const gpointer instance,
+				       const gchar * name,
 				       const gchar * device,
-				       const guint bus,
-				       const guint address,
-				       const gpointer instance);
+				       const guint bus, const guint address);
 
 void overwitch_device_set_state (OverwitchDevice * d, const gchar * status,
 				 const gchar * o2j_latency,

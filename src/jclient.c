@@ -68,7 +68,7 @@ jclient_set_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
   struct jclient *jclient = cb_data;
   uint32_t latency, min_latency, max_latency;
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
-  const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
+  const struct ow_device_desc *desc = &ow_engine_get_device (engine)->desc;
 
   debug_print (2, "JACK latency request");
 
@@ -111,7 +111,7 @@ jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
   int total_connections = 0;
   struct jclient *jclient = cb_data;
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
-  const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
+  const struct ow_device_desc *desc = &ow_engine_get_device (engine)->desc;
 
   debug_print (2, "JACK port connect request");
 
@@ -165,7 +165,6 @@ jclient_set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
 {
   struct jclient *jclient = cb_data;
   debug_print (1, "JACK buffer size: %d", nframes);
-  jclient->bufsize = nframes;
   ow_resampler_set_buffer_size (jclient->resampler, nframes);
   return 0;
 }
@@ -226,7 +225,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   jack_time_t next_usecs;
   float period_usecs;
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
-  const struct ow_device_desc *desc = ow_engine_get_device_desc (engine);
+  const struct ow_device_desc *desc = &ow_engine_get_device (engine)->desc;
 
   if (jack_get_cycle_times (jclient->client, &current_frames, &current_usecs,
 			    &next_usecs, &period_usecs))
@@ -286,28 +285,23 @@ jclient_stop (struct jclient *jclient)
 }
 
 int
-jclient_init (struct jclient *jclient, uint8_t bus, uint8_t address,
+jclient_init (struct jclient *jclient, struct ow_device *device,
 	      unsigned int blocks_per_transfer, unsigned int xfr_timeout,
 	      int quality, int priority)
 {
+  ow_err_t err;
   struct ow_resampler *resampler;
   struct ow_engine *engine;
 
-  jclient->bus = bus;
-  jclient->address = address;
-  jclient->blocks_per_transfer = blocks_per_transfer;
-  jclient->xfr_timeout = xfr_timeout;
-  jclient->quality = quality;
+  jclient->device = device;
   jclient->priority = priority;
+  jclient->running = 0;
 
   pthread_spin_init (&jclient->lock, PTHREAD_PROCESS_PRIVATE);
 
-  ow_err_t err = ow_resampler_init_from_bus_address (&resampler, jclient->bus,
-						     jclient->address,
-						     jclient->blocks_per_transfer,
-						     jclient->xfr_timeout,
-						     jclient->quality);
-  jclient->running = 0;
+  err = ow_resampler_init_from_device (&resampler, device,
+				       blocks_per_transfer, xfr_timeout,
+				       quality);
 
   if (err)
     {
@@ -344,7 +338,7 @@ jclient_run (struct jclient *jclient)
   jclient->context.o2h_audio = NULL;
 
   engine = ow_resampler_get_engine (jclient->resampler);
-  desc = ow_engine_get_device_desc (engine);
+  desc = &ow_engine_get_device (engine)->desc;
 
   jclient->client = jack_client_open (jclient->name, JackNoStartServer,
 				      &status, NULL);

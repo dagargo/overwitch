@@ -98,12 +98,12 @@ jclient_runner (void *data)
 static int
 start_all ()
 {
-  struct ow_usb_device *devices;
-  struct ow_usb_device *device;
+  struct ow_device *devices;
+  struct ow_device *device;
   struct pooled_jclient *pjc;
   size_t jclient_total_count;
 
-  if (ow_get_usb_device_list (&devices, &jclient_total_count))
+  if (ow_get_device_list (&devices, &jclient_total_count))
     {
       return EXIT_FAILURE;
     }
@@ -123,10 +123,12 @@ start_all ()
     POOLED_JCLIENT_LEN ? POOLED_JCLIENT_LEN : jclient_total_count;
   for (guint i = 0; i < jclient_total_count; i++, device++)
     {
-      if (jclient_init (&pjc->jclient, device->bus, device->address,
-			config.blocks, config.timeout, config.quality,
-			JCLIENT_DEFAULT_PRIORITY))
+      struct ow_device *copy = malloc (sizeof (struct ow_device));
+      memcpy (copy, device, sizeof (struct ow_device));
+      if (jclient_init (&pjc->jclient, copy, config.blocks, config.timeout,
+			config.quality, JCLIENT_DEFAULT_PRIORITY))
 	{
+	  free (copy);
 	  continue;
 	}
 
@@ -170,13 +172,10 @@ wait_all ()
 }
 
 static void
-hotplug_callback (uint8_t bus, uint8_t address)
+hotplug_callback (struct ow_device *device)
 {
   guint i;
   struct pooled_jclient *pjc;
-
-  debug_print (1, "Starting new jclient for bus %03d and address %03d...",
-	       bus, address);
 
   pjc = jcpool;
 
@@ -233,8 +232,8 @@ hotplug_callback (uint8_t bus, uint8_t address)
       return;
     }
 
-  if (jclient_init (&pjc->jclient, bus, address, config.blocks,
-		    config.timeout, config.quality, JCLIENT_DEFAULT_PRIORITY))
+  if (jclient_init (&pjc->jclient, device, config.blocks, config.timeout,
+		    config.quality, JCLIENT_DEFAULT_PRIORITY))
     {
       pthread_spin_unlock (&lock);
       return;
@@ -315,7 +314,7 @@ main (gint argc, gchar *argv[])
 
   g_object_unref (app);
 
-  g_free(config.pipewire_props);
+  g_free (config.pipewire_props);
 
   wait_all ();
 

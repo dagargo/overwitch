@@ -51,9 +51,9 @@ ow_err_t
 print_devices ()
 {
   size_t total;
-  struct ow_usb_device *devices;
-  struct ow_usb_device *device;
-  ow_err_t err = ow_get_usb_device_list (&devices, &total);
+  struct ow_device *devices;
+  struct ow_device *device;
+  ow_err_t err = ow_get_device_list (&devices, &total);
 
   if (err)
     {

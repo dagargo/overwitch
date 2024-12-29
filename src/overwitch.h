@@ -157,7 +157,7 @@ struct ow_device_desc
   struct ow_device_track output_tracks[OB_MAX_TRACKS];
 };
 
-struct ow_usb_device
+struct ow_device
 {
   struct ow_device_desc desc;
   uint16_t vid;
@@ -186,7 +186,7 @@ struct ow_resampler_state
   ow_resampler_status_t status;
 };
 
-typedef void (*ow_hotplug_callback_t) (uint8_t, uint8_t);
+typedef void (*ow_hotplug_callback_t) (struct ow_device * device);
 
 struct ow_engine;
 struct ow_resampler;
@@ -194,13 +194,14 @@ struct ow_resampler;
 //Common
 const char *ow_get_err_str (ow_err_t);
 
-int ow_get_usb_device_list (struct ow_usb_device **, size_t *);
+int ow_get_device_list (struct ow_device **, size_t *);
 
 int ow_get_device_desc_from_vid_pid (uint16_t, uint16_t,
 				     struct ow_device_desc *);
 
-int ow_get_usb_device_from_device_attrs (int, const char *, uint8_t,
-					 uint8_t, struct ow_usb_device **);
+int ow_get_device_from_device_attrs (int id, const char *name,
+				     uint8_t bus, uint8_t address,
+				     struct ow_device **);
 
 void ow_set_thread_rt_priority (pthread_t, int);
 
@@ -208,9 +209,10 @@ void ow_copy_device_desc (struct ow_device_desc *,
 			  const struct ow_device_desc *);
 
 //Engine
-ow_err_t ow_engine_init_from_bus_address (struct ow_engine **, uint8_t,
-					  uint8_t, unsigned int,
-					  unsigned int);
+ow_err_t ow_engine_init_from_device (struct ow_engine **engine,
+				     struct ow_device *device,
+				     unsigned int blocks_per_transfer,
+				     unsigned int xfr_timeout);
 
 ow_err_t ow_engine_init_from_libusb_device_descriptor (struct ow_engine **,
 						       int, unsigned int,
@@ -219,83 +221,87 @@ ow_err_t ow_engine_init_from_libusb_device_descriptor (struct ow_engine **,
 ow_err_t ow_engine_start (struct ow_engine *engine,
 			  struct ow_context *context);
 
-void ow_engine_clear_buffers (struct ow_engine *);
+void ow_engine_clear_buffers (struct ow_engine *engine);
 
-void ow_engine_destroy (struct ow_engine *);
+void ow_engine_destroy (struct ow_engine *engine);
 
-void ow_engine_wait (struct ow_engine *);
+void ow_engine_wait (struct ow_engine *engine);
 
-ow_engine_status_t ow_engine_get_status (struct ow_engine *);
+ow_engine_status_t ow_engine_get_status (struct ow_engine *engine);
 
-void ow_engine_set_status (struct ow_engine *, ow_engine_status_t);
+void ow_engine_set_status (struct ow_engine *engine, ow_engine_status_t);
 
-int ow_engine_is_option (struct ow_engine *, ow_engine_option_t);
+int ow_engine_is_option (struct ow_engine *engine, ow_engine_option_t);
 
-void ow_engine_set_option (struct ow_engine *, ow_engine_option_t, int);
+void ow_engine_set_option (struct ow_engine *engine, ow_engine_option_t, int);
 
-struct ow_device_desc *ow_engine_get_device_desc (struct ow_engine *);
+const struct ow_device *ow_engine_get_device (struct ow_engine *engine);
 
-void ow_engine_stop (struct ow_engine *);
+void ow_engine_stop (struct ow_engine *engine);
 
-void ow_engine_set_overbridge_name (struct ow_engine *, const char *);
+void ow_engine_set_overbridge_name (struct ow_engine *engine, const char *);
 
-const char *ow_engine_get_overbridge_name (struct ow_engine *);
+const char *ow_engine_get_overbridge_name (struct ow_engine *engine);
 
 int ow_hotplug_loop (int *running, pthread_spinlock_t * lock,
 		     ow_hotplug_callback_t cb);
 
 //Resampler
-ow_err_t ow_resampler_init_from_bus_address (struct ow_resampler **, uint8_t,
-					     uint8_t, unsigned int,
-					     unsigned int, int);
+ow_err_t ow_resampler_init_from_device (struct ow_resampler **resampler,
+					struct ow_device *device,
+					unsigned int blocks_per_transfer,
+					unsigned int xfr_timeout,
+					unsigned int quality);
 
-ow_err_t ow_resampler_start (struct ow_resampler *, struct ow_context *);
+ow_err_t ow_resampler_start (struct ow_resampler *resampler,
+			     struct ow_context *context);
 
-void ow_resampler_wait (struct ow_resampler *);
+void ow_resampler_wait (struct ow_resampler *resampler);
 
-void ow_resampler_destroy (struct ow_resampler *);
+void ow_resampler_destroy (struct ow_resampler *resampler);
 
 void ow_resampler_get_state (struct ow_resampler *resampler,
 			     struct ow_resampler_state *state);
 
-void ow_resampler_clear_buffers (struct ow_resampler *);
+void ow_resampler_clear_buffers (struct ow_resampler *resampler);
 
-void ow_resampler_reset (struct ow_resampler *);
+void ow_resampler_reset (struct ow_resampler *resampler);
 
-void ow_resampler_read_audio (struct ow_resampler *);
+void ow_resampler_read_audio (struct ow_resampler *resampler);
 
-void ow_resampler_write_audio (struct ow_resampler *);
+void ow_resampler_write_audio (struct ow_resampler *resampler);
 
-int ow_resampler_compute_ratios (struct ow_resampler *, uint64_t,
+int ow_resampler_compute_ratios (struct ow_resampler *resampler, uint64_t,
 				 void (*)(void *), void *);
 
-void ow_resampler_reset_latencies (struct ow_resampler *);
+void ow_resampler_reset_latencies (struct ow_resampler *resampler);
 
-ow_resampler_status_t ow_resampler_get_status (struct ow_resampler *);
+ow_resampler_status_t ow_resampler_get_status (struct ow_resampler
+					       *resampler);
 
-struct ow_engine *ow_resampler_get_engine (struct ow_resampler *);
+struct ow_engine *ow_resampler_get_engine (struct ow_resampler *resampler);
 
-void ow_resampler_stop (struct ow_resampler *);
+void ow_resampler_stop (struct ow_resampler *resampler);
 
-void ow_resampler_set_buffer_size (struct ow_resampler *, uint32_t);
+void ow_resampler_set_buffer_size (struct ow_resampler *resampler, uint32_t);
 
-void ow_resampler_set_samplerate (struct ow_resampler *, uint32_t);
+void ow_resampler_set_samplerate (struct ow_resampler *resampler, uint32_t);
 
-size_t ow_resampler_get_o2h_frame_size (struct ow_resampler *);
+size_t ow_resampler_get_o2h_frame_size (struct ow_resampler *resampler);
 
-size_t ow_resampler_get_h2o_frame_size (struct ow_resampler *);
+size_t ow_resampler_get_h2o_frame_size (struct ow_resampler *resampler);
 
-float *ow_resampler_get_o2h_audio_buffer (struct ow_resampler *);
+float *ow_resampler_get_o2h_audio_buffer (struct ow_resampler *resampler);
 
-float *ow_resampler_get_h2o_audio_buffer (struct ow_resampler *);
+float *ow_resampler_get_h2o_audio_buffer (struct ow_resampler *resampler);
 
 struct ow_resampler_reporter *ow_resampler_get_reporter (struct ow_resampler
 							 *);
 
-void ow_resampler_get_h2o_latency (struct ow_resampler *, uint32_t *,
+void ow_resampler_get_h2o_latency (struct ow_resampler *resampler, uint32_t *,
 				   uint32_t *, uint32_t *);
 
-void ow_resampler_get_o2h_latency (struct ow_resampler *, uint32_t *,
+void ow_resampler_get_o2h_latency (struct ow_resampler *resampler, uint32_t *,
 				   uint32_t *, uint32_t *);
 
-double ow_resampler_get_target_delay_ms (struct ow_resampler *);
+double ow_resampler_get_target_delay_ms (struct ow_resampler *resampler);

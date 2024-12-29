@@ -37,13 +37,8 @@ struct jclient
   jack_port_t **output_ports;
   jack_port_t **input_ports;
   //Parameters
-  uint8_t bus;
-  uint8_t address;
-  unsigned int blocks_per_transfer;
-  unsigned int xfr_timeout;
-  int quality;
+  struct ow_device *device;
   int priority;
-  jack_nframes_t bufsize;
   // Overwitch stuff
   struct ow_resampler *resampler;
   struct ow_context context;
@@ -55,7 +50,7 @@ struct jclient
 
 void jclient_check_jack_server (jclient_notify_status_t);
 
-int jclient_init (struct jclient *jclient, uint8_t bus, uint8_t address,
+int jclient_init (struct jclient *jclient, struct ow_device *device,
 		  unsigned int blocks_per_transfer, unsigned int xfr_timeout,
 		  int quality, int priority);
 

@@ -66,9 +66,9 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
       s = (unsigned char *) blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  if (engine->device_desc.format == OW_ENGINE_FORMAT_V1)
+	  if (engine->device->desc.format == OW_ENGINE_FORMAT_V1)
 	    {
-	      for (int k = 0; k < engine->device_desc.outputs; k++)
+	      for (int k = 0; k < engine->device->desc.outputs; k++)
 		{
 		  v = be32toh (*((int32_t *) s));
 		  printf ("Frame %2d, track %2d: %d\n", j, k, v);
@@ -78,8 +78,8 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
 	  else
 	    {
 	      struct ow_device_track *track =
-		engine->device_desc.output_tracks;
-	      for (int k = 0; k < engine->device_desc.outputs; k++)
+		engine->device->desc.output_tracks;
+	      for (int k = 0; k < engine->device->desc.outputs; k++)
 		{
 		  unsigned char *dst;
 		  if (track->size == 4)
@@ -110,7 +110,8 @@ test_sizes ()
 
   printf ("\n");
 
-  ow_copy_device_desc (&engine.device_desc, &TESTDEV_DESC_V1);
+  engine.device = malloc (sizeof (struct ow_device));
+  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_V1);
   engine.usb.audio_in_blk_len = 0;
   engine.usb.audio_out_blk_len = 0;
   ow_engine_init_mem (&engine, BLOCKS);
@@ -144,7 +145,8 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
 
   printf ("\n");
 
-  ow_copy_device_desc (&engine.device_desc, device_desc);
+  engine.device = malloc (sizeof (struct ow_device));
+  ow_copy_device_desc (&engine.device->desc, device_desc);
   engine.usb.audio_in_blk_len = 0;
   engine.usb.audio_out_blk_len = 0;
   ow_engine_init_mem (&engine, BLOCKS);
@@ -157,7 +159,7 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
     {
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < engine.device_desc.outputs; k++)
+	  for (int k = 0; k < engine.device->desc.outputs; k++)
 	    {
 	      *a = 1e-4 * (i + 1) * (k + 1);
 	      a++;
@@ -189,7 +191,7 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
     {
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  for (int k = 0; k < engine.device_desc.outputs; k++)
+	  for (int k = 0; k < engine.device->desc.outputs; k++)
 	    {
 	      float error = fabsf (*a - *b);
 	      CU_ASSERT_TRUE (error < max_error);
@@ -226,7 +228,8 @@ test_jack_buffers ()
 
   printf ("\n");
 
-  ow_copy_device_desc (&engine.device_desc, &TESTDEV_DESC_V1);
+  engine.device = malloc (sizeof (struct ow_device));
+  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_V1);
 
   for (int i = 0; i < TRACKS; i++)
     {
@@ -239,12 +242,12 @@ test_jack_buffers ()
 	}
     }
 
-  jclient_copy_j2o_audio (output, NFRAMES, jack_input, &engine.device_desc);
+  jclient_copy_j2o_audio (output, NFRAMES, jack_input, &engine.device->desc);
 
   memcpy (input, output,
 	  TRACKS * NFRAMES * sizeof (jack_default_audio_sample_t));
 
-  jclient_copy_o2j_audio (input, NFRAMES, jack_output, &engine.device_desc);
+  jclient_copy_o2j_audio (input, NFRAMES, jack_output, &engine.device->desc);
 
   for (int i = 0; i < TRACKS; i++)
     {
@@ -257,6 +260,8 @@ test_jack_buffers ()
       free (jack_input[i]);
       free (jack_output[i]);
     }
+
+  free (engine.device);
 }
 
 static void

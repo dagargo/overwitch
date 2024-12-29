@@ -166,6 +166,7 @@ struct ow_engine
 {
   char name[OW_ENGINE_NAME_MAX_LEN];
   char overbridge_name[OB_NAME_MAX_LEN];
+  struct ow_device *device;
   ow_engine_status_t status;
   unsigned int blocks_per_transfer;
   unsigned int frames_per_transfer;
@@ -178,7 +179,6 @@ struct ow_engine
   size_t h2o_min_latency;
   size_t h2o_max_latency;
   pthread_t thread;
-  struct ow_device_desc device_desc;
   size_t h2o_transfer_size;
   size_t o2h_transfer_size;
   float *h2o_transfer_buf;

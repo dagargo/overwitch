@@ -321,13 +321,13 @@ static const struct ow_device_desc *OB_DEVICE_DESCS[] = {
 #endif
 
 int
-ow_get_usb_device_list (struct ow_usb_device **devices, size_t *size)
+ow_get_device_list (struct ow_device **ow_devices, size_t *size)
 {
   int err;
   uint8_t bus, address;
   libusb_device **usb_device;
   struct libusb_device_descriptor desc;
-  struct ow_usb_device *device;
+  struct ow_device *ow_device;
   ssize_t total = 0;
   libusb_context *context = NULL;
   libusb_device **usb_devices = NULL;
@@ -342,12 +342,12 @@ ow_get_usb_device_list (struct ow_usb_device **devices, size_t *size)
   total = libusb_get_device_list (context, &usb_devices);
   if (!total)
     {
-      *devices = NULL;
+      *ow_devices = NULL;
       return 0;
     }
 
-  *devices = malloc (sizeof (struct ow_usb_device) * total);
-  device = *devices;
+  *ow_devices = malloc (sizeof (struct ow_device) * total);
+  ow_device = *ow_devices;
   usb_device = usb_devices;
   for (int i = 0; i < total; i++, usb_device++)
     {
@@ -360,26 +360,26 @@ ow_get_usb_device_list (struct ow_usb_device **devices, size_t *size)
 	}
 
       if (!ow_get_device_desc_from_vid_pid (desc.idVendor, desc.idProduct,
-					    &device->desc))
+					    &ow_device->desc))
 	{
 	  bus = libusb_get_bus_number (*usb_device);
 	  address = libusb_get_device_address (*usb_device);
 	  debug_print (1, "Found %s (bus %03d, address %03d, ID %04x:%04x)",
-		       device->desc.name, bus, address, desc.idVendor,
+		       ow_device->desc.name, bus, address, desc.idVendor,
 		       desc.idProduct);
-	  device->vid = desc.idVendor;
-	  device->pid = desc.idProduct;
-	  device->bus = bus;
-	  device->address = address;
-	  device++;
+	  ow_device->vid = desc.idVendor;
+	  ow_device->pid = desc.idProduct;
+	  ow_device->bus = bus;
+	  ow_device->address = address;
+	  ow_device++;
 	  (*size)++;
 	}
     }
 
   if (!*size)
     {
-      free (*devices);
-      *devices = NULL;
+      free (*ow_devices);
+      *ow_devices = NULL;
     }
 
   libusb_free_device_list (usb_devices, total);
@@ -693,23 +693,23 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
 }
 
 int
-ow_get_usb_device_from_device_attrs (int device_num, const char *device_name,
-				     uint8_t bus, uint8_t address,
-				     struct ow_usb_device **device)
+ow_get_device_from_device_attrs (int device_num, const char *device_name,
+				 uint8_t bus, uint8_t address,
+				 struct ow_device **dev)
 {
   int i;
   size_t total;
-  struct ow_usb_device *usb_devices;
-  struct ow_usb_device *usb_device;
-  ow_err_t err = ow_get_usb_device_list (&usb_devices, &total);
+  struct ow_device *devices;
+  struct ow_device *device;
+  ow_err_t err = ow_get_device_list (&devices, &total);
 
   if (err)
     {
       return 1;
     }
 
-  usb_device = usb_devices;
-  for (i = 0; i < total; i++, usb_device++)
+  device = devices;
+  for (i = 0; i < total; i++, device++)
     {
       if (device_num >= 0)
 	{
@@ -720,14 +720,14 @@ ow_get_usb_device_from_device_attrs (int device_num, const char *device_name,
 	}
       else if (device_name)
 	{
-	  if (strcmp (usb_device->desc.name, device_name) == 0)
+	  if (strcmp (device->desc.name, device_name) == 0)
 	    {
 	      break;
 	    }
 	}
       else
 	{
-	  if (usb_device->bus == bus && usb_device->address == address)
+	  if (device->bus == bus && device->address == address)
 	    {
 	      break;
 	    }
@@ -740,11 +740,11 @@ ow_get_usb_device_from_device_attrs (int device_num, const char *device_name,
     }
   else
     {
-      *device = malloc (sizeof (struct ow_usb_device));
-      memcpy (*device, usb_device, sizeof (struct ow_usb_device));
+      *dev = malloc (sizeof (struct ow_device));
+      memcpy (*dev, device, sizeof (struct ow_device));
     }
 
-  free (usb_devices);
+  free (devices);
 
   return err;
 }

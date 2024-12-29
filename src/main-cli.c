@@ -86,11 +86,11 @@ static int
 run_jclient (int device_num, const char *device_name, uint8_t bus,
 	     uint8_t address)
 {
-  struct ow_usb_device *device;
+  struct ow_device *device;
   int err;
 
-  if (ow_get_usb_device_from_device_attrs (device_num, device_name, bus,
-					   address, &device))
+  if (ow_get_device_from_device_attrs (device_num, device_name, bus, address,
+				       &device))
     {
       return EXIT_FAILURE;
     }
@@ -99,16 +99,15 @@ run_jclient (int device_num, const char *device_name, uint8_t bus,
   if (stop)
     {
       pthread_spin_unlock (&lock);
-      err = EXIT_SUCCESS;
-      goto end;
+      return EXIT_SUCCESS;
     }
   pthread_spin_unlock (&lock);
 
-  if (jclient_init (&jclient, device->bus, device->address,
-		    blocks_per_transfer, xfr_timeout, quality, priority))
+  if (jclient_init (&jclient, device, blocks_per_transfer, xfr_timeout,
+		    quality, priority))
     {
-      err = EXIT_FAILURE;
-      goto end;
+      free (device);
+      return EXIT_FAILURE;
     }
 
   jclient_start (&jclient);
@@ -127,8 +126,6 @@ run_jclient (int device_num, const char *device_name, uint8_t bus,
   jclient_wait (&jclient);
   jclient_destroy (&jclient);
 
-end:
-  free (device);
   return err;
 }
 
@@ -136,23 +133,22 @@ static int
 rename_device (int device_num, const char *device_name, uint8_t bus,
 	       uint8_t address, const char *name)
 {
-  struct ow_usb_device *device;
+  struct ow_device *device;
   struct ow_engine *engine;
   struct ow_context context;
   int err;
 
-  if (ow_get_usb_device_from_device_attrs
-      (device_num, device_name, bus, address, &device))
+  if (ow_get_device_from_device_attrs (device_num, device_name, bus,
+				       address, &device))
     {
       return EXIT_FAILURE;
     }
 
-  err = ow_engine_init_from_bus_address (&engine, device->bus,
-					 device->address, OW_DEFAULT_BLOCKS,
-					 OW_DEFAULT_XFR_TIMEOUT);
-  free (device);
+  err = ow_engine_init_from_device (&engine, device, OW_DEFAULT_BLOCKS,
+				    OW_DEFAULT_XFR_TIMEOUT);
   if (err)
     {
+      free (device);
       goto end;
     }
 

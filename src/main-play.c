@@ -29,7 +29,6 @@ static struct ow_context context;
 static struct ow_engine *engine;
 static SF_INFO sfinfo;
 static SNDFILE *sf;
-static const struct ow_device_desc *desc;
 static float max[OB_MAX_TRACKS];
 static float min[OB_MAX_TRACKS];
 static char *file;
@@ -56,6 +55,7 @@ print_status ()
 static size_t
 buffer_read_space (void *data)
 {
+  const struct ow_device_desc *desc = &ow_engine_get_device (engine)->desc;
   size_t rbsp = (sfinfo.frames - frames) * desc->inputs * OW_BYTES_PER_SAMPLE;
 
   if (!rbsp)
@@ -69,6 +69,7 @@ buffer_read_space (void *data)
 static size_t
 buffer_read (void *data, char *buf, size_t size)
 {
+  const struct ow_device_desc *desc = &ow_engine_get_device (engine)->desc;
   int bytes_per_frame = desc->inputs * OW_BYTES_PER_SAMPLE;
   sf_count_t wanted_frames, read_frames;
 
@@ -114,6 +115,7 @@ buffer_read (void *data, char *buf, size_t size)
 static void
 signal_handler (int signo)
 {
+  const struct ow_device_desc *desc = &ow_engine_get_device (engine)->desc;
   print_status ();
   if (debug_level)
     {
@@ -136,24 +138,21 @@ run_play (int device_num, const char *device_name, uint8_t bus,
 	  unsigned int xfr_timeout, const char *file)
 {
   ow_err_t err;
-  struct ow_usb_device *device;
+  struct ow_device *device;
 
-  if (ow_get_usb_device_from_device_attrs (device_num, device_name, bus,
-					   address, &device))
+  if (ow_get_device_from_device_attrs (device_num, device_name, bus,
+				       address, &device))
     {
       return OW_GENERIC_ERROR;
     }
 
-  err = ow_engine_init_from_bus_address (&engine, device->bus,
-					 device->address, blocks_per_transfer,
-					 xfr_timeout);
-  free (device);
+  err = ow_engine_init_from_device (&engine, device, blocks_per_transfer,
+				    xfr_timeout);
   if (err)
     {
+      free (device);
       goto end;
     }
-
-  desc = ow_engine_get_device_desc (engine);
 
   sf = sf_open (file, SFM_READ, &sfinfo);
   if (!sf)
@@ -163,14 +162,14 @@ run_play (int device_num, const char *device_name, uint8_t bus,
       goto cleanup_engine;
     }
 
-  if (sfinfo.channels != desc->inputs)
+  if (sfinfo.channels != device->desc.inputs)
     {
       error_print ("Number of channels do not match inputs");
       err = OW_GENERIC_ERROR;
       goto cleanup_audio;
     }
 
-  for (int i = 0; i < desc->inputs; i++)
+  for (int i = 0; i < device->desc.inputs; i++)
     {
       max[i] = 0.0f;
       min[i] = 0.0f;

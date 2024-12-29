@@ -495,16 +495,16 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 }
 
 ow_err_t
-ow_resampler_init_from_bus_address (struct ow_resampler **resampler_,
-				    uint8_t bus, uint8_t address,
-				    unsigned int blocks_per_transfer,
-				    unsigned int xfr_timeout, int quality)
+ow_resampler_init_from_device (struct ow_resampler **resampler_,
+			       struct ow_device *device,
+			       unsigned int blocks_per_transfer,
+			       unsigned int xfr_timeout, unsigned int quality)
 {
   struct ow_resampler *resampler = malloc (sizeof (struct ow_resampler));
-  ow_err_t err = ow_engine_init_from_bus_address (&resampler->engine, bus,
-						  address,
-						  blocks_per_transfer,
-						  xfr_timeout);
+  ow_err_t err = ow_engine_init_from_device (&resampler->engine,
+					     device,
+					     blocks_per_transfer,
+					     xfr_timeout);
   if (err)
     {
       free (resampler);
@@ -517,20 +517,17 @@ ow_resampler_init_from_bus_address (struct ow_resampler **resampler_,
 
   resampler->samplerate = 0;
   resampler->bufsize = 0;
-  resampler->o2h_frame_size =
-    resampler->engine->device_desc.outputs * OW_BYTES_PER_SAMPLE;
-  resampler->h2o_frame_size =
-    resampler->engine->device_desc.inputs * OW_BYTES_PER_SAMPLE;
+  resampler->o2h_frame_size = device->desc.outputs * OW_BYTES_PER_SAMPLE;
+  resampler->h2o_frame_size = device->desc.inputs * OW_BYTES_PER_SAMPLE;
   resampler->h2o_aux = NULL;
   resampler->status = OW_RESAMPLER_STATUS_STOP;
 
-  resampler->h2o_state =
-    src_callback_new (resampler_h2o_reader, quality,
-		      resampler->engine->device_desc.inputs, NULL, resampler);
-  resampler->o2h_state =
-    src_callback_new (resampler_o2h_reader, quality,
-		      resampler->engine->device_desc.outputs, NULL,
-		      resampler);
+  resampler->h2o_state = src_callback_new (resampler_h2o_reader, quality,
+					   device->desc.inputs, NULL,
+					   resampler);
+  resampler->o2h_state = src_callback_new (resampler_o2h_reader, quality,
+					   device->desc.outputs, NULL,
+					   resampler);
 
   resampler->reporter.callback = NULL;
   resampler->reporter.data = NULL;

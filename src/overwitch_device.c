@@ -21,7 +21,7 @@
 #include <gtk/gtk.h>
 #include "overwitch_device.h"
 
-G_DEFINE_TYPE (OverwitchDevice, overwitch_device, G_TYPE_OBJECT)
+G_DEFINE_TYPE (OverwitchDevice, overwitch_device, G_TYPE_OBJECT);
 
 enum list_store_columns
 {
@@ -99,8 +99,7 @@ overwitch_device_set_property (GObject *object, guint prop_id,
 }
 
 static void
-overwitch_device_get_property (GObject *object,
-			       guint prop_id,
+overwitch_device_get_property (GObject *object, guint prop_id,
 			       GValue *value, GParamSpec *pspec)
 {
   OverwitchDevice *d = OVERWITCH_DEVICE (object);
@@ -201,15 +200,16 @@ overwitch_device_class_init (OverwitchDeviceClass *klass)
 }
 
 OverwitchDevice *
-overwitch_device_new (const gchar *name, const gchar *device, const guint bus,
-		      const guint address, const gpointer instance)
+overwitch_device_new (const gpointer instance, const gchar *name,
+		      const gchar *device, const guint bus,
+		      const guint address)
 {
   OverwitchDevice *d = g_object_new (OVERWITCH_TYPE_DEVICE, NULL);
+  d->instance = instance;
   d->name = g_strdup (name);
   d->device = g_strdup (device);
   d->bus = bus;
   d->address = address;
-  d->instance = instance;
   return d;
 }
 
