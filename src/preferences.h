@@ -1,5 +1,5 @@
 /*
- *   config.h
+ *   preferences.h
  *   Copyright (C) 2022 David García Goñi <dagargo@gmail.com>
  *
  *   This file is part of Overwitch.
@@ -20,7 +20,7 @@
 
 #include <glib.h>
 
-struct ow_config
+struct ow_preferences
 {
   gboolean refresh_at_startup;
   gboolean show_all_columns;
@@ -30,6 +30,6 @@ struct ow_config
   gchar *pipewire_props;
 };
 
-gint ow_load_config (struct ow_config *config);
+gint ow_load_preferences (struct ow_preferences *preferences);
 
-gint ow_save_config (struct ow_config *config);
+gint ow_save_preferences (struct ow_preferences *preferences);

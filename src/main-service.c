@@ -24,7 +24,7 @@
 #include "../config.h"
 #include "jclient.h"
 #include "utils.h"
-#include "config.h"
+#include "preferences.h"
 
 #define POOLED_JCLIENT_LEN 64
 
@@ -42,7 +42,7 @@ struct pooled_jclient
   struct jclient jclient;
 };
 
-static struct ow_config config;
+static struct ow_preferences preferences;
 static struct pooled_jclient jcpool[POOLED_JCLIENT_LEN];
 static pthread_spinlock_t lock;	//Needed for signal handling
 static gint hotplug_running;
@@ -125,8 +125,9 @@ start_all ()
     {
       struct ow_device *copy = malloc (sizeof (struct ow_device));
       memcpy (copy, device, sizeof (struct ow_device));
-      if (jclient_init (&pjc->jclient, copy, config.blocks, config.timeout,
-			config.quality, JCLIENT_DEFAULT_PRIORITY))
+      if (jclient_init (&pjc->jclient, copy, preferences.blocks,
+			preferences.timeout, preferences.quality,
+			JCLIENT_DEFAULT_PRIORITY))
 	{
 	  free (copy);
 	  continue;
@@ -232,8 +233,9 @@ hotplug_callback (struct ow_device *device)
       return;
     }
 
-  if (jclient_init (&pjc->jclient, device, config.blocks, config.timeout,
-		    config.quality, JCLIENT_DEFAULT_PRIORITY))
+  if (jclient_init (&pjc->jclient, device, preferences.blocks,
+		    preferences.timeout, preferences.quality,
+		    JCLIENT_DEFAULT_PRIORITY))
     {
       pthread_spin_unlock (&lock);
       return;
@@ -259,13 +261,13 @@ hotplug_runner (void *data)
 static void
 overwitch_startup (GApplication *app, gpointer *user_data)
 {
-  ow_load_config (&config);
+  ow_load_preferences (&preferences);
 
-  if (config.pipewire_props)
+  if (preferences.pipewire_props)
     {
       debug_print (1, "Setting %s to '%s'...", PIPEWIRE_PROPS_ENV_VAR,
-		   config.pipewire_props);
-      setenv (PIPEWIRE_PROPS_ENV_VAR, config.pipewire_props, TRUE);
+		   preferences.pipewire_props);
+      setenv (PIPEWIRE_PROPS_ENV_VAR, preferences.pipewire_props, TRUE);
     }
 
   if (start_all ())
@@ -314,7 +316,7 @@ main (gint argc, gchar *argv[])
 
   g_object_unref (app);
 
-  g_free (config.pipewire_props);
+  g_free (preferences.pipewire_props);
 
   wait_all ();
 

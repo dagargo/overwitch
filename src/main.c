@@ -30,7 +30,7 @@
 #include "common.h"
 #include "jclient.h"
 #include "utils.h"
-#include "config.h"
+#include "preferences.h"
 #include "overwitch_device.h"
 
 #define PAUSE_TO_BE_NOTIFIED_USECS 500000
@@ -248,49 +248,49 @@ overwitch_show_all_columns (GSimpleAction *action,
 static void
 save_preferences ()
 {
-  struct ow_config config;
+  struct ow_preferences prefs;
   GVariant *v;
   GAction *a;
 
   a = g_action_map_lookup_action (G_ACTION_MAP (app), "refresh_at_startup");
   v = g_action_get_state (a);
-  g_variant_get (v, "b", &config.refresh_at_startup);
+  g_variant_get (v, "b", &prefs.refresh_at_startup);
 
   a = g_action_map_lookup_action (G_ACTION_MAP (app), "show_all_columns");
   v = g_action_get_state (a);
-  g_variant_get (v, "b", &config.show_all_columns);
+  g_variant_get (v, "b", &prefs.show_all_columns);
 
-  config.blocks = gtk_spin_button_get_value_as_int (blocks_spin_button);
-  config.timeout = gtk_spin_button_get_value_as_int (timeout_spin_button);
-  config.quality = gtk_drop_down_get_selected (quality_drop_down);
-  config.pipewire_props = pipewire_props;
+  prefs.blocks = gtk_spin_button_get_value_as_int (blocks_spin_button);
+  prefs.timeout = gtk_spin_button_get_value_as_int (timeout_spin_button);
+  prefs.quality = gtk_drop_down_get_selected (quality_drop_down);
+  prefs.pipewire_props = pipewire_props;
 
-  ow_save_config (&config);
+  ow_save_preferences (&prefs);
 }
 
 static void
 load_preferences ()
 {
-  struct ow_config config;
+  struct ow_preferences prefs;
   GVariant *v;
   GAction *a;
 
-  ow_load_config (&config);
+  ow_load_preferences (&prefs);
 
-  pipewire_props = config.pipewire_props;
+  pipewire_props = prefs.pipewire_props;
 
   a = g_action_map_lookup_action (G_ACTION_MAP (app), "refresh_at_startup");
-  v = g_variant_new_boolean (config.refresh_at_startup);
+  v = g_variant_new_boolean (prefs.refresh_at_startup);
   g_action_change_state (a, v);
 
   a = g_action_map_lookup_action (G_ACTION_MAP (app), "show_all_columns");
-  v = g_variant_new_boolean (config.show_all_columns);
+  v = g_variant_new_boolean (prefs.show_all_columns);
   g_action_change_state (a, v);
 
-  gtk_spin_button_set_value (blocks_spin_button, config.blocks);
-  gtk_spin_button_set_value (timeout_spin_button, config.timeout);
-  gtk_drop_down_set_selected (quality_drop_down, config.quality);
-  update_all_metrics (config.show_all_columns);
+  gtk_spin_button_set_value (blocks_spin_button, prefs.blocks);
+  gtk_spin_button_set_value (timeout_spin_button, prefs.timeout);
+  gtk_drop_down_set_selected (quality_drop_down, prefs.quality);
+  update_all_metrics (prefs.show_all_columns);
 }
 
 static gboolean
