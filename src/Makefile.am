@@ -7,7 +7,7 @@ LIB_LIBS += json-glib-1.0
 endif
 
 CLI_LIBS = jack $(LIB_LIBS)
-SRV_LIBS = glib-2.0 $(CLI_LIBS)
+SRV_LIBS = libsystemd glib-2.0 $(CLI_LIBS)
 GUI_LIBS = gtk4 $(CLI_LIBS)
 
 if ! JSON_DEVS_FILE

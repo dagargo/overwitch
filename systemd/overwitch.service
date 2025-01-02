@@ -4,6 +4,7 @@ After=pipewire.service
 Requires=pipewire.service
 
 [Service]
+Type=notify-reload
 GuessMainPID=true
 ExecStart=overwitch-service
 Restart=on-failure

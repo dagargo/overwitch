@@ -56,6 +56,7 @@ The package dependencies for Debian based distributions are:
 - libsndfile1-dev
 - autopoint
 - gettext
+- libsystemd-dev
 - libjson-glib-dev (only if `JSON_DEVS_FILE=no` is not used)
 - libgtk-4-dev (only if `CLI_ONLY=yes` is not used)
 - systemd-dev (only used to install the udev rules)

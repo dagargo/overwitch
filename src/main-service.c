@@ -21,6 +21,8 @@
 #define _GNU_SOURCE
 #include <signal.h>
 #include <errno.h>
+#include <systemd/sd-daemon.h>
+#include <time.h>
 #include "../config.h"
 #include "jclient.h"
 #include "utils.h"
@@ -48,25 +50,30 @@ static struct pooled_jclient jcpool[POOLED_JCLIENT_LEN];
 static pthread_spinlock_t lock;	//Needed for signal handling
 static gint hotplug_running;
 static pthread_t hotplug_thread;
-static gint stop_all;
+static gint force_stop;
 static GApplication *app;
 
 static GDBusNodeInfo *introspection_data = NULL;
 
 static const gchar introspection_xml[] =
   "<node>"
-  "  <interface name='" PACKAGE_SERVICE_NAME "Service" "'>"
+  "  <interface name='" PACKAGE_SERVICE_NAME "Service'>"
   "    <method name='GetState'>"
   "      <arg type='s' name='status' direction='out'/>"
-  "    </method>" "  </interface>" "</node>";
+  "    </method>"
+  "    <method name='Reload'>" "    </method>" "  </interface>" "</node>";
+
+static void startup ();
+
+static void reload ();
 
 static void
-signal_handler (int signum)
+stop_all ()
 {
   struct pooled_jclient *pjc = jcpool;
 
   pthread_spin_lock (&lock);
-  stop_all = 1;
+  force_stop = 1;
   hotplug_running = 0;
 
   for (guint i = 0; i < POOLED_JCLIENT_LEN; i++, pjc++)
@@ -77,8 +84,29 @@ signal_handler (int signum)
 	}
     }
   pthread_spin_unlock (&lock);
+}
 
-  g_application_release (app);
+static void
+signal_handler (int signum)
+{
+  if (signum == SIGTERM)
+    {
+      stop_all ();
+      g_application_release (app);
+    }
+  else if (signum == SIGHUP)
+    {
+      struct timespec ts;
+      clock_gettime (CLOCK_MONOTONIC, &ts);
+      sd_notifyf (0, "RELOADING=1\nMONOTONIC_USEC=%" PRIdMAX "%06d",
+		  (intmax_t) ts.tv_sec, (int) (ts.tv_nsec / 1000));
+      reload ();
+      sd_notify (0, "READY=1");
+    }
+  else
+    {
+      error_print ("Signal not handled");
+    }
 }
 
 static void *
@@ -89,7 +117,7 @@ jclient_runner (void *data)
   jclient_start (&pjc->jclient);
 
   pthread_spin_lock (&lock);
-  if (stop_all)
+  if (force_stop)
     {
       jclient_stop (&pjc->jclient);
     }
@@ -119,7 +147,7 @@ start_all ()
     }
 
   pthread_spin_lock (&lock);
-  if (stop_all)
+  if (force_stop)
     {
       pthread_spin_unlock (&lock);
       goto end;
@@ -176,6 +204,7 @@ wait_all ()
 	{
 	  debug_print (1, "Waiting pooled jclient %d...", i);
 	  pthread_join (pjc->thread, NULL);
+	  pjc->status = PJC_AVAILABLE;
 	}
 
       pjc++;
@@ -237,7 +266,7 @@ hotplug_callback (struct ow_device *device)
     }
 
   pthread_spin_lock (&lock);
-  if (stop_all)
+  if (force_stop)
     {
       pthread_spin_unlock (&lock);
       return;
@@ -269,12 +298,29 @@ hotplug_runner (void *data)
 }
 
 static void
+reload ()
+{
+  stop_all ();
+  wait_all ();
+  if (hotplug_thread)
+    {
+      pthread_join (hotplug_thread, NULL);
+    }
+  startup ();
+}
+
+static void
 handle_method_call (GDBusConnection *connection, const gchar *sender,
 		    const gchar *object_path, const gchar *interface_name,
 		    const gchar *method_name, GVariant *parameters,
 		    GDBusMethodInvocation *invocation, gpointer user_data)
 {
-  if (g_strcmp0 (method_name, "GetState") == 0)
+  if (g_strcmp0 (method_name, "Reload") == 0)
+    {
+      reload ();
+      g_dbus_method_invocation_return_value (invocation, NULL);
+    }
+  else if (g_strcmp0 (method_name, "GetState") == 0)
     {
       struct pooled_jclient *pjc = jcpool;
       struct ow_resampler *resampler = NULL;
@@ -328,10 +374,9 @@ static const GDBusInterfaceVTable interface_vtable = {
 };
 
 static void
-overwitch_startup (GApplication *app, gpointer *user_data)
+startup ()
 {
-  guint err;
-  GDBusConnection *conn;
+  g_free (preferences.pipewire_props);
 
   ow_load_preferences (&preferences);
 
@@ -342,24 +387,11 @@ overwitch_startup (GApplication *app, gpointer *user_data)
       setenv (PIPEWIRE_PROPS_ENV_VAR, preferences.pipewire_props, TRUE);
     }
 
-  introspection_data = g_dbus_node_info_new_for_xml (introspection_xml, NULL);
-  conn = g_application_get_dbus_connection (app);
-  err = g_dbus_connection_register_object (conn,
-					   "/io/github/dagargo/OverwitchService",
-					   introspection_data->interfaces[0],
-					   &interface_vtable, NULL,
-					   NULL, NULL);
-  if (!err)
-    {
-      goto end;
-    }
-
+  force_stop = 0;
   if (start_all ())
     {
-      goto end;
+      return;
     }
-
-  g_application_hold (app);
 
   if (pthread_create (&hotplug_thread, NULL, hotplug_runner, NULL))
     {
@@ -369,9 +401,29 @@ overwitch_startup (GApplication *app, gpointer *user_data)
     {
       pthread_setname_np (hotplug_thread, "hotplug-worker");
     }
+}
 
-end:
+static void
+overwitch_startup (GApplication *app, gpointer *user_data)
+{
+  guint id;
+  GDBusConnection *conn;
+
+  introspection_data = g_dbus_node_info_new_for_xml (introspection_xml, NULL);
+  conn = g_application_get_dbus_connection (app);
+  id = g_dbus_connection_register_object (conn,
+					  "/io/github/dagargo/OverwitchService",
+					  introspection_data->interfaces[0],
+					  &interface_vtable, NULL, NULL,
+					  NULL);
   g_dbus_node_info_unref (introspection_data);
+
+  if (id)
+    {
+      startup ();
+      g_application_hold (app);
+      sd_notify (0, "READY=1");
+    }
 }
 
 static void
@@ -391,6 +443,7 @@ main (gint argc, gchar *argv[])
   sigemptyset (&action.sa_mask);
   action.sa_flags = 0;
   sigaction (SIGTERM, &action, NULL);
+  sigaction (SIGHUP, &action, NULL);
 
   pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
 
