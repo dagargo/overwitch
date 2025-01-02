@@ -61,7 +61,13 @@ static const gchar introspection_xml[] =
   "    <method name='GetState'>"
   "      <arg type='s' name='status' direction='out'/>"
   "    </method>"
-  "    <method name='Reload'>" "    </method>" "  </interface>" "</node>";
+  "    <method name='Reload'>"
+  "    </method>"
+  "    <method name='SetDeviceName'>"
+  "      <arg type='u' name='id' direction='in'/>"
+  "      <arg type='s' name='name' direction='in'/>"
+  "      <arg type='i' name='error' direction='out'/>"
+  "    </method>" "  </interface>" "</node>";
 
 static void startup ();
 
@@ -76,7 +82,7 @@ stop_all ()
   force_stop = 1;
   hotplug_running = 0;
 
-  for (guint i = 0; i < POOLED_JCLIENT_LEN; i++, pjc++)
+  for (guint32 i = 0; i < POOLED_JCLIENT_LEN; i++, pjc++)
     {
       if (pjc->status == PJC_RUNNING)
 	{
@@ -133,6 +139,32 @@ jclient_runner (void *data)
   return NULL;
 }
 
+static void
+start_single (struct pooled_jclient *pjc, guint id, struct ow_device *device)
+{
+  if (jclient_init (&pjc->jclient, device, preferences.blocks,
+		    preferences.timeout, preferences.quality,
+		    JCLIENT_DEFAULT_PRIORITY))
+    {
+      free (device);
+      return;
+    }
+
+  debug_print (1, "Starting pooled jclient %d...", id);
+  pjc->status = PJC_RUNNING;
+  if (pthread_create (&pjc->thread, NULL, jclient_runner, pjc))
+    {
+      error_print ("Could not start thread");
+      jclient_destroy (&pjc->jclient);
+      pjc->status = PJC_STOPPED;
+      return;
+    }
+
+  gchar name[OW_LABEL_MAX_LEN];
+  snprintf (name, OW_LABEL_MAX_LEN, "service-worker-%d", id);
+  pthread_setname_np (pjc->thread, name);
+}
+
 static int
 start_all ()
 {
@@ -163,22 +195,11 @@ start_all ()
     {
       struct ow_device *copy = malloc (sizeof (struct ow_device));
       memcpy (copy, device, sizeof (struct ow_device));
-      if (jclient_init (&pjc->jclient, copy, preferences.blocks,
-			preferences.timeout, preferences.quality,
-			JCLIENT_DEFAULT_PRIORITY))
-	{
-	  free (copy);
-	  continue;
-	}
 
-      debug_print (1, "Starting pooled jclient %d...", i);
-      pjc->status = PJC_RUNNING;
-      if (pthread_create (&pjc->thread, NULL, jclient_runner, pjc))
-	{
-	  error_print ("Could not start thread");
-	  goto end;
-	}
-      pthread_setname_np (pjc->thread, "cli-worker");
+      pthread_spin_lock (&lock);
+      start_single (pjc, i, copy);
+      pthread_spin_unlock (&lock);
+
       pjc++;
     }
 
@@ -192,7 +213,7 @@ wait_all ()
 {
   struct pooled_jclient *pjc = jcpool;
 
-  for (guint i = 0; i < POOLED_JCLIENT_LEN; i++)
+  for (guint32 i = 0; i < POOLED_JCLIENT_LEN; i++)
     {
       pooled_jclient_status_t status;
 
@@ -214,7 +235,7 @@ wait_all ()
 static void
 hotplug_callback (struct ow_device *device)
 {
-  guint i;
+  guint32 i;
   struct pooled_jclient *pjc;
 
   pjc = jcpool;
@@ -272,21 +293,8 @@ hotplug_callback (struct ow_device *device)
       return;
     }
 
-  if (jclient_init (&pjc->jclient, device, preferences.blocks,
-		    preferences.timeout, preferences.quality,
-		    JCLIENT_DEFAULT_PRIORITY))
-    {
-      pthread_spin_unlock (&lock);
-      return;
-    }
-
-  pjc->status = PJC_RUNNING;
+  start_single (pjc, i, device);
   pthread_spin_unlock (&lock);
-
-  if (!pthread_create (&pjc->thread, NULL, jclient_runner, pjc))
-    {
-      pthread_setname_np (pjc->thread, "cli-worker");
-    }
 }
 
 static void *
@@ -309,6 +317,82 @@ reload ()
   startup ();
 }
 
+static gchar *
+handle_get_state ()
+{
+  struct pooled_jclient *pjc = jcpool;
+  struct ow_resampler *resampler = NULL;
+
+  JsonBuilder *builder = message_state_builder_start ();
+
+  pthread_spin_lock (&lock);
+
+  for (guint32 i = 0; i < POOLED_JCLIENT_LEN; i++)
+    {
+      if (pjc->status == PJC_RUNNING)
+	{
+	  struct ow_resampler_state state;
+	  resampler = pjc->jclient.resampler;
+	  struct ow_engine *engine = ow_resampler_get_engine (resampler);
+	  const struct ow_device *device = ow_engine_get_device (engine);
+	  const gchar *name = ow_engine_get_overbridge_name (engine);
+	  ow_resampler_get_state (resampler, &state);
+	  message_state_builder_add_device (builder, i, name, device, &state);
+	}
+
+      pjc++;
+    }
+
+  gint64 bufsize = 0;
+  gint64 samplerate = 0;
+  gdouble target_delay_ms = 0;
+
+  if (resampler)
+    {
+      samplerate = ow_resampler_get_samplerate (resampler);
+      bufsize = ow_resampler_get_buffer_size (resampler);
+      target_delay_ms = ow_resampler_get_target_delay_ms (resampler);
+    }
+
+  pthread_spin_unlock (&lock);
+
+  return message_state_builder_end (builder, samplerate, bufsize,
+				    target_delay_ms);
+}
+
+static gint
+handle_set_device_name (guint id, const gchar *name)
+{
+  gint err = -1;
+
+  pthread_spin_lock (&lock);
+
+  struct pooled_jclient *pjc = &jcpool[id];
+
+  if (pjc->status == PJC_RUNNING)
+    {
+      err = 0;
+
+      struct ow_resampler *resampler = pjc->jclient.resampler;
+      struct ow_engine *engine = ow_resampler_get_engine (resampler);
+
+      struct ow_device *copy = malloc (sizeof (struct ow_device));
+      memcpy (copy, pjc->jclient.device, sizeof (struct ow_device));
+
+      ow_engine_set_overbridge_name (engine, name);
+
+      jclient_stop (&pjc->jclient);
+      pthread_join (pjc->thread, NULL);
+      pjc->status = PJC_AVAILABLE;
+
+      start_single (pjc, id, copy);
+    }
+
+  pthread_spin_unlock (&lock);
+
+  return err;
+}
+
 static void
 handle_method_call (GDBusConnection *connection, const gchar *sender,
 		    const gchar *object_path, const gchar *interface_name,
@@ -322,48 +406,24 @@ handle_method_call (GDBusConnection *connection, const gchar *sender,
     }
   else if (g_strcmp0 (method_name, "GetState") == 0)
     {
-      struct pooled_jclient *pjc = jcpool;
-      struct ow_resampler *resampler = NULL;
-
-      JsonBuilder *builder = message_state_builder_start ();
-
-      for (guint i = 0; i < POOLED_JCLIENT_LEN; i++)
-	{
-	  pthread_spin_lock (&lock);
-	  if (pjc->status == PJC_RUNNING)
-	    {
-	      struct ow_resampler_state state;
-	      resampler = pjc->jclient.resampler;
-	      struct ow_engine *engine = ow_resampler_get_engine (resampler);
-	      const struct ow_device *device = ow_engine_get_device (engine);
-	      const gchar *name = ow_engine_get_overbridge_name (engine);
-	      ow_resampler_get_state (resampler, &state);
-	      message_state_builder_add_device (builder, i, name, device,
-						&state);
-	    }
-	  pthread_spin_unlock (&lock);
-
-	  pjc++;
-	}
-
-      gint64 bufsize = 0;
-      gint64 samplerate = 0;
-      gdouble target_delay_ms = 0;
-
-      if (resampler)
-	{
-	  samplerate = ow_resampler_get_samplerate (resampler);
-	  bufsize = ow_resampler_get_buffer_size (resampler);
-	  target_delay_ms = ow_resampler_get_target_delay_ms (resampler);
-	}
-
-      gchar *response = message_state_builder_end (builder, samplerate,
-						   bufsize, target_delay_ms);
-
-      GVariant *v = g_variant_new ("(s)", response);
+      gchar *state = handle_get_state ();
+      GVariant *v = g_variant_new ("(s)", state);
       g_dbus_method_invocation_return_value (invocation, v);
-
-      g_free (response);
+      g_free (state);
+    }
+  else if (g_strcmp0 (method_name, "SetDeviceName") == 0)
+    {
+      guint64 id;
+      gchar *name;
+      GVariant *params = g_dbus_method_invocation_get_parameters (invocation);
+      g_variant_get (params, "(us)", &id, &name);
+      gint err = handle_set_device_name (id, name);
+      GVariant *v = g_variant_new ("(i)", err);
+      g_dbus_method_invocation_return_value (invocation, v);
+    }
+  else
+    {
+      error_print ("Method not handled");
     }
 }
 
