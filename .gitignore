@@ -34,6 +34,7 @@ test-driver
 *.dirstamp
 res/Makefile
 res/Makefile.in
+res/io.github.dagargo.OverwitchService.service
 res/overwitch.cmb.db
 src/Makefile
 src/Makefile.in

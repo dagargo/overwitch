@@ -26,7 +26,18 @@ update-icon-cache:
 		echo "***   $(gtk_update_icon_cache)"; \
 	fi
 
+servicedir = $(datadir)/dbus-1/services
+service_in_file = io.github.dagargo.OverwitchService.service.in
+
+service_DATA = $(service_in_file:.in=)
+
+$(service_DATA): $(service_in_file)
+	sed -e 's|@bindir[@]|$(bindir)|g' $< >$@
+
+DISTCLEANFILES = $(service_DATA)
+
 EXTRA_DIST = \
         $(res_DATA) \
         $(desktop_DATA) \
-        $(svgicon_DATA)
+        $(svgicon_DATA) \
+	$(service_in_files)
