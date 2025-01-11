@@ -5,6 +5,7 @@
 #include "../src/jclient.h"
 #include "../src/engine.h"
 #include "../src/common.h"
+#include "../src/message.h"
 
 #define BLOCKS 4
 #define TRACKS 6
@@ -13,7 +14,7 @@
 static const struct ow_device_desc TESTDEV_DESC_V1 = {
   .pid = 0,
   .format = OW_ENGINE_FORMAT_V1,
-  .name = "Test",
+  .name = "Test Device V1",
   .inputs = TRACKS,
   .outputs = TRACKS,
   .input_tracks = {{.name = "T1",.size = 4},
@@ -33,7 +34,7 @@ static const struct ow_device_desc TESTDEV_DESC_V1 = {
 static const struct ow_device_desc TESTDEV_DESC_V2 = {
   .pid = 0,
   .format = OW_ENGINE_FORMAT_V2,
-  .name = "Test",
+  .name = "Test Device V2",
   .inputs = TRACKS,
   .outputs = TRACKS,
   .input_tracks = {{.name = "T1",.size = 4},
@@ -269,6 +270,8 @@ test_get_bus_address_from_str ()
 {
   uint8_t bus, address;
 
+  printf ("\n");
+
   CU_ASSERT_EQUAL (get_bus_address_from_str ("a", &bus, &address), -EINVAL);
   CU_ASSERT_EQUAL (get_bus_address_from_str ("a,", &bus, &address), -EINVAL);
   CU_ASSERT_EQUAL (get_bus_address_from_str ("a,b", &bus, &address), -EINVAL);
@@ -277,7 +280,62 @@ test_get_bus_address_from_str ()
   CU_ASSERT_EQUAL (get_bus_address_from_str ("1,2", &bus, &address), 0);
   CU_ASSERT_EQUAL (bus, 1);
   CU_ASSERT_EQUAL (address, 2);
+}
 
+static void
+test_state_parser ()
+{
+  char *message;
+  guint devices;
+  OverwitchDevice *device;
+  guint32 samplerate, buffer_size;
+  double target_delay_ms;
+  JsonReader *reader;
+  JsonBuilder *builder;
+  struct ow_engine engine;
+  struct ow_resampler_state state;
+
+  engine.device = malloc (sizeof (struct ow_device));
+  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_V1);
+
+  builder = message_state_builder_start ();
+
+  state.latency_o2h = 2;
+  state.latency_o2h_max = 3;
+  state.latency_o2h_min = 1;
+  state.latency_h2o = 2;
+  state.latency_h2o_max = 3;
+  state.latency_h2o_min = 1;
+  state.ratio_o2h = 0.9;
+  state.ratio_h2o = 1.0 / 0.9;
+  state.status = OW_RESAMPLER_STATUS_RUN;
+
+  message_state_builder_add_device (builder, 0, "name 1", engine.device,
+				    &state);
+  message_state_builder_add_device (builder, 1, "name 2", engine.device,
+				    &state);
+  message = message_state_builder_end (builder, 1, 2, 3);
+
+
+  reader = message_state_reader_start (message, &devices);
+  CU_ASSERT_TRUE (reader != NULL);
+  CU_ASSERT_EQUAL (devices, 2);
+
+  for (guint i = 0; i < devices; i++)
+    {
+      device = message_state_reader_get_device (reader, i);
+      g_object_unref (device);
+    }
+
+  message_state_reader_end (reader, &samplerate, &buffer_size,
+			    &target_delay_ms);
+
+  CU_ASSERT_EQUAL (samplerate, 1);
+  CU_ASSERT_EQUAL (buffer_size, 2);
+  CU_ASSERT_EQUAL (target_delay_ms, 3);
+
+  free (message);
+  free (engine.device);
 }
 
 int
@@ -319,6 +377,11 @@ main (int argc, char *argv[])
 
   if (!CU_add_test
       (suite, "get_bus_address_from_str", test_get_bus_address_from_str))
+    {
+      goto cleanup;
+    }
+
+  if (!CU_add_test (suite, "state_parser", test_state_parser))
     {
       goto cleanup;
     }

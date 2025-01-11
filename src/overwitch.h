@@ -175,6 +175,7 @@ struct ow_resampler_reporter
 
 struct ow_resampler_state
 {
+  ow_resampler_status_t status;
   double latency_o2h;
   double latency_o2h_min;
   double latency_o2h_max;
@@ -183,7 +184,6 @@ struct ow_resampler_state
   double latency_h2o_max;
   double ratio_o2h;
   double ratio_h2o;
-  ow_resampler_status_t status;
 };
 
 typedef void (*ow_hotplug_callback_t) (struct ow_device * device);

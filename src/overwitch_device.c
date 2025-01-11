@@ -18,7 +18,7 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <gtk/gtk.h>
+#include <glib.h>
 #include "overwitch_device.h"
 
 G_DEFINE_TYPE (OverwitchDevice, overwitch_device, G_TYPE_OBJECT);
@@ -200,38 +200,23 @@ overwitch_device_class_init (OverwitchDeviceClass *klass)
 }
 
 OverwitchDevice *
-overwitch_device_new (const gpointer instance, const gchar *name,
-		      const gchar *device, const guint bus,
-		      const guint address)
+overwitch_device_new (const guint32 id, const gchar *name,
+		      const gchar *device, const guint8 bus,
+		      const guint8 address, const gchar *status,
+		      const gchar *o2j_latency,
+		      const gchar *j2o_latency,
+		      const gdouble o2j_ratio, const gdouble j2o_ratio)
 {
   OverwitchDevice *d = g_object_new (OVERWITCH_TYPE_DEVICE, NULL);
-  d->instance = instance;
+  d->id = id;
   d->name = g_strdup (name);
   d->device = g_strdup (device);
   d->bus = bus;
   d->address = address;
-  return d;
-}
-
-void
-overwitch_device_set_state (OverwitchDevice *d, const gchar *status,
-			    const gchar *o2j_latency,
-			    const gchar *j2o_latency,
-			    const gdouble o2j_ratio, const gdouble j2o_ratio)
-{
-  g_free (d->status);
-  g_free (d->o2j_latency);
-  g_free (d->j2o_latency);
-
   d->status = g_strdup (status);
   d->o2j_latency = g_strdup (o2j_latency);
   d->j2o_latency = g_strdup (j2o_latency);
   d->o2j_ratio = o2j_ratio;
   d->j2o_ratio = j2o_ratio;
-
-  g_object_notify (G_OBJECT (d), "status");
-  g_object_notify (G_OBJECT (d), "o2j_latency");
-  g_object_notify (G_OBJECT (d), "j2o_latency");
-  g_object_notify (G_OBJECT (d), "o2j_ratio");
-  g_object_notify (G_OBJECT (d), "j2o_ratio");
+  return d;
 }

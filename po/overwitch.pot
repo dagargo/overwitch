@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 2.0\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2024-12-05 12:23+0100\n"
+"POT-Creation-Date: 2025-01-09 14:21+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,47 +17,50 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/main.c:103
-msgid "Error"
+#: src/main.c:154 res/overwitch.ui:406
+msgid "Stop All Devices"
 msgstr ""
 
-#: src/main.c:105
-msgid "Stopped"
+#: src/main.c:155
+msgid "Start All Devices"
 msgstr ""
 
-#: src/main.c:107
-msgid "Ready"
+#: src/main.c:168
+#, c-format
+msgid "JACK at %.5g kHz, %u period"
 msgstr ""
 
-#: src/main.c:109
-msgid "Booting"
-msgstr ""
-
-#: src/main.c:111
-msgid "Tuning"
-msgstr ""
-
-#: src/main.c:113
-msgid "Running"
-msgstr ""
-
-#: src/main.c:131
+#: src/main.c:172
 #, c-format
 msgid "Target latency: %.1f ms"
 msgstr ""
 
-#: src/main.c:483
-#, c-format
-msgid "JACK at %.5g kHz, %d period"
-msgstr ""
-
-#: src/main.c:488
-#, c-format
-msgid "JACK not found"
-msgstr ""
-
-#: src/main.c:868
+#: src/main.c:413
 msgid "Acknowledgements"
+msgstr ""
+
+#: src/message.c:122
+msgid "Error"
+msgstr ""
+
+#: src/message.c:124
+msgid "Stopped"
+msgstr ""
+
+#: src/message.c:126
+msgid "Ready"
+msgstr ""
+
+#: src/message.c:128
+msgid "Booting"
+msgstr ""
+
+#: src/message.c:130
+msgid "Tuning"
+msgstr ""
+
+#: src/message.c:132
+msgid "Running"
 msgstr ""
 
 #: res/overwitch.ui:11
@@ -68,7 +71,7 @@ msgstr ""
 msgid "Show All Columns"
 msgstr ""
 
-#: res/overwitch.ui:21 res/overwitch.ui:495
+#: res/overwitch.ui:21 res/overwitch.ui:482
 msgid "Preferences"
 msgstr ""
 
@@ -144,46 +147,38 @@ msgstr ""
 msgid "JACK to Overbridge ratio"
 msgstr ""
 
-#: res/overwitch.ui:407
-msgid "Stop All Devices"
-msgstr ""
-
-#: res/overwitch.ui:419
-msgid "Refresh Devices"
-msgstr ""
-
-#: res/overwitch.ui:454
+#: res/overwitch.ui:441
 msgid "PipeWire Properties"
 msgstr ""
 
-#: res/overwitch.ui:455
+#: res/overwitch.ui:442
 msgid "Value of the \"PIPEWIRE_PROPS\" environment variable"
 msgstr ""
 
-#: res/overwitch.ui:475
+#: res/overwitch.ui:462
 msgid "_Cancel"
 msgstr ""
 
-#: res/overwitch.ui:483
+#: res/overwitch.ui:470
 msgid "_Save"
 msgstr ""
 
-#: res/overwitch.ui:500
+#: res/overwitch.ui:487
 msgid "Highest"
 msgstr ""
 
-#: res/overwitch.ui:501
+#: res/overwitch.ui:488
 msgid "High"
 msgstr ""
 
-#: res/overwitch.ui:502
+#: res/overwitch.ui:489
 msgid "Medium"
 msgstr ""
 
-#: res/overwitch.ui:503
+#: res/overwitch.ui:490
 msgid "Low"
 msgstr ""
 
-#: res/overwitch.ui:504
+#: res/overwitch.ui:491
 msgid "Lowest"
 msgstr ""

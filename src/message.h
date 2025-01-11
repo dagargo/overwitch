@@ -18,16 +18,30 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 #include <glib.h>
 #include "utils.h"
 #include "overwitch.h"
+#include "overwitch_device.h"
 
 JsonBuilder *message_state_builder_start ();
 
-void message_state_builder_add_device (JsonBuilder * builder, guint id,
+void message_state_builder_add_device (JsonBuilder * builder, guint32 id,
 				       const gchar * overbridge_name,
 				       const struct ow_device *device,
 				       struct ow_resampler_state *state);
 
-gchar *message_state_builder_end (JsonBuilder * builder, gint64 samplerate,
-				  gint64 buffer_size, double target_delay_ms);
+gchar *message_state_builder_end (JsonBuilder * builder, guint32 samplerate,
+				  guint32 buffer_size,
+				  gdouble target_delay_ms);
+
+JsonReader *message_state_reader_start (const gchar * state,
+					guint32 * devices);
+
+OverwitchDevice *message_state_reader_get_device (JsonReader * reader,
+						  guint index);
+
+void message_state_reader_end (JsonReader * reader, guint32 * samplerate,
+			       guint32 * buffer_size,
+			       gdouble * target_delay_ms);

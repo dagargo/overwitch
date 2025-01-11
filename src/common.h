@@ -18,13 +18,15 @@
  *   along with Overwitch. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <libgen.h>
 #define _GNU_SOURCE
 #include <getopt.h>
-#include <overwitch.h>
+#include "overwitch.h"
 
 void print_help (const char *, const char *, struct option *, const char *);
 

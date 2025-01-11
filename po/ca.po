@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2024-12-05 12:23+0100\n"
+"POT-Creation-Date: 2025-01-09 14:21+0100\n"
 "PO-Revision-Date: 2022-09-21 19:08+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: Catalan\n"
@@ -17,48 +17,51 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/main.c:103
-msgid "Error"
-msgstr "Error"
+#: src/main.c:154 res/overwitch.ui:406
+msgid "Stop All Devices"
+msgstr "Para tots el dispositius"
 
-#: src/main.c:105
-msgid "Stopped"
-msgstr "Parat"
+#: src/main.c:155
+msgid "Start All Devices"
+msgstr "Arranca tots el dispositius"
 
-#: src/main.c:107
-msgid "Ready"
-msgstr "Preparat"
+#: src/main.c:168
+#, c-format
+msgid "JACK at %.5g kHz, %u period"
+msgstr "JACK a %.5g kHz, període de %u"
 
-#: src/main.c:109
-msgid "Booting"
-msgstr "Arrancant"
-
-#: src/main.c:111
-msgid "Tuning"
-msgstr "Ajustant"
-
-#: src/main.c:113
-msgid "Running"
-msgstr "Executant"
-
-#: src/main.c:131
+#: src/main.c:172
 #, c-format
 msgid "Target latency: %.1f ms"
 msgstr "Latència objectiu: %.1f ms"
 
-#: src/main.c:483
-#, c-format
-msgid "JACK at %.5g kHz, %d period"
-msgstr "JACK a %.5g kHz, període de %d"
-
-#: src/main.c:488
-#, c-format
-msgid "JACK not found"
-msgstr "JACK no trobat"
-
-#: src/main.c:868
+#: src/main.c:413
 msgid "Acknowledgements"
 msgstr "Agraïments"
+
+#: src/message.c:122
+msgid "Error"
+msgstr "Error"
+
+#: src/message.c:124
+msgid "Stopped"
+msgstr "Parat"
+
+#: src/message.c:126
+msgid "Ready"
+msgstr "Preparat"
+
+#: src/message.c:128
+msgid "Booting"
+msgstr "Arrancant"
+
+#: src/message.c:130
+msgid "Tuning"
+msgstr "Ajustant"
+
+#: src/message.c:132
+msgid "Running"
+msgstr "Executant"
 
 #: res/overwitch.ui:11
 msgid "Refresh At Startup"
@@ -68,7 +71,7 @@ msgstr "Actualitza a l'arrancament"
 msgid "Show All Columns"
 msgstr "Mostra totes les columnes"
 
-#: res/overwitch.ui:21 res/overwitch.ui:495
+#: res/overwitch.ui:21 res/overwitch.ui:482
 msgid "Preferences"
 msgstr "Preferències"
 
@@ -144,46 +147,45 @@ msgstr "Ràtio entre Overbridge i JACK"
 msgid "JACK to Overbridge ratio"
 msgstr "Ràtio entre JACK i Overbridge"
 
-#: res/overwitch.ui:407
-msgid "Stop All Devices"
-msgstr "Para tots el dispositius"
-
-#: res/overwitch.ui:419
-msgid "Refresh Devices"
-msgstr "Actualitza els dispositius"
-
-#: res/overwitch.ui:454
+#: res/overwitch.ui:441
 msgid "PipeWire Properties"
 msgstr "Propietats de PipeWire"
 
-#: res/overwitch.ui:455
+#: res/overwitch.ui:442
 msgid "Value of the \"PIPEWIRE_PROPS\" environment variable"
 msgstr "Valor de la variable d'entorn «PIPEWIRE_PROPS»"
 
-#: res/overwitch.ui:475
+#: res/overwitch.ui:462
 msgid "_Cancel"
 msgstr "_Cancel·la"
 
-#: res/overwitch.ui:483
+#: res/overwitch.ui:470
 msgid "_Save"
 msgstr "_Alça"
 
-#: res/overwitch.ui:500
+#: res/overwitch.ui:487
 msgid "Highest"
 msgstr "Màxima"
 
-#: res/overwitch.ui:501
+#: res/overwitch.ui:488
 msgid "High"
 msgstr "Alta"
 
-#: res/overwitch.ui:502
+#: res/overwitch.ui:489
 msgid "Medium"
 msgstr "Mitja"
 
-#: res/overwitch.ui:503
+#: res/overwitch.ui:490
 msgid "Low"
 msgstr "Baixa"
 
-#: res/overwitch.ui:504
+#: res/overwitch.ui:491
 msgid "Lowest"
 msgstr "Mínima"
+
+#, c-format
+#~ msgid "JACK not found"
+#~ msgstr "JACK no trobat"
+
+#~ msgid "Refresh Devices"
+#~ msgstr "Actualitza els dispositius"

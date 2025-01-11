@@ -57,11 +57,13 @@ static GDBusNodeInfo *introspection_data = NULL;
 
 static const gchar introspection_xml[] =
   "<node>"
-  "  <interface name='" PACKAGE_SERVICE_NAME "Service'>"
+  "  <interface name='" PACKAGE_SERVICE_DBUS_NAME "'>"
   "    <method name='GetState'>"
   "      <arg type='s' name='status' direction='out'/>"
   "    </method>"
-  "    <method name='Reload'>"
+  "    <method name='Start'>"
+  "    </method>"
+  "    <method name='Stop'>"
   "    </method>"
   "    <method name='SetDeviceName'>"
   "      <arg type='u' name='id' direction='in'/>"
@@ -71,7 +73,7 @@ static const gchar introspection_xml[] =
 
 static void startup ();
 
-static void reload ();
+static void handle_start ();
 
 static void
 stop_all ()
@@ -106,7 +108,7 @@ signal_handler (int signum)
       clock_gettime (CLOCK_MONOTONIC, &ts);
       sd_notifyf (0, "RELOADING=1\nMONOTONIC_USEC=%" PRIdMAX "%06d",
 		  (intmax_t) ts.tv_sec, (int) (ts.tv_nsec / 1000));
-      reload ();
+      handle_start ();
       sd_notify (0, "READY=1");
     }
   else
@@ -306,7 +308,7 @@ hotplug_runner (void *data)
 }
 
 static void
-reload ()
+handle_stop ()
 {
   stop_all ();
   wait_all ();
@@ -314,6 +316,12 @@ reload ()
     {
       pthread_join (hotplug_thread, NULL);
     }
+}
+
+static void
+handle_start ()
+{
+  handle_stop ();
   startup ();
 }
 
@@ -343,8 +351,8 @@ handle_get_state ()
       pjc++;
     }
 
-  gint64 bufsize = 0;
-  gint64 samplerate = 0;
+  guint32 bufsize = 0;
+  guint32 samplerate = 0;
   gdouble target_delay_ms = 0;
 
   if (resampler)
@@ -399,9 +407,14 @@ handle_method_call (GDBusConnection *connection, const gchar *sender,
 		    const gchar *method_name, GVariant *parameters,
 		    GDBusMethodInvocation *invocation, gpointer user_data)
 {
-  if (g_strcmp0 (method_name, "Reload") == 0)
+  if (g_strcmp0 (method_name, "Start") == 0)
     {
-      reload ();
+      handle_start ();
+      g_dbus_method_invocation_return_value (invocation, NULL);
+    }
+  else if (g_strcmp0 (method_name, "Stop") == 0)
+    {
+      handle_stop ();
       g_dbus_method_invocation_return_value (invocation, NULL);
     }
   else if (g_strcmp0 (method_name, "GetState") == 0)
@@ -413,7 +426,7 @@ handle_method_call (GDBusConnection *connection, const gchar *sender,
     }
   else if (g_strcmp0 (method_name, "SetDeviceName") == 0)
     {
-      guint64 id;
+      guint id;
       gchar *name;
       GVariant *params = g_dbus_method_invocation_get_parameters (invocation);
       g_variant_get (params, "(us)", &id, &name);
@@ -440,6 +453,11 @@ startup ()
 
   ow_load_preferences (&preferences);
 
+  // When under PipeWire, it is desirable to run Overwitch as a follower of the hardware driver.
+  // This could be achieved by setting the node.group property to the same value the hardware has but there are other ways.
+  // See https://gitlab.freedesktop.org/pipewire/pipewire/-/issues/3612 for a thorough explanation of the need of this.
+  // As setting an environment variable does not need additional libraries, this is backwards compatible.
+
   if (preferences.pipewire_props)
     {
       debug_print (1, "Setting %s to '%s'...", PIPEWIRE_PROPS_ENV_VAR,
@@ -464,7 +482,7 @@ startup ()
 }
 
 static void
-overwitch_startup (GApplication *app, gpointer *user_data)
+app_startup (GApplication *app, gpointer *user_data)
 {
   guint id;
   GDBusConnection *conn;
@@ -487,7 +505,7 @@ overwitch_startup (GApplication *app, gpointer *user_data)
 }
 
 static void
-overwitch_activate (GApplication *app, gpointer *user_data)
+app_activate (GApplication *app, gpointer *user_data)
 {
 }
 
@@ -507,11 +525,11 @@ main (gint argc, gchar *argv[])
 
   pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
 
-  app = g_application_new (PACKAGE_SERVICE_NAME "Service",
+  app = g_application_new (PACKAGE_SERVICE_DBUS_NAME,
 			   G_APPLICATION_DEFAULT_FLAGS);
 
-  g_signal_connect (app, "startup", G_CALLBACK (overwitch_startup), NULL);
-  g_signal_connect (app, "activate", G_CALLBACK (overwitch_activate), NULL);
+  g_signal_connect (app, "startup", G_CALLBACK (app_startup), NULL);
+  g_signal_connect (app, "activate", G_CALLBACK (app_activate), NULL);
 
   status = g_application_run (G_APPLICATION (app), argc, argv);
 

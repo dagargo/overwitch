@@ -30,12 +30,12 @@ G_DECLARE_FINAL_TYPE (OverwitchDevice, overwitch_device, OVERWITCH, DEVICE,
 struct _OverwitchDevice
 {
   GObject parent_instance;
-  gpointer instance;
   //Properties
+  guint32 id;
   gchar *name;
   gchar *device;
-  guint bus;
-  guint address;
+  guint8 bus;
+  guint8 address;
   gchar *status;
   gchar *o2j_latency;
   gchar *j2o_latency;
@@ -48,15 +48,14 @@ struct _OverwitchDeviceClass
   GObjectClass parent_class;
 };
 
-OverwitchDevice *overwitch_device_new (const gpointer instance,
+OverwitchDevice *overwitch_device_new (const guint32 id,
 				       const gchar * overbridge_name,
-				       const gchar * name,
-				       const guint bus, const guint address);
-
-void overwitch_device_set_state (OverwitchDevice * d, const gchar * status,
-				 const gchar * o2j_latency,
-				 const gchar * j2o_latency,
-				 const gdouble o2j_ratio,
-				 const gdouble j2o_ratio);
+				       const gchar * name, const guint8 bus,
+				       const guint8 address,
+				       const gchar * status,
+				       const gchar * o2j_latency,
+				       const gchar * j2o_latency,
+				       const gdouble o2j_ratio,
+				       const gdouble j2o_ratio);
 
 G_END_DECLS

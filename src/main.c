@@ -22,32 +22,24 @@
 #include <errno.h>
 #include <libusb.h>
 #include <string.h>
-#include <sched.h>
 #include <gtk/gtk.h>
-#include <jack/jack.h>
 #include <json-glib/json-glib.h>
 #include <glib/gi18n.h>
 #include "common.h"
-#include "jclient.h"
 #include "utils.h"
 #include "preferences.h"
-#include "overwitch_device.h"
+#include "message.h"
 
-#define PAUSE_TO_BE_NOTIFIED_USECS 500000
+#define REFRESH_TIMEOUT_MS 2000
 
-struct overwitch_instance
-{
-  guint id;
-  struct ow_resampler_state state;
-  struct jclient jclient;
-};
+#define PLAY_IMAGE_NAME "media-playback-start-symbolic"
+#define STOP_IMAGE_NAME "media-playback-stop-symbolic"
 
-static guint next_id;
-static jack_client_t *control_client;
-static jack_nframes_t jack_sample_rate;
-static jack_nframes_t jack_buffer_size;
+static GDBusConnection *connection;
+
+static gboolean running;
+static guint source_id;
 static gchar *pipewire_props;
-static gboolean pipewire_env_var_set;
 
 static GtkApplication *app;
 
@@ -57,12 +49,10 @@ static GtkWidget *preferences_window;
 static GtkWidget *preferences_window_cancel_button;
 static GtkWidget *preferences_window_save_button;
 static GtkWidget *pipewire_props_dialog_entry;
-static GtkWidget *refresh_button;
-static GtkWidget *stop_button;
+static GtkWidget *start_stop_button;
 static GtkSpinButton *blocks_spin_button;
 static GtkSpinButton *timeout_spin_button;
 static GtkDropDown *quality_drop_down;
-static GtkCellRendererText *name_cell_renderer;
 static GtkColumnViewColumn *device_column;
 static GtkColumnViewColumn *bus_column;
 static GtkColumnViewColumn *address_column;
@@ -71,10 +61,6 @@ static GtkColumnViewColumn *j2o_ratio_column;
 static GListStore *status_list_store;
 static GtkLabel *jack_status_label;
 static GtkLabel *target_delay_label;
-
-static pthread_spinlock_t lock;	//Needed for signal handling
-static gint hotplug_running;
-static pthread_t hotplug_thread;
 
 static gboolean
 overwitch_increment_debug_level (const gchar *option_name,
@@ -98,133 +84,6 @@ const GOptionEntry CMD_PARAMS[] = {
    },
   {NULL}
 };
-
-static const char *
-get_status_string (ow_resampler_status_t status)
-{
-  switch (status)
-    {
-    case OW_RESAMPLER_STATUS_ERROR:
-      return _("Error");
-    case OW_RESAMPLER_STATUS_STOP:
-      return _("Stopped");
-    case OW_RESAMPLER_STATUS_READY:
-      return _("Ready");
-    case OW_RESAMPLER_STATUS_BOOT:
-      return _("Booting");
-    case OW_RESAMPLER_STATUS_TUNE:
-      return _("Tuning");
-    case OW_RESAMPLER_STATUS_RUN:
-      return _("Running");
-    }
-  return NULL;
-}
-
-static void
-set_dll_target_delay ()
-{
-  static char msg[OW_LABEL_MAX_LEN];
-  GListModel *model = G_LIST_MODEL (status_list_store);
-
-  if (g_list_model_get_n_items (model))
-    {
-      OverwitchDevice *dev = g_list_model_get_item (model, 0);
-      struct overwitch_instance *instance = dev->instance;
-      struct ow_resampler *resampler = instance->jclient.resampler;
-      double target_delay_ms = ow_resampler_get_target_delay_ms (resampler);
-
-      snprintf (msg, OW_LABEL_MAX_LEN, _("Target latency: %.1f ms"),
-		target_delay_ms);
-      gtk_label_set_text (target_delay_label, msg);
-    }
-  else
-    {
-      gtk_label_set_text (target_delay_label, "");
-    }
-}
-
-static void
-start_instance (struct overwitch_instance *instance)
-{
-  struct ow_resampler *resampler = instance->jclient.resampler;
-  struct ow_engine *engine = ow_resampler_get_engine (resampler);
-  debug_print (1, "Starting %s...", ow_engine_get_overbridge_name (engine));
-  jclient_start (&instance->jclient);
-
-  usleep (PAUSE_TO_BE_NOTIFIED_USECS);
-  set_dll_target_delay ();
-}
-
-static void
-stop_instance (struct overwitch_instance *instance)
-{
-  struct ow_resampler *resampler = instance->jclient.resampler;
-  struct ow_engine *engine = ow_resampler_get_engine (resampler);
-  debug_print (1, "Stopping %s...", ow_engine_get_overbridge_name (engine));
-  jclient_stop (&instance->jclient);
-}
-
-static gboolean
-set_overwitch_instance_state (gpointer data)
-{
-  struct overwitch_instance *instance = data;
-  static gchar o2j_latency_s[OW_LABEL_MAX_LEN];
-  static gchar j2o_latency_s[OW_LABEL_MAX_LEN];
-  const char *status_string;
-
-  GListModel *model = G_LIST_MODEL (status_list_store);
-
-  for (guint i = 0; i < g_list_model_get_n_items (model); i++)
-    {
-      OverwitchDevice *dev = g_list_model_get_item (model, i);
-      struct overwitch_instance *dev_instance = dev->instance;
-
-      if (instance->id == dev_instance->id)
-	{
-	  if (instance->state.latency_o2h >= 0)
-	    {
-	      g_snprintf (o2j_latency_s, OW_LABEL_MAX_LEN,
-			  "%.1f [%.1f, %.1f] ms", instance->state.latency_o2h,
-			  instance->state.latency_o2h_min,
-			  instance->state.latency_o2h_max);
-	    }
-	  else
-	    {
-	      o2j_latency_s[0] = '\0';
-	    }
-
-	  if (instance->state.latency_h2o >= 0)
-	    {
-	      g_snprintf (j2o_latency_s, OW_LABEL_MAX_LEN,
-			  "%.1f [%.1f, %.1f] ms", instance->state.latency_h2o,
-			  instance->state.latency_h2o_min,
-			  instance->state.latency_h2o_max);
-	    }
-	  else
-	    {
-	      j2o_latency_s[0] = '\0';
-	    }
-
-	  status_string = get_status_string (instance->state.status);
-	  overwitch_device_set_state (dev, status_string, o2j_latency_s,
-				      j2o_latency_s,
-				      instance->state.ratio_o2h,
-				      instance->state.ratio_h2o);
-
-	  break;
-	}
-    }
-
-  return FALSE;
-}
-
-static void
-set_report_data (struct overwitch_instance *instance,
-		 struct ow_resampler_state *state)
-{
-  instance->state = *state;
-  g_idle_add (set_overwitch_instance_state, instance);
-}
 
 static void
 update_all_metrics (gboolean active)
@@ -252,10 +111,6 @@ save_preferences ()
   GVariant *v;
   GAction *a;
 
-  a = g_action_map_lookup_action (G_ACTION_MAP (app), "refresh_at_startup");
-  v = g_action_get_state (a);
-  g_variant_get (v, "b", &prefs.refresh_at_startup);
-
   a = g_action_map_lookup_action (G_ACTION_MAP (app), "show_all_columns");
   v = g_action_get_state (a);
   g_variant_get (v, "b", &prefs.show_all_columns);
@@ -279,10 +134,6 @@ load_preferences ()
 
   pipewire_props = prefs.pipewire_props;
 
-  a = g_action_map_lookup_action (G_ACTION_MAP (app), "refresh_at_startup");
-  v = g_variant_new_boolean (prefs.refresh_at_startup);
-  g_action_change_state (a, v);
-
   a = g_action_map_lookup_action (G_ACTION_MAP (app), "show_all_columns");
   v = g_variant_new_boolean (prefs.show_all_columns);
   g_action_change_state (a, v);
@@ -293,301 +144,44 @@ load_preferences ()
   update_all_metrics (prefs.show_all_columns);
 }
 
-static gboolean
-is_device_at_bus_address (uint8_t bus, uint8_t address)
-{
-  GListModel *model = G_LIST_MODEL (status_list_store);
-
-  for (guint i = 0; i < g_list_model_get_n_items (model); i++)
-    {
-      OverwitchDevice *dev = g_list_model_get_item (model, i);
-      if (dev->bus == bus && dev->address == address)
-	{
-	  return TRUE;
-	}
-    }
-
-  return FALSE;
-}
-
 static void
-set_widgets_to_running_state (gboolean running)
+set_widgets_to_running_state ()
 {
-  gtk_widget_set_sensitive (stop_button, running);
+  gtk_button_set_icon_name (GTK_BUTTON (start_stop_button),
+			    running ? STOP_IMAGE_NAME : PLAY_IMAGE_NAME);
+  gtk_widget_set_tooltip_text (start_stop_button,
+			       running ? _("Stop All Devices") :
+			       _("Start All Devices"));
   gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), !running);
   gtk_widget_set_sensitive (GTK_WIDGET (timeout_spin_button), !running);
   gtk_widget_set_sensitive (GTK_WIDGET (quality_drop_down), !running);
 }
 
-static gboolean
-set_status (gpointer data)
+static void
+set_service_state (guint32 samplerate, guint32 buffer_size,
+		   gdouble target_delay_ms)
 {
   static char msg[OW_LABEL_MAX_LEN];
-  if (control_client)
+  if (running)
     {
-      snprintf (msg, OW_LABEL_MAX_LEN, _("JACK at %.5g kHz, %d period"),
-		jack_sample_rate / 1000.f, jack_buffer_size);
+      snprintf (msg, OW_LABEL_MAX_LEN, _("JACK at %.5g kHz, %u period"),
+		samplerate / 1000.f, buffer_size);
+      gtk_label_set_text (jack_status_label, msg);
+
+      snprintf (msg, OW_LABEL_MAX_LEN, _("Target latency: %.1f ms"),
+		target_delay_ms);
+      gtk_label_set_text (target_delay_label, msg);
     }
   else
     {
-      snprintf (msg, OW_LABEL_MAX_LEN, _("JACK not found"));
-    }
-  gtk_label_set_text (jack_status_label, msg);
-
-  return G_SOURCE_REMOVE;
-}
-
-static int
-set_sample_rate_cb (jack_nframes_t nframes, void *cb_data)
-{
-  debug_print (1, "JACK sample rate: %d", nframes);
-  jack_sample_rate = nframes;
-  g_idle_add (set_status, NULL);
-  return 0;
-}
-
-static int
-set_buffer_size_cb (jack_nframes_t nframes, void *cb_data)
-{
-  debug_print (1, "JACK buffer size: %d", nframes);
-  jack_buffer_size = nframes;
-  g_idle_add (set_status, NULL);
-  return 0;
-}
-
-static void
-stop_control_client ()
-{
-  if (control_client)
-    {
-      jack_deactivate (control_client);
-      jack_client_close (control_client);
-      control_client = NULL;
+      gtk_label_set_text (jack_status_label, "");
+      gtk_label_set_text (target_delay_label, "");
     }
 }
 
 static void
-start_control_client ()
-{
-  if (control_client)
-    {
-      return;
-    }
-
-  control_client = jack_client_open ("Overwitch control client",
-				     JackNoStartServer, NULL, NULL);
-  if (control_client)
-    {
-      jack_sample_rate = jack_get_sample_rate (control_client);
-      jack_buffer_size = jack_get_buffer_size (control_client);
-      if (jack_set_sample_rate_callback (control_client, set_sample_rate_cb,
-					 NULL))
-	{
-	  error_print ("Cannot set JACK control client sample rate callback");
-	}
-      if (jack_set_buffer_size_callback (control_client, set_buffer_size_cb,
-					 NULL))
-	{
-	  error_print
-	    ("Cannot set JACK control client set buffer size callback");
-	}
-
-      if (jack_activate (control_client))
-	{
-	  error_print ("Cannot activate control client");
-	  jack_client_close (control_client);
-	}
-    }
-
-  g_idle_add (set_status, NULL);
-}
-
-static void
-remove_stopped_instances ()
-{
-  GListModel *model = G_LIST_MODEL (status_list_store);
-  GSList *e, *to_delete = NULL;
-
-  for (guint i = 0; i < g_list_model_get_n_items (model); i++)
-    {
-      OverwitchDevice *dev = g_list_model_get_item (model, i);
-      struct overwitch_instance *instance = dev->instance;
-      struct ow_resampler *resampler = instance->jclient.resampler;
-      ow_resampler_status_t status = ow_resampler_get_status (resampler);
-      if (status <= OW_RESAMPLER_STATUS_STOP)
-	{
-	  jclient_wait (&instance->jclient);
-	  jclient_destroy (&instance->jclient);
-	  g_free (instance);
-	  to_delete = g_slist_prepend (to_delete, GUINT_TO_POINTER (i));
-	}
-    }
-
-  e = to_delete;
-  while (e)
-    {
-      g_list_store_remove (status_list_store, GPOINTER_TO_UINT (e->data));
-      e = e->next;
-    }
-
-  g_slist_free (to_delete);
-}
-
-static void
-refresh_all (GtkWidget *object, gpointer data)
-{
-  struct ow_device *devices, *device;
-  struct ow_resampler_reporter *reporter;
-  struct overwitch_instance *instance;
-  struct ow_engine *engine;
-  guint blocks, xfr_timeout, quality;
-  size_t devices_count;
-  const gchar *name;
-  ow_err_t err;
-
-  remove_stopped_instances ();
-
-  set_dll_target_delay ();
-
-  err = ow_get_device_list (&devices, &devices_count);
-  if (err || !devices_count)
-    {
-      set_widgets_to_running_state (FALSE);
-      return;
-    }
-
-  device = devices;
-
-  for (gint i = 0; i < devices_count; i++, device++)
-    {
-      if (is_device_at_bus_address (device->bus, device->address))
-	{
-	  debug_print (2, "Device at %03d:%03d already running. Skipping...",
-		       device->bus, device->address);
-	  continue;
-	}
-
-      instance = g_malloc (sizeof (struct overwitch_instance));
-
-      instance->id = next_id++;
-      instance->state.latency_o2h = 0.0;
-      instance->state.latency_h2o = 0.0;
-      instance->state.ratio_o2h = 1.0;
-      instance->state.ratio_h2o = 1.0;
-
-      //Needed because jclient_init will momentarily block the GUI.
-      while (g_main_context_pending (NULL))
-	{
-	  g_main_context_iteration (NULL, FALSE);
-	}
-
-      blocks = gtk_spin_button_get_value_as_int (blocks_spin_button);
-      xfr_timeout = gtk_spin_button_get_value_as_int (timeout_spin_button);
-      quality = gtk_drop_down_get_selected (quality_drop_down);
-
-      struct ow_device *copy = malloc (sizeof (struct ow_device));
-      memcpy (copy, device, sizeof (struct ow_device));
-
-      if (jclient_init (&instance->jclient, copy, blocks, xfr_timeout,
-			quality, -1))
-	{
-	  g_free (copy);
-	  g_free (instance);
-	  continue;
-	}
-
-      reporter = ow_resampler_get_reporter (instance->jclient.resampler);
-      reporter->callback = (ow_resampler_report_t) set_report_data;
-      reporter->data = instance;
-
-      engine = ow_resampler_get_engine (instance->jclient.resampler);
-      name = ow_engine_get_overbridge_name (engine);
-
-      debug_print (1, "Adding %s...", name);
-
-      OverwitchDevice *dev = overwitch_device_new (instance, name,
-						   device->desc.name,
-						   device->bus,
-						   device->address);
-
-      g_list_store_append (status_list_store, dev);
-
-
-      start_instance (instance);
-      set_widgets_to_running_state (TRUE);
-    }
-
-  free (devices);
-}
-
-static gboolean
-refresh_all_sourcefunc (gpointer data)
-{
-  refresh_all (NULL, NULL);
-  return G_SOURCE_REMOVE;
-}
-
-static void
-stop_all (GtkWidget *object, gpointer data)
-{
-  GListModel *model = G_LIST_MODEL (status_list_store);
-
-  for (guint i = 0; i < g_list_model_get_n_items (model); i++)
-    {
-      OverwitchDevice *dev = g_list_model_get_item (model, i);
-      struct overwitch_instance *instance = dev->instance;
-      struct ow_resampler *resampler = instance->jclient.resampler;
-      struct ow_engine *engine = ow_resampler_get_engine (resampler);
-      ow_resampler_status_t status = ow_resampler_get_status (resampler);
-      const gchar *name = ow_engine_get_overbridge_name (engine);
-      if (status != OW_RESAMPLER_STATUS_ERROR)
-	{
-	  debug_print (1, "Stopping %s...", name);
-	  stop_instance (instance);
-	}
-      jclient_wait (&instance->jclient);
-      jclient_destroy (&instance->jclient);
-      g_free (instance);
-    }
-
-  g_list_store_remove_all (status_list_store);
-
-  set_widgets_to_running_state (FALSE);
-
-  set_dll_target_delay ();
-}
-
-// When under PipeWire, it is desirable to run Overwitch as a follower of the hardware driver.
-// This could be achieved by setting the node.group property to the same value the hardware has but there are other ways.
-// See https://gitlab.freedesktop.org/pipewire/pipewire/-/issues/3612 for a thorough explanation of the need of this.
-// As setting an environment variable does not need additional libraries, this is backwards compatible.
-
-static void
-set_pipewire_props ()
-{
-  if (pipewire_env_var_set)
-    {
-      debug_print (1, "%s was '%s' at launch. Ignoring user value '%s'...",
-		   PIPEWIRE_PROPS_ENV_VAR, getenv (PIPEWIRE_PROPS_ENV_VAR),
-		   pipewire_props);
-      return;
-    }
-
-  if (pipewire_props)
-    {
-      debug_print (1, "Setting %s to '%s'...", PIPEWIRE_PROPS_ENV_VAR,
-		   pipewire_props);
-      setenv (PIPEWIRE_PROPS_ENV_VAR, pipewire_props, TRUE);
-    }
-  else
-    {
-      unsetenv (PIPEWIRE_PROPS_ENV_VAR);
-    }
-}
-
-static void
-overwitch_open_preferences (GSimpleAction *simple_action, GVariant *parameter,
-			    gpointer data)
+open_preferences (GSimpleAction *simple_action, GVariant *parameter,
+		  gpointer data)
 {
   GtkEntryBuffer *buf;
 
@@ -597,13 +191,13 @@ overwitch_open_preferences (GSimpleAction *simple_action, GVariant *parameter,
 }
 
 static void
-overwitch_close_preferences (GtkButton *self, gpointer data)
+close_preferences (GtkButton *self, gpointer data)
 {
   gtk_widget_set_visible (preferences_window, FALSE);
 }
 
 static void
-overwitch_save_preferences (GtkButton *self, gpointer data)
+click_save_preferences (GtkButton *self, gpointer data)
 {
   const gchar *props;
   GtkEntryBuffer *buf;
@@ -615,90 +209,186 @@ overwitch_save_preferences (GtkButton *self, gpointer data)
 
   g_free (pipewire_props);
   pipewire_props = strdup (props ? props : "");
-
-  set_pipewire_props ();
-
-  stop_all (NULL, NULL);
-  usleep (PAUSE_TO_BE_NOTIFIED_USECS);	//Time to let the devices notify us.
-  stop_control_client ();
-  start_control_client ();
-  g_idle_add (refresh_all_sourcefunc, NULL);
 }
 
 static void
-overwitch_open_about (GSimpleAction *simple_action, GVariant *parameter,
-		      gpointer data)
+open_about (GSimpleAction *simple_action, GVariant *parameter, gpointer data)
 {
   gtk_widget_set_visible (GTK_WIDGET (about_dialog), TRUE);
 }
 
 static void
-overwitch_exit ()
+app_exit ()
 {
   debug_print (1, "Exiting Overwitch...");
 
-  pthread_spin_lock (&lock);
-  hotplug_running = 0;
-  pthread_spin_unlock (&lock);
-
-  stop_all (NULL, NULL);
-  usleep (PAUSE_TO_BE_NOTIFIED_USECS);	//Time to let the devices notify us.
-  while (g_main_context_pending (NULL))
-    {
-      g_main_context_iteration (NULL, FALSE);
-    }
-  stop_control_client ();
   save_preferences ();
   g_free (pipewire_props);
   gtk_window_destroy (GTK_WINDOW (main_window));
 }
 
 static gboolean
-overwitch_delete_window (GtkWidget *widget, GdkEvent *event, gpointer data)
+delete_main_window (GtkWidget *widget, GdkEvent *event, gpointer data)
 {
-  overwitch_exit ();
+  app_exit ();
   return FALSE;
 }
 
 const GActionEntry APP_ENTRIES[] = {
-  {"refresh_at_startup", NULL, NULL, "false", NULL},
   {"show_all_columns", NULL, NULL, "false", overwitch_show_all_columns},
-  {"open_preferences", overwitch_open_preferences, NULL, NULL, NULL},
-  {"open_about", overwitch_open_about, NULL, NULL, NULL}
+  {"open_preferences", open_preferences, NULL, NULL, NULL},
+  {"open_about", open_about, NULL, NULL, NULL}
 };
 
 static void
-overwitch_device_name_changed (GtkEditableLabel *label, GParamSpec *pspec,
-			       GtkColumnViewCell *cell)
+set_state (const gchar *state)
 {
-  if (!gtk_editable_label_get_editing (label))
+  OverwitchDevice *device;
+  guint devices;
+  guint32 samplerate, buffer_size;
+  double target_delay_ms;
+
+  JsonReader *reader = message_state_reader_start (state, &devices);
+  if (reader == NULL)
+    {
+      return;
+    }
+
+  g_list_store_remove_all (status_list_store);
+
+  for (guint i = 0; i < devices; i++)
+    {
+      device = message_state_reader_get_device (reader, i);
+      if (device)
+	{
+	  g_list_store_append (status_list_store, device);
+	}
+    }
+
+  message_state_reader_end (reader, &samplerate, &buffer_size,
+			    &target_delay_ms);
+
+  running = devices > 0;
+
+  set_service_state (samplerate, buffer_size, target_delay_ms);
+  set_widgets_to_running_state ();
+}
+
+static gboolean
+refresh_state (gpointer data)
+{
+  GVariant *result;
+  const gchar *state;
+  GError *error = NULL;
+
+  result = g_dbus_connection_call_sync (connection,
+					PACKAGE_SERVICE_DBUS_NAME,
+					"/io/github/dagargo/OverwitchService",
+					PACKAGE_SERVICE_DBUS_NAME,
+					"GetState", NULL,
+					G_VARIANT_TYPE ("(s)"),
+					G_DBUS_CALL_FLAGS_NONE, -1, NULL,
+					&error);
+
+  if (error == NULL)
+    {
+      g_variant_get (result, "(&s)", &state);
+      debug_print (1, "State: %s", state);
+      set_state (state);
+      g_variant_unref (result);
+    }
+  else
+    {
+      error_print ("Error calling method 'GetState': %s", error->message);
+      g_error_free (error);
+    }
+
+  return G_SOURCE_CONTINUE;
+}
+
+static void
+device_name_changed (GtkEditableLabel *label, GParamSpec *pspec,
+		     GtkColumnViewCell *cell)
+{
+  if (gtk_editable_label_get_editing (label))
+    {
+      g_source_remove (source_id);
+    }
+  else
     {
       OverwitchDevice *d =
 	OVERWITCH_DEVICE (gtk_column_view_cell_get_item (cell));
-      struct overwitch_instance *instance = d->instance;
-      struct ow_engine *engine =
-	ow_resampler_get_engine (instance->jclient.resampler);
+      GVariant *result;
+      GError *error = NULL;
       const char *new_name = gtk_editable_get_text (GTK_EDITABLE (label));
       const char *old_name = d->name;
+
       if (g_strcmp0 (new_name, old_name))
 	{
-	  debug_print (1, "Renaming device to '%s'...", new_name);
-	  ow_engine_set_overbridge_name (engine, new_name);
-	  stop_instance (instance);
-	  usleep (PAUSE_TO_BE_NOTIFIED_USECS);
-	  remove_stopped_instances ();
-	  refresh_all (NULL, NULL);
+	  result = g_dbus_connection_call_sync (connection,
+						PACKAGE_SERVICE_DBUS_NAME,
+						"/io/github/dagargo/OverwitchService",
+						PACKAGE_SERVICE_DBUS_NAME,
+						"SetDeviceName",
+						g_variant_new ("(us)", d->id,
+							       new_name),
+						G_VARIANT_TYPE ("(i)"),
+						G_DBUS_CALL_FLAGS_NONE, -1,
+						NULL, &error);
+
+	  if (error == NULL)
+	    {
+	      gint err;
+	      g_variant_get (result, "(i)", &err);
+	      debug_print (1, "Err: %d", err);
+	      g_variant_unref (result);
+	    }
+	  else
+	    {
+	      error_print ("Error calling method 'SetDeviceName': %s",
+			   error->message);
+	      g_error_free (error);
+	    }
 	}
+
+      source_id = g_timeout_add (REFRESH_TIMEOUT_MS, refresh_state, NULL);
     }
 }
 
 static void
-overwitch_build_ui ()
+click_start_stop (GtkWidget *object, gpointer data)
+{
+  GError *error = NULL;
+  GVariant *result;
+  const gchar *method;
+
+  method = running ? "Stop" : "Start";
+  result = g_dbus_connection_call_sync (connection,
+					PACKAGE_SERVICE_DBUS_NAME,
+					"/io/github/dagargo/OverwitchService",
+					PACKAGE_SERVICE_DBUS_NAME,
+					method, NULL, NULL,
+					G_DBUS_CALL_FLAGS_NONE, -1, NULL,
+					&error);
+
+  if (error == NULL)
+    {
+      g_variant_unref (result);
+    }
+  else
+    {
+      error_print ("Error calling method '%s': %s", method, error->message);
+      g_error_free (error);
+    }
+}
+
+static void
+build_ui ()
 {
   gchar *thanks;
   static GtkBuilder *builder;
   GtkBuilderScope *scope = gtk_builder_cscope_new ();
-  gtk_builder_cscope_add_callback (scope, overwitch_device_name_changed);
+  gtk_builder_cscope_add_callback (scope, device_name_changed);
 
   builder = gtk_builder_new ();
   gtk_builder_set_scope (builder, scope);
@@ -742,16 +432,12 @@ overwitch_build_ui ()
   quality_drop_down =
     GTK_DROP_DOWN (gtk_builder_get_object (builder, "quality_drop_down"));
 
-  refresh_button =
-    GTK_WIDGET (gtk_builder_get_object (builder, "refresh_button"));
-  stop_button = GTK_WIDGET (gtk_builder_get_object (builder, "stop_button"));
+  start_stop_button =
+    GTK_WIDGET (gtk_builder_get_object (builder, "start_stop_button"));
 
   status_list_store =
     G_LIST_STORE (gtk_builder_get_object (builder, "status_list_store"));
 
-  name_cell_renderer =
-    GTK_CELL_RENDERER_TEXT (gtk_builder_get_object
-			    (builder, "name_cell_renderer"));
   device_column =
     GTK_COLUMN_VIEW_COLUMN (gtk_builder_get_object
 			    (builder, "device_column"));
@@ -773,85 +459,65 @@ overwitch_build_ui ()
     GTK_LABEL (gtk_builder_get_object (builder, "target_delay_label"));
 
   g_signal_connect (main_window, "close-request",
-		    G_CALLBACK (overwitch_delete_window), NULL);
+		    G_CALLBACK (delete_main_window), NULL);
 
   g_signal_connect (preferences_window_cancel_button, "clicked",
-		    G_CALLBACK (overwitch_close_preferences), NULL);
+		    G_CALLBACK (close_preferences), NULL);
   g_signal_connect (preferences_window_save_button, "clicked",
-		    G_CALLBACK (overwitch_save_preferences), NULL);
+		    G_CALLBACK (click_save_preferences), NULL);
 
-  g_signal_connect (refresh_button, "clicked", G_CALLBACK (refresh_all),
-		    NULL);
-  g_signal_connect (stop_button, "clicked", G_CALLBACK (stop_all), NULL);
+  g_signal_connect (start_stop_button, "clicked",
+		    G_CALLBACK (click_start_stop), NULL);
 
   g_action_map_add_action_entries (G_ACTION_MAP (app), APP_ENTRIES,
 				   G_N_ELEMENTS (APP_ENTRIES), app);
 
   g_object_unref (builder);
+
+  gtk_widget_set_sensitive (main_window, FALSE);
 }
 
 static void
-hotplug_callback (struct ow_device *device)
+app_startup (GApplication *gapp, gpointer *user_data)
 {
-  g_free (device);
-  g_idle_add (refresh_all_sourcefunc, NULL);
-}
+  GError *error = NULL;
 
-static void *
-hotplug_runner (void *data)
-{
-  hotplug_running = 1;
-  ow_hotplug_loop (&hotplug_running, &lock, hotplug_callback);
-  return NULL;
-}
-
-static void
-overwitch_startup (GApplication *gapp, gpointer *user_data)
-{
-  gboolean refresh_at_startup;
-  GVariant *v;
-  GAction *a;
-
-  overwitch_build_ui ();
+  build_ui ();
 
   gtk_application_add_window (app, GTK_WINDOW (main_window));
 
   load_preferences ();
 
-  pipewire_env_var_set = getenv (PIPEWIRE_PROPS_ENV_VAR) != NULL;
-  set_pipewire_props ();
-
-  a = g_action_map_lookup_action (G_ACTION_MAP (app), "refresh_at_startup");
-  v = g_action_get_state (a);
-
-  g_variant_get (v, "b", &refresh_at_startup);
-
-  start_control_client ();
-  if (refresh_at_startup)
+  connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
+  if (error == NULL)
     {
-      refresh_all (NULL, NULL);
-    }
-
-  if (pthread_create (&hotplug_thread, NULL, hotplug_runner, NULL))
-    {
-      error_print ("Could not start hotplug thread");
+      refresh_state (NULL);
+      gtk_widget_set_sensitive (main_window, TRUE);
+      source_id = g_timeout_add (REFRESH_TIMEOUT_MS, refresh_state, NULL);
     }
   else
     {
-      pthread_setname_np (hotplug_thread, "hotplug-worker");
+      error_print ("Error connecting to the bus: %s", error->message);
+      g_error_free (error);
     }
 }
 
 static void
-overwitch_activate (GApplication *gapp, gpointer *user_data)
+app_activate (GApplication *gapp, gpointer *user_data)
 {
   gtk_window_present (GTK_WINDOW (main_window));
 }
 
 static void
+app_shutdown (GApplication *gapp, gpointer *user_data)
+{
+  g_object_unref (connection);
+}
+
+static void
 signal_handler (int signum)
 {
-  overwitch_exit ();
+  app_exit ();
 }
 
 gint
@@ -872,26 +538,18 @@ main (gint argc, gchar *argv[])
   bindtextdomain (PACKAGE, LOCALEDIR);
   textdomain (PACKAGE);
 
-  pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
-
-  app = gtk_application_new (PACKAGE_SERVICE_NAME,
+  app = gtk_application_new (PACKAGE_APP_DBUS_NAME,
 			     G_APPLICATION_DEFAULT_FLAGS);
 
-  g_signal_connect (app, "startup", G_CALLBACK (overwitch_startup), NULL);
-  g_signal_connect (app, "activate", G_CALLBACK (overwitch_activate), NULL);
+  g_signal_connect (app, "startup", G_CALLBACK (app_startup), NULL);
+  g_signal_connect (app, "activate", G_CALLBACK (app_activate), NULL);
+  g_signal_connect (app, "shutdown", G_CALLBACK (app_shutdown), NULL);
 
   g_application_add_main_option_entries (G_APPLICATION (app), CMD_PARAMS);
 
   status = g_application_run (G_APPLICATION (app), argc, argv);
 
   g_object_unref (app);
-
-  if (hotplug_thread)
-    {
-      pthread_join (hotplug_thread, NULL);
-    }
-
-  pthread_spin_destroy (&lock);
 
   return status;
 }

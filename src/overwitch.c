@@ -49,7 +49,7 @@
 #define DEV_TAG_TRACK_NAME "name"
 #define DEV_TAG_TRACK_SIZE "size"
 
-#if !defined(JSON_DEVS_FILE) || defined(OW_TESTING)
+#if !defined(JSON_DEVS_FILE)
 static const struct ow_device_desc DIGITAKT_DESC = {
   .pid = DIGITAKT_PID,
   .name = "Digitakt",
@@ -412,7 +412,7 @@ ow_copy_device_desc (struct ow_device_desc *device_desc,
     }
 }
 
-#if defined(JSON_DEVS_FILE) && !defined(OW_TESTING)
+#if defined(JSON_DEVS_FILE)
 int
 ow_get_device_desc_from_vid_pid_file (uint16_t vid, uint16_t pid,
 				      struct ow_device_desc *device_desc,
@@ -426,7 +426,7 @@ ow_get_device_desc_from_vid_pid_file (uint16_t vid, uint16_t pid,
   device_desc->inputs = 0;
   device_desc->outputs = 0;
 
-  parser = json_parser_new ();
+  parser = json_parser_new_immutable ();
 
   if (!json_parser_load_from_file (parser, file, &error))
     {
@@ -654,7 +654,7 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
       return 1;
     }
 
-#if defined(JSON_DEVS_FILE) && !defined(OW_TESTING)
+#if defined(JSON_DEVS_FILE)
   char *filename;
   int err;
 

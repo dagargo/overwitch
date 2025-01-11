@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no'?>
 <!DOCTYPE cambalache-project SYSTEM "cambalache-project.dtd">
-<cambalache-project version="0.92.0" target_tk="gtk-4.0">
+<cambalache-project version="0.94.0" target_tk="gtk-4.0">
   <ui>
 	(2,None,"overwitch.ui","overwitch.ui",None,None,None,None,None,None,None)
   </ui>
@@ -36,11 +36,8 @@
 	(2,49,"GtkLabel","target_delay_label",47,None,None,None,1,None,None),
 	(2,50,"GtkHeaderBar",None,14,None,"titlebar",None,1,None,None),
 	(2,51,"GtkBox",None,50,None,"end",None,0,None,None),
-	(2,52,"GtkButton","stop_button",51,None,None,None,0,None,None),
-	(2,53,"GtkImage",None,52,None,None,None,0,None,None),
-	(2,54,"GtkButton","refresh_button",51,None,None,None,1,None,None),
-	(2,55,"GtkImage",None,54,None,None,None,0,None,None),
-	(2,56,"GtkMenuButton","menu_button",51,None,None,None,2,None,None),
+	(2,52,"GtkButton","start_stop_button",51,None,None,None,0,None,None),
+	(2,56,"GtkMenuButton","menu_button",51,None,None,None,1,None,None),
 	(2,65,"GtkWindow","preferences_window",None,None,None,None,6,None,None),
 	(2,66,"GtkBox",None,65,None,None,None,0,None,None),
 	(2,67,"GtkBox",None,66,None,None,None,0,None,None),
@@ -139,15 +136,9 @@
 	(2,49,"GtkWidget","halign","end",None,None,None,None,None,None,None,None,None),
 	(2,49,"GtkWidget","hexpand","1",None,None,None,None,None,None,None,None,None),
 	(2,51,"GtkBox","spacing","6",None,None,None,None,None,None,None,None,None),
+	(2,52,"GtkButton","icon-name","media-playback-start-symbolic",None,None,None,None,None,None,None,None,None),
 	(2,52,"GtkWidget","focusable","1",None,None,None,None,None,None,None,None,None),
 	(2,52,"GtkWidget","receives-default","1",None,None,None,None,None,None,None,None,None),
-	(2,52,"GtkWidget","sensitive","0",None,None,None,None,None,None,None,None,None),
-	(2,52,"GtkWidget","tooltip-text","Stop All Devices",1,None,None,None,None,None,None,None,None),
-	(2,53,"GtkImage","icon-name","media-playback-stop-symbolic",None,None,None,None,None,None,None,None,None),
-	(2,54,"GtkWidget","focusable","1",None,None,None,None,None,None,None,None,None),
-	(2,54,"GtkWidget","receives-default","1",None,None,None,None,None,None,None,None,None),
-	(2,54,"GtkWidget","tooltip-text","Refresh Devices",1,None,None,None,None,None,None,None,None),
-	(2,55,"GtkImage","icon-name","view-refresh-symbolic",None,None,None,None,None,None,None,None,None),
 	(2,56,"GtkMenuButton","icon-name","open-menu-symbolic",None,None,None,None,None,None,None,None,None),
 	(2,56,"GtkMenuButton","menu-model","1",None,None,None,None,None,None,None,None,None),
 	(2,56,"GtkWidget","valign","center",None,None,None,None,None,None,None,None,None),
@@ -215,7 +206,7 @@
 	(2,90,"GtkWidget","hexpand","True",None,None,None,None,None,None,None,None,None),
 	(2,90,"GtkWidget","vexpand","True",None,None,None,None,None,None,None,None,None),
 	(2,92,"GtkNoSelection","model",None,None,None,None,None,93,None,None,None,None),
-	(2,94,"GtkBuilderListItemFactory","bytes","&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;\n&lt;interface&gt;\n  &lt;template class=\"GtkColumnViewCell\"&gt;\n    &lt;property name=\"child\"&gt;\n      &lt;object class=\"GtkEditableLabel\"&gt;\n        &lt;binding name=\"text\"&gt;\n          &lt;lookup name=\"name\" type=\"OverwitchDevice\"&gt;\n            &lt;lookup name=\"item\"&gt;GtkColumnViewCell&lt;/lookup&gt;\n          &lt;/lookup&gt;\n        &lt;/binding&gt;\n        &lt;signal name=\"notify::editing\" handler=\"overwitch_device_name_changed\"/&gt;\n      &lt;/object&gt;\n    &lt;/property&gt;\n  &lt;/template&gt;\n&lt;/interface&gt;",None,None,None,None,None,None,None,None,None),
+	(2,94,"GtkBuilderListItemFactory","bytes","&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;\n&lt;interface&gt;\n  &lt;template class=\"GtkColumnViewCell\"&gt;\n    &lt;property name=\"child\"&gt;\n      &lt;object class=\"GtkEditableLabel\"&gt;\n        &lt;binding name=\"text\"&gt;\n          &lt;lookup name=\"name\" type=\"OverwitchDevice\"&gt;\n            &lt;lookup name=\"item\"&gt;GtkColumnViewCell&lt;/lookup&gt;\n          &lt;/lookup&gt;\n        &lt;/binding&gt;\n        &lt;signal name=\"notify::editing\" handler=\"device_name_changed\"/&gt;\n      &lt;/object&gt;\n    &lt;/property&gt;\n  &lt;/template&gt;\n&lt;/interface&gt;",None,None,None,None,None,None,None,None,None),
 	(2,95,"GtkBuilderListItemFactory","bytes","&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;\n&lt;interface&gt;\n  &lt;template class=\"GtkListItem\"&gt;\n    &lt;property name=\"child\"&gt;\n      &lt;object class=\"GtkLabel\"&gt;\n        &lt;property name=\"hexpand\"&gt;TRUE&lt;/property&gt;\n        &lt;property name=\"xalign\"&gt;0&lt;/property&gt;\n        &lt;binding name=\"label\"&gt;\n          &lt;lookup name=\"status\" type=\"OverwitchDevice\"&gt;\n            &lt;lookup name=\"item\"&gt;GtkListItem&lt;/lookup&gt;\n          &lt;/lookup&gt;\n        &lt;/binding&gt;\n      &lt;/object&gt;\n    &lt;/property&gt;\n  &lt;/template&gt;\n&lt;/interface&gt;",None,None,None,None,None,None,None,None,None),
 	(2,96,"GtkBuilderListItemFactory","bytes","&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;\n&lt;interface&gt;\n  &lt;template class=\"GtkListItem\"&gt;\n    &lt;property name=\"child\"&gt;\n      &lt;object class=\"GtkLabel\"&gt;\n        &lt;property name=\"hexpand\"&gt;TRUE&lt;/property&gt;\n        &lt;property name=\"xalign\"&gt;0&lt;/property&gt;\n        &lt;binding name=\"label\"&gt;\n          &lt;lookup name=\"device\" type=\"OverwitchDevice\"&gt;\n            &lt;lookup name=\"item\"&gt;GtkListItem&lt;/lookup&gt;\n          &lt;/lookup&gt;\n        &lt;/binding&gt;\n      &lt;/object&gt;\n    &lt;/property&gt;\n  &lt;/template&gt;\n&lt;/interface&gt;",None,None,None,None,None,None,None,None,None),
 	(2,97,"GtkBuilderListItemFactory","bytes","&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;\n&lt;interface&gt;\n  &lt;template class=\"GtkListItem\"&gt;\n    &lt;property name=\"child\"&gt;\n      &lt;object class=\"GtkLabel\"&gt;\n        &lt;property name=\"hexpand\"&gt;TRUE&lt;/property&gt;\n        &lt;property name=\"xalign\"&gt;0&lt;/property&gt;\n        &lt;binding name=\"label\"&gt;\n          &lt;lookup name=\"bus\" type=\"OverwitchDevice\"&gt;\n            &lt;lookup name=\"item\"&gt;GtkListItem&lt;/lookup&gt;\n          &lt;/lookup&gt;\n        &lt;/binding&gt;\n      &lt;/object&gt;\n    &lt;/property&gt;\n  &lt;/template&gt;\n&lt;/interface&gt;",None,None,None,None,None,None,None,None,None),
