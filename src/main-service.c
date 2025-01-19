@@ -500,6 +500,7 @@ app_startup (GApplication *app, gpointer *user_data)
     {
       startup ();
       g_application_hold (app);
+      g_application_activate (app);
       sd_notify (0, "READY=1");
     }
 }
@@ -526,7 +527,7 @@ main (gint argc, gchar *argv[])
   pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
 
   app = g_application_new (PACKAGE_SERVICE_DBUS_NAME,
-			   G_APPLICATION_DEFAULT_FLAGS);
+			   G_APPLICATION_IS_SERVICE);
 
   g_signal_connect (app, "startup", G_CALLBACK (app_startup), NULL);
   g_signal_connect (app, "activate", G_CALLBACK (app_activate), NULL);
