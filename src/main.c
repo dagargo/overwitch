@@ -37,7 +37,7 @@
 
 static GDBusConnection *connection;
 
-static gboolean running;
+static gint devices;
 static guint source_id;
 static gchar *pipewire_props;
 
@@ -148,13 +148,14 @@ static void
 set_widgets_to_running_state ()
 {
   gtk_button_set_icon_name (GTK_BUTTON (start_stop_button),
-			    running ? STOP_IMAGE_NAME : PLAY_IMAGE_NAME);
+			    devices > 0 ? STOP_IMAGE_NAME : PLAY_IMAGE_NAME);
   gtk_widget_set_tooltip_text (start_stop_button,
-			       running ? _("Stop All Devices") :
+			       devices > 0 ? _("Stop All Devices") :
 			       _("Start All Devices"));
-  gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), !running);
-  gtk_widget_set_sensitive (GTK_WIDGET (timeout_spin_button), !running);
-  gtk_widget_set_sensitive (GTK_WIDGET (quality_drop_down), !running);
+  gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), devices == 0);
+  gtk_widget_set_sensitive (GTK_WIDGET (timeout_spin_button), devices == 0);
+  gtk_widget_set_sensitive (GTK_WIDGET (quality_drop_down), devices == 0);
+  gtk_widget_set_sensitive (start_stop_button, devices >= 0);
 }
 
 static void
@@ -162,7 +163,7 @@ set_service_state (guint32 samplerate, guint32 buffer_size,
 		   gdouble target_delay_ms)
 {
   static char msg[OW_LABEL_MAX_LEN];
-  if (running)
+  if (devices > 0)
     {
       snprintf (msg, OW_LABEL_MAX_LEN, _("JACK at %.5g kHz, %u period"),
 		samplerate / 1000.f, buffer_size);
@@ -244,15 +245,18 @@ static void
 set_state (const gchar *state)
 {
   OverwitchDevice *device;
-  guint devices;
+  guint udevices;
   guint32 samplerate, buffer_size;
   double target_delay_ms;
 
-  JsonReader *reader = message_state_reader_start (state, &devices);
+  JsonReader *reader = message_state_reader_start (state, &udevices);
   if (reader == NULL)
     {
+      devices = -1;
       return;
     }
+
+  devices = udevices;
 
   g_list_store_remove_all (status_list_store);
 
@@ -268,10 +272,7 @@ set_state (const gchar *state)
   message_state_reader_end (reader, &samplerate, &buffer_size,
 			    &target_delay_ms);
 
-  running = devices > 0;
-
   set_service_state (samplerate, buffer_size, target_delay_ms);
-  set_widgets_to_running_state ();
 }
 
 static gboolean
@@ -299,9 +300,12 @@ refresh_state (gpointer data)
     }
   else
     {
+      devices = -1;
       error_print ("Error calling method 'GetState': %s", error->message);
       g_error_free (error);
     }
+
+  set_widgets_to_running_state ();
 
   return G_SOURCE_CONTINUE;
 }
@@ -362,7 +366,7 @@ click_start_stop (GtkWidget *object, gpointer data)
   GVariant *result;
   const gchar *method;
 
-  method = running ? "Stop" : "Start";
+  method = devices > 0 ? "Stop" : "Start";
   result = g_dbus_connection_call_sync (connection,
 					PACKAGE_SERVICE_DBUS_NAME,
 					"/io/github/dagargo/OverwitchService",
@@ -473,8 +477,6 @@ build_ui ()
 				   G_N_ELEMENTS (APP_ENTRIES), app);
 
   g_object_unref (builder);
-
-  gtk_widget_set_sensitive (main_window, FALSE);
 }
 
 static void
@@ -491,8 +493,7 @@ app_startup (GApplication *gapp, gpointer *user_data)
   connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
   if (error == NULL)
     {
-      refresh_state (NULL);
-      gtk_widget_set_sensitive (main_window, TRUE);
+      refresh_state (NULL); // If the D-Bus service is not started, it will be started. In this case, it will fail to get the state.
       source_id = g_timeout_add (REFRESH_TIMEOUT_MS, refresh_state, NULL);
     }
   else
