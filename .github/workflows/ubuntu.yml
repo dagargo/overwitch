@@ -16,7 +16,7 @@ jobs:
     - name: install dependencies
       run: |
           sudo apt-get update
-          sudo apt-get -y --no-install-recommends install automake libtool libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev libsndfile1-dev autopoint gettext libjson-glib-dev libgtk-4-dev
+          sudo apt-get -y --no-install-recommends install automake libtool libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev libsndfile1-dev autopoint gettext libjson-glib-dev libgtk-4-dev libsystemd-dev
           sudo apt-get -y --no-install-recommends install libcunit1-dev
     - name: autoreconf
       run: autoreconf --install
