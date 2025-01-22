@@ -79,7 +79,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <property name="adjustment">blocks_adjustment</property>
                 <property name="climb-rate">1</property>
                 <property name="focusable">1</property>
-                <property name="text">2</property>
+                <property name="text">24</property>
                 <property name="value">24</property>
               </object>
             </child>
@@ -113,7 +113,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <property name="adjustment">transfer_timeout_adjustment</property>
                 <property name="climb-rate">1</property>
                 <property name="focusable">1</property>
-                <property name="text">24</property>
+                <property name="text">10</property>
                 <property name="value">10</property>
               </object>
             </child>
