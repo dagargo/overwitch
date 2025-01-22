@@ -40,4 +40,4 @@ EXTRA_DIST = \
         $(res_DATA) \
         $(desktop_DATA) \
         $(svgicon_DATA) \
-	$(service_in_files)
+        $(service_in_file)
