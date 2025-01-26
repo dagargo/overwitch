@@ -197,9 +197,6 @@ const char *ow_get_err_str (ow_err_t);
 
 int ow_get_device_list (struct ow_device **, size_t *);
 
-int ow_get_device_desc_from_vid_pid (uint16_t, uint16_t,
-				     struct ow_device_desc *);
-
 int ow_get_device_from_device_attrs (int id, const char *name,
 				     uint8_t bus, uint8_t address,
 				     struct ow_device **);

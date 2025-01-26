@@ -35,6 +35,8 @@
 #define DEV_TAG_TRACK_NAME "name"
 #define DEV_TAG_TRACK_SIZE "size"
 
+static int ow_get_device_desc (uint16_t, struct ow_device_desc *);
+
 int
 ow_get_device_list (struct ow_device **ow_devices, size_t *size)
 {
@@ -74,8 +76,13 @@ ow_get_device_list (struct ow_device **ow_devices, size_t *size)
 	  continue;
 	}
 
-      if (!ow_get_device_desc_from_vid_pid (desc.idVendor, desc.idProduct,
-					    &ow_device->desc))
+      if (desc.idVendor != ELEKTRON_VID)
+	{
+	  debug_print (3, "Non Elektron USB device found. Skipping...");
+	  continue;
+	}
+
+      if (!ow_get_device_desc (desc.idProduct, &ow_device->desc))
 	{
 	  bus = libusb_get_bus_number (*usb_device);
 	  address = libusb_get_device_address (*usb_device);
@@ -127,18 +134,180 @@ ow_copy_device_desc (struct ow_device_desc *device_desc,
     }
 }
 
-int
-ow_get_device_desc_from_vid_pid_file (uint16_t vid, uint16_t pid,
-				      struct ow_device_desc *device_desc,
-				      const char *file)
+static int
+ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
+			   JsonReader *reader)
 {
-  gint dpid, err, devices;
+  gint dpid;
+
+  device_desc->inputs = 0;
+  device_desc->outputs = 0;
+
+  if (!json_reader_read_member (reader, DEV_TAG_PID))
+    {
+      error_print ("Cannot read member '%s'. Continuing...", DEV_TAG_PID);
+      return -ENODEV;
+    }
+
+  dpid = json_reader_get_int_value (reader);
+  json_reader_end_member (reader);
+  if (dpid != pid)
+    {
+      return -ENODEV;
+    }
+  device_desc->pid = dpid;
+
+  debug_print (1, "Device with PID %d found", dpid);
+
+  if (!json_reader_read_member (reader, DEV_TAG_NAME))
+    {
+      error_print ("Cannot read member '%s'. Stopping...", DEV_TAG_NAME);
+      json_reader_end_element (reader);
+      return -EINVAL;
+    }
+  snprintf (device_desc->name, OW_LABEL_MAX_LEN, "%s",
+	    json_reader_get_string_value (reader));
+  json_reader_end_member (reader);
+
+  if (!json_reader_read_member (reader, DEV_TAG_FORMAT))
+    {
+      error_print ("Cannot read member '%s'. Stopping...", DEV_TAG_FORMAT);
+      return -EINVAL;
+    }
+  device_desc->format = json_reader_get_int_value (reader);
+  json_reader_end_member (reader);
+
+  if (device_desc->format < OW_ENGINE_FORMAT_V1 ||
+      device_desc->format > OW_ENGINE_FORMAT_V3)
+    {
+      error_print ("Invalid format version '%d'. Stopping...",
+		   device_desc->format);
+      return -EINVAL;
+    }
+
+  if (!json_reader_read_member (reader, DEV_TAG_INPUT_TRACKS))
+    {
+      error_print ("Cannot read member '%s'. Stopping...",
+		   DEV_TAG_INPUT_TRACKS);
+      json_reader_end_element (reader);
+      return -EINVAL;
+    }
+  if (!json_reader_is_array (reader))
+    {
+      error_print ("Not an array");
+      json_reader_end_element (reader);
+      return -EINVAL;
+    }
+  device_desc->inputs = json_reader_count_elements (reader);
+  if (!device_desc->inputs)
+    {
+      debug_print (1, "No tracks found");
+      return -EINVAL;
+    }
+
+  for (int j = 0; j < device_desc->inputs; j++)
+    {
+      if (json_reader_read_element (reader, j))
+	{
+	  if (!json_reader_read_member (reader, DEV_TAG_TRACK_NAME))
+	    {
+	      debug_print (1, "No name found");
+	      return -EINVAL;
+	    }
+	  snprintf (device_desc->input_tracks[j].name, OW_LABEL_MAX_LEN,
+		    "%s", json_reader_get_string_value (reader));
+
+	  json_reader_end_member (reader);
+
+	  if (!json_reader_read_member (reader, DEV_TAG_TRACK_SIZE))
+	    {
+	      debug_print (1, "No size found");
+	      return -EINVAL;
+	    }
+	  device_desc->input_tracks[j].size =
+	    json_reader_get_int_value (reader);
+
+	  json_reader_end_member (reader);
+
+	  json_reader_end_element (reader);
+	}
+      else
+	{
+	  error_print ("Cannot read input track name %d", j);
+	  return -EINVAL;
+	}
+    }
+  json_reader_end_member (reader);
+
+  if (!json_reader_read_member (reader, DEV_TAG_OUTPUT_TRACKS))
+    {
+      error_print ("Cannot read member '%s'. Stopping...",
+		   DEV_TAG_OUTPUT_TRACKS);
+      json_reader_end_element (reader);
+      return -EINVAL;
+    }
+  if (!json_reader_is_array (reader))
+    {
+      error_print ("Not an array");
+      return -EINVAL;
+    }
+  device_desc->outputs = json_reader_count_elements (reader);
+  if (!device_desc->outputs)
+    {
+      debug_print (1, "No tracks found");
+      return -EINVAL;
+    }
+
+  for (int j = 0; j < device_desc->outputs; j++)
+    {
+      if (json_reader_read_element (reader, j))
+	{
+	  if (!json_reader_read_member (reader, DEV_TAG_TRACK_NAME))
+	    {
+	      debug_print (1, "No name found");
+	      return -EINVAL;
+	    }
+	  snprintf (device_desc->output_tracks[j].name, OW_LABEL_MAX_LEN,
+		    "%s", json_reader_get_string_value (reader));
+
+	  json_reader_end_member (reader);
+
+	  if (!json_reader_read_member (reader, DEV_TAG_TRACK_SIZE))
+	    {
+	      debug_print (1, "No size found");
+	      return -EINVAL;
+	    }
+	  device_desc->output_tracks[j].size =
+	    json_reader_get_int_value (reader);
+
+	  json_reader_end_member (reader);
+
+	  json_reader_end_element (reader);
+	}
+      else
+	{
+	  error_print ("Cannot read output track name %d", j);
+	  return -EINVAL;
+	}
+    }
+  json_reader_end_member (reader);
+
+  return 0;
+}
+
+static int
+ow_get_device_desc_file (uint16_t pid, struct ow_device_desc *device_desc,
+			 const char *file)
+{
+  gint err, devices;
   JsonParser *parser;
   JsonReader *reader;
   GError *error = NULL;
 
   device_desc->inputs = 0;
   device_desc->outputs = 0;
+
+  debug_print (1, "Searching device in %s", file);
 
   parser = json_parser_new_immutable ();
 
@@ -182,173 +351,16 @@ ow_get_device_desc_from_vid_pid_file (uint16_t vid, uint16_t pid,
 	  continue;
 	}
 
-      if (!json_reader_read_member (reader, DEV_TAG_PID))
-	{
-	  error_print ("Cannot read member '%s'. Continuing...", DEV_TAG_PID);
-	  continue;
-	}
-      dpid = json_reader_get_int_value (reader);
-      json_reader_end_member (reader);
-      if (dpid != pid)
+      err = ow_get_device_desc_reader (pid, device_desc, reader);
+      if (err == -ENODEV)
 	{
 	  json_reader_end_element (reader);
 	  continue;
 	}
-      device_desc->pid = dpid;
-
-      err = 0;
-      debug_print (1, "Device with PID %d found", dpid);
-
-      if (!json_reader_read_member (reader, DEV_TAG_NAME))
+      else
 	{
-	  error_print ("Cannot read member '%s'. Stopping...", DEV_TAG_NAME);
-	  json_reader_end_element (reader);
-	  err = -ENODEV;
 	  break;
 	}
-      snprintf (device_desc->name, OW_LABEL_MAX_LEN, "%s",
-		json_reader_get_string_value (reader));
-      json_reader_end_member (reader);
-
-      if (!json_reader_read_member (reader, DEV_TAG_FORMAT))
-	{
-	  error_print ("Cannot read member '%s'. Stopping...",
-		       DEV_TAG_FORMAT);
-	  json_reader_end_element (reader);
-	  err = -ENODEV;
-	  break;
-	}
-      device_desc->format = json_reader_get_int_value (reader);
-      json_reader_end_member (reader);
-
-      if (device_desc->format < OW_ENGINE_FORMAT_V1 ||
-	  device_desc->format > OW_ENGINE_FORMAT_V3)
-	{
-	  error_print ("Invalid format version '%d'. Stopping...",
-		       device_desc->format);
-	  err = -ENODEV;
-	  break;
-	}
-
-      if (!json_reader_read_member (reader, DEV_TAG_INPUT_TRACKS))
-	{
-	  error_print ("Cannot read member '%s'. Stopping...",
-		       DEV_TAG_INPUT_TRACKS);
-	  json_reader_end_element (reader);
-	  err = -ENODEV;
-	  break;
-	}
-      if (!json_reader_is_array (reader))
-	{
-	  error_print ("Not an array");
-	  err = -ENODEV;
-	  goto cleanup_reader;
-	}
-      device_desc->inputs = json_reader_count_elements (reader);
-      if (!device_desc->inputs)
-	{
-	  debug_print (1, "No tracks found");
-	  err = -ENODEV;
-	  goto cleanup_reader;
-	}
-
-      for (int j = 0; j < device_desc->inputs; j++)
-	{
-	  if (json_reader_read_element (reader, j))
-	    {
-	      if (!json_reader_read_member (reader, DEV_TAG_TRACK_NAME))
-		{
-		  debug_print (1, "No name found");
-		  err = -ENODEV;
-		  goto cleanup_reader;
-		}
-	      snprintf (device_desc->input_tracks[j].name, OW_LABEL_MAX_LEN,
-			"%s", json_reader_get_string_value (reader));
-
-	      json_reader_end_member (reader);
-
-	      if (!json_reader_read_member (reader, DEV_TAG_TRACK_SIZE))
-		{
-		  debug_print (1, "No size found");
-		  err = -ENODEV;
-		  goto cleanup_reader;
-		}
-	      device_desc->input_tracks[j].size =
-		json_reader_get_int_value (reader);
-
-	      json_reader_end_member (reader);
-
-	      json_reader_end_element (reader);
-	    }
-	  else
-	    {
-	      error_print ("Cannot read input track name %d", j);
-	      err = -ENODEV;
-	      goto cleanup_reader;
-	    }
-	}
-      json_reader_end_member (reader);
-
-      if (!json_reader_read_member (reader, DEV_TAG_OUTPUT_TRACKS))
-	{
-	  error_print ("Cannot read member '%s'. Stopping...",
-		       DEV_TAG_OUTPUT_TRACKS);
-	  json_reader_end_element (reader);
-	  err = -ENODEV;
-	  break;
-	}
-      if (!json_reader_is_array (reader))
-	{
-	  error_print ("Not an array");
-	  err = -ENODEV;
-	  goto cleanup_reader;
-	}
-      device_desc->outputs = json_reader_count_elements (reader);
-      if (!device_desc->outputs)
-	{
-	  debug_print (1, "No tracks found");
-	  err = -ENODEV;
-	  goto cleanup_reader;
-	}
-
-      for (int j = 0; j < device_desc->outputs; j++)
-	{
-	  if (json_reader_read_element (reader, j))
-	    {
-	      if (!json_reader_read_member (reader, DEV_TAG_TRACK_NAME))
-		{
-		  debug_print (1, "No name found");
-		  err = -ENODEV;
-		  goto cleanup_reader;
-		}
-	      snprintf (device_desc->output_tracks[j].name, OW_LABEL_MAX_LEN,
-			"%s", json_reader_get_string_value (reader));
-
-	      json_reader_end_member (reader);
-
-	      if (!json_reader_read_member (reader, DEV_TAG_TRACK_SIZE))
-		{
-		  debug_print (1, "No size found");
-		  err = -ENODEV;
-		  goto cleanup_reader;
-		}
-	      device_desc->output_tracks[j].size =
-		json_reader_get_int_value (reader);
-
-	      json_reader_end_member (reader);
-
-	      json_reader_end_element (reader);
-	    }
-	  else
-	    {
-	      error_print ("Cannot read output track name %d", j);
-	      err = -ENODEV;
-	      goto cleanup_reader;
-	    }
-	}
-      json_reader_end_member (reader);
-
-      break;
     }
 
 cleanup_reader:
@@ -358,37 +370,22 @@ cleanup_parser:
   return err;
 }
 
-int
-ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
-				 struct ow_device_desc *device_desc)
+static int
+ow_get_device_desc (uint16_t pid, struct ow_device_desc *device_desc)
 {
-  if (vid != ELEKTRON_VID)
-    {
-      return 1;
-    }
-
-  char *filename;
+  char *file;
   int err;
 
-  filename = get_expanded_dir (CONF_DIR DEVICES_FILE);
+  file = get_expanded_dir (CONF_DIR DEVICES_FILE);
+  err = ow_get_device_desc_file (pid, device_desc, file);
+  g_free (file);
 
-  debug_print (1, "Searching device in %s", filename);
-
-  err = ow_get_device_desc_from_vid_pid_file (vid, pid, device_desc,
-					      filename);
   if (err)
     {
-      g_free (filename);
-
-      filename = strdup (DATADIR DEVICES_FILE);
-
-      debug_print (1, "Searching device in %s...", filename);
-
-      err = ow_get_device_desc_from_vid_pid_file (vid, pid, device_desc,
-						  filename);
+      file = strdup (DATADIR DEVICES_FILE);
+      err = ow_get_device_desc_file (pid, device_desc, file);
+      g_free (file);
     }
-
-  g_free (filename);
 
   return err;
 }
