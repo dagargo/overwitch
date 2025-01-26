@@ -6,13 +6,13 @@ permalink: /addingdevices/
 
 ## Adding devices
 
-Devices are specified in `JSON` files. Overwitch first searches the device being used in the user defined file `~/.config/overwitch/devices.json`. If the file does not exist or the device is not there, then it searches in the file included in the project.
+Devices are specified in `JSON` files. As devices can be user-defined, there is no need to recompile the code or wait for new releases to use Overwitch with new devices.
 
-As devices can be user-defined, there is no need to recompile the code or wait for new releases to use Overwitch with new devices.
+Overwitch first searches a device in all the files in the `~/.config/overwitch/devices.d` directory, where each one contains a `JSON` object; then into the user defined file `~/.config/overwitch/devices.json`, which is a `JSON` array; and finally into the file included in the project, which is a `JSON` array too.
 
 ### JSON format
 
-This is a self-explanatory device. Both the included file and the custom file are an array of these devices.
+This is a self-explanatory device. Keep in mind that, while files in the `~/.config/overwitch/devices.d` directory follow this definition, both the included file and the custom file are an array of these devices.
 
 There are 3 types of formats, depending on how many bytes are used to store samples in the USB blocks.
 

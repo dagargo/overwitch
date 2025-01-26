@@ -25,6 +25,7 @@
 #include "overwitch.h"
 #include "utils.h"
 
+#define DEVICES_DIR "/devices.d"
 #define DEVICES_FILE "/devices.json"
 
 #define DEV_TAG_PID "pid"
@@ -145,7 +146,7 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 
   if (!json_reader_read_member (reader, DEV_TAG_PID))
     {
-      error_print ("Cannot read member '%s'. Continuing...", DEV_TAG_PID);
+      error_print ("Cannot read member '%s'", DEV_TAG_PID);
       return -ENODEV;
     }
 
@@ -161,7 +162,7 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 
   if (!json_reader_read_member (reader, DEV_TAG_NAME))
     {
-      error_print ("Cannot read member '%s'. Stopping...", DEV_TAG_NAME);
+      error_print ("Cannot read member '%s'", DEV_TAG_NAME);
       json_reader_end_element (reader);
       return -EINVAL;
     }
@@ -171,7 +172,7 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 
   if (!json_reader_read_member (reader, DEV_TAG_FORMAT))
     {
-      error_print ("Cannot read member '%s'. Stopping...", DEV_TAG_FORMAT);
+      error_print ("Cannot read member '%s'", DEV_TAG_FORMAT);
       return -EINVAL;
     }
   device_desc->format = json_reader_get_int_value (reader);
@@ -180,15 +181,13 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
   if (device_desc->format < OW_ENGINE_FORMAT_V1 ||
       device_desc->format > OW_ENGINE_FORMAT_V3)
     {
-      error_print ("Invalid format version '%d'. Stopping...",
-		   device_desc->format);
+      error_print ("Invalid format version '%d'", device_desc->format);
       return -EINVAL;
     }
 
   if (!json_reader_read_member (reader, DEV_TAG_INPUT_TRACKS))
     {
-      error_print ("Cannot read member '%s'. Stopping...",
-		   DEV_TAG_INPUT_TRACKS);
+      error_print ("Cannot read member '%s'", DEV_TAG_INPUT_TRACKS);
       json_reader_end_element (reader);
       return -EINVAL;
     }
@@ -241,8 +240,7 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 
   if (!json_reader_read_member (reader, DEV_TAG_OUTPUT_TRACKS))
     {
-      error_print ("Cannot read member '%s'. Stopping...",
-		   DEV_TAG_OUTPUT_TRACKS);
+      error_print ("Cannot read member '%s'", DEV_TAG_OUTPUT_TRACKS);
       json_reader_end_element (reader);
       return -EINVAL;
     }
@@ -297,7 +295,7 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 
 static int
 ow_get_device_desc_file (uint16_t pid, struct ow_device_desc *device_desc,
-			 const char *file)
+			 const char *file, int array)
 {
   gint err, devices;
   JsonParser *parser;
@@ -327,40 +325,47 @@ ow_get_device_desc_file (uint16_t pid, struct ow_device_desc *device_desc,
       goto cleanup_parser;
     }
 
-  if (!json_reader_is_array (reader))
+  if (array)
     {
-      error_print ("Not an array");
-      err = -ENODEV;
-      goto cleanup_reader;
-    }
-
-  devices = json_reader_count_elements (reader);
-  if (!devices)
-    {
-      debug_print (1, "No devices found");
-      err = -ENODEV;
-      goto cleanup_reader;
-    }
-
-  err = -ENODEV;
-  for (int i = 0; i < devices; i++)
-    {
-      if (!json_reader_read_element (reader, i))
+      if (!json_reader_is_array (reader))
 	{
-	  error_print ("Cannot read element %d. Continuing...", i);
-	  continue;
+	  error_print ("Not an array");
+	  err = -ENODEV;
+	  goto cleanup_reader;
 	}
 
+      devices = json_reader_count_elements (reader);
+      if (!devices)
+	{
+	  debug_print (1, "No devices found");
+	  err = -ENODEV;
+	  goto cleanup_reader;
+	}
+
+      err = -ENODEV;
+      for (int i = 0; i < devices; i++)
+	{
+	  if (!json_reader_read_element (reader, i))
+	    {
+	      error_print ("Cannot read element %d. Continuing...", i);
+	      continue;
+	    }
+
+	  err = ow_get_device_desc_reader (pid, device_desc, reader);
+	  if (err == -ENODEV)
+	    {
+	      json_reader_end_element (reader);
+	      continue;
+	    }
+	  else
+	    {
+	      break;
+	    }
+	}
+    }
+  else
+    {
       err = ow_get_device_desc_reader (pid, device_desc, reader);
-      if (err == -ENODEV)
-	{
-	  json_reader_end_element (reader);
-	  continue;
-	}
-      else
-	{
-	  break;
-	}
     }
 
 cleanup_reader:
@@ -373,17 +378,53 @@ cleanup_parser:
 static int
 ow_get_device_desc (uint16_t pid, struct ow_device_desc *device_desc)
 {
-  char *file;
+  char *file, *dir;
   int err;
 
-  file = get_expanded_dir (CONF_DIR DEVICES_FILE);
-  err = ow_get_device_desc_file (pid, device_desc, file);
-  g_free (file);
+  dir = get_expanded_dir (CONF_DIR DEVICES_DIR);
+
+  err = -ENODEV;
+  if (g_file_test (dir, G_FILE_TEST_IS_DIR))
+    {
+      GDir *gdir;
+      const gchar *name;
+
+      if ((gdir = g_dir_open (dir, 0, NULL)) != NULL)
+	{
+	  while ((name = g_dir_read_name (gdir)) != NULL)
+	    {
+	      if (name[0] == '.')
+		{
+		  continue;
+		}
+
+	      if (!g_str_has_suffix (name, ".json"))
+		{
+		  continue;
+		}
+
+	      file = g_build_path (G_DIR_SEPARATOR_S, dir, name, NULL);
+	      if (g_file_test (file, G_FILE_TEST_IS_REGULAR))
+		{
+		  err = ow_get_device_desc_file (pid, device_desc, file, 0);
+		}
+	      g_free (file);
+	    }
+	}
+    }
+  g_free (dir);
+
+  if (err)
+    {
+      file = get_expanded_dir (CONF_DIR DEVICES_FILE);
+      err = ow_get_device_desc_file (pid, device_desc, file, 1);
+      g_free (file);
+    }
 
   if (err)
     {
       file = strdup (DATADIR DEVICES_FILE);
-      err = ow_get_device_desc_file (pid, device_desc, file);
+      err = ow_get_device_desc_file (pid, device_desc, file, 1);
       g_free (file);
     }
 
