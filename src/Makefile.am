@@ -1,18 +1,10 @@
 PKG_CONFIG ?= pkg-config
 
-LIB_LIBS = libusb-1.0
-
-if JSON_DEVS_FILE
-LIB_LIBS += json-glib-1.0
-endif
+LIB_LIBS = libusb-1.0 json-glib-1.0
 
 CLI_LIBS = jack $(LIB_LIBS)
 SRV_LIBS = libsystemd glib-2.0 $(CLI_LIBS)
 GUI_LIBS = gtk4 $(CLI_LIBS)
-
-if ! JSON_DEVS_FILE
-GUI_LIBS += json-glib-1.0
-endif
 
 overwitch_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(GUI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
 overwitch_LDFLAGS = `$(PKG_CONFIG) --libs $(GUI_LIBS)` $(SAMPLERATE_LIBS)

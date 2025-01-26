@@ -6,10 +6,9 @@ permalink: /installation/
 
 ## Installation
 
-As with other autotools project, you need to run the commands below. There are a few options available.
+As with other autotools project, you need to run the commands below. There is a compilation option available.
 
 * If you just want to compile the command line applications, pass `CLI_ONLY=yes` to `./configure`.
-* If you do not want to use the JSON devices files, pass `JSON_DEVS_FILE=no` to `./configure`. This is useful to eliminate GLIB dependencies when building the library. In this case, the devices configuration used are the ones in the source code.
 
 ```
 autoreconf --install
@@ -31,7 +30,7 @@ The package dependencies for Debian based distributions are:
 - autopoint
 - gettext
 - libsystemd-dev
-- libjson-glib-dev (only if `JSON_DEVS_FILE=no` is not used)
+- libjson-glib-dev
 - libgtk-4-dev (only if `CLI_ONLY=yes` is not used)
 - systemd-dev (only used to install the udev rules)
 

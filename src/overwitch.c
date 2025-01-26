@@ -27,20 +27,6 @@
 
 #define DEVICES_FILE "/devices.json"
 
-#define ANALOG_FOUR_PID 0x0004
-#define ANALOG_KEYS_PID 0x0006
-#define ANALOG_RYTM_PID 0x0008
-#define ANALOG_HEAT_PID 0x000a
-#define DIGITAKT_PID 0x0b2c
-#define ANALOG_FOUR_MK2_PID 0x0b47
-#define ANALOG_RYTM_MK2_PID 0x0b48
-#define DIGITONE_PID 0x0b36
-#define ANALOG_HEAT_MK2_PID 0x0b52
-#define DIGITONE_KEYS_PID 0x0b35
-#define SYNTAKT_PID 0x0b4a
-#define ANALOG_HEAT_FX_PID 0x0b53
-#define DIGITAKT_II_PID 0x0b2b
-
 #define DEV_TAG_PID "pid"
 #define DEV_TAG_NAME "name"
 #define DEV_TAG_FORMAT "format"
@@ -48,277 +34,6 @@
 #define DEV_TAG_OUTPUT_TRACKS "output_tracks"
 #define DEV_TAG_TRACK_NAME "name"
 #define DEV_TAG_TRACK_SIZE "size"
-
-#if !defined(JSON_DEVS_FILE)
-static const struct ow_device_desc DIGITAKT_DESC = {
-  .pid = DIGITAKT_PID,
-  .name = "Digitakt",
-  .format = 2,
-  .inputs = 2,
-  .outputs = 12,
-  .input_tracks = {{.name = "Main L Input",.size = 4},
-		   {.name = "Main R Input",.size = 4}},
-  .output_tracks = {{.name = "Main L",.size = 4},
-		    {.name = "Main R",.size = 4},
-		    {.name = "Track 1",.size = 4},
-		    {.name = "Track 2",.size = 4},
-		    {.name = "Track 3",.size = 4},
-		    {.name = "Track 4",.size = 4},
-		    {.name = "Track 5",.size = 4},
-		    {.name = "Track 6",.size = 4},
-		    {.name = "Track 7",.size = 4},
-		    {.name = "Track 8",.size = 4},
-		    {.name = "Input L",.size = 4},
-		    {.name = "Input R",.size = 4}}
-};
-
-static const struct ow_device_desc DIGITONE_DESC = {
-  .pid = DIGITONE_PID,
-  .name = "Digitone",
-  .format = 2,
-  .inputs = 2,
-  .outputs = 12,
-  .input_tracks = {{.name = "Main L Input",.size = 4},
-		   {.name = "Main R Input",.size = 4}},
-  .output_tracks = {{.name = "Main L",.size = 4},
-		    {.name = "Main R",.size = 4},
-		    {.name = "Track 1 L",.size = 4},
-		    {.name = "Track 1 R",.size = 4},
-		    {.name = "Track 2 L",.size = 4},
-		    {.name = "Track 2 R",.size = 4},
-		    {.name = "Track 3 L",.size = 4},
-		    {.name = "Track 3 R",.size = 4},
-		    {.name = "Track 4 L",.size = 4},
-		    {.name = "Track 4 R",.size = 4},
-		    {.name = "Input L",.size = 4},
-		    {.name = "Input R",.size = 4}}
-};
-
-static const struct ow_device_desc ANALOG_FOUR_MK2_DESC = {
-  .pid = ANALOG_FOUR_MK2_PID,
-  .name = "Analog Four MKII",
-  .format = 2,
-  .inputs = 6,
-  .outputs = 8,
-  .input_tracks = {{.name = "Main L Input",.size = 4},
-		   {.name = "Main R Input",.size = 4},
-		   {.name = "Synth Track 1 Input",.size = 4},
-		   {.name = "Synth Track 2 Input",.size = 4},
-		   {.name = "Synth Track 3 Input",.size = 4},
-		   {.name = "Synth Track 4 Input",.size = 4}},
-  .output_tracks = {{.name = "Main L",.size = 4},
-		    {.name = "Main R",.size = 4},
-		    {.name = "Synth Track 1",.size = 4},
-		    {.name = "Synth Track 2",.size = 4},
-		    {.name = "Synth Track 3",.size = 4},
-		    {.name = "Synth Track 4",.size = 4},
-		    {.name = "Input L",.size = 4},
-		    {.name = "Input R",.size = 4}}
-};
-
-static const struct ow_device_desc ANALOG_RYTM_MK2_DESC = {
-  .pid = ANALOG_RYTM_MK2_PID,
-  .name = "Analog Rytm MKII",
-  .format = 2,
-  .inputs = 12,
-  .outputs = 12,
-  .input_tracks = {{.name = "Main L Input",.size = 4},
-		   {.name = "Main R Input",.size = 4},
-		   {.name = "Main FX L Input",.size = 4},
-		   {.name = "Main FX R Input",.size = 4},
-		   {.name = "BD Input",.size = 4},
-		   {.name = "SD Input",.size = 4},
-		   {.name = "RS/CP Input",.size = 4},
-		   {.name = "BT Input",.size = 4},
-		   {.name = "LT Input",.size = 4},
-		   {.name = "MT/HT Input",.size = 4},
-		   {.name = "CH/OH Input",.size = 4},
-		   {.name = "CY/CB Input",.size = 4}},
-  .output_tracks = {{.name = "Main L",.size = 4},
-		    {.name = "Main R",.size = 4},
-		    {.name = "BD",.size = 4},
-		    {.name = "SD",.size = 4},
-		    {.name = "RS/CP",.size = 4},
-		    {.name = "BT",.size = 4},
-		    {.name = "LT",.size = 4},
-		    {.name = "MT/HT",.size = 4},
-		    {.name = "CH/OH",.size = 4},
-		    {.name = "CY/CB",.size = 4},
-		    {.name = "Input L",.size = 4},
-		    {.name = "Input R",.size = 4}}
-};
-
-static const struct ow_device_desc DIGITONE_KEYS_DESC = {
-  .pid = DIGITONE_KEYS_PID,
-  .name = "Digitone Keys",
-  .format = 2,
-  .inputs = 2,
-  .outputs = 12,
-  .input_tracks = {{.name = "Main L Input",.size = 4},
-		   {.name = "Main R Input",.size = 4}},
-  .output_tracks = {{.name = "Main L",.size = 4},
-		    {.name = "Main R",.size = 4},
-		    {.name = "Track 1 L",.size = 4},
-		    {.name = "Track 1 R",.size = 4},
-		    {.name = "Track 2 L",.size = 4},
-		    {.name = "Track 2 R",.size = 4},
-		    {.name = "Track 3 L",.size = 4},
-		    {.name = "Track 3 R",.size = 4},
-		    {.name = "Track 4 L",.size = 4},
-		    {.name = "Track 4 R",.size = 4},
-		    {.name = "Input L",.size = 4},
-		    {.name = "Input R",.size = 4}}
-};
-
-static const struct ow_device_desc ANALOG_HEAT_DESC = {
-  .pid = ANALOG_HEAT_PID,
-  .name = "Analog Heat",
-  .format = 2,
-  .inputs = 4,
-  .outputs = 4,
-  .input_tracks = {{.name = "Main L Input",.size = 4},
-		   {.name = "Main R Input",.size = 4},
-		   {.name = "FX Send L",.size = 4},
-		   {.name = "FX Send R",.size = 4}},
-  .output_tracks = {{.name = "Main L",.size = 4},
-		    {.name = "Main R",.size = 4},
-		    {.name = "FX Return L",.size = 4},
-		    {.name = "FX Return R",.size = 4}}
-};
-
-static const struct ow_device_desc ANALOG_HEAT_MK2_DESC = {
-  .pid = ANALOG_HEAT_MK2_PID,
-  .name = "Analog Heat MKII",
-  .format = 2,
-  .inputs = 4,
-  .outputs = 4,
-  .input_tracks = {{.name = "Main L Input",.size = 4},
-		   {.name = "Main R Input",.size = 4},
-		   {.name = "FX Send L",.size = 4},
-		   {.name = "FX Send R",.size = 4}},
-  .output_tracks = {{.name = "Main L",.size = 4},
-		    {.name = "Main R",.size = 4},
-		    {.name = "FX Return L",.size = 4},
-		    {.name = "FX Return R",.size = 4}}
-};
-
-static const struct ow_device_desc ANALOG_HEAT_FX_DESC = {
-  .pid = ANALOG_HEAT_FX_PID,
-  .name = "Analog Heat +FX",
-  .format = 2,
-  .inputs = 4,
-  .outputs = 4,
-  .input_tracks = {{.name = "Main L Input",.size = 4},
-		   {.name = "Main R Input",.size = 4},
-		   {.name = "FX Send L",.size = 4},
-		   {.name = "FX Send R",.size = 4}},
-  .output_tracks = {{.name = "Main L",.size = 4},
-		    {.name = "Main R",.size = 4},
-		    {.name = "FX Return L",.size = 4},
-		    {.name = "FX Return R",.size = 4}}
-};
-
-static const struct ow_device_desc SYNTAKT_DESC = {
-  .pid = SYNTAKT_PID,
-  .name = "Syntakt",
-  .format = 2,
-  .inputs = 8,
-  .outputs = 20,
-  .input_tracks = {{.name = "Main L Input",.size = 4},
-		   {.name = "Main R Input",.size = 4},
-		   {.name = "Analog FX L Input",.size = 4},
-		   {.name = "Analog FX R Input",.size = 4},
-		   {.name = "Track 9 Input",.size = 4},
-		   {.name = "Track 10 Input",.size = 4},
-		   {.name = "Track 11 Input",.size = 4},
-		   {.name = "Track 12 Input",.size = 4}},
-  .output_tracks = {{.name = "Main L",.size = 4},
-		    {.name = "Main R",.size = 4},
-		    {.name = "Track  1",.size = 4},
-		    {.name = "Track  2",.size = 4},
-		    {.name = "Track  3",.size = 4},
-		    {.name = "Track  4",.size = 4},
-		    {.name = "Track  5",.size = 4},
-		    {.name = "Track  6",.size = 4},
-		    {.name = "Track  7",.size = 4},
-		    {.name = "Track  8",.size = 4},
-		    {.name = "Track  9",.size = 4},
-		    {.name = "Track 10",.size = 4},
-		    {.name = "Track 11",.size = 4},
-		    {.name = "Track 12",.size = 4},
-		    {.name = "Analog FX L",.size = 4},
-		    {.name = "Analog FX R",.size = 4},
-		    {.name = "Delay/Reverb L",.size = 4},
-		    {.name = "Delay/Reverb R",.size = 4},
-		    {.name = "Input L",.size = 4},
-		    {.name = "Input R",.size = 4}}
-};
-
-static const struct ow_device_desc DIGITAKT_II_DESC = {
-  .pid = DIGITAKT_II_PID,
-  .name = "Digitakt II",
-  .format = 3,
-  .inputs = 8,
-  .outputs = 42,
-  .input_tracks = {{.name = "Main L Input",.size = 4},
-		   {.name = "Main R Input",.size = 4},
-		   {.name = "Delay L Input",.size = 4},
-		   {.name = "Delay R Input",.size = 4},
-		   {.name = "Reverb L Input",.size = 4},
-		   {.name = "Reverb R Input",.size = 4},
-		   {.name = "Chorus L Input",.size = 4},
-		   {.name = "Chorus R Input",.size = 4}},
-  .output_tracks = {{.name = "Main L",.size = 4},
-		    {.name = "Main R",.size = 4},
-		    {.name = "Track  1 L",.size = 4},
-		    {.name = "Track  1 R",.size = 4},
-		    {.name = "Track  2 L",.size = 4},
-		    {.name = "Track  2 R",.size = 4},
-		    {.name = "Track  3 L",.size = 4},
-		    {.name = "Track  3 R",.size = 4},
-		    {.name = "Track  4 L",.size = 4},
-		    {.name = "Track  4 R",.size = 4},
-		    {.name = "Track  5 L",.size = 4},
-		    {.name = "Track  5 R",.size = 4},
-		    {.name = "Track  6 L",.size = 4},
-		    {.name = "Track  6 R",.size = 4},
-		    {.name = "Track  7 L",.size = 3},
-		    {.name = "Track  7 R",.size = 3},
-		    {.name = "Track  8 L",.size = 3},
-		    {.name = "Track  8 R",.size = 3},
-		    {.name = "Track  9 L",.size = 3},
-		    {.name = "Track  9 R",.size = 3},
-		    {.name = "Track 10 L",.size = 3},
-		    {.name = "Track 10 R",.size = 3},
-		    {.name = "Track 11 L",.size = 3},
-		    {.name = "Track 11 R",.size = 3},
-		    {.name = "Track 12 L",.size = 3},
-		    {.name = "Track 12 R",.size = 3},
-		    {.name = "Track 13 L",.size = 3},
-		    {.name = "Track 13 R",.size = 3},
-		    {.name = "Track 14 L",.size = 3},
-		    {.name = "Track 14 R",.size = 3},
-		    {.name = "Track 15 L",.size = 3},
-		    {.name = "Track 15 R",.size = 3},
-		    {.name = "Track 16 L",.size = 3},
-		    {.name = "Track 16 R",.size = 3},
-		    {.name = "Delay L",.size = 3},
-		    {.name = "Delay R",.size = 3},
-		    {.name = "Reverb L",.size = 3},
-		    {.name = "Reverb R",.size = 3},
-		    {.name = "Chorus L",.size = 3},
-		    {.name = "Chorus R",.size = 3},
-		    {.name = "Input L",.size = 3},
-		    {.name = "Input R",.size = 3}}
-};
-
-static const struct ow_device_desc *OB_DEVICE_DESCS[] = {
-  &DIGITAKT_DESC, &DIGITONE_DESC, &ANALOG_FOUR_MK2_DESC,
-  &ANALOG_RYTM_MK2_DESC, &DIGITONE_KEYS_DESC, &ANALOG_HEAT_DESC,
-  &ANALOG_HEAT_MK2_DESC, &ANALOG_HEAT_FX_DESC, &SYNTAKT_DESC,
-  &DIGITAKT_II_DESC, NULL
-};
-#endif
 
 int
 ow_get_device_list (struct ow_device **ow_devices, size_t *size)
@@ -412,7 +127,6 @@ ow_copy_device_desc (struct ow_device_desc *device_desc,
     }
 }
 
-#if defined(JSON_DEVS_FILE)
 int
 ow_get_device_desc_from_vid_pid_file (uint16_t vid, uint16_t pid,
 				      struct ow_device_desc *device_desc,
@@ -643,7 +357,6 @@ cleanup_parser:
   g_object_unref (parser);
   return err;
 }
-#endif
 
 int
 ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
@@ -654,7 +367,6 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
       return 1;
     }
 
-#if defined(JSON_DEVS_FILE)
   char *filename;
   int err;
 
@@ -679,17 +391,6 @@ ow_get_device_desc_from_vid_pid (uint16_t vid, uint16_t pid,
   g_free (filename);
 
   return err;
-#else
-  for (const struct ow_device_desc ** d = OB_DEVICE_DESCS; *d != NULL; d++)
-    {
-      if ((*d)->pid == pid)
-	{
-	  ow_copy_device_desc (device_desc, *d);
-	  return 0;
-	}
-    }
-  return 1;
-#endif
 }
 
 int

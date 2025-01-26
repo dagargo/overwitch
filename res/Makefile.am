@@ -1,8 +1,8 @@
 resdir = $(datadir)/overwitch
-res_DATA = overwitch.ui THANKS
+res_DATA =  devices.json THANKS
 
-if JSON_DEVS_FILE
-res_DATA += devices.json
+if ! CLI_ONLY
+res_DATA += overwitch.ui
 endif
 
 desktopdir = $(datadir)/applications
