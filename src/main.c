@@ -493,7 +493,7 @@ app_startup (GApplication *gapp, gpointer *user_data)
   connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
   if (error == NULL)
     {
-      refresh_state (NULL); // If the D-Bus service is not started, it will be started. In this case, it will fail to get the state.
+      refresh_state (NULL);	// If the D-Bus service is not started, it will be started. In this case, it will fail to get the state.
       source_id = g_timeout_add (REFRESH_TIMEOUT_MS, refresh_state, NULL);
     }
   else

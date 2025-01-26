@@ -377,13 +377,17 @@ Devices can be specified in two ways.
 
 This is a self-explanatory device definition from `res/devices.json`. The file is an array of these definitions.
 
-There are 2 types of formats, depending on how many bytes are used to store samples in the USB blocks. Format 1 uses 4 bytes integers and format 2 uses 3 bytes integers. For format 2 devices, some tracks might use 4 bytes to store the samples even though the actual samples are only 3 bytes.
+There are 3 types of formats, depending on how many bytes are used to store samples in the USB blocks.
+
+* Format 1 is reserved for Analog Rytm MKI and Analog Form MKI and Keys.
+* Format 2 uses 4 bytes integers.
+* Format 3 uses 3 bytes integers. Note that some tracks might use 4 bytes to store the samples even though the actual samples are only 3 bytes.
 
 ```
 {
   "pid": 2899,
   "name": "Analog Heat +FX",
-  "format": 1,
+  "format": 2,
   "input_tracks": [
     {
       "name": "Main L Input",
@@ -437,7 +441,7 @@ Notice that the definition of the device must match the device itself, so output
 static const struct ow_device_desc ANALOG_HEAT_FX_DESC = {
   .pid = ANALOG_HEAT_FX_PID,
   .name = "Analog Heat +FX",
-  .format = 1,
+  .format = 2,
   .inputs = 4,
   .outputs = 4,
   .input_tracks = {{.name = "Main L Input",.size = 4},

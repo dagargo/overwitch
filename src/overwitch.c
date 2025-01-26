@@ -53,7 +53,7 @@
 static const struct ow_device_desc DIGITAKT_DESC = {
   .pid = DIGITAKT_PID,
   .name = "Digitakt",
-  .format = 1,
+  .format = 2,
   .inputs = 2,
   .outputs = 12,
   .input_tracks = {{.name = "Main L Input",.size = 4},
@@ -75,7 +75,7 @@ static const struct ow_device_desc DIGITAKT_DESC = {
 static const struct ow_device_desc DIGITONE_DESC = {
   .pid = DIGITONE_PID,
   .name = "Digitone",
-  .format = 1,
+  .format = 2,
   .inputs = 2,
   .outputs = 12,
   .input_tracks = {{.name = "Main L Input",.size = 4},
@@ -97,7 +97,7 @@ static const struct ow_device_desc DIGITONE_DESC = {
 static const struct ow_device_desc ANALOG_FOUR_MK2_DESC = {
   .pid = ANALOG_FOUR_MK2_PID,
   .name = "Analog Four MKII",
-  .format = 1,
+  .format = 2,
   .inputs = 6,
   .outputs = 8,
   .input_tracks = {{.name = "Main L Input",.size = 4},
@@ -119,7 +119,7 @@ static const struct ow_device_desc ANALOG_FOUR_MK2_DESC = {
 static const struct ow_device_desc ANALOG_RYTM_MK2_DESC = {
   .pid = ANALOG_RYTM_MK2_PID,
   .name = "Analog Rytm MKII",
-  .format = 1,
+  .format = 2,
   .inputs = 12,
   .outputs = 12,
   .input_tracks = {{.name = "Main L Input",.size = 4},
@@ -151,7 +151,7 @@ static const struct ow_device_desc ANALOG_RYTM_MK2_DESC = {
 static const struct ow_device_desc DIGITONE_KEYS_DESC = {
   .pid = DIGITONE_KEYS_PID,
   .name = "Digitone Keys",
-  .format = 1,
+  .format = 2,
   .inputs = 2,
   .outputs = 12,
   .input_tracks = {{.name = "Main L Input",.size = 4},
@@ -173,7 +173,7 @@ static const struct ow_device_desc DIGITONE_KEYS_DESC = {
 static const struct ow_device_desc ANALOG_HEAT_DESC = {
   .pid = ANALOG_HEAT_PID,
   .name = "Analog Heat",
-  .format = 1,
+  .format = 2,
   .inputs = 4,
   .outputs = 4,
   .input_tracks = {{.name = "Main L Input",.size = 4},
@@ -189,7 +189,7 @@ static const struct ow_device_desc ANALOG_HEAT_DESC = {
 static const struct ow_device_desc ANALOG_HEAT_MK2_DESC = {
   .pid = ANALOG_HEAT_MK2_PID,
   .name = "Analog Heat MKII",
-  .format = 1,
+  .format = 2,
   .inputs = 4,
   .outputs = 4,
   .input_tracks = {{.name = "Main L Input",.size = 4},
@@ -205,7 +205,7 @@ static const struct ow_device_desc ANALOG_HEAT_MK2_DESC = {
 static const struct ow_device_desc ANALOG_HEAT_FX_DESC = {
   .pid = ANALOG_HEAT_FX_PID,
   .name = "Analog Heat +FX",
-  .format = 1,
+  .format = 2,
   .inputs = 4,
   .outputs = 4,
   .input_tracks = {{.name = "Main L Input",.size = 4},
@@ -221,7 +221,7 @@ static const struct ow_device_desc ANALOG_HEAT_FX_DESC = {
 static const struct ow_device_desc SYNTAKT_DESC = {
   .pid = SYNTAKT_PID,
   .name = "Syntakt",
-  .format = 1,
+  .format = 2,
   .inputs = 8,
   .outputs = 20,
   .input_tracks = {{.name = "Main L Input",.size = 4},
@@ -257,7 +257,7 @@ static const struct ow_device_desc SYNTAKT_DESC = {
 static const struct ow_device_desc DIGITAKT_II_DESC = {
   .pid = DIGITAKT_II_PID,
   .name = "Digitakt II",
-  .format = 2,
+  .format = 3,
   .inputs = 8,
   .outputs = 42,
   .input_tracks = {{.name = "Main L Input",.size = 4},
@@ -508,7 +508,7 @@ ow_get_device_desc_from_vid_pid_file (uint16_t vid, uint16_t pid,
       json_reader_end_member (reader);
 
       if (device_desc->format < OW_ENGINE_FORMAT_V1 ||
-	  device_desc->format > OW_ENGINE_FORMAT_V2)
+	  device_desc->format > OW_ENGINE_FORMAT_V3)
 	{
 	  error_print ("Invalid format version '%d'. Stopping...",
 		       device_desc->format);

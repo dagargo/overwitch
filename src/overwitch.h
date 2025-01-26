@@ -113,8 +113,9 @@ typedef enum
 
 typedef enum
 {
-  OW_ENGINE_FORMAT_V1 = 1,
-  OW_ENGINE_FORMAT_V2 = 2
+  OW_ENGINE_FORMAT_V1 = 1,	//16 bits isochronous transfers (Analog Rytm MKI and Analog Four MKI and Keys)
+  OW_ENGINE_FORMAT_V2 = 2,	//32 bits interrupt transfers
+  OW_ENGINE_FORMAT_V3 = 3	//24 bits Interrupt transfers
 } ow_engine_format_version_t;
 
 struct ow_context
