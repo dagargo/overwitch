@@ -2,7 +2,7 @@
 
 README=../README.md
 
-$(README): index.md
+$(README): index.md installation.md usage.md configuration.md adding.md
 	echo '# Overwitch' > $(README)
 	echo >> $(README)
 	echo '[//]: # (Do not modify this file manually.)' >> $(README)
