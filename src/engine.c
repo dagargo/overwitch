@@ -109,8 +109,7 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine)
 
 	      memcpy (&hv, s, size);
 
-	      if (engine->device->desc.format == OW_ENGINE_FORMAT_V3
-		  && size == 4)
+	      if (engine->device->desc.type == OW_DEVICE_TYPE_3 && size == 4)
 		{
 		  hv >>= 8;
 		}
@@ -191,8 +190,7 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine)
 	      int size = engine->device->desc.input_tracks[k].size;
 	      ov = (int32_t) (*f * INT32_MAX);
 
-	      if (engine->device->desc.format == OW_ENGINE_FORMAT_V3
-		  && size == 4)
+	      if (engine->device->desc.type == OW_DEVICE_TYPE_3 && size == 4)
 		{
 		  ov >>= 8;
 		}

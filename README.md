@@ -367,25 +367,19 @@ Although you can run Overwitch with verbose output this is **not recommended** u
 
 ## Adding devices
 
-Devices are specified in `JSON` files. As devices can be user-defined, there is no need to recompile the code or wait for new releases to use Overwitch with new devices.
+Devices are specified in `JSON` files. As devices can be user-defined, there is no need to recompile the code or wait for new releases to use Overwitch with new devices of the same type.
 
-Overwitch first searches a device in all the files in the `~/.config/overwitch/devices.d` directory, where each one contains a `JSON` object; then into the user defined file `~/.config/overwitch/devices.json`, which is a `JSON` array; and finally into the file included in the project, which is a `JSON` array too.
+Overwitch first searches a device in all the files with `json` extension in the `~/.config/overwitch/devices.d` directory, where each file contains a single `JSON` object; then into the user defined file `~/.config/overwitch/devices.json`, which is a `JSON` array of these objects; and finally into the devices file distributed with Overwitch, which is a `JSON` array too.
 
 ### JSON format
 
-This is a self-explanatory device. Keep in mind that, while files in the `~/.config/overwitch/devices.d` directory follow this definition, both the included file and the custom file are an array of these devices.
-
-There are 3 types of formats, depending on how many bytes are used to store samples in the USB blocks.
-
-* Format 1 is reserved for Analog Rytm MKI and Analog Form MKI and Keys.
-* Format 2 uses 4 bytes integers.
-* Format 3 uses 3 bytes integers. Note that some tracks might use 4 bytes to store the samples even though the actual samples are only 3 bytes.
+This example is a self-explanatory `JSON` object for a device.
 
 ```
 {
   "pid": 2899,
   "name": "Analog Heat +FX",
-  "format": 2,
+  "type": 2,
   "input_tracks": [
     {
       "name": "Main L Input",
@@ -424,3 +418,9 @@ There are 3 types of formats, depending on how many bytes are used to store samp
   ]
 }
 ```
+
+Notice that there are 3 types of devices, depending on the transfer type and how many bytes are used to store samples in the USB blocks.
+
+* Type 1 (isochronous transfers) is reserved for Analog Rytm MKI and Analog Form MKI and Keys.
+* Type 2 (interrupt transfers) uses 4 bytes integers.
+* Type 3 (interrupt transfers) uses 3 bytes integers. Note that some tracks might use 4 bytes to store the samples even though the actual samples are only 3 bytes.

@@ -11,10 +11,10 @@
 #define TRACKS 6
 #define NFRAMES 64
 
-static const struct ow_device_desc TESTDEV_DESC_V2 = {
+static const struct ow_device_desc TESTDEV_DESC_T2 = {
   .pid = 0,
-  .format = OW_ENGINE_FORMAT_V2,
-  .name = "Test Device V2",
+  .type = OW_DEVICE_TYPE_2,
+  .name = "Test Device Type 2",
   .inputs = TRACKS,
   .outputs = TRACKS,
   .input_tracks = {{.name = "T1",.size = 4},
@@ -31,10 +31,10 @@ static const struct ow_device_desc TESTDEV_DESC_V2 = {
 		    {.name = "T6",.size = 4}},
 };
 
-static const struct ow_device_desc TESTDEV_DESC_V3 = {
+static const struct ow_device_desc TESTDEV_DESC_T3 = {
   .pid = 0,
-  .format = OW_ENGINE_FORMAT_V3,
-  .name = "Test Device V3",
+  .type = OW_DEVICE_TYPE_3,
+  .name = "Test Device Type 3",
   .inputs = TRACKS,
   .outputs = TRACKS,
   .input_tracks = {{.name = "T1",.size = 4},
@@ -67,7 +67,7 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
       s = (unsigned char *) blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
-	  if (engine->device->desc.format == OW_ENGINE_FORMAT_V2)
+	  if (engine->device->desc.type == OW_DEVICE_TYPE_2)
 	    {
 	      for (int k = 0; k < engine->device->desc.outputs; k++)
 		{
@@ -76,7 +76,7 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
 		  s += sizeof (int32_t);
 		}
 	    }
-	  else if (engine->device->desc.format == OW_ENGINE_FORMAT_V3)
+	  else if (engine->device->desc.type == OW_DEVICE_TYPE_3)
 	    {
 	      struct ow_device_track *track =
 		engine->device->desc.output_tracks;
@@ -112,7 +112,7 @@ test_sizes ()
   printf ("\n");
 
   engine.device = malloc (sizeof (struct ow_device));
-  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_V2);
+  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_T2);
   engine.usb.audio_in_blk_len = 0;
   engine.usb.audio_out_blk_len = 0;
   ow_engine_init_mem (&engine, BLOCKS);
@@ -207,15 +207,15 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
 }
 
 static void
-test_usb_blocks_v1 ()
+test_usb_blocks_t1 ()
 {
-  test_usb_blocks (&TESTDEV_DESC_V2, 1e-9);
+  test_usb_blocks (&TESTDEV_DESC_T2, 1e-9);
 }
 
 static void
-test_usb_blocks_v2 ()
+test_usb_blocks_t2 ()
 {
-  test_usb_blocks (&TESTDEV_DESC_V3, 1e-6);
+  test_usb_blocks (&TESTDEV_DESC_T3, 1e-6);
 }
 
 static void
@@ -230,7 +230,7 @@ test_jack_buffers ()
   printf ("\n");
 
   engine.device = malloc (sizeof (struct ow_device));
-  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_V2);
+  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_T2);
 
   for (int i = 0; i < TRACKS; i++)
     {
@@ -296,7 +296,7 @@ test_state_parser ()
   struct ow_resampler_state state;
 
   engine.device = malloc (sizeof (struct ow_device));
-  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_V2);
+  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_T2);
 
   builder = message_state_builder_start ();
 
@@ -360,12 +360,12 @@ main (int argc, char *argv[])
       goto cleanup;
     }
 
-  if (!CU_add_test (suite, "test_usb_blocks_v1", test_usb_blocks_v1))
+  if (!CU_add_test (suite, "test_usb_blocks_t1", test_usb_blocks_t1))
     {
       goto cleanup;
     }
 
-  if (!CU_add_test (suite, "test_usb_blocks_v2", test_usb_blocks_v2))
+  if (!CU_add_test (suite, "test_usb_blocks_t2", test_usb_blocks_t2))
     {
       goto cleanup;
     }

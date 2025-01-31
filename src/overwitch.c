@@ -30,7 +30,7 @@
 
 #define DEV_TAG_PID "pid"
 #define DEV_TAG_NAME "name"
-#define DEV_TAG_FORMAT "format"
+#define DEV_TAG_TYPE "type"
 #define DEV_TAG_INPUT_TRACKS "input_tracks"
 #define DEV_TAG_OUTPUT_TRACKS "output_tracks"
 #define DEV_TAG_TRACK_NAME "name"
@@ -116,7 +116,7 @@ ow_copy_device_desc (struct ow_device_desc *device_desc,
 {
   device_desc->pid = d->pid;
   strncpy (device_desc->name, d->name, OW_LABEL_MAX_LEN);
-  device_desc->format = d->format;
+  device_desc->type = d->type;
   device_desc->inputs = d->inputs;
   device_desc->outputs = d->outputs;
 
@@ -170,18 +170,18 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 	    json_reader_get_string_value (reader));
   json_reader_end_member (reader);
 
-  if (!json_reader_read_member (reader, DEV_TAG_FORMAT))
+  if (!json_reader_read_member (reader, DEV_TAG_TYPE))
     {
-      error_print ("Cannot read member '%s'", DEV_TAG_FORMAT);
+      error_print ("Cannot read member '%s'", DEV_TAG_TYPE);
       return -EINVAL;
     }
-  device_desc->format = json_reader_get_int_value (reader);
+  device_desc->type = json_reader_get_int_value (reader);
   json_reader_end_member (reader);
 
-  if (device_desc->format < OW_ENGINE_FORMAT_V1 ||
-      device_desc->format > OW_ENGINE_FORMAT_V3)
+  if (device_desc->type < OW_DEVICE_TYPE_1 ||
+      device_desc->type > OW_DEVICE_TYPE_3)
     {
-      error_print ("Invalid format version '%d'", device_desc->format);
+      error_print ("Invalid type version '%d'", device_desc->type);
       return -EINVAL;
     }
 
