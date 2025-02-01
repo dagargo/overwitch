@@ -109,9 +109,17 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine)
 		  hv >>= 8;
 		}
 
-	      hv = be32toh (hv);
+	      if (engine->device->desc.type == OW_DEVICE_TYPE_1)
+		{
+		  int16_t hv16 = be16toh (hv);
+		  *f = hv16 / (float) INT16_MAX;
+		}
+	      else
+		{
+		  int32_t hv32 = be32toh (hv);
+		  *f = hv32 / (float) INT32_MAX;
+		}
 
-	      *f = hv / (float) INT32_MAX;
 	      f++;
 	      s += size;
 	    }
@@ -186,14 +194,22 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine)
 	      int size = engine->device->desc.input_tracks[k].size;
 	      ov = (int32_t) (*f * INT32_MAX);
 
-	      if (engine->device->desc.type == OW_DEVICE_TYPE_3 && size == 4)
+	      if (engine->device->desc.type == OW_DEVICE_TYPE_1)
 		{
-		  ov >>= 8;
+		  ov >>= 16;
+		  int16_t ov16 = htobe16 (ov);
+		  memcpy (s, &ov16, size);
 		}
-
-	      ov = htobe32 (ov);
-
-	      memcpy (s, &ov, size);
+	      else
+		{
+		  if (engine->device->desc.type == OW_DEVICE_TYPE_3 &&
+		      size == 4)
+		    {
+		      ov >>= 8;
+		    }
+		  int32_t ov32 = htobe32 (ov);
+		  memcpy (s, &ov32, size);
+		}
 
 	      f++;
 	      s += size;
