@@ -11,6 +11,26 @@
 #define TRACKS 6
 #define NFRAMES 64
 
+static const struct ow_device_desc TESTDEV_DESC_T1 = {
+  .pid = 0,
+  .type = OW_DEVICE_TYPE_1,
+  .name = "Test Device Type 1",
+  .inputs = TRACKS,
+  .outputs = TRACKS,
+  .input_tracks = {{.name = "T1",.size = 2},
+		   {.name = "T2",.size = 2},
+		   {.name = "T3",.size = 2},
+		   {.name = "T4",.size = 2},
+		   {.name = "T5",.size = 2},
+		   {.name = "T6",.size = 2}},
+  .output_tracks = {{.name = "T1",.size = 2},
+		    {.name = "T2",.size = 2},
+		    {.name = "T3",.size = 2},
+		    {.name = "T4",.size = 2},
+		    {.name = "T5",.size = 2},
+		    {.name = "T6",.size = 2}}
+};
+
 static const struct ow_device_desc TESTDEV_DESC_T2 = {
   .pid = 0,
   .type = OW_DEVICE_TYPE_2,
@@ -28,7 +48,7 @@ static const struct ow_device_desc TESTDEV_DESC_T2 = {
 		    {.name = "T3",.size = 4},
 		    {.name = "T4",.size = 4},
 		    {.name = "T5",.size = 4},
-		    {.name = "T6",.size = 4}},
+		    {.name = "T6",.size = 4}}
 };
 
 static const struct ow_device_desc TESTDEV_DESC_T3 = {
@@ -48,7 +68,7 @@ static const struct ow_device_desc TESTDEV_DESC_T3 = {
 		    {.name = "T3",.size = 3},
 		    {.name = "T4",.size = 3},
 		    {.name = "T5",.size = 3},
-		    {.name = "T6",.size = 3}},
+		    {.name = "T6",.size = 3}}
 };
 
 static const struct ow_device_desc TESTDEV_DESC_SIZE = {
@@ -244,11 +264,17 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
 static void
 test_usb_blocks_t1 ()
 {
-  test_usb_blocks (&TESTDEV_DESC_T2, 1e-9);
+  test_usb_blocks (&TESTDEV_DESC_T1, 1e-4);
 }
 
 static void
 test_usb_blocks_t2 ()
+{
+  test_usb_blocks (&TESTDEV_DESC_T2, 1e-9);
+}
+
+static void
+test_usb_blocks_t3 ()
 {
   test_usb_blocks (&TESTDEV_DESC_T3, 1e-6);
 }
@@ -407,6 +433,11 @@ main (int argc, char *argv[])
     }
 
   if (!CU_add_test (suite, "test_usb_blocks_t2", test_usb_blocks_t2))
+    {
+      goto cleanup;
+    }
+
+  if (!CU_add_test (suite, "test_usb_blocks_t3", test_usb_blocks_t3))
     {
       goto cleanup;
     }
