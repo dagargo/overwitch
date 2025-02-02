@@ -138,17 +138,28 @@ test_sizes ()
   printf ("\n");
 
   engine.device = malloc (sizeof (struct ow_device));
-  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_T2);
+  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_SIZE);
   engine.usb.audio_in_blk_len = 0;
   engine.usb.audio_out_blk_len = 0;
   ow_engine_init_mem (&engine, BLOCKS);
 
   printf ("\n");
 
-  CU_ASSERT_EQUAL (engine.usb.audio_out_blk_len,
-		   TRACKS * OB_FRAMES_PER_BLOCK * OW_BYTES_PER_SAMPLE + 32);
+  size_t o2h_frame_size = 2 * 4 + 2 * 3;
+  size_t h2o_frame_size = 2 * 4;
+
+  CU_ASSERT_EQUAL (engine.o2h_frame_size, o2h_frame_size);
+  CU_ASSERT_EQUAL (engine.h2o_frame_size, h2o_frame_size);
+
   CU_ASSERT_EQUAL (engine.usb.audio_in_blk_len,
-		   TRACKS * OB_FRAMES_PER_BLOCK * OW_BYTES_PER_SAMPLE + 32);
+		   OB_FRAMES_PER_BLOCK * o2h_frame_size + 32);
+  CU_ASSERT_EQUAL (engine.usb.audio_out_blk_len,
+		   OB_FRAMES_PER_BLOCK * h2o_frame_size + 32);
+
+  CU_ASSERT_EQUAL (engine.o2h_transfer_size,
+		   BLOCKS * OB_FRAMES_PER_BLOCK * 4 * OW_BYTES_PER_SAMPLE);
+  CU_ASSERT_EQUAL (engine.h2o_transfer_size,
+		   BLOCKS * OB_FRAMES_PER_BLOCK * 2 * OW_BYTES_PER_SAMPLE);
 
   ow_engine_free_mem (&engine);
 }
