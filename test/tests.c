@@ -51,6 +51,20 @@ static const struct ow_device_desc TESTDEV_DESC_T3 = {
 		    {.name = "T6",.size = 3}},
 };
 
+static const struct ow_device_desc TESTDEV_DESC_SIZE = {
+  .pid = 0,
+  .type = OW_DEVICE_TYPE_1,
+  .name = "Test Device Size",
+  .inputs = 2,
+  .outputs = 4,
+  .input_tracks = {{.name = "T1",.size = 4},
+		   {.name = "T2",.size = 4}},
+  .output_tracks = {{.name = "T1",.size = 4},
+		    {.name = "T2",.size = 4},
+		    {.name = "T3",.size = 3},
+		    {.name = "T4",.size = 3}}
+};
+
 static void
 ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
 {
@@ -105,6 +119,18 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
 }
 
 static void
+test_get_frame_size_from_desc_tracks ()
+{
+  printf ("\n");
+
+  size_t frame_size =
+    ow_get_frame_size_from_desc_tracks (TESTDEV_DESC_SIZE.outputs,
+					TESTDEV_DESC_SIZE.output_tracks);
+
+  CU_ASSERT_EQUAL (frame_size, 2 * 4 + 2 * 3);
+}
+
+static void
 test_sizes ()
 {
   struct ow_engine engine;
@@ -135,11 +161,8 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
   struct ow_engine engine;
   size_t frame_size;
 
-  frame_size = 0;
-  for (int i = 0; i < device_desc->inputs; i++)
-    {
-      frame_size += device_desc->input_tracks[i].size;
-    }
+  frame_size = ow_get_frame_size_from_desc_tracks (device_desc->inputs,
+						   device_desc->input_tracks);
 
   blk_size = sizeof (struct ow_engine_usb_blk) +
     OB_FRAMES_PER_BLOCK * frame_size;
@@ -351,6 +374,12 @@ main (int argc, char *argv[])
     }
   CU_pSuite suite = CU_add_suite ("Overwitch USB blocks tests", 0, 0);
   if (!suite)
+    {
+      goto cleanup;
+    }
+
+  if (!CU_add_test (suite, "test_get_frame_size_from_desc_tracks",
+		    test_get_frame_size_from_desc_tracks))
     {
       goto cleanup;
     }

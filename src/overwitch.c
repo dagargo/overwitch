@@ -496,3 +496,15 @@ ow_set_thread_rt_priority (pthread_t thread, int p)
   };
   pthread_setschedparam (thread, SCHED_FIFO, &default_rt_param);
 }
+
+size_t
+ow_get_frame_size_from_desc_tracks (unsigned int tracks,
+				    const struct ow_device_track *track)
+{
+  size_t frame_size = 0;
+  for (unsigned int i = 0; i < tracks; i++, track++)
+    {
+      frame_size += track->size;
+    }
+  return frame_size;
+}

@@ -431,17 +431,14 @@ ow_engine_init_mem (struct ow_engine *engine,
   engine->frames_per_transfer =
     OB_FRAMES_PER_BLOCK * engine->blocks_per_transfer;
 
-  engine->o2h_frame_size = 0;
-  for (int i = 0; i < engine->device->desc.outputs; i++)
-    {
-      engine->o2h_frame_size += engine->device->desc.output_tracks[i].size;
-    }
+  engine->o2h_frame_size =
+    ow_get_frame_size_from_desc_tracks (engine->device->desc.outputs,
+					engine->device->desc.output_tracks);
 
-  engine->h2o_frame_size = 0;
-  for (int i = 0; i < engine->device->desc.inputs; i++)
-    {
-      engine->h2o_frame_size += engine->device->desc.input_tracks[i].size;
-    }
+  engine->h2o_frame_size =
+    ow_get_frame_size_from_desc_tracks (engine->device->desc.inputs,
+					engine->device->desc.input_tracks);
+
 
   debug_print (2, "o2h: USB in frame size: %zu B", engine->o2h_frame_size);
   debug_print (2, "h2o: USB out frame size: %zu B", engine->h2o_frame_size);
@@ -482,13 +479,13 @@ ow_engine_init_mem (struct ow_engine *engine,
   engine->h2o_transfer_size = engine->frames_per_transfer *
     engine->device->desc.inputs * OW_BYTES_PER_SAMPLE;
 
-  engine->o2h_min_latency = engine->frames_per_transfer;
-  engine->h2o_min_latency = engine->frames_per_transfer;
-
   debug_print (2, "o2h: audio transfer size: %zu B",
 	       engine->o2h_transfer_size);
   debug_print (2, "h2o: audio transfer size: %zu B",
 	       engine->h2o_transfer_size);
+
+  engine->o2h_min_latency = engine->frames_per_transfer;
+  engine->h2o_min_latency = engine->frames_per_transfer;
 
   engine->usb.audio_frames_counter = 0;
   engine->usb.xfr_audio_in_data_len =

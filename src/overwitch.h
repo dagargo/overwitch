@@ -206,6 +206,10 @@ void ow_set_thread_rt_priority (pthread_t, int);
 void ow_copy_device_desc (struct ow_device_desc *,
 			  const struct ow_device_desc *);
 
+size_t ow_get_frame_size_from_desc_tracks (unsigned int tracks,
+					   const struct ow_device_track
+					   *track);
+
 //Engine
 ow_err_t ow_engine_init_from_device (struct ow_engine **engine,
 				     struct ow_device *device,
