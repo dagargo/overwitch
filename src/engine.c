@@ -85,7 +85,7 @@ prepare_transfers (struct ow_engine *engine)
 }
 
 inline void
-ow_engine_read_usb_input_blocks (struct ow_engine *engine)
+ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print)
 {
   int32_t hv;
   uint8_t *s;
@@ -96,8 +96,19 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine)
     {
       blk = GET_NTH_INPUT_USB_BLK (engine, i);
       s = (uint8_t *) blk->data;
+
+      if (print && !i)
+	{
+          fprintf (stderr, "O2H data:\n");
+	}
+
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
+	  if (print && !i)
+	    {
+	      fprintf (stderr, "  Frame %d:", j);
+	    }
+
 	  for (int k = 0; k < engine->device->desc.outputs; k++)
 	    {
 	      int size = engine->device->desc.output_tracks[k].size;
@@ -120,15 +131,25 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine)
 		  *f = hv32 / (float) INT32_MAX;
 		}
 
+	      if (print && !i)
+		{
+		  fprintf (stderr, " % .6f", *f);
+		}
+
 	      f++;
 	      s += size;
+	    }
+
+	  if (print && !i)
+	    {
+	      fprintf (stderr, "\n");
 	    }
 	}
     }
 }
 
 static void
-set_usb_input_data_blks (struct ow_engine *engine)
+set_usb_input_data_blks (struct ow_engine *engine, int print)
 {
   size_t wso2h;
   ow_engine_status_t status;
@@ -143,7 +164,7 @@ set_usb_input_data_blks (struct ow_engine *engine)
   status = engine->status;
   pthread_spin_unlock (&engine->lock);
 
-  ow_engine_read_usb_input_blocks (engine);
+  ow_engine_read_usb_input_blocks (engine, print);
 
   if (status < OW_ENGINE_STATUS_RUN)
     {
@@ -174,7 +195,7 @@ set_usb_input_data_blks (struct ow_engine *engine)
 }
 
 inline void
-ow_engine_write_usb_output_blocks (struct ow_engine *engine)
+ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
 {
   int32_t ov;
   uint8_t *s;
@@ -187,8 +208,19 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine)
       blk->frames = htobe16 (engine->usb.audio_frames_counter);
       engine->usb.audio_frames_counter += OB_FRAMES_PER_BLOCK;
       s = (uint8_t *) blk->data;
+
+      if (print && !i)
+	{
+          fprintf (stderr, "H2O data:\n");
+	}
+
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
+	  if (print && !i)
+	    {
+	      fprintf (stderr, "  Frame %d:", j);
+	    }
+
 	  for (int k = 0; k < engine->device->desc.inputs; k++)
 	    {
 	      int size = engine->device->desc.input_tracks[k].size;
@@ -211,15 +243,25 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine)
 		  memcpy (s, &ov32, size);
 		}
 
+	      if (print && !i)
+		{
+		  fprintf (stderr, " % .6f", *f);
+		}
+
 	      f++;
 	      s += size;
+	    }
+
+	  if (print && !i)
+	    {
+	      fprintf (stderr, "\n");
 	    }
 	}
     }
 }
 
 static void
-set_usb_output_data_blks (struct ow_engine *engine)
+set_usb_output_data_blks (struct ow_engine *engine, int print)
 {
   size_t rsh2o;
   size_t bytes;
@@ -313,12 +355,35 @@ set_usb_output_data_blks (struct ow_engine *engine)
     }
 
 set_blocks:
-  ow_engine_write_usb_output_blocks (engine);
+  ow_engine_write_usb_output_blocks (engine, print);
+}
+
+static inline void
+print_usb_block (struct ow_engine_usb_blk *blk, int o2h, int frame_size)
+{
+  uint8_t *s = (uint8_t *) blk->data;
+
+  fprintf (stderr, "%s block: header: 0x%04x; frames: 0x%04x\n",
+	   o2h ? "O2H" : "H2O", be16toh (blk->header), be16toh (blk->frames));
+
+  for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
+    {
+      fprintf (stderr, "  Frame %d:", j);
+
+      for (int k = 0; k < frame_size; k++, s++)
+	{
+	  fprintf (stderr, " %02x", *s);
+	}
+
+      fprintf (stderr, "\n");
+    }
 }
 
 static void LIBUSB_CALL
 cb_xfr_audio_in (struct libusb_transfer *xfr)
 {
+  int print;
+  static uint8_t debug_counter = 0;
   struct ow_engine *engine = xfr->user_data;
 
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
@@ -333,7 +398,15 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
       struct ow_engine *engine = xfr->user_data;
       if (engine->context->options & OW_ENGINE_OPTION_O2H_AUDIO)
 	{
-	  set_usb_input_data_blks (engine);
+	  print = debug_level >= 3 && debug_counter == 0;
+
+	  if (print)
+	    {
+	      print_usb_block (GET_NTH_INPUT_USB_BLK (engine, 0), 1,
+			       engine->o2h_frame_size);
+	    }
+
+	  set_usb_input_data_blks (engine, print);
 	}
     }
   else
@@ -347,11 +420,15 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
       // start new cycle even if this one did not succeed
       prepare_cycle_in_audio (xfr->user_data);
     }
+
+  debug_counter++;
 }
 
 static void LIBUSB_CALL
 cb_xfr_audio_out (struct libusb_transfer *xfr)
 {
+  int print;
+  static uint8_t debug_counter = 0;
   struct ow_engine *engine = xfr->user_data;
 
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
@@ -369,7 +446,15 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
 		   xfr->actual_length, libusb_error_name (xfr->status));
     }
 
-  set_usb_output_data_blks (xfr->user_data);
+  print = debug_level >= 3 && debug_counter == 0;
+
+  set_usb_output_data_blks (xfr->user_data, print);
+
+  if (print)
+    {
+      print_usb_block (GET_NTH_OUTPUT_USB_BLK (engine, 0), 0,
+		       engine->h2o_frame_size);
+    }
 
   if (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP)
     {
@@ -377,6 +462,8 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
       // Race condition on slower systems!
       prepare_cycle_out_audio (xfr->user_data);
     }
+
+  debug_counter++;
 }
 
 static void
