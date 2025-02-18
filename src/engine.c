@@ -32,12 +32,16 @@
 #include "engine.h"
 
 #define AUDIO_OUT_EP 0x03
-#define AUDIO_OUT_INTERFACE 2
-#define AUDIO_OUT_ALT_SETTING 3
+#define AUDIO_OUT_MK1_INTERFACE 1
+#define AUDIO_OUT_MK1_ALT_SETTING 3
+#define AUDIO_OUT_MK2_INTERFACE 2
+#define AUDIO_OUT_MK2_ALT_SETTING 3
 
 #define AUDIO_IN_EP  (AUDIO_OUT_EP | 0x80)
-#define AUDIO_IN_INTERFACE 1
-#define AUDIO_IN_ALT_SETTING 3
+#define AUDIO_IN_MK1_INTERFACE 0
+#define AUDIO_IN_MK1_ALT_SETTING 3
+#define AUDIO_IN_MK2_INTERFACE 1
+#define AUDIO_IN_MK2_ALT_SETTING 3
 
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
@@ -639,6 +643,10 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
 {
   int err;
   ow_err_t ret = OW_OK;
+  int audio_in_interface;
+  int audio_in_alt_setting;
+  int audio_out_interface;
+  int audio_out_alt_setting;
 
   engine->status = OW_ENGINE_STATUS_STOP;
   engine->device = device;
@@ -650,8 +658,31 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   engine->usb.xfr_timeout = xfr_timeout;
   debug_print (1, "USB transfer timeout: %u", engine->usb.xfr_timeout);
 
-  libusb_detach_kernel_driver (engine->usb.device_handle, 4);
-  libusb_detach_kernel_driver (engine->usb.device_handle, 5);
+  switch (device->desc.type)
+    {
+    case OW_DEVICE_TYPE_1:
+      libusb_detach_kernel_driver (engine->usb.device_handle, 3);	//TODO: Is this one really claimed by the kernel?
+      libusb_detach_kernel_driver (engine->usb.device_handle, 4);	//USB MIDI class compliant
+
+      audio_in_interface = AUDIO_IN_MK1_INTERFACE;
+      audio_in_alt_setting = AUDIO_IN_MK1_ALT_SETTING;
+      audio_out_interface = AUDIO_OUT_MK1_INTERFACE;
+      audio_out_alt_setting = AUDIO_OUT_MK1_ALT_SETTING;
+      break;
+    case OW_DEVICE_TYPE_2:
+    case OW_DEVICE_TYPE_3:
+      libusb_detach_kernel_driver (engine->usb.device_handle, 4);	//This is claimed by the kernel
+      libusb_detach_kernel_driver (engine->usb.device_handle, 5);	//USB MIDI class compliant
+
+      audio_in_interface = AUDIO_IN_MK2_INTERFACE;
+      audio_in_alt_setting = AUDIO_IN_MK2_ALT_SETTING;
+      audio_out_interface = AUDIO_OUT_MK2_INTERFACE;
+      audio_out_alt_setting = AUDIO_OUT_MK2_ALT_SETTING;
+      break;
+    default:
+      ret = OW_GENERIC_ERROR;
+      goto end;
+    }
 
   err = libusb_set_configuration (engine->usb.device_handle, 1);
   if (LIBUSB_SUCCESS != err)
@@ -661,30 +692,30 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
     }
 
   err = libusb_claim_interface (engine->usb.device_handle,
-				AUDIO_IN_INTERFACE);
+				audio_in_interface);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
   err = libusb_set_interface_alt_setting (engine->usb.device_handle,
-					  AUDIO_IN_INTERFACE,
-					  AUDIO_IN_ALT_SETTING);
+					  audio_in_interface,
+					  audio_in_alt_setting);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_SET_ALT_SETTING;
       goto end;
     }
   err = libusb_claim_interface (engine->usb.device_handle,
-				AUDIO_OUT_INTERFACE);
+				audio_out_interface);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
   err = libusb_set_interface_alt_setting (engine->usb.device_handle,
-					  AUDIO_OUT_INTERFACE,
-					  AUDIO_OUT_ALT_SETTING);
+					  audio_out_interface,
+					  audio_out_alt_setting);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_SET_ALT_SETTING;
@@ -711,18 +742,40 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
       goto end;
     }
 
-  libusb_attach_kernel_driver (engine->usb.device_handle, 4);
-  libusb_attach_kernel_driver (engine->usb.device_handle, 5);
+  switch (device->desc.type)
+    {
+    case OW_DEVICE_TYPE_1:
+      libusb_attach_kernel_driver (engine->usb.device_handle, 3);	//TODO: See comment on libusb_detach_kernel_driver above
+      libusb_attach_kernel_driver (engine->usb.device_handle, 4);
+
+      engine->usb.audio_in_blk_len = 0;
+      engine->usb.audio_out_blk_len = 0;
+      break;
+    case OW_DEVICE_TYPE_2:
+    case OW_DEVICE_TYPE_3:
+      libusb_attach_kernel_driver (engine->usb.device_handle, 4);
+      libusb_attach_kernel_driver (engine->usb.device_handle, 5);
+    }
 
 #if LIBUSB_API_VERSION >= 0x0100010A
   engine->usb.audio_in_blk_len =
-    libusb_get_max_alt_packet_size (engine->usb.device, AUDIO_IN_INTERFACE,
-				    AUDIO_IN_ALT_SETTING, AUDIO_IN_EP);
+    libusb_get_max_alt_packet_size (engine->usb.device,
+				    audio_in_interface,
+				    audio_in_alt_setting, AUDIO_IN_EP);
 
   engine->usb.audio_out_blk_len =
-    libusb_get_max_alt_packet_size (engine->usb.device, AUDIO_OUT_INTERFACE,
-				    AUDIO_OUT_ALT_SETTING, AUDIO_OUT_EP);
+    libusb_get_max_alt_packet_size (engine->usb.device,
+				    audio_out_interface,
+				    audio_out_alt_setting, AUDIO_OUT_EP);
 #else
+  if (device->desc.type == OW_DEVICE_TYPE_1)
+    {
+      error_print
+	("Type 1 devices requiere a libusb 1.0.27 version because the Overbridge package size is unknown");
+      ret = OW_GENERIC_ERROR;
+      goto end;
+    }
+
   engine->usb.audio_in_blk_len = 0;
   engine->usb.audio_out_blk_len = 0;
 #endif
