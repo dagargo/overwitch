@@ -224,9 +224,9 @@ struct ow_engine_usb_blk
 
 int ow_bytes_to_frame_bytes (int, int);
 
-void ow_engine_read_usb_input_blocks (struct ow_engine *);
+void ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print);
 
-void ow_engine_write_usb_output_blocks (struct ow_engine *);
+void ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print);
 
 int ow_engine_init_mem (struct ow_engine *, unsigned int);
 
