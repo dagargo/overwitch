@@ -183,11 +183,15 @@
 #include "utils.h"
 #include "overwitch.h"
 
-#define GET_NTH_USB_BLK(blks,blk_len,n) ((struct ow_engine_usb_blk *) &blks[n * blk_len])
-#define GET_NTH_INPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_len, n))
-#define GET_NTH_OUTPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_len, n))
+#define GET_NTH_USB_BLK_OB1(blks,blk_len,n) ((struct ow_engine_usb_blk_ob1 *) &blks[n * blk_len])
+#define GET_NTH_INPUT_USB_BLK_OB1(engine,n) (GET_NTH_USB_BLK_OB1((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_size, n))
+#define GET_NTH_OUTPUT_USB_BLK_OB1(engine,n) (GET_NTH_USB_BLK_OB1((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_size, n))
 
-#define OB_PADDING_LEN 28
+#define GET_NTH_USB_BLK_OB2(blks,blk_len,n) ((struct ow_engine_usb_blk_ob2 *) &blks[n * blk_len])
+#define GET_NTH_INPUT_USB_BLK_OB2(engine,n) (GET_NTH_USB_BLK_OB2((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_size, n))
+#define GET_NTH_OUTPUT_USB_BLK_OB2(engine,n) (GET_NTH_USB_BLK_OB2((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_size, n))
+
+#define OB2_PADDING_LEN 28
 
 #define OB_NAME_MAX_LEN 32
 
@@ -202,6 +206,7 @@ struct ow_engine
   struct ow_device *device;
   ow_engine_status_t status;
   unsigned int blocks_per_transfer;
+  unsigned int frames_per_block;
   unsigned int frames_per_transfer;
   pthread_spinlock_t lock;
   //Latencies are measured in frames
@@ -225,13 +230,14 @@ struct ow_engine
     libusb_device_handle *device_handle;
     unsigned int xfr_timeout;
     //Audio
-    uint16_t audio_frames_counter;
+    uint32_t audio_frames_counter_ob1;
+    uint16_t audio_frames_counter_ob2;
     struct libusb_transfer *xfr_audio_in;
     struct libusb_transfer *xfr_audio_out;
     uint8_t *xfr_audio_in_data;
     uint8_t *xfr_audio_out_data;
-    size_t audio_in_blk_len;
-    size_t audio_out_blk_len;
+    size_t audio_in_blk_size;
+    size_t audio_out_blk_size;
     int xfr_audio_in_data_len;
     int xfr_audio_out_data_len;
     //Control
@@ -247,11 +253,18 @@ struct ow_engine
   struct ow_context *context;
 };
 
-struct ow_engine_usb_blk
+struct ow_engine_usb_blk_ob1
+{
+  uint16_t header;
+  uint32_t frames;
+  uint8_t data[];
+};
+
+struct ow_engine_usb_blk_ob2
 {
   uint16_t header;
   uint16_t frames;
-  uint8_t padding[OB_PADDING_LEN];
+  uint8_t padding[OB2_PADDING_LEN];
   int32_t data[];
 };
 

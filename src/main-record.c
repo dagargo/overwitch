@@ -30,6 +30,7 @@
 #define TRACK_BUF_KB 256
 #define MAX_FILENAME_LEN 128
 #define MAX_TIME_LEN 32
+#define REC_FRAMES_PER_BLOCK MAX(OB_FRAMES_PER_BLOCK_OB1, OB_FRAMES_PER_BLOCK_OB2)
 
 static struct ow_context context;
 static struct ow_engine *engine;
@@ -86,7 +87,7 @@ print_status ()
 static size_t
 buffer_dummy_rw_space (void *data)
 {
-  return OW_DEFAULT_BLOCKS * OB_FRAMES_PER_BLOCK * OB_MAX_TRACKS *
+  return OW_DEFAULT_BLOCKS * REC_FRAMES_PER_BLOCK * OB_MAX_TRACKS *
     OW_BYTES_PER_SAMPLE;
 }
 

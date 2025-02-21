@@ -498,6 +498,7 @@ ow_set_thread_rt_priority (pthread_t thread, int p)
   pthread_setschedparam (thread, SCHED_FIFO, &default_rt_param);
 }
 
+//TODO: Add device size checks and return ssize_t and check value
 size_t
 ow_get_frame_size_from_desc_tracks (unsigned int tracks,
 				    const struct ow_device_track *track)
