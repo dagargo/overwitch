@@ -142,6 +142,39 @@
  |                                                               |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+--------------------------------------------------------------------------------
+
+ Protocol details known so far for Overbridge 1 devices (MKI)
+ ------------------------------------------------------------
+
+ MK1 devices use USB isochronous transfers with 3 packets.
+ Each isochronous packet is an Overbridge block.
+ Every block has 48 frames and the frame counter reflects this increment.
+ Sample size and track amount can be configured.
+ All sample values are little-endian (LSB first)!
+
+ Data format TO Analog Rytm MK1 (USB isochronous transfer, EP 0x03)
+ ------------------------------------------------------------------
+
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ | fixed header: 0x03FF          | frame counter (uint32_t) MSB  |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ + sample counter (uint32_t) LSB | samples                       |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ Data format FROM Analog Rytm MK1 (USB isochronous transfer, EP 0x83)
+ --------------------------------------------------------------------
+
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ | fixed header: 0x0300          | frame counter (uint32_t) MSB  |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ + frame counter (uint32_t) LSB  | samples                       |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
  */
 
 #include <libusb.h>
