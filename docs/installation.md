@@ -42,6 +42,8 @@ As this will install `jackd2`, you would be asked to configure it to be run with
 
 ### systemd service
 
-For embedded systems or users not wanting to use the GUI, it is recommended to install the systemd service unit by running `sudo make install` from the `systemd` directory.
+For embedded systems or users not wanting to use the GUI, it is recommended to install the systemd service unit by running `sudo make install` from the `systemd` directory. Notice `overwitch.service` is installed as a user service.
+
+As with any other systemd services, it needs to be started with `systemctl start overwitch --user`. Commands `stop` and `restart` are also available.
 
 To allow the service to be started at boot, running `systemctl --user enable overwitch.service` is needed.
