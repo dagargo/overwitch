@@ -187,6 +187,9 @@
 #define GET_NTH_INPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_size, n))
 #define GET_NTH_OUTPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_size, n))
 
+#define IS_DEVICE_TYPE_1(e) (e->device->desc.type == OW_DEVICE_TYPE_1)
+
+#define OB1_BLOCKS_PER_TRANSFER 3
 #define OB2_PADDING_LEN 28
 
 #define OB_NAME_MAX_LEN 32
@@ -261,7 +264,7 @@ struct ow_engine_usb_blk_ob2
   uint16_t header;
   uint16_t frames;
   uint8_t padding[OB2_PADDING_LEN];
-  int32_t data[];
+  uint8_t data[];
 };
 
 int ow_bytes_to_frame_bytes (int, int);

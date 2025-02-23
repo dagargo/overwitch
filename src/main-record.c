@@ -30,7 +30,7 @@
 #define TRACK_BUF_KB 256
 #define MAX_FILENAME_LEN 128
 #define MAX_TIME_LEN 32
-#define REC_FRAMES_PER_BLOCK MAX(OB_FRAMES_PER_BLOCK_OB1, OB_FRAMES_PER_BLOCK_OB2)
+#define REC_FRAMES_PER_BLOCK MAX(OB1_FRAMES_PER_BLOCK, OB2_FRAMES_PER_BLOCK)
 
 static struct ow_context context;
 static struct ow_engine *engine;
