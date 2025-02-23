@@ -183,13 +183,9 @@
 #include "utils.h"
 #include "overwitch.h"
 
-#define GET_NTH_USB_BLK_OB1(blks,blk_len,n) ((struct ow_engine_usb_blk_ob1 *) &blks[n * blk_len])
-#define GET_NTH_INPUT_USB_BLK_OB1(engine,n) (GET_NTH_USB_BLK_OB1((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_size, n))
-#define GET_NTH_OUTPUT_USB_BLK_OB1(engine,n) (GET_NTH_USB_BLK_OB1((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_size, n))
-
-#define GET_NTH_USB_BLK_OB2(blks,blk_len,n) ((struct ow_engine_usb_blk_ob2 *) &blks[n * blk_len])
-#define GET_NTH_INPUT_USB_BLK_OB2(engine,n) (GET_NTH_USB_BLK_OB2((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_size, n))
-#define GET_NTH_OUTPUT_USB_BLK_OB2(engine,n) (GET_NTH_USB_BLK_OB2((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_size, n))
+#define GET_NTH_USB_BLK(blks,blk_len,n) ((void *) &blks[n * blk_len])
+#define GET_NTH_INPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_size, n))
+#define GET_NTH_OUTPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_size, n))
 
 #define OB2_PADDING_LEN 28
 
