@@ -110,13 +110,13 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print)
       if (IS_ENGINE_TYPE_1 (engine))
 	{
 	  struct ow_engine_usb_blk_ob1 *blk =
-	    GET_NTH_INPUT_USB_BLK_OB1 (engine, i);
+	    GET_NTH_INPUT_USB_BLK (engine, i);
 	  s = (uint8_t *) blk->data;
 	}
       else
 	{
 	  struct ow_engine_usb_blk_ob2 *blk =
-	    GET_NTH_INPUT_USB_BLK_OB2 (engine, i);
+	    GET_NTH_INPUT_USB_BLK (engine, i);
 	  s = (uint8_t *) blk->data;
 	}
 
@@ -239,7 +239,7 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
       if (IS_ENGINE_TYPE_1 (engine))
 	{
 	  struct ow_engine_usb_blk_ob1 *blk =
-	    GET_NTH_OUTPUT_USB_BLK_OB1 (engine, i);
+	    GET_NTH_OUTPUT_USB_BLK (engine, i);
 	  blk->frames = htobe16 (engine->usb.audio_frames_counter_ob1);
 	  engine->usb.audio_frames_counter_ob1 += OB_FRAMES_PER_BLOCK_OB1;
 	  s = (uint8_t *) blk->data;
@@ -247,7 +247,7 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
       else
 	{
 	  struct ow_engine_usb_blk_ob2 *blk =
-	    GET_NTH_OUTPUT_USB_BLK_OB2 (engine, i);
+	    GET_NTH_OUTPUT_USB_BLK (engine, i);
 	  blk->frames = htobe16 (engine->usb.audio_frames_counter_ob2);
 	  engine->usb.audio_frames_counter_ob2 += OB_FRAMES_PER_BLOCK_OB2;
 	  s = (uint8_t *) blk->data;
@@ -424,12 +424,12 @@ print_usb_blk (struct ow_engine *engine, int o2h)
 
       if (o2h)
 	{
-	  blk = GET_NTH_INPUT_USB_BLK_OB1 (engine, 0);
+	  blk = GET_NTH_INPUT_USB_BLK (engine, 0);
 	  frame_size = engine->o2h_frame_size;
 	}
       else
 	{
-	  blk = GET_NTH_OUTPUT_USB_BLK_OB1 (engine, 0);
+	  blk = GET_NTH_OUTPUT_USB_BLK (engine, 0);
 	  frame_size = engine->h2o_frame_size;
 	}
 
@@ -446,12 +446,12 @@ print_usb_blk (struct ow_engine *engine, int o2h)
 
       if (o2h)
 	{
-	  blk = GET_NTH_INPUT_USB_BLK_OB2 (engine, 0);
+	  blk = GET_NTH_INPUT_USB_BLK (engine, 0);
 	  frame_size = engine->o2h_frame_size;
 	}
       else
 	{
-	  blk = GET_NTH_OUTPUT_USB_BLK_OB2 (engine, 0);
+	  blk = GET_NTH_OUTPUT_USB_BLK (engine, 0);
 	  frame_size = engine->h2o_frame_size;
 	}
 
@@ -842,13 +842,13 @@ ow_engine_init_mem (struct ow_engine *engine,
       if (IS_ENGINE_TYPE_1 (engine))
 	{
 	  struct ow_engine_usb_blk_ob1 *blk =
-	    GET_NTH_OUTPUT_USB_BLK_OB1 (engine, i);
+	    GET_NTH_OUTPUT_USB_BLK (engine, i);
 	  blk->header = htobe16 (0x03ff);
 	}
       else
 	{
 	  struct ow_engine_usb_blk_ob2 *blk =
-	    GET_NTH_OUTPUT_USB_BLK_OB2 (engine, i);
+	    GET_NTH_OUTPUT_USB_BLK (engine, i);
 	  blk->header = htobe16 (0x07ff);
 	}
     }
