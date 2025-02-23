@@ -73,7 +73,7 @@ static const struct ow_device_desc TESTDEV_DESC_T3 = {
 
 static const struct ow_device_desc TESTDEV_DESC_SIZE = {
   .pid = 0,
-  .type = OW_DEVICE_TYPE_1,
+  .type = OW_DEVICE_TYPE_3,
   .name = "Test Device Size",
   .inputs = 2,
   .outputs = 4,
@@ -91,49 +91,87 @@ ow_engine_print_blocks (struct ow_engine *engine, uint8_t *blks,
 {
   int32_t v;
   uint8_t *s;
-  struct ow_engine_usb_blk *blk;
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
-      blk = GET_NTH_USB_BLK (blks, blk_len, i);
       printf ("Block %d\n", i);
-      printf ("0x%04x | 0x%04x\n", be16toh (blk->header),
-	      be16toh (blk->frames));
-      s = (uint8_t *) blk->data;
-      for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
+
+      if (IS_DEVICE_TYPE_1 (engine))
 	{
-	  if (engine->device->desc.type == OW_DEVICE_TYPE_2)
+	  struct ow_engine_usb_blk_ob1 *blk =
+	    GET_NTH_USB_BLK (blks, blk_len, i);
+	  printf ("0x%04x | 0x%08x\n", be16toh (blk->header),
+		  be32toh (blk->frames));
+	  s = (uint8_t *) blk->data;
+	}
+      else
+	{
+	  struct ow_engine_usb_blk_ob2 *blk =
+	    GET_NTH_USB_BLK (blks, blk_len, i);
+	  printf ("0x%04x | 0x%04x\n", be16toh (blk->header),
+		  be16toh (blk->frames));
+	  s = (uint8_t *) blk->data;
+	}
+
+      for (int j = 0; j < OB2_FRAMES_PER_BLOCK; j++)
+	{
+	  struct ow_device_track *track = engine->device->desc.output_tracks;
+	  for (int k = 0; k < engine->device->desc.outputs; k++)
 	    {
-	      for (int k = 0; k < engine->device->desc.outputs; k++)
+	      uint8_t *dst;
+	      v = 0;
+
+	      if (track->size == 2)
 		{
-		  v = be32toh (*((int32_t *) s));
-		  printf ("Frame %2d, track %2d: %d\n", j, k, v);
-		  s += sizeof (int32_t);
-		}
-	    }
-	  else if (engine->device->desc.type == OW_DEVICE_TYPE_3)
-	    {
-	      struct ow_device_track *track =
-		engine->device->desc.output_tracks;
-	      for (int k = 0; k < engine->device->desc.outputs; k++)
-		{
-		  uint8_t *dst;
-		  if (track->size == 4)
+		  if (IS_DEVICE_TYPE_1 (engine))
 		    {
-		      dst = (uint8_t *) & v;
+		      dst = &((uint8_t *) & v)[2];
 		      memcpy (dst, s, track->size);
 		    }
 		  else
 		    {
+		      CU_ASSERT_FATAL (1);	//2 bytes only allowed on type 1
+		    }
+
+		  v = be32toh (v);
+		  v <<= 16;
+		}
+	      else if (track->size == 3)
+		{
+		  if (IS_DEVICE_TYPE_1 (engine)
+		      || engine->device->desc.type == OW_DEVICE_TYPE_3)
+		    {
 		      dst = &((uint8_t *) & v)[1];
 		      memcpy (dst, s, track->size);
 		    }
+		  else
+		    {
+		      CU_ASSERT_FATAL (1);	//3 bytes only allowed on type 1 and 3
+		    }
+
 		  v = be32toh (v);
 		  v <<= 8;
-		  printf ("Frame %2d, track %2d: %d\n", j, k, v);
-		  s += track->size;
-		  track++;
 		}
+	      else if (track->size == 4)
+		{
+		  if (IS_DEVICE_TYPE_1 (engine))
+		    {
+		      CU_ASSERT_FATAL (1);	//4 bytes only allowed on type 2 and 3
+		    }
+		  else
+		    {
+		      dst = (uint8_t *) & v;
+		      memcpy (dst, s, track->size);
+		    }
+		}
+	      else
+		{
+		  CU_ASSERT_FATAL (1);	//Only 2, 3 and 4 bytes are allowed
+		}
+
+	      printf ("Frame %2d, track %2d: %d\n", j, k, v);
+	      s += track->size;
+	      track++;
 	    }
 	}
     }
@@ -160,11 +198,9 @@ test_sizes ()
 
   engine.device = malloc (sizeof (struct ow_device));
   ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_SIZE);
-  engine.usb.audio_in_blk_len = 0;
-  engine.usb.audio_out_blk_len = 0;
+  engine.usb.audio_in_blk_size = 0;
+  engine.usb.audio_out_blk_size = 0;
   ow_engine_init_mem (&engine, BLOCKS);
-
-  printf ("\n");
 
   size_t o2h_frame_size = 2 * 4 + 2 * 3;
   size_t h2o_frame_size = 2 * 4;
@@ -172,48 +208,47 @@ test_sizes ()
   CU_ASSERT_EQUAL (engine.o2h_frame_size, o2h_frame_size);
   CU_ASSERT_EQUAL (engine.h2o_frame_size, h2o_frame_size);
 
-  CU_ASSERT_EQUAL (engine.usb.audio_in_blk_len,
-		   OB_FRAMES_PER_BLOCK * o2h_frame_size + 32);
-  CU_ASSERT_EQUAL (engine.usb.audio_out_blk_len,
-		   OB_FRAMES_PER_BLOCK * h2o_frame_size + 32);
+  CU_ASSERT_EQUAL (engine.usb.audio_in_blk_size,
+		   sizeof (struct ow_engine_usb_blk_ob2) +
+		   OB2_FRAMES_PER_BLOCK * o2h_frame_size);
+  CU_ASSERT_EQUAL (engine.usb.audio_out_blk_size,
+		   sizeof (struct ow_engine_usb_blk_ob2) +
+		   OB2_FRAMES_PER_BLOCK * h2o_frame_size);
 
   CU_ASSERT_EQUAL (engine.o2h_transfer_size,
-		   BLOCKS * OB_FRAMES_PER_BLOCK * 4 * OW_BYTES_PER_SAMPLE);
+		   BLOCKS * OB2_FRAMES_PER_BLOCK * 4 * OW_BYTES_PER_SAMPLE);
   CU_ASSERT_EQUAL (engine.h2o_transfer_size,
-		   BLOCKS * OB_FRAMES_PER_BLOCK * 2 * OW_BYTES_PER_SAMPLE);
+		   BLOCKS * OB2_FRAMES_PER_BLOCK * 2 * OW_BYTES_PER_SAMPLE);
 
   ow_engine_free_mem (&engine);
 }
 
 static void
-test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
+test_usb_blocks_1 (const struct ow_device_desc *device_desc, float max_error)
 {
   float *a, *b;
-  size_t blk_size;
   struct ow_engine engine;
-  size_t frame_size;
-
-  frame_size = ow_get_frame_size_from_desc_tracks (device_desc->inputs,
-						   device_desc->input_tracks);
-
-  blk_size = sizeof (struct ow_engine_usb_blk) +
-    OB_FRAMES_PER_BLOCK * frame_size;
 
   printf ("\n");
 
   engine.device = malloc (sizeof (struct ow_device));
   ow_copy_device_desc (&engine.device->desc, device_desc);
-  engine.usb.audio_in_blk_len = 0;
-  engine.usb.audio_out_blk_len = 0;
+  // Block sizes are determined by the wMaxPacketSize in the endpoint descriptor so this need to be emulated.
+  engine.usb.audio_in_blk_size = sizeof (struct ow_engine_usb_blk_ob1) +
+    OB1_FRAMES_PER_BLOCK *
+    ow_get_frame_size_from_desc_tracks (engine.device->desc.outputs,
+					engine.device->desc.output_tracks);
+  engine.usb.audio_out_blk_size = sizeof (struct ow_engine_usb_blk_ob1) +
+    OB1_FRAMES_PER_BLOCK *
+    ow_get_frame_size_from_desc_tracks (engine.device->desc.inputs,
+					engine.device->desc.input_tracks);
+  // In the Overbridge 1 version, the blocks are ignored and OB1_FRAMES_PER_BLOCK is used always.
   ow_engine_init_mem (&engine, BLOCKS);
 
-  CU_ASSERT_EQUAL (engine.usb.audio_out_blk_len, blk_size);
-  CU_ASSERT_EQUAL (engine.usb.audio_in_blk_len, blk_size);
-
   a = engine.h2o_transfer_buf;
-  for (int i = 0; i < BLOCKS; i++)
+  for (int i = 0; i < OB1_BLOCKS_PER_TRANSFER; i++)
     {
-      for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
+      for (int j = 0; j < OB1_FRAMES_PER_BLOCK; j++)
 	{
 	  for (int k = 0; k < engine.device->desc.outputs; k++)
 	    {
@@ -223,29 +258,107 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
 	}
     }
 
-  ow_engine_write_usb_output_blocks (&engine);
+  ow_engine_write_usb_output_blocks (&engine, 1);
 
-  for (int i = 0; i < BLOCKS; i++)
+  for (int i = 0; i < OB1_BLOCKS_PER_TRANSFER; i++)
     {
-      CU_ASSERT_EQUAL (0x7ff,
-		       be16toh (GET_NTH_OUTPUT_USB_BLK (&engine, i)->header));
-      CU_ASSERT_EQUAL (i * 7,
-		       be16toh (GET_NTH_OUTPUT_USB_BLK (&engine, i)->frames));
+      struct ow_engine_usb_blk_ob1 *blk = GET_NTH_OUTPUT_USB_BLK (&engine, i);
+      CU_ASSERT_EQUAL (0x3ff, be16toh (blk->header));
+      CU_ASSERT_EQUAL (i * OB1_FRAMES_PER_BLOCK, be32toh (blk->frames));
     }
 
   ow_engine_print_blocks (&engine, engine.usb.xfr_audio_out_data,
-			  engine.usb.audio_out_blk_len);
+			  engine.usb.audio_out_blk_size);
 
   memcpy (engine.usb.xfr_audio_in_data, engine.usb.xfr_audio_out_data,
 	  engine.usb.xfr_audio_in_data_len);
 
-  ow_engine_read_usb_input_blocks (&engine);
+  ow_engine_read_usb_input_blocks (&engine, 1);
+
+  a = engine.h2o_transfer_buf;
+  b = engine.o2h_transfer_buf;
+  for (int i = 0; i < OB1_BLOCKS_PER_TRANSFER; i++)
+    {
+      for (int j = 0; j < OB1_FRAMES_PER_BLOCK; j++)
+	{
+	  for (int k = 0; k < engine.device->desc.outputs; k++)
+	    {
+	      float error = fabsf (*a - *b);
+	      CU_ASSERT_TRUE (error < max_error);
+	      printf ("%.10f =?= %.10f; error: %.10f\n", *a, *b, error);
+	      a++;
+	      b++;
+	    }
+	}
+    }
+
+  ow_engine_free_mem (&engine);
+}
+
+static void
+test_usb_blocks_2_3 (const struct ow_device_desc *device_desc,
+		     float max_error)
+{
+  float *a, *b;
+  size_t blk_size;
+  struct ow_engine engine;
+  size_t frame_size;
+
+  frame_size = ow_get_frame_size_from_desc_tracks (device_desc->inputs,
+						   device_desc->input_tracks);
+
+  blk_size = sizeof (struct ow_engine_usb_blk_ob2) +
+    OB2_FRAMES_PER_BLOCK * frame_size;
+
+  printf ("\n");
+
+  engine.device = malloc (sizeof (struct ow_device));
+  ow_copy_device_desc (&engine.device->desc, device_desc);
+  engine.usb.audio_in_blk_size = 0;
+  engine.usb.audio_out_blk_size = 0;
+  ow_engine_init_mem (&engine, BLOCKS);
+
+  printf ("%ld\n", engine.usb.audio_out_blk_size);
+  printf ("%ld\n", engine.usb.audio_in_blk_size);
+
+  CU_ASSERT_EQUAL (engine.usb.audio_out_blk_size, blk_size);
+  CU_ASSERT_EQUAL (engine.usb.audio_in_blk_size, blk_size);
+
+  a = engine.h2o_transfer_buf;
+  for (int i = 0; i < BLOCKS; i++)
+    {
+      for (int j = 0; j < OB2_FRAMES_PER_BLOCK; j++)
+	{
+	  for (int k = 0; k < engine.device->desc.outputs; k++)
+	    {
+	      *a = 1e-4 * (i + 1) * (k + 1);
+	      a++;
+	    }
+	}
+    }
+
+  ow_engine_write_usb_output_blocks (&engine, 1);
+
+  for (int i = 0; i < BLOCKS; i++)
+    {
+      struct ow_engine_usb_blk_ob2 *blk = GET_NTH_OUTPUT_USB_BLK (&engine, i);
+      CU_ASSERT_EQUAL (0x7ff, be16toh (blk->header));
+      CU_ASSERT_EQUAL (i * OB2_FRAMES_PER_BLOCK, be16toh (blk->frames));
+    }
+
+  ow_engine_print_blocks (&engine, engine.usb.xfr_audio_out_data,
+			  engine.usb.audio_out_blk_size);
+
+  memcpy (engine.usb.xfr_audio_in_data, engine.usb.xfr_audio_out_data,
+	  engine.usb.xfr_audio_in_data_len);
+
+  ow_engine_read_usb_input_blocks (&engine, 1);
 
   a = engine.h2o_transfer_buf;
   b = engine.o2h_transfer_buf;
   for (int i = 0; i < BLOCKS; i++)
     {
-      for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
+      for (int j = 0; j < OB2_FRAMES_PER_BLOCK; j++)
 	{
 	  for (int k = 0; k < engine.device->desc.outputs; k++)
 	    {
@@ -264,19 +377,19 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
 static void
 test_usb_blocks_t1 ()
 {
-  test_usb_blocks (&TESTDEV_DESC_T1, 1e-4);
+  test_usb_blocks_1 (&TESTDEV_DESC_T1, 1e-4);
 }
 
 static void
 test_usb_blocks_t2 ()
 {
-  test_usb_blocks (&TESTDEV_DESC_T2, 1e-9);
+  test_usb_blocks_2_3 (&TESTDEV_DESC_T2, 1e-9);
 }
 
 static void
 test_usb_blocks_t3 ()
 {
-  test_usb_blocks (&TESTDEV_DESC_T3, 1e-6);
+  test_usb_blocks_2_3 (&TESTDEV_DESC_T3, 1e-6);
 }
 
 static void

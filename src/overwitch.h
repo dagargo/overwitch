@@ -27,8 +27,8 @@
 #define ELEKTRON_VID 0x1935
 
 #define OB_SAMPLE_RATE 48000.0
-#define OB_FRAMES_PER_BLOCK_OB1 48
-#define OB_FRAMES_PER_BLOCK_OB2 7
+#define OB1_FRAMES_PER_BLOCK 48
+#define OB2_FRAMES_PER_BLOCK 7
 #define OB_MAX_TRACKS 64
 
 //While samples might use 3 or 4 bytes in the USB packets, Overwitch uses
