@@ -475,18 +475,32 @@ print_usb_blk (struct ow_engine *engine, int o2h)
 }
 
 static void LIBUSB_CALL
-cb_xfr_audio_in_int (struct libusb_transfer *xfr)
+cb_xfr_audio_in (struct libusb_transfer *xfr)
 {
   static uint8_t debug_counter = 0;
   struct ow_engine *engine = xfr->user_data;
 
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
-      if (xfr->length < xfr->actual_length)
+      if (IS_DEVICE_TYPE_1 (engine))
 	{
-	  error_print
-	    ("o2h: incomplete USB interrupt transfer (%d B < %d B)",
-	     xfr->length, xfr->actual_length);
+	  struct libusb_iso_packet_descriptor *packet = xfr->iso_packet_desc;
+	  for (int i = 0; i < xfr->num_iso_packets; i++)
+	    {
+	      if (packet->status == LIBUSB_TRANSFER_COMPLETED)
+		{
+		  error_print ("o2h: incomplete USB isochronous transfer");
+		}
+	    }
+	}
+      else
+	{
+	  if (xfr->length < xfr->actual_length)
+	    {
+	      error_print
+		("o2h: incomplete USB interrupt transfer (%d B < %d B)",
+		 xfr->length, xfr->actual_length);
+	    }
 	}
 
       if (engine->context->options & OW_ENGINE_OPTION_O2H_AUDIO)
@@ -503,7 +517,7 @@ cb_xfr_audio_in_int (struct libusb_transfer *xfr)
     }
   else
     {
-      error_print ("o2h: Error on USB interrupt transfer (%d B): %s",
+      error_print ("o2h: Error on USB transfer (%d B): %s",
 		   xfr->actual_length, libusb_error_name (xfr->status));
     }
 
@@ -524,11 +538,25 @@ cb_xfr_audio_out_int (struct libusb_transfer *xfr)
 
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
-      if (xfr->length < xfr->actual_length)
+      if (IS_DEVICE_TYPE_1 (engine))
 	{
-	  error_print
-	    ("h2o: incomplete USB interrupt transfer (%d B < %d B)",
-	     xfr->length, xfr->actual_length);
+	  struct libusb_iso_packet_descriptor *packet = xfr->iso_packet_desc;
+	  for (int i = 0; i < xfr->num_iso_packets; i++)
+	    {
+	      if (packet->status == LIBUSB_TRANSFER_COMPLETED)
+		{
+		  error_print ("h2o: incomplete USB isochronous transfer");
+		}
+	    }
+	}
+      else
+	{
+	  if (xfr->length < xfr->actual_length)
+	    {
+	      error_print
+		("h2o: incomplete USB interrupt transfer (%d B < %d B)",
+		 xfr->length, xfr->actual_length);
+	    }
 	}
 
       int print = debug_level >= 3 && debug_counter == 0;
@@ -556,89 +584,6 @@ cb_xfr_audio_out_int (struct libusb_transfer *xfr)
   debug_counter++;
 }
 
-static void LIBUSB_CALL
-cb_xfr_audio_in_iso (struct libusb_transfer *xfr)
-{
-  static uint8_t debug_counter = 0;
-  struct ow_engine *engine = xfr->user_data;
-
-  if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
-    {
-      if (engine->context->options & OW_ENGINE_OPTION_O2H_AUDIO)
-	{
-	  for (int i = 0; i < xfr->num_iso_packets; i++)
-	    {
-	      int print = debug_level >= 3 && debug_counter == 0;
-
-	      if (print)
-		{
-		  print_usb_blk (engine, 1);
-		}
-
-	      set_usb_input_data_blks (engine, print);
-
-	      debug_counter++;
-	    }
-	}
-    }
-  else
-    {
-      error_print ("o2h: Error on USB isochronous transfer (%d B): %s",
-		   xfr->actual_length, libusb_error_name (xfr->status));
-    }
-
-  if (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP)
-    {
-      // start new cycle even if this one did not succeed
-      prepare_cycle_in_audio (xfr->user_data);
-    }
-}
-
-static void LIBUSB_CALL
-cb_xfr_audio_out_iso (struct libusb_transfer *xfr)
-{
-  static uint8_t debug_counter = 0;
-  struct ow_engine *engine = xfr->user_data;
-
-  if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
-    {
-      struct libusb_iso_packet_descriptor *packet = xfr->iso_packet_desc;
-      for (int i = 0; i < xfr->num_iso_packets; i++)
-	{
-	  if (packet->status == LIBUSB_TRANSFER_COMPLETED)
-	    {
-	      int print = debug_level >= 3 && debug_counter == 0;
-	      set_usb_output_data_blks (engine, print);
-
-	      if (print)
-		{
-		  print_usb_blk (engine, 0);
-		}
-	    }
-	  else
-	    {
-	      printf ("h2o: Packet %d transfer failed: %d\n", i,
-		      packet->status);
-	    }
-
-	  packet++;
-	  debug_counter++;
-	}
-    }
-  else
-    {
-      error_print ("h2o: Error on USB isochronous transfer (%d B): %s",
-		   xfr->actual_length, libusb_error_name (xfr->status));
-    }
-
-  if (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP)
-    {
-      // We have to make sure that the out cycle is always started after its callback
-      // Race condition on slower systems!
-      prepare_cycle_out_audio (xfr->user_data);
-    }
-}
-
 static void
 prepare_cycle_out_audio (struct ow_engine *engine)
 {
@@ -649,7 +594,7 @@ prepare_cycle_out_audio (struct ow_engine *engine)
 				engine->usb.xfr_audio_out_data,
 				engine->usb.xfr_audio_out_data_len,
 				OB1_BLOCKS_PER_TRANSFER,
-				cb_xfr_audio_out_iso, engine,
+				cb_xfr_audio_out_int, engine,
 				engine->usb.xfr_timeout);
       libusb_set_iso_packet_lengths (engine->usb.xfr_audio_out,
 				     engine->usb.audio_out_blk_size);
@@ -683,7 +628,7 @@ prepare_cycle_in_audio (struct ow_engine *engine)
 				engine->usb.xfr_audio_in_data,
 				engine->usb.xfr_audio_in_data_len,
 				OB1_BLOCKS_PER_TRANSFER,
-				cb_xfr_audio_in_iso, engine,
+				cb_xfr_audio_in, engine,
 				engine->usb.xfr_timeout);
       libusb_set_iso_packet_lengths (engine->usb.xfr_audio_out,
 				     engine->usb.audio_in_blk_size);
@@ -694,7 +639,7 @@ prepare_cycle_in_audio (struct ow_engine *engine)
 				      engine->usb.device_handle, AUDIO_IN_EP,
 				      engine->usb.xfr_audio_in_data,
 				      engine->usb.xfr_audio_in_data_len,
-				      cb_xfr_audio_in_int, engine,
+				      cb_xfr_audio_in, engine,
 				      engine->usb.xfr_timeout);
     }
 
