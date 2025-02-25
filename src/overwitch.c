@@ -136,6 +136,20 @@ ow_copy_device_desc (struct ow_device_desc *device_desc,
 }
 
 static int
+ow_check_track_size (ow_device_type_t type, int size)
+{
+  if ((type == OW_DEVICE_TYPE_1 && (size < 2 || size > 3)) ||
+      (type == OW_DEVICE_TYPE_2 && size != 4) ||
+      (type == OW_DEVICE_TYPE_3 && (size < 3 || size > 4)))
+    {
+      error_print ("Size '%d' not allowed for type '%d'", size, type);
+      return -EINVAL;
+    }
+
+  return 0;
+}
+
+static int
 ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 			   JsonReader *reader)
 {
@@ -225,6 +239,11 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 	    }
 	  device_desc->input_tracks[j].size =
 	    json_reader_get_int_value (reader);
+	  if (ow_check_track_size (device_desc->type,
+				   device_desc->input_tracks[j].size))
+	    {
+	      return -EINVAL;
+	    }
 
 	  json_reader_end_member (reader);
 
@@ -277,6 +296,11 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 	    }
 	  device_desc->output_tracks[j].size =
 	    json_reader_get_int_value (reader);
+	  if (ow_check_track_size (device_desc->type,
+				   device_desc->output_tracks[j].size))
+	    {
+	      return -EINVAL;
+	    }
 
 	  json_reader_end_member (reader);
 
