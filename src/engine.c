@@ -97,7 +97,6 @@ prepare_transfers (struct ow_engine *engine)
 inline void
 ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print)
 {
-  int32_t hv;
   uint8_t *s;
   int frames = IS_DEVICE_TYPE_1 (engine) ? OB1_FRAMES_PER_BLOCK :
     OB2_FRAMES_PER_BLOCK;
@@ -134,30 +133,36 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print)
 	    {
 	      int size = engine->device->desc.output_tracks[k].size;
 
-	      memcpy (&hv, s, size);
-
-	      if (engine->device->desc.type == OW_DEVICE_TYPE_3 && size == 4)
-		{
-		  hv >>= 8;
-		}
-
 	      if (IS_DEVICE_TYPE_1 (engine))
 		{
 		  if (size == 2)
 		    {
-		      int16_t hv16 = le16toh (hv);
-		      *f = hv16 / (float) INT16_MAX;
+		      int16_t hv;
+		      memcpy (&hv, s, size);
+		      hv = le16toh (hv);
+		      *f = hv / (float) INT16_MAX;
 		    }
 		  else		// size == 3
 		    {
-		      int32_t hv32 = le32toh (hv);
-		      *f = hv32 / (float) INT16_MAX;
+		      int32_t hv = 0;
+		      memcpy (&hv, s, size);
+		      hv = le32toh (hv);
+		      *f = hv / (float) INT32_MAX;
 		    }
 		}
 	      else
 		{
-		  int32_t hv32 = be32toh (hv);
-		  *f = hv32 / (float) INT32_MAX;
+		  int32_t hv;
+		  memcpy (&hv, s, size);
+
+		  if (engine->device->desc.type == OW_DEVICE_TYPE_3
+		      && size == 4)
+		    {
+		      hv >>= 8;
+		    }
+
+		  hv = be32toh (hv);
+		  *f = hv / (float) INT32_MAX;
 		}
 
 	      if (print && !i)
@@ -226,7 +231,6 @@ set_usb_input_data_blks (struct ow_engine *engine, int print)
 inline void
 ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
 {
-  int32_t ov;
   uint8_t *s;
   int frames = IS_DEVICE_TYPE_1 (engine) ? OB1_FRAMES_PER_BLOCK :
     OB2_FRAMES_PER_BLOCK;
@@ -266,7 +270,7 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
 	  for (int k = 0; k < engine->device->desc.inputs; k++)
 	    {
 	      int size = engine->device->desc.input_tracks[k].size;
-	      ov = (int32_t) (*f * INT32_MAX);
+	      int32_t ov = (int32_t) (*f * INT32_MAX);
 
 	      if (IS_DEVICE_TYPE_1 (engine))
 		{
