@@ -235,12 +235,6 @@ delete_main_window (GtkWidget *widget, GdkEvent *event, gpointer data)
   return FALSE;
 }
 
-const GActionEntry APP_ENTRIES[] = {
-  {"show_all_columns", NULL, NULL, "false", overwitch_show_all_columns},
-  {"open_preferences", open_preferences, NULL, NULL, NULL},
-  {"open_about", open_about, NULL, NULL, NULL}
-};
-
 static void
 set_state (const gchar *state)
 {
@@ -360,13 +354,10 @@ device_name_changed (GtkEditableLabel *label, GParamSpec *pspec,
 }
 
 static void
-click_start_stop (GtkWidget *object, gpointer data)
+control_service (const gchar *method)
 {
   GError *error = NULL;
   GVariant *result;
-  const gchar *method;
-
-  method = devices > 0 ? "Stop" : "Start";
   result = g_dbus_connection_call_sync (connection,
 					PACKAGE_SERVICE_DBUS_NAME,
 					"/io/github/dagargo/OverwitchService",
@@ -385,6 +376,27 @@ click_start_stop (GtkWidget *object, gpointer data)
       g_error_free (error);
     }
 }
+
+static void
+click_start_stop (GtkWidget *object, gpointer data)
+{
+  control_service (devices > 0 ? "Stop" : "Start");
+}
+
+static void
+exit_service_and_exit (GSimpleAction *simple_action, GVariant *parameter,
+		       gpointer data)
+{
+  control_service ("Exit");
+  app_exit ();
+}
+
+const GActionEntry APP_ENTRIES[] = {
+  {"show_all_columns", NULL, NULL, "false", overwitch_show_all_columns},
+  {"open_preferences", open_preferences, NULL, NULL, NULL},
+  {"open_about", open_about, NULL, NULL, NULL},
+  {"exit", exit_service_and_exit, NULL, NULL, NULL}
+};
 
 static void
 build_ui ()
