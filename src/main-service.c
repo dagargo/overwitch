@@ -58,12 +58,14 @@ static GDBusNodeInfo *introspection_data = NULL;
 static const gchar introspection_xml[] =
   "<node>"
   "  <interface name='" PACKAGE_SERVICE_DBUS_NAME "'>"
-  "    <method name='GetState'>"
-  "      <arg type='s' name='status' direction='out'/>"
+  "    <method name='Exit'>"
   "    </method>"
   "    <method name='Start'>"
   "    </method>"
   "    <method name='Stop'>"
+  "    </method>"
+  "    <method name='GetState'>"
+  "      <arg type='s' name='status' direction='out'/>"
   "    </method>"
   "    <method name='SetDeviceName'>"
   "      <arg type='u' name='id' direction='in'/>"
@@ -407,7 +409,13 @@ handle_method_call (GDBusConnection *connection, const gchar *sender,
 		    const gchar *method_name, GVariant *parameters,
 		    GDBusMethodInvocation *invocation, gpointer user_data)
 {
-  if (g_strcmp0 (method_name, "Start") == 0)
+  if (g_strcmp0 (method_name, "Exit") == 0)
+    {
+      handle_stop ();
+      g_dbus_method_invocation_return_value (invocation, NULL);
+      g_application_quit (G_APPLICATION (app));
+    }
+  else if (g_strcmp0 (method_name, "Start") == 0)
     {
       handle_start ();
       g_dbus_method_invocation_return_value (invocation, NULL);
