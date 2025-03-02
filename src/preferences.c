@@ -24,7 +24,6 @@
 
 #define PREF_FILE "/preferences.json"
 
-#define PREF_REFRESH_AT_STARTUP "refreshAtStartup"
 #define PREF_SHOW_ALL_COLUMNS "showAllColumns"
 #define PREF_BLOCKS "blocks"
 #define PREF_QUALITY "quality"
@@ -58,9 +57,6 @@ ow_save_preferences (struct ow_preferences *prefs)
   builder = json_builder_new ();
 
   json_builder_begin_object (builder);
-
-  json_builder_set_member_name (builder, PREF_REFRESH_AT_STARTUP);
-  json_builder_add_boolean_value (builder, prefs->refresh_at_startup);
 
   json_builder_set_member_name (builder, PREF_SHOW_ALL_COLUMNS);
   json_builder_add_boolean_value (builder, prefs->show_all_columns);
@@ -104,7 +100,6 @@ ow_load_preferences (struct ow_preferences *prefs)
   prefs->blocks = 24;
   prefs->quality = 2;
   prefs->timeout = 10;
-  prefs->refresh_at_startup = TRUE;
   prefs->show_all_columns = FALSE;
   prefs->pipewire_props = NULL;
 
@@ -120,12 +115,6 @@ ow_load_preferences (struct ow_preferences *prefs)
     }
 
   reader = json_reader_new (json_parser_get_root (parser));
-
-  if (json_reader_read_member (reader, PREF_REFRESH_AT_STARTUP))
-    {
-      prefs->refresh_at_startup = json_reader_get_boolean_value (reader);
-    }
-  json_reader_end_member (reader);
 
   if (json_reader_read_member (reader, PREF_SHOW_ALL_COLUMNS))
     {
