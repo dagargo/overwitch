@@ -7,10 +7,6 @@
   <menu id="main_popover_model">
     <section>
       <item>
-        <attribute name="action">app.refresh_at_startup</attribute>
-        <attribute name="label" translatable="yes">Refresh At Startup</attribute>
-      </item>
-      <item>
         <attribute name="action">app.show_all_columns</attribute>
         <attribute name="label" translatable="yes">Show All Columns</attribute>
       </item>

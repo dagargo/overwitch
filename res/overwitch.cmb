@@ -11,8 +11,7 @@
   <object>
 	(2,1,"(menu)","main_popover_model",None,None,None,None,0,None,None),
 	(2,2,"(section)",None,1,None,None,None,0,None,None),
-	(2,3,"(item)",None,2,None,None,None,0,None,None),
-	(2,4,"(item)",None,2,None,None,None,1,None,None),
+	(2,4,"(item)",None,2,None,None,None,0,None,None),
 	(2,5,"(section)",None,1,None,None,None,1,None,None),
 	(2,6,"(item)",None,5,None,None,None,0,None,None),
 	(2,7,"(section)",None,1,None,None,None,2,None,None),
@@ -73,8 +72,6 @@
 	(2,104,"(item)",None,103,None,None,None,0,None,None)
   </object>
   <object_property>
-	(2,3,"(item)","action","app.refresh_at_startup",None,None,None,None,None,None,None,None,None),
-	(2,3,"(item)","label","Refresh At Startup",1,None,None,None,None,None,None,None,None),
 	(2,4,"(item)","action","app.show_all_columns",None,None,None,None,None,None,None,None,None),
 	(2,4,"(item)","label","Show All Columns",1,None,None,None,None,None,None,None,None),
 	(2,6,"(item)","action","app.open_preferences",None,None,None,None,None,None,None,None,None),

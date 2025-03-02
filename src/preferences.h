@@ -22,7 +22,6 @@
 
 struct ow_preferences
 {
-  gboolean refresh_at_startup;
   gboolean show_all_columns;
   gint64 blocks;
   gint64 timeout;
