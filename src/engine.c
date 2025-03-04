@@ -694,8 +694,8 @@ ow_engine_init_mem (struct ow_engine *engine,
     engine->blocks_per_transfer * engine->frames_per_block;
 
   debug_print (1, "Blocks per transfer: %u", engine->blocks_per_transfer);
-  debug_print (1, "Frames per block: %u", engine->blocks_per_transfer);
-  debug_print (1, "frames per transfer: %u", engine->blocks_per_transfer);
+  debug_print (1, "Frames per block: %u", engine->frames_per_block);
+  debug_print (1, "Frames per transfer: %u", engine->frames_per_transfer);
 
   engine->o2h_frame_size =
     ow_get_frame_size_from_desc_tracks (engine->device->desc.outputs,
