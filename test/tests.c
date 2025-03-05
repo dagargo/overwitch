@@ -198,9 +198,7 @@ test_sizes ()
 
   engine.device = malloc (sizeof (struct ow_device));
   ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_SIZE);
-  engine.usb.audio_in_blk_size = 0;
-  engine.usb.audio_out_blk_size = 0;
-  ow_engine_init_mem (&engine, BLOCKS);
+  ow_engine_init_mem (&engine, BLOCKS, 0, 0);
 
   size_t o2h_frame_size = 2 * 4 + 2 * 3;
   size_t h2o_frame_size = 2 * 4;
@@ -227,23 +225,28 @@ static void
 test_usb_blocks_1 (const struct ow_device_desc *device_desc, float max_error)
 {
   float *a, *b;
+  size_t usb_audio_in_blk_size;
+  size_t usb_audio_out_blk_size;
   struct ow_engine engine;
 
   printf ("\n");
 
   engine.device = malloc (sizeof (struct ow_device));
   ow_copy_device_desc (&engine.device->desc, device_desc);
-  // Block sizes are determined by the wMaxPacketSize in the endpoint descriptor so this need to be emulated.
-  engine.usb.audio_in_blk_size = sizeof (struct ow_engine_usb_blk_ob1) +
+
+  // In type 1 devices, block sizes are determined by the wMaxPacketSize in the endpoint descriptor so this need to be emulated.
+  usb_audio_in_blk_size = sizeof (struct ow_engine_usb_blk_ob1) +
     OB1_FRAMES_PER_BLOCK *
     ow_get_frame_size_from_desc_tracks (engine.device->desc.outputs,
 					engine.device->desc.output_tracks);
-  engine.usb.audio_out_blk_size = sizeof (struct ow_engine_usb_blk_ob1) +
+  usb_audio_out_blk_size = sizeof (struct ow_engine_usb_blk_ob1) +
     OB1_FRAMES_PER_BLOCK *
     ow_get_frame_size_from_desc_tracks (engine.device->desc.inputs,
 					engine.device->desc.input_tracks);
-  // In the Overbridge 1 version, the blocks are ignored and OB1_FRAMES_PER_BLOCK is used always.
-  ow_engine_init_mem (&engine, BLOCKS);
+
+  // In type 1 devices, sizes are obtained from the endpoint.
+  ow_engine_init_mem (&engine, BLOCKS, usb_audio_in_blk_size,
+		      usb_audio_out_blk_size);
 
   a = engine.h2o_transfer_buf;
   for (int i = 0; i < OB1_BLOCKS_PER_TRANSFER; i++)
@@ -314,9 +317,8 @@ test_usb_blocks_2_3 (const struct ow_device_desc *device_desc,
 
   engine.device = malloc (sizeof (struct ow_device));
   ow_copy_device_desc (&engine.device->desc, device_desc);
-  engine.usb.audio_in_blk_size = 0;
-  engine.usb.audio_out_blk_size = 0;
-  ow_engine_init_mem (&engine, BLOCKS);
+
+  ow_engine_init_mem (&engine, BLOCKS, 0, 0);
 
   printf ("%ld\n", engine.usb.audio_out_blk_size);
   printf ("%ld\n", engine.usb.audio_in_blk_size);

@@ -672,9 +672,12 @@ usb_shutdown (struct ow_engine *engine)
 
 int
 ow_engine_init_mem (struct ow_engine *engine,
-		    unsigned int blocks_per_transfer)
+		    unsigned int blocks_per_transfer,
+		    size_t usb_audio_in_blk_size_ep,
+		    size_t usb_audio_out_blk_size_ep)
 {
-  size_t size;
+  size_t usb_audio_in_blk_size_calc;
+  size_t usb_audio_out_blk_size_calc;
 
   engine->context = NULL;
 
@@ -708,40 +711,39 @@ ow_engine_init_mem (struct ow_engine *engine,
   debug_print (2, "o2h: USB in frame size: %zu B", engine->o2h_frame_size);
   debug_print (2, "h2o: USB out frame size: %zu B", engine->h2o_frame_size);
 
-  if (!IS_DEVICE_TYPE_1 (engine))
+  if (IS_DEVICE_TYPE_1 (engine))
     {
-      size = sizeof (struct ow_engine_usb_blk_ob2) +
+      engine->usb.audio_in_blk_size = usb_audio_in_blk_size_ep;
+      engine->usb.audio_out_blk_size = usb_audio_out_blk_size_ep;
+    }
+  else
+    {
+      usb_audio_in_blk_size_calc = sizeof (struct ow_engine_usb_blk_ob2) +
 	engine->frames_per_block * engine->o2h_frame_size;
 
-      if (engine->usb.audio_in_blk_size
-	  && engine->usb.audio_in_blk_size != size)
+      if (usb_audio_in_blk_size_ep &&
+	  usb_audio_in_blk_size_ep != usb_audio_in_blk_size_calc)
 	{
 	  error_print ("Unexpected audio block size (%lu != %zu)",
-		       engine->usb.audio_in_blk_size, size);
+		       usb_audio_in_blk_size_ep, usb_audio_in_blk_size_calc);
 	  return OW_USB_UNEXPECTED_PACKET_SIZE;
 	}
-      else
-	{
-	  engine->usb.audio_in_blk_size = size;
-	}
-    }
 
-  if (!IS_DEVICE_TYPE_1 (engine))
-    {
-      size = sizeof (struct ow_engine_usb_blk_ob2) +
+      engine->usb.audio_in_blk_size = usb_audio_in_blk_size_calc;
+
+      usb_audio_out_blk_size_calc = sizeof (struct ow_engine_usb_blk_ob2) +
 	engine->frames_per_block * engine->h2o_frame_size;
 
-      if (engine->usb.audio_out_blk_size
-	  && engine->usb.audio_out_blk_size != size)
+      if (usb_audio_out_blk_size_ep &&
+	  usb_audio_out_blk_size_ep != usb_audio_out_blk_size_calc)
 	{
 	  error_print ("Unexpected audio block size (%lu != %zu)",
-		       engine->usb.audio_out_blk_size, size);
+		       usb_audio_out_blk_size_ep,
+		       usb_audio_out_blk_size_calc);
 	  return OW_USB_UNEXPECTED_PACKET_SIZE;
 	}
-      else
-	{
-	  engine->usb.audio_out_blk_size = size;
-	}
+
+      engine->usb.audio_out_blk_size = usb_audio_out_blk_size_calc;
     }
 
   debug_print (2, "o2h: USB in block size: %zu B",
@@ -826,6 +828,8 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   int audio_in_alt_setting;
   int audio_out_interface;
   int audio_out_alt_setting;
+  size_t usb_audio_in_blk_size_ep;
+  size_t usb_audio_out_blk_size_ep;
 
   engine->status = OW_ENGINE_STATUS_STOP;
   engine->device = device;
@@ -934,12 +938,12 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
     }
 
 #if LIBUSB_API_VERSION >= 0x0100010A
-  engine->usb.audio_in_blk_size =
+  usb_audio_in_blk_size_ep =
     libusb_get_max_alt_packet_size (engine->usb.device,
 				    audio_in_interface,
 				    audio_in_alt_setting, AUDIO_IN_EP);
 
-  engine->usb.audio_out_blk_size =
+  usb_audio_out_blk_size_ep =
     libusb_get_max_alt_packet_size (engine->usb.device,
 				    audio_out_interface,
 				    audio_out_alt_setting, AUDIO_OUT_EP);
@@ -952,12 +956,14 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
       goto end;
     }
 
-  engine->usb.audio_in_blk_size = 0;
-  engine->usb.audio_out_blk_size = 0;
+  usb_audio_in_blk_size_ep = 0;
+  usb_audio_out_blk_size_ep = 0;
 #endif
 
   err = LIBUSB_SUCCESS;
-  ret = ow_engine_init_mem (engine, blocks_per_transfer);
+  ret = ow_engine_init_mem (engine, blocks_per_transfer,
+			    usb_audio_in_blk_size_ep,
+			    usb_audio_out_blk_size_ep);
 
 end:
   if (ret != OW_OK)
