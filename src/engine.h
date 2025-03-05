@@ -273,6 +273,8 @@ void ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print);
 
 void ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print);
 
-int ow_engine_init_mem (struct ow_engine *, unsigned int);
+int ow_engine_init_mem (struct ow_engine *, unsigned int,
+			size_t usb_audio_in_blk_size,
+			size_t usb_audio_out_blk_size);
 
 void ow_engine_free_mem (struct ow_engine *);
