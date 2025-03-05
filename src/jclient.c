@@ -320,7 +320,7 @@ jclient_destroy (struct jclient *jclient)
   pthread_spin_destroy (&jclient->lock);
 }
 
-int
+static ow_err_t
 jclient_run (struct jclient *jclient)
 {
   jack_status_t status;
@@ -334,6 +334,10 @@ jclient_run (struct jclient *jclient)
   jclient->input_ports = NULL;
   jclient->context.h2o_audio = NULL;
   jclient->context.o2h_audio = NULL;
+
+  pthread_spin_lock (&jclient->lock);
+  jclient->running = 1;
+  pthread_spin_unlock (&jclient->lock);
 
   engine = ow_resampler_get_engine (jclient->resampler);
   desc = &ow_engine_get_device (engine)->desc;
@@ -414,12 +418,14 @@ jclient_run (struct jclient *jclient)
   if (jack_set_buffer_size_callback (jclient->client,
 				     jclient_set_buffer_size_cb, jclient))
     {
+      err = OW_GENERIC_ERROR;
       goto cleanup_jack;
     }
 
   if (jack_set_sample_rate_callback (jclient->client,
 				     jclient_set_sample_rate_cb, jclient))
     {
+      err = OW_GENERIC_ERROR;
       goto cleanup_jack;
     }
 
@@ -444,6 +450,7 @@ jclient_run (struct jclient *jclient)
       if (jclient->output_ports[i] == NULL)
 	{
 	  error_print (MSG_ERROR_PORT_REGISTER);
+	  err = OW_GENERIC_ERROR;
 	  goto cleanup_jack;
 	}
     }
@@ -462,6 +469,7 @@ jclient_run (struct jclient *jclient)
       if (jclient->input_ports[i] == NULL)
 	{
 	  error_print (MSG_ERROR_PORT_REGISTER);
+	  err = OW_GENERIC_ERROR;
 	  goto cleanup_jack;
 	}
     }
@@ -498,14 +506,8 @@ jclient_run (struct jclient *jclient)
   if (jack_activate (jclient->client))
     {
       error_print ("Cannot activate client");
-      err = -1;
+      err = OW_GENERIC_ERROR;
       goto cleanup_jack;
-    }
-  else
-    {
-      pthread_spin_lock (&jclient->lock);
-      jclient->running = 1;
-      pthread_spin_unlock (&jclient->lock);
     }
 
   ow_resampler_wait (jclient->resampler);
@@ -514,8 +516,14 @@ jclient_run (struct jclient *jclient)
   jack_deactivate (jclient->client);
 
 cleanup_jack:
-  jack_ringbuffer_free (jclient->context.h2o_audio);
-  jack_ringbuffer_free (jclient->context.o2h_audio);
+  if (jclient->context.h2o_audio)
+    {
+      jack_ringbuffer_free (jclient->context.h2o_audio);
+    }
+  if (jclient->context.o2h_audio)
+    {
+      jack_ringbuffer_free (jclient->context.o2h_audio);
+    }
   jack_client_close (jclient->client);
   free (jclient->output_ports);
   free (jclient->input_ports);
@@ -566,18 +574,6 @@ jclient_start (struct jclient *jclient)
 void
 jclient_wait (struct jclient *jclient)
 {
-  int running;
-
-  pthread_spin_lock (&jclient->lock);
-  running = jclient->running;
-  pthread_spin_unlock (&jclient->lock);
-
-  if (running)
-    {
-      pthread_join (jclient->thread, NULL);
-
-      pthread_spin_lock (&jclient->lock);
-      jclient->running = 0;
-      pthread_spin_unlock (&jclient->lock);
-    }
+  pthread_join (jclient->thread, NULL);
+  jclient->running = 0;
 }
