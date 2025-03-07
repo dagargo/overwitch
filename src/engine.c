@@ -826,6 +826,7 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   size_t usb_audio_in_blk_size_ep;
   size_t usb_audio_out_blk_size_ep;
 
+  engine->status = OW_ENGINE_STATUS_READY;
   engine->device = device;
   engine->usb.xfr_audio_in = NULL;
   engine->usb.xfr_audio_out = NULL;
@@ -1094,7 +1095,14 @@ run_audio (void *data)
 					      engine->context->get_time ());
     }
 
-  ow_engine_set_status (engine, OW_ENGINE_STATUS_BOOT);
+  pthread_spin_lock (&engine->lock);
+  if (engine->status <= OW_ENGINE_STATUS_STOP)
+    {
+      pthread_spin_unlock (&engine->lock);
+      return NULL;
+    }
+  engine->status = OW_ENGINE_STATUS_BOOT;
+  pthread_spin_unlock (&engine->lock);
 
   while (1)
     {
@@ -1106,12 +1114,12 @@ run_audio (void *data)
 
       //status == OW_ENGINE_STATUS_BOOT || status == OW_ENGINE_STATUS_CLEAR
 
-      if (ow_engine_get_status (engine) == OW_ENGINE_STATUS_CLEAR)
+      pthread_spin_lock (&engine->lock);
+      if (engine->status == OW_ENGINE_STATUS_CLEAR)
 	{
 	  engine->status = OW_ENGINE_STATUS_RUN;
 	}
 
-      pthread_spin_lock (&engine->lock);
       if (engine->context->dll)
 	{
 	  if (engine->status == OW_ENGINE_STATUS_BOOT)
@@ -1227,7 +1235,6 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 	{
 	  return OW_INIT_ERROR_NO_DLL;
 	}
-      engine->status = OW_ENGINE_STATUS_READY;
     }
 
   debug_print (1, "Starting thread...");
@@ -1243,7 +1250,8 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
     }
 
   //Wait till the thread has reached the USB loop
-  while (ow_engine_get_status (engine) < OW_ENGINE_STATUS_WAIT)
+  while (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP &&
+	 ow_engine_get_status (engine) < OW_ENGINE_STATUS_WAIT)
     {
       usleep (PAUSE_TO_BE_WAITING_USECS);
     }
@@ -1299,7 +1307,10 @@ inline void
 ow_engine_set_status (struct ow_engine *engine, ow_engine_status_t status)
 {
   pthread_spin_lock (&engine->lock);
-  engine->status = status;
+  if (engine->status >= OW_ENGINE_STATUS_READY)
+    {
+      engine->status = status;
+    }
   pthread_spin_unlock (&engine->lock);
 }
 
@@ -1350,10 +1361,6 @@ ow_engine_get_device (struct ow_engine *engine)
 inline void
 ow_engine_stop (struct ow_engine *engine)
 {
-  while (ow_engine_get_status (engine) != OW_ENGINE_STATUS_RUN)
-    {
-      usleep (500000);
-    }
   ow_engine_set_status (engine, OW_ENGINE_STATUS_STOP);
 }
 
