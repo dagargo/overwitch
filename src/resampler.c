@@ -567,20 +567,7 @@ ow_resampler_start (struct ow_resampler *resampler,
 void
 ow_resampler_wait (struct ow_resampler *resampler)
 {
-  ow_resampler_status_t status;
-
   ow_engine_wait (resampler->engine);
-
-  if (ow_engine_get_status (resampler->engine) == OW_ENGINE_STATUS_ERROR)
-    {
-      status = OW_RESAMPLER_STATUS_ERROR;
-    }
-  else
-    {
-      status = OW_RESAMPLER_STATUS_STOP;
-    }
-  ow_resampler_set_status (resampler, status);
-
   ow_resampler_report_state (resampler);
 }
 
