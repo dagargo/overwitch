@@ -229,6 +229,8 @@ struct ow_engine
     libusb_device_handle *device_handle;
     unsigned int xfr_timeout;
     //Audio
+    int audio_in_interface;
+    int audio_out_interface;
     uint32_t audio_frames_counter_ob1;
     uint16_t audio_frames_counter_ob2;
     struct libusb_transfer *xfr_audio_in;
@@ -273,7 +275,8 @@ void ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print);
 
 void ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print);
 
-int ow_engine_init_mem (struct ow_engine *, unsigned int,
+int ow_engine_init_mem (struct ow_engine *engine,
+			unsigned int blocks_per_transfer,
 			size_t usb_audio_in_blk_size,
 			size_t usb_audio_out_blk_size);
 

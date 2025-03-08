@@ -652,22 +652,10 @@ prepare_cycle_in_audio (struct ow_engine *engine)
 static void
 usb_shutdown (struct ow_engine *engine)
 {
-  int audio_in_interface;
-  int audio_out_interface;
-
-  if (IS_DEVICE_TYPE_1 (engine))
-    {
-      audio_in_interface = AUDIO_IN_MK1_INTERFACE;
-      audio_out_interface = AUDIO_OUT_MK1_INTERFACE;
-    }
-  else
-    {
-      audio_in_interface = AUDIO_IN_MK2_INTERFACE;
-      audio_out_interface = AUDIO_OUT_MK2_INTERFACE;
-    }
-
-  libusb_release_interface (engine->usb.device_handle, audio_in_interface);
-  libusb_release_interface (engine->usb.device_handle, audio_out_interface);
+  libusb_release_interface (engine->usb.device_handle,
+			    engine->usb.audio_in_interface);
+  libusb_release_interface (engine->usb.device_handle,
+			    engine->usb.audio_out_interface);
   libusb_close (engine->usb.device_handle);
   libusb_unref_device (engine->usb.device);
   libusb_free_transfer (engine->usb.xfr_audio_in);
@@ -700,6 +688,7 @@ ow_engine_init_mem (struct ow_engine *engine,
       engine->blocks_per_transfer = blocks_per_transfer;
       engine->frames_per_block = OB2_FRAMES_PER_BLOCK;
     }
+
   engine->frames_per_transfer =
     engine->blocks_per_transfer * engine->frames_per_block;
 
@@ -831,9 +820,7 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
 {
   int err;
   ow_err_t ret = OW_OK;
-  int audio_in_interface;
   int audio_in_alt_setting;
-  int audio_out_interface;
   int audio_out_alt_setting;
   int control_interface;
   int midi_interface;
@@ -852,18 +839,18 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
 
   if (IS_DEVICE_TYPE_1 (engine))
     {
-      audio_in_interface = AUDIO_IN_MK1_INTERFACE;
+      engine->usb.audio_in_interface = AUDIO_IN_MK1_INTERFACE;
+      engine->usb.audio_out_interface = AUDIO_OUT_MK1_INTERFACE;
       audio_in_alt_setting = AUDIO_IN_MK1_ALT_SETTING;
-      audio_out_interface = AUDIO_OUT_MK1_INTERFACE;
       audio_out_alt_setting = AUDIO_OUT_MK1_ALT_SETTING;
       control_interface = CONTROL_MK1_INTERFACE;
       midi_interface = MIDI_MK1_INTERFACE;
     }
   else
     {
-      audio_in_interface = AUDIO_IN_MK2_INTERFACE;
+      engine->usb.audio_in_interface = AUDIO_IN_MK2_INTERFACE;
+      engine->usb.audio_out_interface = AUDIO_OUT_MK2_INTERFACE;
       audio_in_alt_setting = AUDIO_IN_MK2_ALT_SETTING;
-      audio_out_interface = AUDIO_OUT_MK2_INTERFACE;
       audio_out_alt_setting = AUDIO_OUT_MK2_ALT_SETTING;
       control_interface = CONTROL_MK2_INTERFACE;
       midi_interface = MIDI_MK2_INTERFACE;
@@ -880,14 +867,14 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
     }
 
   err = libusb_claim_interface (engine->usb.device_handle,
-				audio_in_interface);
+				engine->usb.audio_in_interface);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
   err = libusb_set_interface_alt_setting (engine->usb.device_handle,
-					  audio_in_interface,
+					  engine->usb.audio_in_interface,
 					  audio_in_alt_setting);
   if (LIBUSB_SUCCESS != err)
     {
@@ -895,14 +882,14 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
       goto end;
     }
   err = libusb_claim_interface (engine->usb.device_handle,
-				audio_out_interface);
+				engine->usb.audio_out_interface);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
   err = libusb_set_interface_alt_setting (engine->usb.device_handle,
-					  audio_out_interface,
+					  engine->usb.audio_out_interface,
 					  audio_out_alt_setting);
   if (LIBUSB_SUCCESS != err)
     {
@@ -936,12 +923,12 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
 #if LIBUSB_API_VERSION >= 0x0100010A
   usb_audio_in_blk_size_ep =
     libusb_get_max_alt_packet_size (engine->usb.device,
-				    audio_in_interface,
+				    engine->usb.audio_in_interface,
 				    audio_in_alt_setting, AUDIO_IN_EP);
 
   usb_audio_out_blk_size_ep =
     libusb_get_max_alt_packet_size (engine->usb.device,
-				    audio_out_interface,
+				    engine->usb.audio_out_interface,
 				    audio_out_alt_setting, AUDIO_OUT_EP);
 #else
   if (IS_DEVICE_TYPE_1 (engine))
