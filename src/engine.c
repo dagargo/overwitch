@@ -502,17 +502,14 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
 	    }
 	}
 
-      if (engine->context->options & OW_ENGINE_OPTION_O2H_AUDIO)
+      int print = debug_level >= 3 && debug_counter == 0;
+
+      if (print)
 	{
-	  int print = debug_level >= 3 && debug_counter == 0;
-
-	  if (print)
-	    {
-	      print_usb_blk (engine, 1);
-	    }
-
-	  set_usb_input_data_blks (engine, print);
+	  print_usb_blk (engine, 1);
 	}
+
+      set_usb_input_data_blks (engine, print);
     }
   else
     {
