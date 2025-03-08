@@ -587,7 +587,7 @@ prepare_cycle_out_audio (struct ow_engine *engine)
 				engine->usb.device_handle, AUDIO_OUT_EP,
 				engine->usb.xfr_audio_out_data,
 				engine->usb.xfr_audio_out_data_len,
-				OB1_BLOCKS_PER_TRANSFER,
+				engine->blocks_per_transfer,
 				cb_xfr_audio_out, engine,
 				engine->usb.xfr_timeout);
       libusb_set_iso_packet_lengths (engine->usb.xfr_audio_out,
@@ -621,7 +621,7 @@ prepare_cycle_in_audio (struct ow_engine *engine)
 				engine->usb.device_handle, AUDIO_IN_EP,
 				engine->usb.xfr_audio_in_data,
 				engine->usb.xfr_audio_in_data_len,
-				OB1_BLOCKS_PER_TRANSFER,
+				engine->blocks_per_transfer,
 				cb_xfr_audio_in, engine,
 				engine->usb.xfr_timeout);
       libusb_set_iso_packet_lengths (engine->usb.xfr_audio_out,
