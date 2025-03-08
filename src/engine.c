@@ -43,6 +43,11 @@
 #define AUDIO_IN_MK2_INTERFACE 1
 #define AUDIO_IN_MK2_ALT_SETTING 3
 
+#define CONTROL_MK1_INTERFACE 3
+#define CONTROL_MK2_INTERFACE 4
+#define MIDI_MK1_INTERFACE 4
+#define MIDI_MK2_INTERFACE 5
+
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
 #define INT32_TO_FLOAT32_SCALE ((float) (1.0f / INT32_MAX))
@@ -828,6 +833,8 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   int audio_in_alt_setting;
   int audio_out_interface;
   int audio_out_alt_setting;
+  int control_interface;
+  int midi_interface;
   size_t usb_audio_in_blk_size_ep;
   size_t usb_audio_out_blk_size_ep;
 
@@ -844,28 +851,29 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   switch (device->desc.type)
     {
     case OW_DEVICE_TYPE_1:
-      libusb_detach_kernel_driver (engine->usb.device_handle, 3);	//TODO: Is this one really claimed by the kernel?
-      libusb_detach_kernel_driver (engine->usb.device_handle, 4);	//USB MIDI class compliant
-
       audio_in_interface = AUDIO_IN_MK1_INTERFACE;
       audio_in_alt_setting = AUDIO_IN_MK1_ALT_SETTING;
       audio_out_interface = AUDIO_OUT_MK1_INTERFACE;
       audio_out_alt_setting = AUDIO_OUT_MK1_ALT_SETTING;
+      control_interface = CONTROL_MK1_INTERFACE;
+      midi_interface = MIDI_MK1_INTERFACE;
       break;
     case OW_DEVICE_TYPE_2:
     case OW_DEVICE_TYPE_3:
-      libusb_detach_kernel_driver (engine->usb.device_handle, 4);	//This is claimed by the kernel
-      libusb_detach_kernel_driver (engine->usb.device_handle, 5);	//USB MIDI class compliant
-
       audio_in_interface = AUDIO_IN_MK2_INTERFACE;
       audio_in_alt_setting = AUDIO_IN_MK2_ALT_SETTING;
       audio_out_interface = AUDIO_OUT_MK2_INTERFACE;
       audio_out_alt_setting = AUDIO_OUT_MK2_ALT_SETTING;
+      control_interface = CONTROL_MK2_INTERFACE;
+      midi_interface = MIDI_MK2_INTERFACE;
       break;
     default:
       ret = OW_GENERIC_ERROR;
       goto end;
     }
+
+  libusb_detach_kernel_driver (engine->usb.device_handle, control_interface);
+  libusb_detach_kernel_driver (engine->usb.device_handle, midi_interface);
 
   err = libusb_set_configuration (engine->usb.device_handle, 1);
   if (LIBUSB_SUCCESS != err)
@@ -925,17 +933,8 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
       goto end;
     }
 
-  switch (device->desc.type)
-    {
-    case OW_DEVICE_TYPE_1:
-      libusb_attach_kernel_driver (engine->usb.device_handle, 3);	//TODO: See comment on libusb_detach_kernel_driver above
-      libusb_attach_kernel_driver (engine->usb.device_handle, 4);
-      break;
-    case OW_DEVICE_TYPE_2:
-    case OW_DEVICE_TYPE_3:
-      libusb_attach_kernel_driver (engine->usb.device_handle, 4);
-      libusb_attach_kernel_driver (engine->usb.device_handle, 5);
-    }
+  libusb_attach_kernel_driver (engine->usb.device_handle, control_interface);
+  libusb_attach_kernel_driver (engine->usb.device_handle, midi_interface);
 
 #if LIBUSB_API_VERSION >= 0x0100010A
   usb_audio_in_blk_size_ep =
