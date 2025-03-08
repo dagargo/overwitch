@@ -492,7 +492,7 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
 	  struct libusb_iso_packet_descriptor *packet = xfr->iso_packet_desc;
 	  for (int i = 0; i < xfr->num_iso_packets; i++)
 	    {
-	      if (packet->status == LIBUSB_TRANSFER_COMPLETED)
+	      if (packet->status != LIBUSB_TRANSFER_COMPLETED)
 		{
 		  error_print ("o2h: incomplete USB isochronous transfer");
 		}
@@ -548,7 +548,7 @@ cb_xfr_audio_out_int (struct libusb_transfer *xfr)
 	  struct libusb_iso_packet_descriptor *packet = xfr->iso_packet_desc;
 	  for (int i = 0; i < xfr->num_iso_packets; i++)
 	    {
-	      if (packet->status == LIBUSB_TRANSFER_COMPLETED)
+	      if (packet->status != LIBUSB_TRANSFER_COMPLETED)
 		{
 		  error_print ("h2o: incomplete USB isochronous transfer");
 		}
