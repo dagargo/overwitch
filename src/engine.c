@@ -71,7 +71,7 @@ static int
 prepare_transfers (struct ow_engine *engine)
 {
   int audio_iso_packets = IS_DEVICE_TYPE_1 (engine) ?
-    OB1_BLOCKS_PER_TRANSFER : 0;
+    engine->blocks_per_transfer : 0;
 
   engine->usb.xfr_audio_in = libusb_alloc_transfer (audio_iso_packets);
   if (!engine->usb.xfr_audio_in)
