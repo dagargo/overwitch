@@ -274,7 +274,7 @@ test_usb_blocks_1 (const struct ow_device_desc *device_desc, float max_error)
 			  engine.usb.audio_out_blk_size);
 
   memcpy (engine.usb.xfr_audio_in_data, engine.usb.xfr_audio_out_data,
-	  engine.usb.xfr_audio_in_data_len);
+	  engine.usb.xfr_audio_in_data_size);
 
   ow_engine_read_usb_input_blocks (&engine, 1);
 
@@ -352,7 +352,7 @@ test_usb_blocks_2_3 (const struct ow_device_desc *device_desc,
 			  engine.usb.audio_out_blk_size);
 
   memcpy (engine.usb.xfr_audio_in_data, engine.usb.xfr_audio_out_data,
-	  engine.usb.xfr_audio_in_data_len);
+	  engine.usb.xfr_audio_in_data_size);
 
   ow_engine_read_usb_input_blocks (&engine, 1);
 
