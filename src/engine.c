@@ -48,8 +48,6 @@
 
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
-#define INT32_TO_FLOAT32_SCALE ((float) (1.0f / INT32_MAX))
-
 static void prepare_cycle_in_audio ();
 static void prepare_cycle_out_audio ();
 static void ow_engine_load_overbridge_name (struct ow_engine *);
