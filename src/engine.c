@@ -540,7 +540,7 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
 }
 
 static void LIBUSB_CALL
-cb_xfr_audio_out_int (struct libusb_transfer *xfr)
+cb_xfr_audio_out (struct libusb_transfer *xfr)
 {
   static uint8_t debug_counter = 0;
   struct ow_engine *engine = xfr->user_data;
@@ -603,7 +603,7 @@ prepare_cycle_out_audio (struct ow_engine *engine)
 				engine->usb.xfr_audio_out_data,
 				engine->usb.xfr_audio_out_data_len,
 				OB1_BLOCKS_PER_TRANSFER,
-				cb_xfr_audio_out_int, engine,
+				cb_xfr_audio_out, engine,
 				engine->usb.xfr_timeout);
       libusb_set_iso_packet_lengths (engine->usb.xfr_audio_out,
 				     engine->usb.audio_out_blk_size);
@@ -614,7 +614,7 @@ prepare_cycle_out_audio (struct ow_engine *engine)
 				      engine->usb.device_handle, AUDIO_OUT_EP,
 				      engine->usb.xfr_audio_out_data,
 				      engine->usb.xfr_audio_out_data_len,
-				      cb_xfr_audio_out_int, engine,
+				      cb_xfr_audio_out, engine,
 				      engine->usb.xfr_timeout);
     }
 
