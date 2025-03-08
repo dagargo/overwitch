@@ -239,8 +239,8 @@ struct ow_engine
     uint8_t *xfr_audio_out_data;
     size_t audio_in_blk_size;
     size_t audio_out_blk_size;
-    int xfr_audio_in_data_len;
-    int xfr_audio_out_data_len;
+    int xfr_audio_in_data_size;
+    int xfr_audio_out_data_size;
     //Control
     struct libusb_transfer *xfr_control_out;
     struct libusb_transfer *xfr_control_in;
