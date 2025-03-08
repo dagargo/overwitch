@@ -651,8 +651,22 @@ prepare_cycle_in_audio (struct ow_engine *engine)
 static void
 usb_shutdown (struct ow_engine *engine)
 {
-  libusb_release_interface (engine->usb.device_handle, 1);
-  libusb_release_interface (engine->usb.device_handle, 3);
+  int audio_in_interface;
+  int audio_out_interface;
+
+  if (IS_DEVICE_TYPE_1 (engine))
+    {
+      audio_in_interface = AUDIO_IN_MK1_INTERFACE;
+      audio_out_interface = AUDIO_OUT_MK1_INTERFACE;
+    }
+  else
+    {
+      audio_in_interface = AUDIO_IN_MK2_INTERFACE;
+      audio_out_interface = AUDIO_OUT_MK2_INTERFACE;
+    }
+
+  libusb_release_interface (engine->usb.device_handle, audio_in_interface);
+  libusb_release_interface (engine->usb.device_handle, audio_out_interface);
   libusb_close (engine->usb.device_handle);
   libusb_unref_device (engine->usb.device);
   libusb_free_transfer (engine->usb.xfr_audio_in);
@@ -835,28 +849,23 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   engine->usb.xfr_timeout = xfr_timeout;
   debug_print (1, "USB transfer timeout: %u", engine->usb.xfr_timeout);
 
-  switch (device->desc.type)
+  if (IS_DEVICE_TYPE_1 (engine))
     {
-    case OW_DEVICE_TYPE_1:
       audio_in_interface = AUDIO_IN_MK1_INTERFACE;
       audio_in_alt_setting = AUDIO_IN_MK1_ALT_SETTING;
       audio_out_interface = AUDIO_OUT_MK1_INTERFACE;
       audio_out_alt_setting = AUDIO_OUT_MK1_ALT_SETTING;
       control_interface = CONTROL_MK1_INTERFACE;
       midi_interface = MIDI_MK1_INTERFACE;
-      break;
-    case OW_DEVICE_TYPE_2:
-    case OW_DEVICE_TYPE_3:
+    }
+  else
+    {
       audio_in_interface = AUDIO_IN_MK2_INTERFACE;
       audio_in_alt_setting = AUDIO_IN_MK2_ALT_SETTING;
       audio_out_interface = AUDIO_OUT_MK2_INTERFACE;
       audio_out_alt_setting = AUDIO_OUT_MK2_ALT_SETTING;
       control_interface = CONTROL_MK2_INTERFACE;
       midi_interface = MIDI_MK2_INTERFACE;
-      break;
-    default:
-      ret = OW_GENERIC_ERROR;
-      goto end;
     }
 
   libusb_detach_kernel_driver (engine->usb.device_handle, control_interface);
@@ -934,7 +943,7 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
 				    audio_out_interface,
 				    audio_out_alt_setting, AUDIO_OUT_EP);
 #else
-  if (device->desc.type == OW_DEVICE_TYPE_1)
+  if (IS_DEVICE_TYPE_1 (engine))
     {
       error_print
 	("Type 1 devices requiere a libusb 1.0.27 version because the Overbridge package size is unknown");
