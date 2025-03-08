@@ -419,7 +419,6 @@ static inline void
 print_usb_blk (struct ow_engine *engine, int o2h)
 {
   uint8_t *s;
-  int frames;
   int frame_size;
   void *blkv;
 
@@ -443,7 +442,6 @@ print_usb_blk (struct ow_engine *engine, int o2h)
 	       be32toh (blk->frames));
 
       s = blk->data;
-      frames = OB1_FRAMES_PER_BLOCK;
     }
   else
     {
@@ -454,10 +452,9 @@ print_usb_blk (struct ow_engine *engine, int o2h)
 	       be16toh (blk->frames));
 
       s = (uint8_t *) blk->data;
-      frames = OB2_FRAMES_PER_BLOCK;
     }
 
-  for (int j = 0; j < frames; j++)
+  for (int j = 0; j < engine->frames_per_block; j++)
     {
       fprintf (stderr, "  Frame %d:", j);
 
