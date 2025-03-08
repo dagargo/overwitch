@@ -582,7 +582,7 @@ prepare_cycle_out_audio (struct ow_engine *engine)
       libusb_fill_iso_transfer (engine->usb.xfr_audio_out,
 				engine->usb.device_handle, AUDIO_OUT_EP,
 				engine->usb.xfr_audio_out_data,
-				engine->usb.xfr_audio_out_data_len,
+				engine->usb.xfr_audio_out_data_size,
 				engine->blocks_per_transfer,
 				cb_xfr_audio_out, engine,
 				engine->usb.xfr_timeout);
@@ -594,7 +594,7 @@ prepare_cycle_out_audio (struct ow_engine *engine)
       libusb_fill_interrupt_transfer (engine->usb.xfr_audio_out,
 				      engine->usb.device_handle, AUDIO_OUT_EP,
 				      engine->usb.xfr_audio_out_data,
-				      engine->usb.xfr_audio_out_data_len,
+				      engine->usb.xfr_audio_out_data_size,
 				      cb_xfr_audio_out, engine,
 				      engine->usb.xfr_timeout);
     }
@@ -616,7 +616,7 @@ prepare_cycle_in_audio (struct ow_engine *engine)
       libusb_fill_iso_transfer (engine->usb.xfr_audio_in,
 				engine->usb.device_handle, AUDIO_IN_EP,
 				engine->usb.xfr_audio_in_data,
-				engine->usb.xfr_audio_in_data_len,
+				engine->usb.xfr_audio_in_data_size,
 				engine->blocks_per_transfer,
 				cb_xfr_audio_in, engine,
 				engine->usb.xfr_timeout);
@@ -628,7 +628,7 @@ prepare_cycle_in_audio (struct ow_engine *engine)
       libusb_fill_interrupt_transfer (engine->usb.xfr_audio_in,
 				      engine->usb.device_handle, AUDIO_IN_EP,
 				      engine->usb.xfr_audio_in_data,
-				      engine->usb.xfr_audio_in_data_len,
+				      engine->usb.xfr_audio_in_data_size,
 				      cb_xfr_audio_in, engine,
 				      engine->usb.xfr_timeout);
     }
@@ -756,17 +756,17 @@ ow_engine_init_mem (struct ow_engine *engine,
   engine->usb.audio_frames_counter_ob1 = 0;
   engine->usb.audio_frames_counter_ob2 = 0;
 
-  engine->usb.xfr_audio_in_data_len =
+  engine->usb.xfr_audio_in_data_size =
     engine->usb.audio_in_blk_size * engine->blocks_per_transfer;
-  engine->usb.xfr_audio_out_data_len =
+  engine->usb.xfr_audio_out_data_size =
     engine->usb.audio_out_blk_size * engine->blocks_per_transfer;
-  engine->usb.xfr_audio_in_data = malloc (engine->usb.xfr_audio_in_data_len);
+  engine->usb.xfr_audio_in_data = malloc (engine->usb.xfr_audio_in_data_size);
   engine->usb.xfr_audio_out_data =
-    malloc (engine->usb.xfr_audio_out_data_len);
+    malloc (engine->usb.xfr_audio_out_data_size);
   memset (engine->usb.xfr_audio_in_data, 0,
-	  engine->usb.xfr_audio_in_data_len);
+	  engine->usb.xfr_audio_in_data_size);
   memset (engine->usb.xfr_audio_out_data, 0,
-	  engine->usb.xfr_audio_out_data_len);
+	  engine->usb.xfr_audio_out_data_size);
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
