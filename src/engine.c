@@ -424,21 +424,22 @@ print_usb_blk (struct ow_engine *engine, int o2h)
   uint8_t *s;
   int frames;
   int frame_size;
+  void *blkv;
+
+  if (o2h)
+    {
+      blkv = GET_NTH_INPUT_USB_BLK (engine, 0);
+      frame_size = engine->o2h_frame_size;
+    }
+  else
+    {
+      blkv = GET_NTH_OUTPUT_USB_BLK (engine, 0);
+      frame_size = engine->h2o_frame_size;
+    }
 
   if (IS_DEVICE_TYPE_1 (engine))
     {
-      struct ow_engine_usb_blk_ob1 *blk;
-
-      if (o2h)
-	{
-	  blk = GET_NTH_INPUT_USB_BLK (engine, 0);
-	  frame_size = engine->o2h_frame_size;
-	}
-      else
-	{
-	  blk = GET_NTH_OUTPUT_USB_BLK (engine, 0);
-	  frame_size = engine->h2o_frame_size;
-	}
+      struct ow_engine_usb_blk_ob1 *blk = blkv;
 
       fprintf (stderr, "%s block: header: 0x%04x; frames: 0x%08x\n",
 	       o2h ? "O2H" : "H2O", be16toh (blk->header),
@@ -449,18 +450,7 @@ print_usb_blk (struct ow_engine *engine, int o2h)
     }
   else
     {
-      struct ow_engine_usb_blk_ob2 *blk;
-
-      if (o2h)
-	{
-	  blk = GET_NTH_INPUT_USB_BLK (engine, 0);
-	  frame_size = engine->o2h_frame_size;
-	}
-      else
-	{
-	  blk = GET_NTH_OUTPUT_USB_BLK (engine, 0);
-	  frame_size = engine->h2o_frame_size;
-	}
+      struct ow_engine_usb_blk_ob2 *blk = blkv;
 
       fprintf (stderr, "%s block: header: 0x%04x; frames: 0x%04x\n",
 	       o2h ? "O2H" : "H2O", be16toh (blk->header),
