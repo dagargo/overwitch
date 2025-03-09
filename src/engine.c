@@ -104,8 +104,6 @@ inline void
 ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print)
 {
   uint8_t *s;
-  int frames = IS_DEVICE_TYPE_1 (engine) ? OB1_FRAMES_PER_BLOCK :
-    OB2_FRAMES_PER_BLOCK;
   float *f = engine->o2h_transfer_buf;
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
@@ -128,7 +126,7 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print)
 	  fprintf (stderr, "O2H data:\n");
 	}
 
-      for (int j = 0; j < frames; j++)
+      for (int j = 0; j < engine->frames_per_block; j++)
 	{
 	  if (print && !i)
 	    {
@@ -238,8 +236,6 @@ inline void
 ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
 {
   uint8_t *s;
-  int frames = IS_DEVICE_TYPE_1 (engine) ? OB1_FRAMES_PER_BLOCK :
-    OB2_FRAMES_PER_BLOCK;
   float *f = engine->h2o_transfer_buf;
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
@@ -249,7 +245,7 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
 	  struct ow_engine_usb_blk_ob1 *blk =
 	    GET_NTH_OUTPUT_USB_BLK (engine, i);
 	  blk->frames = htobe32 (engine->usb.audio_frames_counter_ob1);
-	  engine->usb.audio_frames_counter_ob1 += OB1_FRAMES_PER_BLOCK;
+	  engine->usb.audio_frames_counter_ob1 += engine->frames_per_block;
 	  s = (uint8_t *) blk->data;
 	}
       else
@@ -257,7 +253,7 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
 	  struct ow_engine_usb_blk_ob2 *blk =
 	    GET_NTH_OUTPUT_USB_BLK (engine, i);
 	  blk->frames = htobe16 (engine->usb.audio_frames_counter_ob2);
-	  engine->usb.audio_frames_counter_ob2 += OB2_FRAMES_PER_BLOCK;
+	  engine->usb.audio_frames_counter_ob2 += engine->frames_per_block;
 	  s = (uint8_t *) blk->data;
 	}
 
@@ -266,7 +262,7 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
 	  fprintf (stderr, "H2O data:\n");
 	}
 
-      for (int j = 0; j < frames; j++)
+      for (int j = 0; j < engine->frames_per_block; j++)
 	{
 	  if (print && !i)
 	    {
