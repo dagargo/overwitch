@@ -603,6 +603,7 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_PREPARE_TRANSFER;
+      goto end;
     }
 
   libusb_attach_kernel_driver (engine->usb.device_handle, 4);
@@ -621,18 +622,15 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   engine->usb.audio_out_blk_len = 0;
 #endif
 
-end:
-  if (ret == OW_OK)
-    {
-      ret = ow_engine_init_mem (engine, blocks_per_transfer);
-    }
+  err = LIBUSB_SUCCESS;
+  ret = ow_engine_init_mem (engine, blocks_per_transfer);
 
+end:
   if (ret != OW_OK)
     {
       usb_shutdown (engine);
       free (engine);
-      error_print ("Error while initializing device: %s",
-		   ow_get_err_str (ret));
+      error_print ("%s (%s)", ow_get_err_str (ret), libusb_error_name (err));
     }
 
   return ret;
