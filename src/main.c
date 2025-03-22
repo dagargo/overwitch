@@ -390,7 +390,7 @@ static void
 build_ui ()
 {
   gchar *thanks;
-  static GtkBuilder *builder;
+  GtkBuilder *builder;
   GtkBuilderScope *scope = gtk_builder_cscope_new ();
   gtk_builder_cscope_add_callback (scope, device_name_changed);
 
