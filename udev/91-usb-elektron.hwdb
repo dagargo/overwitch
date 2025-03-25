@@ -114,3 +114,6 @@ usb:v1935p0134*
 
 usb:v1935p1034*
  ID_MODEL_FROM_DATABASE=Digitone II Audio/MIDI
+
+usb:v1935p0B34*
+ ID_MODEL_FROM_DATABASE=Digitone II Overbridge
