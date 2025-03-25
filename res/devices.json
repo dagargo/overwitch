@@ -816,5 +816,214 @@
         "size": 3
       }
     ]
+  },
+  {
+    "pid": 2868,
+    "name": "Digitone II",
+    "type": 3,
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 4
+      },
+      {
+        "name": "Main R Input",
+        "size": 4
+      },
+      {
+        "name": "Delay L Input",
+        "size": 4
+      },
+      {
+        "name": "Delay R Input",
+        "size": 4
+      },
+      {
+        "name": "Reverb L Input",
+        "size": 4
+      },
+      {
+        "name": "Reverb R Input",
+        "size": 4
+      },
+      {
+        "name": "Chorus L Input",
+        "size": 4
+      },
+      {
+        "name": "Chorus R Input",
+        "size": 4
+      }
+    ],
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 4
+      },
+      {
+        "name": "Main R",
+        "size": 4
+      },
+      {
+        "name": "Track  1 L",
+        "size": 4
+      },
+      {
+        "name": "Track  1 R",
+        "size": 4
+      },
+      {
+        "name": "Track  2 L",
+        "size": 4
+      },
+      {
+        "name": "Track  2 R",
+        "size": 4
+      },
+      {
+        "name": "Track  3 L",
+        "size": 4
+      },
+      {
+        "name": "Track  3 R",
+        "size": 4
+      },
+      {
+        "name": "Track  4 L",
+        "size": 4
+      },
+      {
+        "name": "Track  4 R",
+        "size": 4
+      },
+      {
+        "name": "Track  5 L",
+        "size": 4
+      },
+      {
+        "name": "Track  5 R",
+        "size": 4
+      },
+      {
+        "name": "Track  6 L",
+        "size": 4
+      },
+      {
+        "name": "Track  6 R",
+        "size": 4
+      },
+      {
+        "name": "Track  7 L",
+        "size": 3
+      },
+      {
+        "name": "Track  7 R",
+        "size": 3
+      },
+      {
+        "name": "Track  8 L",
+        "size": 3
+      },
+      {
+        "name": "Track  8 R",
+        "size": 3
+      },
+      {
+        "name": "Track  9 L",
+        "size": 3
+      },
+      {
+        "name": "Track  9 R",
+        "size": 3
+      },
+      {
+        "name": "Track 10 L",
+        "size": 3
+      },
+      {
+        "name": "Track 10 R",
+        "size": 3
+      },
+      {
+        "name": "Track 11 L",
+        "size": 3
+      },
+      {
+        "name": "Track 11 R",
+        "size": 3
+      },
+      {
+        "name": "Track 12 L",
+        "size": 3
+      },
+      {
+        "name": "Track 12 R",
+        "size": 3
+      },
+      {
+        "name": "Track 13 L",
+        "size": 3
+      },
+      {
+        "name": "Track 13 R",
+        "size": 3
+      },
+      {
+        "name": "Track 14 L",
+        "size": 3
+      },
+      {
+        "name": "Track 14 R",
+        "size": 3
+      },
+      {
+        "name": "Track 15 L",
+        "size": 3
+      },
+      {
+        "name": "Track 15 R",
+        "size": 3
+      },
+      {
+        "name": "Track 16 L",
+        "size": 3
+      },
+      {
+        "name": "Track 16 R",
+        "size": 3
+      },
+      {
+        "name": "Delay L",
+        "size": 3
+      },
+      {
+        "name": "Delay R",
+        "size": 3
+      },
+      {
+        "name": "Reverb L",
+        "size": 3
+      },
+      {
+        "name": "Reverb R",
+        "size": 3
+      },
+      {
+        "name": "Chorus L",
+        "size": 3
+      },
+      {
+        "name": "Chorus R",
+        "size": 3
+      },
+      {
+        "name": "Input L",
+        "size": 3
+      },
+      {
+        "name": "Input R",
+        "size": 3
+      }
+    ]
   }
 ]
