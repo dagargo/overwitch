@@ -34,9 +34,20 @@ The package dependencies for Debian based distributions are:
 - libgtk-4-dev (only if `CLI_ONLY=yes` is not used)
 - systemd-dev (only used to install the udev rules)
 
-You can easily install all them by running `sudo apt install automake libtool libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev libsndfile1-dev autopoint gettext libsystemd-dev libjson-glib-dev libgtk-4-dev systemd-dev`.
+You can easily install all them by running this.
 
-For Fedora, run `sudo yum install automake libtool libusb1-devel jack-audio-connection-kit-devel libsamplerate-devel libsndfile-devel gettext-devel json-glib-devel gtk4-devel systemd-devel` to install the build dependencies.
+```
+sudo apt install automake libtool libusb-1.0-0-dev libjack-jackd2-dev libsamplerate0-dev libsndfile1-dev autopoint gettext libsystemd-dev libjson-glib-dev libgtk-4-dev systemd-dev
+```
+
+For Fedora, run this to install the build dependencies.
+
+
+```
+sudo yum install automake libtool libusb1-devel jack-audio-connection-kit-devel libsamplerate-devel libsndfile-devel gettext-devel json-glib-devel gtk4-devel systemd-devel
+```
+
+For Arch, no additional dependencies are needed.
 
 As this will install `jackd2`, you would be asked to configure it to be run with real time priority. Be sure to answer yes. With this, the `audio` group would be able to run processes with real time priority. Be sure to be in the `audio` group too.
 
