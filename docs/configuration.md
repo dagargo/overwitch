@@ -2,6 +2,7 @@
 layout: base
 title: Configuration
 permalink: /configuration/
+order: 2
 ---
 
 ## Configuration
@@ -40,7 +41,7 @@ To keep latency as low as possible, the amount of blocks can be configured in th
 
 ### Tuning
 
-Although this is a matter of JACK, Ardour and OS tuning, Here you have some tips.
+Although this is a matter of JACK, Ardour and OS tuning, here you have some tips.
 
 First and foremost, real time applications work much better without SMT/HyperThreading activated. This script might be handy. It also changes the CPU governor to performance.
 

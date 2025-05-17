@@ -2,6 +2,7 @@
 layout: base
 title: Usage
 permalink: /usage/
+order: 3
 ---
 
 ## Usage

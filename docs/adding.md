@@ -2,6 +2,7 @@
 layout: base
 title: Adding devices
 permalink: /addingdevices/
+order: 4
 ---
 
 ## Adding devices
