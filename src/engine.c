@@ -620,7 +620,7 @@ prepare_cycle_in_audio (struct ow_engine *engine)
 				engine->blocks_per_transfer,
 				cb_xfr_audio_in, engine,
 				engine->usb.xfr_timeout);
-      libusb_set_iso_packet_lengths (engine->usb.xfr_audio_out,
+      libusb_set_iso_packet_lengths (engine->usb.xfr_audio_in,
 				     engine->usb.audio_in_blk_size);
     }
   else
