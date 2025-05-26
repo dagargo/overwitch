@@ -263,14 +263,16 @@ struct ow_engine
 struct ow_engine_usb_blk_ob1_in
 {
   uint16_t header;
-  uint32_t frames;
+  uint16_t frames_msb;
+  uint16_t frames_lsb;
   uint8_t data[];
 };
 
 struct ow_engine_usb_blk_ob1_out
 {
   uint16_t header;
-  uint32_t frames;
+  uint16_t frames_msb;
+  uint16_t frames_lsb;
   uint8_t padding[OB1_OUT_PADDING_LEN];
   uint8_t data[];
 };
