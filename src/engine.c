@@ -704,8 +704,10 @@ ow_engine_init_mem (struct ow_engine *engine,
 
   if (IS_DEVICE_TYPE_1 (engine))
     {
-      engine->usb.audio_in_blk_size = usb_audio_in_blk_size_ep;
-      engine->usb.audio_out_blk_size = usb_audio_out_blk_size_ep;
+      engine->usb.audio_in_blk_size = sizeof (struct ow_engine_usb_blk_ob1) +
+	engine->frames_per_block * engine->o2h_frame_size;
+      engine->usb.audio_out_blk_size = sizeof (struct ow_engine_usb_blk_ob1) +
+	engine->frames_per_block * engine->h2o_frame_size;
     }
   else
     {
