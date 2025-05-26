@@ -498,8 +498,10 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
 	    {
 	      if (packet->status != LIBUSB_TRANSFER_COMPLETED)
 		{
-		  error_print ("o2h: Error on isochronous transfer: %s",
-			       libusb_error_name (packet->status));
+		  error_print
+		    ("o2h: Error on isochronous transfer (%d B, %d B): %s",
+		     packet->length, packet->actual_length,
+		     libusb_error_name (packet->status));
 		}
 	    }
 	}
@@ -552,8 +554,10 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
 	    {
 	      if (packet->status != LIBUSB_TRANSFER_COMPLETED)
 		{
-		  error_print ("h2o: Error on isochronous transfer: %s",
-			       libusb_error_name (packet->status));
+		  error_print
+		    ("h2o: Error on isochronous transfer (%d B, %d B): %s",
+		     packet->length, packet->actual_length,
+		     libusb_error_name (packet->status));
 		}
 	    }
 	}
