@@ -54,6 +54,8 @@
 
 #define IS_ENGINE_TYPE_1(e) (e->device->desc.type == OW_DEVICE_TYPE_1)
 
+#define OB_MK1_OUTPUT_PACKET_PADDING 4
+
 static void prepare_cycle_in_audio (struct ow_engine *engine);
 static void prepare_cycle_out_audio (struct ow_engine *engine);
 static void ow_engine_load_overbridge_name (struct ow_engine *engine);
@@ -110,7 +112,7 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print)
     {
       if (IS_DEVICE_TYPE_1 (engine))
 	{
-	  struct ow_engine_usb_blk_ob1 *blk =
+	  struct ow_engine_usb_blk_ob1_in *blk =
 	    GET_NTH_INPUT_USB_BLK (engine, i);
 	  s = (uint8_t *) blk->data;
 	}
@@ -242,7 +244,7 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
     {
       if (IS_DEVICE_TYPE_1 (engine))
 	{
-	  struct ow_engine_usb_blk_ob1 *blk =
+	  struct ow_engine_usb_blk_ob1_out *blk =
 	    GET_NTH_OUTPUT_USB_BLK (engine, i);
 	  blk->frames = htobe32 (engine->usb.audio_frames_counter_ob1);
 	  engine->usb.audio_frames_counter_ob1 += engine->frames_per_block;
@@ -435,13 +437,27 @@ print_usb_blk (struct ow_engine *engine, int o2h)
 
   if (IS_DEVICE_TYPE_1 (engine))
     {
-      struct ow_engine_usb_blk_ob1 *blk = blkv;
+      uint16_t header;
+      uint32_t frames;
+
+      if (o2h)
+	{
+	  struct ow_engine_usb_blk_ob1_in *blk = blkv;
+	  header = blk->header;
+	  frames = blk->frames;
+	  s = blk->data;
+	}
+      else
+	{
+	  struct ow_engine_usb_blk_ob1_out *blk = blkv;
+	  header = blk->header;
+	  frames = blk->frames;
+	  s = blk->data;
+	}
 
       fprintf (stderr, "%s block: header: 0x%04x; frames: 0x%08x\n",
-	       o2h ? "O2H" : "H2O", be16toh (blk->header),
-	       be32toh (blk->frames));
+	       o2h ? "O2H" : "H2O", be16toh (header), be32toh (frames));
 
-      s = blk->data;
     }
   else
     {
@@ -704,10 +720,13 @@ ow_engine_init_mem (struct ow_engine *engine,
 
   if (IS_DEVICE_TYPE_1 (engine))
     {
-      engine->usb.audio_in_blk_size = sizeof (struct ow_engine_usb_blk_ob1) +
+      engine->usb.audio_in_blk_size =
+	sizeof (struct ow_engine_usb_blk_ob1_in) +
 	engine->frames_per_block * engine->o2h_frame_size;
-      engine->usb.audio_out_blk_size = sizeof (struct ow_engine_usb_blk_ob1) +
-	engine->frames_per_block * engine->h2o_frame_size;
+      engine->usb.audio_out_blk_size =
+	sizeof (struct ow_engine_usb_blk_ob1_out) +
+	engine->frames_per_block * engine->h2o_frame_size +
+	OB_MK1_OUTPUT_PACKET_PADDING;
     }
   else
     {
@@ -776,7 +795,7 @@ ow_engine_init_mem (struct ow_engine *engine,
     {
       if (IS_DEVICE_TYPE_1 (engine))
 	{
-	  struct ow_engine_usb_blk_ob1 *blk =
+	  struct ow_engine_usb_blk_ob1_out *blk =
 	    GET_NTH_OUTPUT_USB_BLK (engine, i);
 	  blk->header = htobe16 (0x03ff);
 	}

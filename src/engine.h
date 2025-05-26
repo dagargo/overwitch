@@ -172,7 +172,11 @@
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  | fixed header: 0x3000          | frame counter (uint32_t) MSB  |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- + frame counter (uint32_t) LSB  | samples                       |
+ + frame counter (uint32_t) LSB  | unknown (98 bytes)            |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ + samples                                                       |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ + padding (4 bytes)                                             +
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
  */
@@ -191,6 +195,8 @@
 
 #define OB1_BLOCKS_PER_TRANSFER 3
 #define OB2_PADDING_LEN 28
+
+#define OB1_OUT_PADDING_LEN 98
 
 #define OB_NAME_MAX_LEN 32
 
@@ -254,10 +260,18 @@ struct ow_engine
   struct ow_context *context;
 };
 
-struct ow_engine_usb_blk_ob1
+struct ow_engine_usb_blk_ob1_in
 {
   uint16_t header;
   uint32_t frames;
+  uint8_t data[];
+};
+
+struct ow_engine_usb_blk_ob1_out
+{
+  uint16_t header;
+  uint32_t frames;
+  uint8_t padding[OB1_OUT_PADDING_LEN];
   uint8_t data[];
 };
 
