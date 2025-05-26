@@ -246,7 +246,9 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
 	{
 	  struct ow_engine_usb_blk_ob1_out *blk =
 	    GET_NTH_OUTPUT_USB_BLK (engine, i);
-	  blk->frames = htobe32 (engine->usb.audio_frames_counter_ob1);
+	  uint32_t frames = htobe32 (engine->usb.audio_frames_counter_ob1);
+	  blk->frames_msb = frames >> 16;
+	  blk->frames_lsb = frames & 0xffff;
 	  engine->usb.audio_frames_counter_ob1 += engine->frames_per_block;
 	  s = (uint8_t *) blk->data;
 	}
@@ -444,14 +446,18 @@ print_usb_blk (struct ow_engine *engine, int o2h)
 	{
 	  struct ow_engine_usb_blk_ob1_in *blk = blkv;
 	  header = blk->header;
-	  frames = blk->frames;
+	  frames = blk->frames_msb;
+	  frames <<= 16;
+	  frames |= blk->frames_lsb;
 	  s = blk->data;
 	}
       else
 	{
 	  struct ow_engine_usb_blk_ob1_out *blk = blkv;
 	  header = blk->header;
-	  frames = blk->frames;
+	  frames = blk->frames_msb;
+	  frames <<= 16;
+	  frames |= blk->frames_lsb;
 	  s = blk->data;
 	}
 

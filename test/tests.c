@@ -71,7 +71,7 @@ static const struct ow_device_desc TESTDEV_DESC_T3 = {
 		    {.name = "T6",.size = 3}}
 };
 
-static const struct ow_device_desc TESTDEV_DESC_SIZE = {
+static const struct ow_device_desc TESTDEV_DESC_SIZE_2 = {
   .pid = 0,
   .type = OW_DEVICE_TYPE_3,
   .name = "Test Device Size",
@@ -83,6 +83,18 @@ static const struct ow_device_desc TESTDEV_DESC_SIZE = {
 		    {.name = "T2",.size = 4},
 		    {.name = "T3",.size = 3},
 		    {.name = "T4",.size = 3}}
+};
+
+static const struct ow_device_desc TESTDEV_DESC_SIZE_1 = {
+  .pid = 0,
+  .type = OW_DEVICE_TYPE_1,
+  .name = "Test Device Type 1",
+  .inputs = 2,
+  .outputs = 2,
+  .input_tracks = {{.name = "T1",.size = 2},
+		   {.name = "T2",.size = 2}},
+  .output_tracks = {{.name = "T1",.size = 2},
+		    {.name = "T2",.size = 2}}
 };
 
 static void
@@ -98,10 +110,10 @@ ow_engine_print_blocks (struct ow_engine *engine, uint8_t *blks,
 
       if (IS_DEVICE_TYPE_1 (engine))
 	{
-	  struct ow_engine_usb_blk_ob1 *blk =
+	  struct ow_engine_usb_blk_ob1_out *blk =
 	    GET_NTH_USB_BLK (blks, blk_len, i);
 	  printf ("0x%04x | 0x%08x\n", be16toh (blk->header),
-		  be32toh (blk->frames));
+		  be32toh ((blk->frames_msb << 16) + blk->frames_lsb));
 	  s = (uint8_t *) blk->data;
 	}
       else
@@ -183,21 +195,51 @@ test_get_frame_size_from_desc_tracks ()
   printf ("\n");
 
   size_t frame_size =
-    ow_get_frame_size_from_desc_tracks (TESTDEV_DESC_SIZE.outputs,
-					TESTDEV_DESC_SIZE.output_tracks);
+    ow_get_frame_size_from_desc_tracks (TESTDEV_DESC_SIZE_2.outputs,
+					TESTDEV_DESC_SIZE_2.output_tracks);
 
   CU_ASSERT_EQUAL (frame_size, 2 * 4 + 2 * 3);
 }
 
 static void
-test_sizes ()
+test_sizes_1 ()
 {
   struct ow_engine engine;
 
   printf ("\n");
 
   engine.device = malloc (sizeof (struct ow_device));
-  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_SIZE);
+  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_SIZE_1);
+  ow_engine_init_mem (&engine, OB1_BLOCKS_PER_TRANSFER, 0, 0);
+
+  size_t o2h_frame_size = 2 * 2;
+  size_t h2o_frame_size = 2 * 2;
+
+  CU_ASSERT_EQUAL (engine.o2h_frame_size, o2h_frame_size);
+  CU_ASSERT_EQUAL (engine.h2o_frame_size, h2o_frame_size);
+
+  CU_ASSERT_EQUAL (engine.usb.audio_in_blk_size, 198);
+  CU_ASSERT_EQUAL (engine.usb.audio_out_blk_size, 300);
+
+  CU_ASSERT_EQUAL (engine.o2h_transfer_size,
+		   OB1_BLOCKS_PER_TRANSFER * OB1_FRAMES_PER_BLOCK * 2 *
+		   OW_BYTES_PER_SAMPLE);
+  CU_ASSERT_EQUAL (engine.h2o_transfer_size,
+		   OB1_BLOCKS_PER_TRANSFER * OB1_FRAMES_PER_BLOCK * 2 *
+		   OW_BYTES_PER_SAMPLE);
+
+  ow_engine_free_mem (&engine);
+}
+
+static void
+test_sizes_2 ()
+{
+  struct ow_engine engine;
+
+  printf ("\n");
+
+  engine.device = malloc (sizeof (struct ow_device));
+  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_SIZE_2);
   ow_engine_init_mem (&engine, BLOCKS, 0, 0);
 
   size_t o2h_frame_size = 2 * 4 + 2 * 3;
@@ -222,7 +264,7 @@ test_sizes ()
 }
 
 static void
-test_usb_blocks_1 (const struct ow_device_desc *device_desc, float max_error)
+test_usb_blocks_t1 (const struct ow_device_desc *device_desc, float max_error)
 {
   float *a, *b;
   size_t usb_audio_in_blk_size;
@@ -234,17 +276,15 @@ test_usb_blocks_1 (const struct ow_device_desc *device_desc, float max_error)
   engine.device = malloc (sizeof (struct ow_device));
   ow_copy_device_desc (&engine.device->desc, device_desc);
 
-  // In type 1 devices, block sizes are determined by the wMaxPacketSize in the endpoint descriptor so this need to be emulated.
-  usb_audio_in_blk_size = sizeof (struct ow_engine_usb_blk_ob1) +
+  usb_audio_in_blk_size = sizeof (struct ow_engine_usb_blk_ob1_in) +
     OB1_FRAMES_PER_BLOCK *
     ow_get_frame_size_from_desc_tracks (engine.device->desc.outputs,
 					engine.device->desc.output_tracks);
-  usb_audio_out_blk_size = sizeof (struct ow_engine_usb_blk_ob1) +
+  usb_audio_out_blk_size = sizeof (struct ow_engine_usb_blk_ob1_out) +
     OB1_FRAMES_PER_BLOCK *
     ow_get_frame_size_from_desc_tracks (engine.device->desc.inputs,
-					engine.device->desc.input_tracks);
+					engine.device->desc.input_tracks) + 4;
 
-  // In type 1 devices, sizes are obtained from the endpoint.
   ow_engine_init_mem (&engine, BLOCKS, usb_audio_in_blk_size,
 		      usb_audio_out_blk_size);
 
@@ -265,16 +305,25 @@ test_usb_blocks_1 (const struct ow_device_desc *device_desc, float max_error)
 
   for (int i = 0; i < OB1_BLOCKS_PER_TRANSFER; i++)
     {
-      struct ow_engine_usb_blk_ob1 *blk = GET_NTH_OUTPUT_USB_BLK (&engine, i);
+      struct ow_engine_usb_blk_ob1_out *blk =
+	GET_NTH_OUTPUT_USB_BLK (&engine, i);
       CU_ASSERT_EQUAL (0x3ff, be16toh (blk->header));
-      CU_ASSERT_EQUAL (i * OB1_FRAMES_PER_BLOCK, be32toh (blk->frames));
+      CU_ASSERT_EQUAL (i * OB1_FRAMES_PER_BLOCK,
+		       be32toh ((blk->frames_msb << 16) + blk->frames_lsb));
     }
 
   ow_engine_print_blocks (&engine, engine.usb.xfr_audio_out_data,
 			  engine.usb.audio_out_blk_size);
 
-  memcpy (engine.usb.xfr_audio_in_data, engine.usb.xfr_audio_out_data,
-	  engine.usb.xfr_audio_in_data_size);
+  for (int i = 0; i < OB1_BLOCKS_PER_TRANSFER; i++)
+    {
+      struct ow_engine_usb_blk_ob1_out *out =
+	GET_NTH_OUTPUT_USB_BLK (&engine, i);
+      struct ow_engine_usb_blk_ob1_in *in =
+	GET_NTH_INPUT_USB_BLK (&engine, i);
+      memcpy (in->data, out->data,
+	      engine.frames_per_block * engine.o2h_frame_size);
+    }
 
   ow_engine_read_usb_input_blocks (&engine, 1);
 
@@ -351,8 +400,13 @@ test_usb_blocks_2_3 (const struct ow_device_desc *device_desc,
   ow_engine_print_blocks (&engine, engine.usb.xfr_audio_out_data,
 			  engine.usb.audio_out_blk_size);
 
-  memcpy (engine.usb.xfr_audio_in_data, engine.usb.xfr_audio_out_data,
-	  engine.usb.xfr_audio_in_data_size);
+  for (int i = 0; i < BLOCKS; i++)
+    {
+      struct ow_engine_usb_blk_ob2 *out = GET_NTH_OUTPUT_USB_BLK (&engine, i);
+      struct ow_engine_usb_blk_ob2 *in = GET_NTH_INPUT_USB_BLK (&engine, i);
+      memcpy (in->data, out->data,
+	      engine.frames_per_block * engine.o2h_frame_size);
+    }
 
   ow_engine_read_usb_input_blocks (&engine, 1);
 
@@ -377,19 +431,19 @@ test_usb_blocks_2_3 (const struct ow_device_desc *device_desc,
 }
 
 static void
-test_usb_blocks_t1 ()
+test_usb_blocks_1 ()
 {
-  test_usb_blocks_1 (&TESTDEV_DESC_T1, 1e-4);
+  test_usb_blocks_t1 (&TESTDEV_DESC_T1, 1e-4);
 }
 
 static void
-test_usb_blocks_t2 ()
+test_usb_blocks_2 ()
 {
   test_usb_blocks_2_3 (&TESTDEV_DESC_T2, 1e-9);
 }
 
 static void
-test_usb_blocks_t3 ()
+test_usb_blocks_3 ()
 {
   test_usb_blocks_2_3 (&TESTDEV_DESC_T3, 1e-6);
 }
@@ -537,22 +591,27 @@ main (int argc, char *argv[])
       goto cleanup;
     }
 
-  if (!CU_add_test (suite, "test_sizes", test_sizes))
+  if (!CU_add_test (suite, "test_sizes_1", test_sizes_1))
     {
       goto cleanup;
     }
 
-  if (!CU_add_test (suite, "test_usb_blocks_t1", test_usb_blocks_t1))
+  if (!CU_add_test (suite, "test_sizes_2", test_sizes_2))
     {
       goto cleanup;
     }
 
-  if (!CU_add_test (suite, "test_usb_blocks_t2", test_usb_blocks_t2))
+  if (!CU_add_test (suite, "test_usb_blocks_1", test_usb_blocks_1))
     {
       goto cleanup;
     }
 
-  if (!CU_add_test (suite, "test_usb_blocks_t3", test_usb_blocks_t3))
+  if (!CU_add_test (suite, "test_usb_blocks_2", test_usb_blocks_2))
+    {
+      goto cleanup;
+    }
+
+  if (!CU_add_test (suite, "test_usb_blocks_3", test_usb_blocks_3))
     {
       goto cleanup;
     }
