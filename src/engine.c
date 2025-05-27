@@ -52,8 +52,6 @@
 
 #define INT32_TO_FLOAT32_SCALE ((float) (1.0f / INT32_MAX))
 
-#define IS_ENGINE_TYPE_1(e) (e->device->desc.type == OW_DEVICE_TYPE_1)
-
 #define OB_MK1_INPUT_PACKET_PADDING 2
 #define OB_MK1_OUTPUT_PACKET_PADDING 4
 
@@ -73,7 +71,7 @@ ow_engine_init_name (struct ow_engine *engine)
 static int
 prepare_transfers (struct ow_engine *engine)
 {
-  int audio_iso_packets = IS_DEVICE_TYPE_1 (engine) ?
+  int audio_iso_packets = IS_DEVICE_TYPE_1 (engine->device) ?
     engine->blocks_per_transfer : 0;
 
   engine->usb.xfr_audio_in = libusb_alloc_transfer (audio_iso_packets);
@@ -111,7 +109,7 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print)
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
-      if (IS_DEVICE_TYPE_1 (engine))
+      if (IS_DEVICE_TYPE_1 (engine->device))
 	{
 	  struct ow_engine_usb_blk_ob1_in *blk =
 	    GET_NTH_INPUT_USB_BLK (engine, i);
@@ -140,7 +138,7 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print)
 	    {
 	      int size = engine->device->desc.output_tracks[k].size;
 
-	      if (IS_DEVICE_TYPE_1 (engine))
+	      if (IS_DEVICE_TYPE_1 (engine->device))
 		{
 		  if (size == 2)
 		    {
@@ -243,7 +241,7 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
-      if (IS_DEVICE_TYPE_1 (engine))
+      if (IS_DEVICE_TYPE_1 (engine->device))
 	{
 	  struct ow_engine_usb_blk_ob1_out *blk =
 	    GET_NTH_OUTPUT_USB_BLK (engine, i);
@@ -279,7 +277,7 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
 	      int size = engine->device->desc.input_tracks[k].size;
 	      int32_t ov = (int32_t) (*f * INT32_MAX);
 
-	      if (IS_DEVICE_TYPE_1 (engine))
+	      if (IS_DEVICE_TYPE_1 (engine->device))
 		{
 		  if (size == 2)
 		    {
@@ -438,7 +436,7 @@ print_usb_blk (struct ow_engine *engine, int o2h)
       frame_size = engine->h2o_frame_size;
     }
 
-  if (IS_DEVICE_TYPE_1 (engine))
+  if (IS_DEVICE_TYPE_1 (engine->device))
     {
       uint16_t header;
       uint32_t frames;
@@ -498,7 +496,7 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
 
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
-      if (IS_DEVICE_TYPE_1 (engine))
+      if (IS_DEVICE_TYPE_1 (engine->device))
 	{
 	  struct libusb_iso_packet_descriptor *packet = xfr->iso_packet_desc;
 	  for (int i = 0; i < xfr->num_iso_packets; i++)
@@ -554,7 +552,7 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
 
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
-      if (IS_DEVICE_TYPE_1 (engine))
+      if (IS_DEVICE_TYPE_1 (engine->device))
 	{
 	  struct libusb_iso_packet_descriptor *packet = xfr->iso_packet_desc;
 	  for (int i = 0; i < xfr->num_iso_packets; i++)
@@ -606,7 +604,7 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
 static void
 prepare_cycle_out_audio (struct ow_engine *engine)
 {
-  if (IS_DEVICE_TYPE_1 (engine))
+  if (IS_DEVICE_TYPE_1 (engine->device))
     {
       libusb_fill_iso_transfer (engine->usb.xfr_audio_out,
 				engine->usb.device_handle, AUDIO_OUT_EP,
@@ -640,7 +638,7 @@ prepare_cycle_out_audio (struct ow_engine *engine)
 static void
 prepare_cycle_in_audio (struct ow_engine *engine)
 {
-  if (IS_DEVICE_TYPE_1 (engine))
+  if (IS_DEVICE_TYPE_1 (engine->device))
     {
       libusb_fill_iso_transfer (engine->usb.xfr_audio_in,
 				engine->usb.device_handle, AUDIO_IN_EP,
@@ -687,6 +685,24 @@ usb_shutdown (struct ow_engine *engine)
   libusb_exit (engine->usb.context);
 }
 
+unsigned int
+ow_engine_set_blocks_per_transfer (unsigned int blocks_per_transfer,
+				   unsigned int min, unsigned int max,
+				   unsigned int def)
+{
+  unsigned int v = blocks_per_transfer;
+  if (v == 0 || v < min || v > max)
+    {
+      if (v != 0)
+	{
+	  error_print ("Invalid blocks per transfer. Using %d...", def);
+	}
+      v = def;
+    }
+
+  return v;
+}
+
 int
 ow_engine_init_mem (struct ow_engine *engine,
 		    unsigned int blocks_per_transfer,
@@ -700,14 +716,20 @@ ow_engine_init_mem (struct ow_engine *engine,
 
   pthread_spin_init (&engine->lock, PTHREAD_PROCESS_SHARED);
 
-  if (IS_DEVICE_TYPE_1 (engine))
+  if (IS_DEVICE_TYPE_1 (engine->device))
     {
-      engine->blocks_per_transfer = OB1_BLOCKS_PER_TRANSFER;
+      engine->blocks_per_transfer =
+	ow_engine_set_blocks_per_transfer (blocks_per_transfer,
+					   OW1_MIN_BLOCKS, OW1_MAX_BLOCKS,
+					   OW1_DEFAULT_BLOCKS);
       engine->frames_per_block = OB1_FRAMES_PER_BLOCK;
     }
   else
     {
-      engine->blocks_per_transfer = blocks_per_transfer;
+      engine->blocks_per_transfer =
+	ow_engine_set_blocks_per_transfer (blocks_per_transfer,
+					   OW2_MIN_BLOCKS, OW2_MAX_BLOCKS,
+					   OW2_DEFAULT_BLOCKS);
       engine->frames_per_block = OB2_FRAMES_PER_BLOCK;
     }
 
@@ -729,7 +751,7 @@ ow_engine_init_mem (struct ow_engine *engine,
   debug_print (2, "o2h: USB in frame size: %zu B", engine->o2h_frame_size);
   debug_print (2, "h2o: USB out frame size: %zu B", engine->h2o_frame_size);
 
-  if (IS_DEVICE_TYPE_1 (engine))
+  if (IS_DEVICE_TYPE_1 (engine->device))
     {
       //The OB_MK1_INPUT_PACKET_PADDING padding is in the data sent by the device but does NOT appear in the captured traffic.
       engine->usb.audio_in_blk_size =
@@ -806,7 +828,7 @@ ow_engine_init_mem (struct ow_engine *engine,
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
-      if (IS_DEVICE_TYPE_1 (engine))
+      if (IS_DEVICE_TYPE_1 (engine->device))
 	{
 	  struct ow_engine_usb_blk_ob1_out *blk =
 	    GET_NTH_OUTPUT_USB_BLK (engine, i);
@@ -866,7 +888,7 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   engine->usb.xfr_timeout = xfr_timeout;
   debug_print (1, "USB transfer timeout: %u", engine->usb.xfr_timeout);
 
-  if (IS_DEVICE_TYPE_1 (engine))
+  if (IS_DEVICE_TYPE_1 (engine->device))
     {
       engine->usb.audio_in_interface = AUDIO_IN_MK1_INTERFACE;
       engine->usb.audio_out_interface = AUDIO_OUT_MK1_INTERFACE;
@@ -960,7 +982,7 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
 				    engine->usb.audio_out_interface,
 				    audio_out_alt_setting, AUDIO_OUT_EP);
 #else
-  if (IS_DEVICE_TYPE_1 (engine))
+  if (IS_DEVICE_TYPE_1 (engine->device))
     {
       error_print
 	("Type 1 devices requiere a libusb 1.0.27 version because the Overbridge package size is unknown");
