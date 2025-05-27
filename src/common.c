@@ -114,13 +114,10 @@ get_ow_blocks_per_transfer_argument (const char *optarg)
 
   errno = 0;
   blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
-  if (errno || endstr == optarg || *endstr != '\0' || blocks_per_transfer < 2
-      || blocks_per_transfer > 32)
+  if (errno || endstr == optarg || *endstr != '\0')
     {
-      blocks_per_transfer = OW_DEFAULT_BLOCKS;
-      fprintf (stderr,
-	       "Blocks value must be in [2..32]. Using value %d...\n",
-	       blocks_per_transfer);
+      blocks_per_transfer = 0;
+      fprintf (stderr, "Invalid blocks per transfer. Using default...\n");
     }
   return blocks_per_transfer;
 }

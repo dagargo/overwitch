@@ -115,7 +115,7 @@ save_preferences ()
   v = g_action_get_state (a);
   g_variant_get (v, "b", &prefs.show_all_columns);
 
-  prefs.blocks = gtk_spin_button_get_value_as_int (blocks_spin_button);
+  prefs.blocks_ob2 = gtk_spin_button_get_value_as_int (blocks_spin_button);
   prefs.timeout = gtk_spin_button_get_value_as_int (timeout_spin_button);
   prefs.quality = gtk_drop_down_get_selected (quality_drop_down);
   prefs.pipewire_props = pipewire_props;
@@ -138,7 +138,7 @@ load_preferences ()
   v = g_variant_new_boolean (prefs.show_all_columns);
   g_action_change_state (a, v);
 
-  gtk_spin_button_set_value (blocks_spin_button, prefs.blocks);
+  gtk_spin_button_set_value (blocks_spin_button, prefs.blocks_ob2);
   gtk_spin_button_set_value (timeout_spin_button, prefs.timeout);
   gtk_drop_down_set_selected (quality_drop_down, prefs.quality);
   update_all_metrics (prefs.show_all_columns);
