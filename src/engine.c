@@ -97,7 +97,7 @@ prepare_transfers (struct ow_engine *engine)
       return -ENOMEM;
     }
 
-  return LIBUSB_SUCCESS;
+  return 0;
 }
 
 inline void
@@ -732,6 +732,11 @@ ow_engine_init_mem (struct ow_engine *engine,
       engine->frames_per_block = OB2_FRAMES_PER_BLOCK;
     }
 
+  if (prepare_transfers (engine))
+    {
+      return OW_GENERIC_ERROR;
+    }
+
   engine->frames_per_transfer =
     engine->blocks_per_transfer * engine->frames_per_block;
 
@@ -955,13 +960,6 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLEAR_EP;
-      goto end;
-    }
-
-  err = prepare_transfers (engine);
-  if (LIBUSB_SUCCESS != err)
-    {
-      ret = OW_USB_ERROR_CANT_PREPARE_TRANSFER;
       goto end;
     }
 
