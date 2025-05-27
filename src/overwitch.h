@@ -41,7 +41,16 @@
 
 #define OW_DEFAULT_XFR_TIMEOUT 10
 
-#define OW_DEFAULT_BLOCKS 24
+#define OW1_DEFAULT_BLOCKS 3
+#define OW2_DEFAULT_BLOCKS 24
+
+#define OW1_MIN_BLOCKS 1
+#define OW2_MIN_BLOCKS 2
+
+#define OW1_MAX_BLOCKS 5
+#define OW2_MAX_BLOCKS 32
+
+#define IS_DEVICE_TYPE_1(d) (d->desc.type == OW_DEVICE_TYPE_1)
 
 typedef size_t (*ow_buffer_rw_space_t) (void *);
 typedef size_t (*ow_buffer_read_t) (void *, char *, size_t);

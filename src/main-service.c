@@ -180,9 +180,10 @@ jclient_runner (void *data)
 static void
 start_single (struct pooled_jclient *pjc, guint id, struct ow_device *device)
 {
-  if (jclient_init (&pjc->jclient, device, preferences.blocks,
-		    preferences.timeout, preferences.quality,
-		    JCLIENT_DEFAULT_PRIORITY))
+  guint blocks = IS_DEVICE_TYPE_1 (device) ? preferences.blocks_ob1 :
+    preferences.blocks_ob2;
+  if (jclient_init (&pjc->jclient, device, blocks, preferences.timeout,
+		    preferences.quality, JCLIENT_DEFAULT_PRIORITY))
     {
       free (device);
       return;

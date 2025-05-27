@@ -23,7 +23,8 @@
 struct ow_preferences
 {
   gboolean show_all_columns;
-  gint64 blocks;
+  gint64 blocks_ob1;
+  gint64 blocks_ob2;
   gint64 timeout;
   gint64 quality;
   gchar *pipewire_props;

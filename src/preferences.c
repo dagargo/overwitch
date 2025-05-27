@@ -20,12 +20,14 @@
 
 #include <sys/stat.h>
 #include "preferences.h"
+#include "overwitch.h"
 #include "utils.h"
 
 #define PREF_FILE "/preferences.json"
 
 #define PREF_SHOW_ALL_COLUMNS "showAllColumns"
-#define PREF_BLOCKS "blocks"
+#define PREF_BLOCKS_OB1 "blocksOverbridge1"
+#define PREF_BLOCKS_OB2 "blocksOverbridge2"
 #define PREF_QUALITY "quality"
 #define PREF_TIMEOUT "timeout"
 #define PREF_PIPEWIRE_PROPS "pipewireProps"
@@ -61,8 +63,11 @@ ow_save_preferences (struct ow_preferences *prefs)
   json_builder_set_member_name (builder, PREF_SHOW_ALL_COLUMNS);
   json_builder_add_boolean_value (builder, prefs->show_all_columns);
 
-  json_builder_set_member_name (builder, PREF_BLOCKS);
-  json_builder_add_int_value (builder, prefs->blocks);
+  json_builder_set_member_name (builder, PREF_BLOCKS_OB1);
+  json_builder_add_int_value (builder, prefs->blocks_ob1);
+
+  json_builder_set_member_name (builder, PREF_BLOCKS_OB2);
+  json_builder_add_int_value (builder, prefs->blocks_ob2);
 
   json_builder_set_member_name (builder, PREF_TIMEOUT);
   json_builder_add_int_value (builder, prefs->timeout);
@@ -98,7 +103,8 @@ ow_load_preferences (struct ow_preferences *prefs)
   JsonParser *parser = json_parser_new ();
   gchar *preferences_file = get_expanded_dir (CONF_DIR PREF_FILE);
 
-  prefs->blocks = 24;
+  prefs->blocks_ob1 = OW1_DEFAULT_BLOCKS;
+  prefs->blocks_ob2 = OW2_DEFAULT_BLOCKS;
   prefs->quality = 2;
   prefs->timeout = 10;
   prefs->show_all_columns = FALSE;
@@ -124,9 +130,15 @@ ow_load_preferences (struct ow_preferences *prefs)
     }
   json_reader_end_member (reader);
 
-  if (json_reader_read_member (reader, PREF_BLOCKS))
+  if (json_reader_read_member (reader, PREF_BLOCKS_OB1))
     {
-      prefs->blocks = json_reader_get_int_value (reader);
+      prefs->blocks_ob1 = json_reader_get_int_value (reader);
+    }
+  json_reader_end_member (reader);
+
+  if (json_reader_read_member (reader, PREF_BLOCKS_OB2))
+    {
+      prefs->blocks_ob2 = json_reader_get_int_value (reader);
     }
   json_reader_end_member (reader);
 

@@ -108,7 +108,7 @@ ow_engine_print_blocks (struct ow_engine *engine, uint8_t *blks,
     {
       printf ("Block %d\n", i);
 
-      if (IS_DEVICE_TYPE_1 (engine))
+      if (IS_DEVICE_TYPE_1 (engine->device))
 	{
 	  struct ow_engine_usb_blk_ob1_out *blk =
 	    GET_NTH_USB_BLK (blks, blk_len, i);
@@ -135,7 +135,7 @@ ow_engine_print_blocks (struct ow_engine *engine, uint8_t *blks,
 
 	      if (track->size == 2)
 		{
-		  if (IS_DEVICE_TYPE_1 (engine))
+		  if (IS_DEVICE_TYPE_1 (engine->device))
 		    {
 		      dst = &((uint8_t *) & v)[2];
 		      memcpy (dst, s, track->size);
@@ -150,7 +150,7 @@ ow_engine_print_blocks (struct ow_engine *engine, uint8_t *blks,
 		}
 	      else if (track->size == 3)
 		{
-		  if (IS_DEVICE_TYPE_1 (engine)
+		  if (IS_DEVICE_TYPE_1 (engine->device)
 		      || engine->device->desc.type == OW_DEVICE_TYPE_3)
 		    {
 		      dst = &((uint8_t *) & v)[1];
@@ -166,7 +166,7 @@ ow_engine_print_blocks (struct ow_engine *engine, uint8_t *blks,
 		}
 	      else if (track->size == 4)
 		{
-		  if (IS_DEVICE_TYPE_1 (engine))
+		  if (IS_DEVICE_TYPE_1 (engine->device))
 		    {
 		      CU_ASSERT_FATAL (1);	//4 bytes only allowed on type 2 and 3
 		    }
@@ -202,6 +202,17 @@ test_get_frame_size_from_desc_tracks ()
 }
 
 static void
+test_ow_engine_set_blocks_per_transfer ()
+{
+  printf ("\n");
+
+  CU_ASSERT_EQUAL (ow_engine_set_blocks_per_transfer (0, 10, 20, 15), 15);
+  CU_ASSERT_EQUAL (ow_engine_set_blocks_per_transfer (9, 10, 20, 15), 15);
+  CU_ASSERT_EQUAL (ow_engine_set_blocks_per_transfer (21, 10, 20, 15), 15);
+  CU_ASSERT_EQUAL (ow_engine_set_blocks_per_transfer (12, 10, 20, 15), 12);
+}
+
+static void
 test_sizes_1 ()
 {
   struct ow_engine engine;
@@ -210,7 +221,7 @@ test_sizes_1 ()
 
   engine.device = malloc (sizeof (struct ow_device));
   ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_SIZE_1);
-  ow_engine_init_mem (&engine, OB1_BLOCKS_PER_TRANSFER, 0, 0);
+  ow_engine_init_mem (&engine, BLOCKS, 0, 0);
 
   size_t o2h_frame_size = 2 * 2;
   size_t h2o_frame_size = 2 * 2;
@@ -222,11 +233,9 @@ test_sizes_1 ()
   CU_ASSERT_EQUAL (engine.usb.audio_out_blk_size, 300);
 
   CU_ASSERT_EQUAL (engine.o2h_transfer_size,
-		   OB1_BLOCKS_PER_TRANSFER * OB1_FRAMES_PER_BLOCK * 2 *
-		   OW_BYTES_PER_SAMPLE);
+		   BLOCKS * OB1_FRAMES_PER_BLOCK * 2 * OW_BYTES_PER_SAMPLE);
   CU_ASSERT_EQUAL (engine.h2o_transfer_size,
-		   OB1_BLOCKS_PER_TRANSFER * OB1_FRAMES_PER_BLOCK * 2 *
-		   OW_BYTES_PER_SAMPLE);
+		   BLOCKS * OB1_FRAMES_PER_BLOCK * 2 * OW_BYTES_PER_SAMPLE);
 
   ow_engine_free_mem (&engine);
 }
@@ -289,7 +298,7 @@ test_usb_blocks_t1 (const struct ow_device_desc *device_desc, float max_error)
 		      usb_audio_out_blk_size);
 
   a = engine.h2o_transfer_buf;
-  for (int i = 0; i < OB1_BLOCKS_PER_TRANSFER; i++)
+  for (int i = 0; i < BLOCKS; i++)
     {
       for (int j = 0; j < OB1_FRAMES_PER_BLOCK; j++)
 	{
@@ -303,7 +312,7 @@ test_usb_blocks_t1 (const struct ow_device_desc *device_desc, float max_error)
 
   ow_engine_write_usb_output_blocks (&engine, 1);
 
-  for (int i = 0; i < OB1_BLOCKS_PER_TRANSFER; i++)
+  for (int i = 0; i < BLOCKS; i++)
     {
       struct ow_engine_usb_blk_ob1_out *blk =
 	GET_NTH_OUTPUT_USB_BLK (&engine, i);
@@ -315,7 +324,7 @@ test_usb_blocks_t1 (const struct ow_device_desc *device_desc, float max_error)
   ow_engine_print_blocks (&engine, engine.usb.xfr_audio_out_data,
 			  engine.usb.audio_out_blk_size);
 
-  for (int i = 0; i < OB1_BLOCKS_PER_TRANSFER; i++)
+  for (int i = 0; i < BLOCKS; i++)
     {
       struct ow_engine_usb_blk_ob1_out *out =
 	GET_NTH_OUTPUT_USB_BLK (&engine, i);
@@ -329,7 +338,7 @@ test_usb_blocks_t1 (const struct ow_device_desc *device_desc, float max_error)
 
   a = engine.h2o_transfer_buf;
   b = engine.o2h_transfer_buf;
-  for (int i = 0; i < OB1_BLOCKS_PER_TRANSFER; i++)
+  for (int i = 0; i < BLOCKS; i++)
     {
       for (int j = 0; j < OB1_FRAMES_PER_BLOCK; j++)
 	{
@@ -587,6 +596,12 @@ main (int argc, char *argv[])
 
   if (!CU_add_test (suite, "test_get_frame_size_from_desc_tracks",
 		    test_get_frame_size_from_desc_tracks))
+    {
+      goto cleanup;
+    }
+
+  if (!CU_add_test (suite, "test_ow_engine_set_blocks_per_transfer",
+		    test_ow_engine_set_blocks_per_transfer))
     {
       goto cleanup;
     }

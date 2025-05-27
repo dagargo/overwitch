@@ -25,9 +25,6 @@
 #define OW_XFR_TIMEOUT_MIN 0
 #define OW_XFR_TIMEOUT_MAX 25
 
-#define OW_BLOCKS_MIN 6
-#define OW_BLOCKS_MAX 32
-
 void
 print_help (const char *executable_path, const char *package_string,
 	    struct option *option, const char *fixed_params)
@@ -120,14 +117,10 @@ get_ow_blocks_per_transfer_argument (const char *optarg)
 
   errno = 0;
   blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
-  if (errno || endstr == optarg || *endstr != '\0' ||
-      blocks_per_transfer < OW_BLOCKS_MIN ||
-      blocks_per_transfer > OW_BLOCKS_MAX)
+  if (errno || endstr == optarg || *endstr != '\0')
     {
-      blocks_per_transfer = OW_DEFAULT_BLOCKS;
-      fprintf (stderr,
-	       "Blocks value must be in [%d..%d]. Using value %d...\n",
-	       OW_BLOCKS_MIN, OW_BLOCKS_MAX, blocks_per_transfer);
+      blocks_per_transfer = 0;
+      fprintf (stderr, "Invalid blocks per transfer. Using default...\n");
     }
   return blocks_per_transfer;
 }

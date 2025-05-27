@@ -215,7 +215,7 @@ main (int argc, char *argv[])
   ow_err_t ow_err;
   struct sigaction action;
   int device_num = -1;
-  unsigned int blocks_per_transfer = OW_DEFAULT_BLOCKS;
+  unsigned int blocks_per_transfer = 0;
   unsigned int xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
 
   action.sa_handler = signal_handler;
