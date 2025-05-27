@@ -32,21 +32,21 @@
 #include "engine.h"
 
 #define AUDIO_OUT_EP 0x03
-#define AUDIO_OUT_MK1_INTERFACE 1
-#define AUDIO_OUT_MK1_ALT_SETTING 3
-#define AUDIO_OUT_MK2_INTERFACE 2
-#define AUDIO_OUT_MK2_ALT_SETTING 3
+#define AUDIO_OUT_OB1_INTERFACE 1
+#define AUDIO_OUT_OB1_ALT_SETTING 2
+#define AUDIO_OUT_OB2_INTERFACE 2
+#define AUDIO_OUT_OB2_ALT_SETTING 3
 
 #define AUDIO_IN_EP  (AUDIO_OUT_EP | 0x80)
-#define AUDIO_IN_MK1_INTERFACE 0
-#define AUDIO_IN_MK1_ALT_SETTING 3
-#define AUDIO_IN_MK2_INTERFACE 1
-#define AUDIO_IN_MK2_ALT_SETTING 3
+#define AUDIO_IN_OB1_INTERFACE 0
+#define AUDIO_IN_OB1_ALT_SETTING 2
+#define AUDIO_IN_OB2_INTERFACE 1
+#define AUDIO_IN_OB2_ALT_SETTING 3
 
-#define CONTROL_MK1_INTERFACE 3
-#define CONTROL_MK2_INTERFACE 4
-#define MIDI_MK1_INTERFACE 4
-#define MIDI_MK2_INTERFACE 5
+#define CONTROL_OB1_INTERFACE 3
+#define CONTROL_OB2_INTERFACE 4
+#define MIDI_OB1_INTERFACE 4
+#define MIDI_OB2_INTERFACE 5
 
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
@@ -752,13 +752,8 @@ ow_engine_init_mem (struct ow_engine *engine,
 
   if (IS_DEVICE_TYPE_1 (engine->device))
     {
-      engine->usb.audio_in_blk_size =
-	sizeof (struct ow_engine_usb_blk_ob1_in) +
-	engine->frames_per_block * engine->o2h_frame_size;
-      engine->usb.audio_out_blk_size =
-	sizeof (struct ow_engine_usb_blk_ob1_out) +
-	engine->frames_per_block * engine->h2o_frame_size +
-	OB_MK1_OUTPUT_PACKET_PADDING;
+      engine->usb.audio_in_blk_size = usb_audio_in_blk_size_ep;
+      engine->usb.audio_out_blk_size = usb_audio_out_blk_size_ep;
     }
   else
     {
@@ -892,21 +887,21 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
 
   if (IS_DEVICE_TYPE_1 (engine->device))
     {
-      engine->usb.audio_in_interface = AUDIO_IN_MK1_INTERFACE;
-      engine->usb.audio_out_interface = AUDIO_OUT_MK1_INTERFACE;
-      audio_in_alt_setting = AUDIO_IN_MK1_ALT_SETTING;
-      audio_out_alt_setting = AUDIO_OUT_MK1_ALT_SETTING;
-      control_interface = CONTROL_MK1_INTERFACE;
-      midi_interface = MIDI_MK1_INTERFACE;
+      engine->usb.audio_in_interface = AUDIO_IN_OB1_INTERFACE;
+      engine->usb.audio_out_interface = AUDIO_OUT_OB1_INTERFACE;
+      audio_in_alt_setting = AUDIO_IN_OB1_ALT_SETTING;
+      audio_out_alt_setting = AUDIO_OUT_OB1_ALT_SETTING;
+      control_interface = CONTROL_OB1_INTERFACE;
+      midi_interface = MIDI_OB1_INTERFACE;
     }
   else
     {
-      engine->usb.audio_in_interface = AUDIO_IN_MK2_INTERFACE;
-      engine->usb.audio_out_interface = AUDIO_OUT_MK2_INTERFACE;
-      audio_in_alt_setting = AUDIO_IN_MK2_ALT_SETTING;
-      audio_out_alt_setting = AUDIO_OUT_MK2_ALT_SETTING;
-      control_interface = CONTROL_MK2_INTERFACE;
-      midi_interface = MIDI_MK2_INTERFACE;
+      engine->usb.audio_in_interface = AUDIO_IN_OB2_INTERFACE;
+      engine->usb.audio_out_interface = AUDIO_OUT_OB2_INTERFACE;
+      audio_in_alt_setting = AUDIO_IN_OB2_ALT_SETTING;
+      audio_out_alt_setting = AUDIO_OUT_OB2_ALT_SETTING;
+      control_interface = CONTROL_OB2_INTERFACE;
+      midi_interface = MIDI_OB2_INTERFACE;
     }
 
   libusb_detach_kernel_driver (engine->usb.device_handle, control_interface);
