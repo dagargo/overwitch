@@ -27,7 +27,7 @@
 
 #define DEFAULT_QUALITY 2
 
-static int blocks_per_transfer = OW_DEFAULT_BLOCKS;
+static int blocks_per_transfer = 0;
 static int quality = DEFAULT_QUALITY;
 static int priority = JCLIENT_DEFAULT_PRIORITY;
 static int xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
@@ -145,7 +145,8 @@ rename_device (int device_num, const char *device_name, uint8_t bus,
       return EXIT_FAILURE;
     }
 
-  err = ow_engine_init_from_device (&engine, device, OW_DEFAULT_BLOCKS,
+  //Any block value will work here provided that is a valid value for both OB1 and OB2 devices.
+  err = ow_engine_init_from_device (&engine, device, 5,
 				    OW_DEFAULT_XFR_TIMEOUT);
   if (err)
     {
