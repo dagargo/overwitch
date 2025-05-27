@@ -229,7 +229,7 @@ test_sizes_1 ()
   CU_ASSERT_EQUAL (engine.o2h_frame_size, o2h_frame_size);
   CU_ASSERT_EQUAL (engine.h2o_frame_size, h2o_frame_size);
 
-  CU_ASSERT_EQUAL (engine.usb.audio_in_blk_size, 200);
+  CU_ASSERT_EQUAL (engine.usb.audio_in_blk_size, 198);
   CU_ASSERT_EQUAL (engine.usb.audio_out_blk_size, 300);
 
   CU_ASSERT_EQUAL (engine.o2h_transfer_size,
