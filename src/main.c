@@ -152,9 +152,6 @@ set_widgets_to_running_state ()
   gtk_widget_set_tooltip_text (start_stop_button,
 			       devices > 0 ? _("Stop All Devices") :
 			       _("Start All Devices"));
-  gtk_widget_set_sensitive (GTK_WIDGET (blocks_spin_button), devices == 0);
-  gtk_widget_set_sensitive (GTK_WIDGET (timeout_spin_button), devices == 0);
-  gtk_widget_set_sensitive (GTK_WIDGET (quality_drop_down), devices == 0);
   gtk_widget_set_sensitive (start_stop_button, devices >= 0);
 }
 

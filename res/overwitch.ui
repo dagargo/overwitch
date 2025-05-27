@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<!-- Created with Cambalache 0.94.1 -->
+<!-- Created with Cambalache 0.96.1 -->
 <interface>
   <!-- interface-name overwitch.ui -->
   <requires lib="gio" version="2.44"/>
@@ -67,60 +67,6 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
         <property name="margin-top">6</property>
         <property name="orientation">vertical</property>
         <property name="spacing">6</property>
-        <child>
-          <object class="GtkBox">
-            <property name="spacing">6</property>
-            <child>
-              <object class="GtkLabel">
-                <property name="label" translatable="yes">Blocks per Transfer</property>
-                <property name="tooltip-text" translatable="yes">Overbridge Blocks (7 frames) per USB Transfer</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkSpinButton" id="blocks_spin_button">
-                <property name="adjustment">blocks_adjustment</property>
-                <property name="climb-rate">1</property>
-                <property name="focusable">1</property>
-                <property name="text">24</property>
-                <property name="value">24</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkSeparator"/>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="label" translatable="yes">Resampler Quality</property>
-                <property name="tooltip-text" translatable="yes">Resampler quality to balance out the CPU usage</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkDropDown" id="quality_drop_down">
-                <property name="model">quality_string_list</property>
-                <property name="selected">0</property>
-                <!-- Custom object fragments -->
-              </object>
-            </child>
-            <child>
-              <object class="GtkSeparator"/>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="label" translatable="yes">Transfer Timeout</property>
-                <property name="tooltip-text" translatable="yes">USB Transfer Timeout (ms)</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkSpinButton" id="timeout_spin_button">
-                <property name="adjustment">transfer_timeout_adjustment</property>
-                <property name="climb-rate">1</property>
-                <property name="focusable">1</property>
-                <property name="text">10</property>
-                <property name="value">10</property>
-              </object>
-            </child>
-          </object>
-        </child>
         <child>
           <object class="GtkViewport">
             <property name="child">
@@ -430,21 +376,99 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
         <property name="orientation">vertical</property>
         <property name="spacing">12</property>
         <child>
-          <object class="GtkBox">
-            <property name="margin-bottom">6</property>
-            <property name="spacing">6</property>
+          <object class="GtkGrid">
+            <property name="column-spacing">6</property>
+            <property name="row-spacing">6</property>
             <child>
               <object class="GtkLabel">
+                <property name="halign">end</property>
+                <property name="label" translatable="yes">Overbridge Blocks</property>
+                <property name="tooltip-text" translatable="yes">Overbridge Blocks (7 frames) per USB Transfer</property>
+                <layout>
+                  <property name="column">0</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="GtkSpinButton" id="blocks_spin_button">
+                <property name="adjustment">blocks_adjustment</property>
+                <property name="climb-rate">1</property>
+                <property name="halign">start</property>
+                <property name="text">24</property>
+                <property name="value">24</property>
+                <layout>
+                  <property name="column">1</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">end</property>
+                <property name="label" translatable="yes">Transfer Timeout</property>
+                <property name="tooltip-text" translatable="yes">USB Transfer Timeout (ms)</property>
+                <layout>
+                  <property name="column">0</property>
+                  <property name="row">1</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="GtkSpinButton" id="timeout_spin_button">
+                <property name="adjustment">transfer_timeout_adjustment</property>
+                <property name="climb-rate">1</property>
+                <property name="halign">start</property>
+                <property name="text">10</property>
+                <property name="value">10</property>
+                <layout>
+                  <property name="column">1</property>
+                  <property name="row">1</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">end</property>
+                <property name="label" translatable="yes">Resampler Quality</property>
+                <property name="tooltip-text" translatable="yes">Resampler quality to balance out the CPU usage</property>
+                <layout>
+                  <property name="column">0</property>
+                  <property name="row">2</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="GtkDropDown" id="quality_drop_down">
+                <property name="halign">start</property>
+                <property name="model">quality_string_list</property>
+                <property name="selected">0</property>
+                <layout>
+                  <property name="column">1</property>
+                  <property name="row">2</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">end</property>
                 <property name="label" translatable="yes">PipeWire Properties</property>
                 <property name="tooltip-text" translatable="yes">Value of the "PIPEWIRE_PROPS" environment variable</property>
+                <layout>
+                  <property name="column">0</property>
+                  <property name="row">3</property>
+                </layout>
               </object>
             </child>
             <child>
               <object class="GtkEntry" id="pipewire_props_dialog_entry">
                 <property name="activates-default">1</property>
-                <property name="focusable">1</property>
                 <property name="hexpand">1</property>
                 <property name="input-purpose">alpha</property>
+                <layout>
+                  <property name="column">1</property>
+                  <property name="row">3</property>
+                </layout>
               </object>
             </child>
           </object>
