@@ -54,6 +54,7 @@
 
 #define IS_ENGINE_TYPE_1(e) (e->device->desc.type == OW_DEVICE_TYPE_1)
 
+#define OB_MK1_INPUT_PACKET_PADDING 2
 #define OB_MK1_OUTPUT_PACKET_PADDING 4
 
 static void prepare_cycle_in_audio (struct ow_engine *engine);
@@ -730,9 +731,11 @@ ow_engine_init_mem (struct ow_engine *engine,
 
   if (IS_DEVICE_TYPE_1 (engine))
     {
+      //The OB_MK1_INPUT_PACKET_PADDING padding is in the data sent by the device but does NOT appear in the captured traffic.
       engine->usb.audio_in_blk_size =
 	sizeof (struct ow_engine_usb_blk_ob1_in) +
-	engine->frames_per_block * engine->o2h_frame_size;
+	engine->frames_per_block * engine->o2h_frame_size +
+	OB_MK1_INPUT_PACKET_PADDING;
       engine->usb.audio_out_blk_size =
 	sizeof (struct ow_engine_usb_blk_ob1_out) +
 	engine->frames_per_block * engine->h2o_frame_size +
