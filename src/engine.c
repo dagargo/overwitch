@@ -498,7 +498,7 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
       if (IS_DEVICE_TYPE_1 (engine->device))
 	{
 	  struct libusb_iso_packet_descriptor *packet = xfr->iso_packet_desc;
-	  for (int i = 0; i < xfr->num_iso_packets; i++)
+	  for (int i = 0; i < xfr->num_iso_packets; i++, packet++)
 	    {
 	      if (packet->status != LIBUSB_TRANSFER_COMPLETED)
 		{
@@ -554,7 +554,7 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
       if (IS_DEVICE_TYPE_1 (engine->device))
 	{
 	  struct libusb_iso_packet_descriptor *packet = xfr->iso_packet_desc;
-	  for (int i = 0; i < xfr->num_iso_packets; i++)
+	  for (int i = 0; i < xfr->num_iso_packets; i++, packet++)
 	    {
 	      if (packet->status != LIBUSB_TRANSFER_COMPLETED)
 		{
