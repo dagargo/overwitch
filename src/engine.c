@@ -823,6 +823,11 @@ ow_engine_init_mem (struct ow_engine *engine,
   memset (engine->usb.xfr_audio_out_data, 0,
 	  engine->usb.xfr_audio_out_data_size);
 
+  debug_print (2, "o2h: USB in transfer size: %d B",
+	       engine->usb.xfr_audio_in_data_size);
+  debug_print (2, "h2o: USB out transfer size: %d B",
+	       engine->usb.xfr_audio_out_data_size);
+
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
       if (IS_DEVICE_TYPE_1 (engine->device))
