@@ -49,7 +49,8 @@ static GtkWidget *preferences_window_cancel_button;
 static GtkWidget *preferences_window_save_button;
 static GtkWidget *pipewire_props_dialog_entry;
 static GtkWidget *start_stop_button;
-static GtkSpinButton *blocks_spin_button;
+static GtkSpinButton *blocks_ob1_spin_button;
+static GtkSpinButton *blocks_ob2_spin_button;
 static GtkSpinButton *timeout_spin_button;
 static GtkDropDown *quality_drop_down;
 static GtkColumnViewColumn *device_column;
@@ -119,7 +120,10 @@ save_preferences ()
   v = g_action_get_state (a);
   g_variant_get (v, "b", &prefs.show_all_columns);
 
-  prefs.blocks_ob2 = gtk_spin_button_get_value_as_int (blocks_spin_button);
+  prefs.blocks_ob1 =
+    gtk_spin_button_get_value_as_int (blocks_ob1_spin_button);
+  prefs.blocks_ob2 =
+    gtk_spin_button_get_value_as_int (blocks_ob2_spin_button);
   prefs.timeout = gtk_spin_button_get_value_as_int (timeout_spin_button);
   prefs.quality = gtk_drop_down_get_selected (quality_drop_down);
 
@@ -145,7 +149,8 @@ load_preferences ()
   v = g_variant_new_boolean (prefs.show_all_columns);
   g_action_change_state (a, v);
 
-  gtk_spin_button_set_value (blocks_spin_button, prefs.blocks_ob2);
+  gtk_spin_button_set_value (blocks_ob1_spin_button, prefs.blocks_ob1);
+  gtk_spin_button_set_value (blocks_ob2_spin_button, prefs.blocks_ob2);
   gtk_spin_button_set_value (timeout_spin_button, prefs.timeout);
   gtk_drop_down_set_selected (quality_drop_down, prefs.quality);
 
@@ -457,8 +462,12 @@ build_ui ()
       g_strfreev (lines);
     }
 
-  blocks_spin_button =
-    GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "blocks_spin_button"));
+  blocks_ob1_spin_button =
+    GTK_SPIN_BUTTON (gtk_builder_get_object
+		     (builder, "blocks_ob1_spin_button"));
+  blocks_ob2_spin_button =
+    GTK_SPIN_BUTTON (gtk_builder_get_object
+		     (builder, "blocks_ob2_spin_button"));
   timeout_spin_button =
     GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "timeout_spin_button"));
   quality_drop_down =
