@@ -220,7 +220,7 @@ test_sizes_1 ()
 
   engine.device = malloc (sizeof (struct ow_device));
   ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_SIZE_1);
-  ow_engine_init_mem (&engine, BLOCKS, 0, 0);
+  ow_engine_init_mem (&engine, BLOCKS, 202, 300);
 
   size_t o2h_frame_size = 2 * 2;
   size_t h2o_frame_size = 2 * 2;
@@ -228,8 +228,13 @@ test_sizes_1 ()
   CU_ASSERT_EQUAL (engine.o2h_frame_size, o2h_frame_size);
   CU_ASSERT_EQUAL (engine.h2o_frame_size, h2o_frame_size);
 
-  CU_ASSERT_EQUAL (engine.usb.audio_in_blk_size, 198);
+  CU_ASSERT_EQUAL (engine.usb.audio_in_blk_size, 202);
   CU_ASSERT_EQUAL (engine.usb.audio_out_blk_size, 300);
+
+  CU_ASSERT_EQUAL (engine.usb.xfr_audio_in_data_size,
+		   BLOCKS * engine.usb.audio_in_blk_size);
+  CU_ASSERT_EQUAL (engine.usb.xfr_audio_out_data_size,
+		   BLOCKS * engine.usb.audio_out_blk_size);
 
   CU_ASSERT_EQUAL (engine.o2h_transfer_size,
 		   BLOCKS * OB1_FRAMES_PER_BLOCK * 2 * OW_BYTES_PER_SAMPLE);
@@ -262,6 +267,11 @@ test_sizes_2 ()
   CU_ASSERT_EQUAL (engine.usb.audio_out_blk_size,
 		   sizeof (struct ow_engine_usb_blk_ob2) +
 		   OB2_FRAMES_PER_BLOCK * h2o_frame_size);
+
+  CU_ASSERT_EQUAL (engine.usb.xfr_audio_in_data_size,
+		   BLOCKS * engine.usb.audio_in_blk_size);
+  CU_ASSERT_EQUAL (engine.usb.xfr_audio_out_data_size,
+		   BLOCKS * engine.usb.audio_out_blk_size);
 
   CU_ASSERT_EQUAL (engine.o2h_transfer_size,
 		   BLOCKS * OB2_FRAMES_PER_BLOCK * 4 * OW_BYTES_PER_SAMPLE);
