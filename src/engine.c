@@ -954,19 +954,6 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
       goto end;
     }
 
-  err = libusb_clear_halt (engine->usb.device_handle, USB_AUDIO_IN_EP);
-  if (LIBUSB_SUCCESS != err)
-    {
-      ret = OW_USB_ERROR_CANT_CLEAR_EP;
-      goto end;
-    }
-  err = libusb_clear_halt (engine->usb.device_handle, USB_AUDIO_OUT_EP);
-  if (LIBUSB_SUCCESS != err)
-    {
-      ret = OW_USB_ERROR_CANT_CLEAR_EP;
-      goto end;
-    }
-
   libusb_attach_kernel_driver (engine->usb.device_handle, control_interface);
   libusb_attach_kernel_driver (engine->usb.device_handle, midi_interface);
 
@@ -992,6 +979,22 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   usb_audio_in_blk_size_ep = 0;
   usb_audio_out_blk_size_ep = 0;
 #endif
+
+  if (!IS_DEVICE_TYPE_1 (engine->device))
+    {
+      err = libusb_clear_halt (engine->usb.device_handle, USB_AUDIO_IN_EP);
+      if (LIBUSB_SUCCESS != err)
+	{
+	  ret = OW_USB_ERROR_CANT_CLEAR_EP;
+	  goto end;
+	}
+      err = libusb_clear_halt (engine->usb.device_handle, USB_AUDIO_OUT_EP);
+      if (LIBUSB_SUCCESS != err)
+	{
+	  ret = OW_USB_ERROR_CANT_CLEAR_EP;
+	  goto end;
+	}
+    }
 
   err = LIBUSB_SUCCESS;
   ret = ow_engine_init_mem (engine, blocks_per_transfer,
