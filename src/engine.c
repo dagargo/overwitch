@@ -108,6 +108,11 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print)
   uint8_t *s;
   float *f = engine->o2h_transfer_buf;
 
+  if (print)
+    {
+      fprintf (stderr, "O2H data:\n");
+    }
+
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
       if (IS_DEVICE_TYPE_1 (engine->device))
@@ -121,11 +126,6 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print)
 	  struct ow_engine_usb_blk_ob2 *blk =
 	    GET_NTH_INPUT_USB_BLK (engine, i);
 	  s = (uint8_t *) blk->data;
-	}
-
-      if (print && !i)
-	{
-	  fprintf (stderr, "O2H data:\n");
 	}
 
       for (int j = 0; j < engine->frames_per_block; j++)
@@ -239,6 +239,11 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
   uint8_t *s;
   float *f = engine->h2o_transfer_buf;
 
+  if (print)
+    {
+      fprintf (stderr, "H2O data:\n");
+    }
+
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
       if (IS_DEVICE_TYPE_1 (engine->device))
@@ -258,11 +263,6 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print)
 	  blk->frames = htobe16 (engine->usb.audio_frames_counter_ob2);
 	  engine->usb.audio_frames_counter_ob2 += engine->frames_per_block;
 	  s = (uint8_t *) blk->data;
-	}
-
-      if (print && !i)
-	{
-	  fprintf (stderr, "H2O data:\n");
 	}
 
       for (int j = 0; j < engine->frames_per_block; j++)
@@ -681,7 +681,7 @@ usb_shutdown (struct ow_engine *engine)
 }
 
 unsigned int
-ow_engine_set_blocks_per_transfer (unsigned int blocks_per_transfer,
+ow_engine_get_blocks_per_transfer (unsigned int blocks_per_transfer,
 				   unsigned int min, unsigned int max,
 				   unsigned int def)
 {
@@ -714,7 +714,7 @@ ow_engine_init_mem (struct ow_engine *engine,
   if (IS_DEVICE_TYPE_1 (engine->device))
     {
       engine->blocks_per_transfer =
-	ow_engine_set_blocks_per_transfer (blocks_per_transfer,
+	ow_engine_get_blocks_per_transfer (blocks_per_transfer,
 					   OW1_MIN_BLOCKS, OW1_MAX_BLOCKS,
 					   OW1_DEFAULT_BLOCKS);
       engine->frames_per_block = OB1_FRAMES_PER_BLOCK;
@@ -722,7 +722,7 @@ ow_engine_init_mem (struct ow_engine *engine,
   else
     {
       engine->blocks_per_transfer =
-	ow_engine_set_blocks_per_transfer (blocks_per_transfer,
+	ow_engine_get_blocks_per_transfer (blocks_per_transfer,
 					   OW2_MIN_BLOCKS, OW2_MAX_BLOCKS,
 					   OW2_DEFAULT_BLOCKS);
       engine->frames_per_block = OB2_FRAMES_PER_BLOCK;
