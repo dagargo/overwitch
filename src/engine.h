@@ -288,7 +288,7 @@ void ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print);
 
 void ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print);
 
-unsigned int ow_engine_set_blocks_per_transfer (unsigned int
+unsigned int ow_engine_get_blocks_per_transfer (unsigned int
 						blocks_per_transfer,
 						unsigned int min,
 						unsigned int max,
