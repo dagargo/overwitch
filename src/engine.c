@@ -31,28 +31,29 @@
 #include <unistd.h>
 #include "engine.h"
 
-#define AUDIO_OUT_EP 0x03
-#define AUDIO_OUT_OB1_INTERFACE 1
-#define AUDIO_OUT_OB1_ALT_SETTING 2
-#define AUDIO_OUT_OB2_INTERFACE 2
-#define AUDIO_OUT_OB2_ALT_SETTING 3
+#define USB_CONFIGURATION 1
 
-#define AUDIO_IN_EP  (AUDIO_OUT_EP | 0x80)
-#define AUDIO_IN_OB1_INTERFACE 0
-#define AUDIO_IN_OB1_ALT_SETTING 2
-#define AUDIO_IN_OB2_INTERFACE 1
-#define AUDIO_IN_OB2_ALT_SETTING 3
+#define USB_AUDIO_OUT_EP 0x03
+#define USB_AUDIO_OUT_OB1_INTERFACE 1
+#define USB_AUDIO_OUT_OB1_ALT_SETTING 2
+#define USB_AUDIO_OUT_OB2_INTERFACE 2
+#define USB_AUDIO_OUT_OB2_ALT_SETTING 3
 
-#define CONTROL_OB1_INTERFACE 3
-#define CONTROL_OB2_INTERFACE 4
-#define MIDI_OB1_INTERFACE 4
-#define MIDI_OB2_INTERFACE 5
+#define USB_AUDIO_IN_EP  (USB_AUDIO_OUT_EP | 0x80)
+#define USB_AUDIO_IN_OB1_INTERFACE 0
+#define USB_AUDIO_IN_OB1_ALT_SETTING 2
+#define USB_AUDIO_IN_OB2_INTERFACE 1
+#define USB_AUDIO_IN_OB2_ALT_SETTING 3
+
+#define USB_CONTROL_OB1_INTERFACE 3
+#define USB_CONTROL_OB2_INTERFACE 4
+
+#define USB_MIDI_OB1_INTERFACE 4
+#define USB_MIDI_OB2_INTERFACE 5
 
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
 #define INT32_TO_FLOAT32_SCALE ((float) (1.0f / INT32_MAX))
-
-#define OB_MK1_OUTPUT_PACKET_PADDING 4
 
 static void prepare_cycle_in_audio (struct ow_engine *engine);
 static void prepare_cycle_out_audio (struct ow_engine *engine);
@@ -606,7 +607,7 @@ prepare_cycle_out_audio (struct ow_engine *engine)
   if (IS_DEVICE_TYPE_1 (engine->device))
     {
       libusb_fill_iso_transfer (engine->usb.xfr_audio_out,
-				engine->usb.device_handle, AUDIO_OUT_EP,
+				engine->usb.device_handle, USB_AUDIO_OUT_EP,
 				engine->usb.xfr_audio_out_data,
 				engine->usb.xfr_audio_out_data_size,
 				engine->blocks_per_transfer,
@@ -618,7 +619,8 @@ prepare_cycle_out_audio (struct ow_engine *engine)
   else
     {
       libusb_fill_interrupt_transfer (engine->usb.xfr_audio_out,
-				      engine->usb.device_handle, AUDIO_OUT_EP,
+				      engine->usb.device_handle,
+				      USB_AUDIO_OUT_EP,
 				      engine->usb.xfr_audio_out_data,
 				      engine->usb.xfr_audio_out_data_size,
 				      cb_xfr_audio_out, engine,
@@ -640,7 +642,7 @@ prepare_cycle_in_audio (struct ow_engine *engine)
   if (IS_DEVICE_TYPE_1 (engine->device))
     {
       libusb_fill_iso_transfer (engine->usb.xfr_audio_in,
-				engine->usb.device_handle, AUDIO_IN_EP,
+				engine->usb.device_handle, USB_AUDIO_IN_EP,
 				engine->usb.xfr_audio_in_data,
 				engine->usb.xfr_audio_in_data_size,
 				engine->blocks_per_transfer,
@@ -652,7 +654,8 @@ prepare_cycle_in_audio (struct ow_engine *engine)
   else
     {
       libusb_fill_interrupt_transfer (engine->usb.xfr_audio_in,
-				      engine->usb.device_handle, AUDIO_IN_EP,
+				      engine->usb.device_handle,
+				      USB_AUDIO_IN_EP,
 				      engine->usb.xfr_audio_in_data,
 				      engine->usb.xfr_audio_in_data_size,
 				      cb_xfr_audio_in, engine,
@@ -892,27 +895,28 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
 
   if (IS_DEVICE_TYPE_1 (engine->device))
     {
-      engine->usb.audio_in_interface = AUDIO_IN_OB1_INTERFACE;
-      engine->usb.audio_out_interface = AUDIO_OUT_OB1_INTERFACE;
-      audio_in_alt_setting = AUDIO_IN_OB1_ALT_SETTING;
-      audio_out_alt_setting = AUDIO_OUT_OB1_ALT_SETTING;
-      control_interface = CONTROL_OB1_INTERFACE;
-      midi_interface = MIDI_OB1_INTERFACE;
+      engine->usb.audio_in_interface = USB_AUDIO_IN_OB1_INTERFACE;
+      engine->usb.audio_out_interface = USB_AUDIO_OUT_OB1_INTERFACE;
+      audio_in_alt_setting = USB_AUDIO_IN_OB1_ALT_SETTING;
+      audio_out_alt_setting = USB_AUDIO_OUT_OB1_ALT_SETTING;
+      control_interface = USB_CONTROL_OB1_INTERFACE;
+      midi_interface = USB_MIDI_OB1_INTERFACE;
     }
   else
     {
-      engine->usb.audio_in_interface = AUDIO_IN_OB2_INTERFACE;
-      engine->usb.audio_out_interface = AUDIO_OUT_OB2_INTERFACE;
-      audio_in_alt_setting = AUDIO_IN_OB2_ALT_SETTING;
-      audio_out_alt_setting = AUDIO_OUT_OB2_ALT_SETTING;
-      control_interface = CONTROL_OB2_INTERFACE;
-      midi_interface = MIDI_OB2_INTERFACE;
+      engine->usb.audio_in_interface = USB_AUDIO_IN_OB2_INTERFACE;
+      engine->usb.audio_out_interface = USB_AUDIO_OUT_OB2_INTERFACE;
+      audio_in_alt_setting = USB_AUDIO_IN_OB2_ALT_SETTING;
+      audio_out_alt_setting = USB_AUDIO_OUT_OB2_ALT_SETTING;
+      control_interface = USB_CONTROL_OB2_INTERFACE;
+      midi_interface = USB_MIDI_OB2_INTERFACE;
     }
 
   libusb_detach_kernel_driver (engine->usb.device_handle, control_interface);
   libusb_detach_kernel_driver (engine->usb.device_handle, midi_interface);
 
-  err = libusb_set_configuration (engine->usb.device_handle, 1);
+  err = libusb_set_configuration (engine->usb.device_handle,
+				  USB_CONFIGURATION);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_SET_USB_CONFIG;
@@ -950,13 +954,13 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
       goto end;
     }
 
-  err = libusb_clear_halt (engine->usb.device_handle, AUDIO_IN_EP);
+  err = libusb_clear_halt (engine->usb.device_handle, USB_AUDIO_IN_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLEAR_EP;
       goto end;
     }
-  err = libusb_clear_halt (engine->usb.device_handle, AUDIO_OUT_EP);
+  err = libusb_clear_halt (engine->usb.device_handle, USB_AUDIO_OUT_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLEAR_EP;
@@ -970,12 +974,12 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   usb_audio_in_blk_size_ep =
     libusb_get_max_alt_packet_size (engine->usb.device,
 				    engine->usb.audio_in_interface,
-				    audio_in_alt_setting, AUDIO_IN_EP);
+				    audio_in_alt_setting, USB_AUDIO_IN_EP);
 
   usb_audio_out_blk_size_ep =
     libusb_get_max_alt_packet_size (engine->usb.device,
 				    engine->usb.audio_out_interface,
-				    audio_out_alt_setting, AUDIO_OUT_EP);
+				    audio_out_alt_setting, USB_AUDIO_OUT_EP);
 #else
   if (IS_DEVICE_TYPE_1 (engine->device))
     {
