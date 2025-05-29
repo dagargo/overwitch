@@ -202,14 +202,14 @@ test_get_frame_size_from_desc_tracks ()
 }
 
 static void
-test_ow_engine_set_blocks_per_transfer ()
+test_ow_engine_get_blocks_per_transfer ()
 {
   printf ("\n");
 
-  CU_ASSERT_EQUAL (ow_engine_set_blocks_per_transfer (0, 10, 20, 15), 15);
-  CU_ASSERT_EQUAL (ow_engine_set_blocks_per_transfer (9, 10, 20, 15), 15);
-  CU_ASSERT_EQUAL (ow_engine_set_blocks_per_transfer (21, 10, 20, 15), 15);
-  CU_ASSERT_EQUAL (ow_engine_set_blocks_per_transfer (12, 10, 20, 15), 12);
+  CU_ASSERT_EQUAL (ow_engine_get_blocks_per_transfer (0, 10, 20, 15), 15);
+  CU_ASSERT_EQUAL (ow_engine_get_blocks_per_transfer (9, 10, 20, 15), 15);
+  CU_ASSERT_EQUAL (ow_engine_get_blocks_per_transfer (21, 10, 20, 15), 15);
+  CU_ASSERT_EQUAL (ow_engine_get_blocks_per_transfer (12, 10, 20, 15), 12);
 }
 
 static void
@@ -610,8 +610,8 @@ main (int argc, char *argv[])
       goto cleanup;
     }
 
-  if (!CU_add_test (suite, "test_ow_engine_set_blocks_per_transfer",
-		    test_ow_engine_set_blocks_per_transfer))
+  if (!CU_add_test (suite, "test_ow_engine_get_blocks_per_transfer",
+		    test_ow_engine_get_blocks_per_transfer))
     {
       goto cleanup;
     }
