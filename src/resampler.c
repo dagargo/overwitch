@@ -126,6 +126,8 @@ ow_resampler_set_state (struct ow_resampler *resampler)
 
   state->status = resampler->status;
 
+  state->target_delay = ow_resampler_get_target_delay_ms (resampler);
+
   pthread_spin_unlock (&resampler->lock);
 }
 

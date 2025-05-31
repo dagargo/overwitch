@@ -56,11 +56,11 @@ static GtkDropDown *quality_drop_down;
 static GtkColumnViewColumn *device_column;
 static GtkColumnViewColumn *bus_column;
 static GtkColumnViewColumn *address_column;
+static GtkColumnViewColumn *target_delay_column;
 static GtkColumnViewColumn *o2j_ratio_column;
 static GtkColumnViewColumn *j2o_ratio_column;
 static GListStore *status_list_store;
 static GtkLabel *jack_status_label;
-static GtkLabel *target_delay_label;
 
 static void control_service (const gchar * method);
 static gboolean refresh_state (gpointer data);
@@ -96,6 +96,7 @@ update_all_metrics (gboolean active)
   gtk_column_view_column_set_visible (address_column, active);
   gtk_column_view_column_set_visible (o2j_ratio_column, active);
   gtk_column_view_column_set_visible (j2o_ratio_column, active);
+  gtk_column_view_column_set_visible (target_delay_column, active);
 }
 
 static void
@@ -176,8 +177,7 @@ set_widgets_to_running_state ()
 }
 
 static void
-set_service_state (guint32 samplerate, guint32 buffer_size,
-		   gdouble target_delay_ms)
+set_service_state (guint32 samplerate, guint32 buffer_size)
 {
   static char msg[OW_LABEL_MAX_LEN];
   if (devices > 0)
@@ -185,15 +185,10 @@ set_service_state (guint32 samplerate, guint32 buffer_size,
       snprintf (msg, OW_LABEL_MAX_LEN, _("JACK at %.5g kHz, %u period"),
 		samplerate / 1000.f, buffer_size);
       gtk_label_set_text (jack_status_label, msg);
-
-      snprintf (msg, OW_LABEL_MAX_LEN, _("Target latency: %.1f ms"),
-		target_delay_ms);
-      gtk_label_set_text (target_delay_label, msg);
     }
   else
     {
       gtk_label_set_text (jack_status_label, "");
-      gtk_label_set_text (target_delay_label, "");
     }
 }
 
@@ -262,7 +257,6 @@ set_state (const gchar *state)
   OverwitchDevice *device;
   guint udevices;
   guint32 samplerate, buffer_size;
-  double target_delay_ms;
 
   JsonReader *reader = message_state_reader_start (state, &udevices);
   if (reader == NULL)
@@ -284,10 +278,9 @@ set_state (const gchar *state)
 	}
     }
 
-  message_state_reader_end (reader, &samplerate, &buffer_size,
-			    &target_delay_ms);
+  message_state_reader_end (reader, &samplerate, &buffer_size);
 
-  set_service_state (samplerate, buffer_size, target_delay_ms);
+  set_service_state (samplerate, buffer_size);
 }
 
 static gboolean
@@ -493,11 +486,12 @@ build_ui ()
   j2o_ratio_column =
     GTK_COLUMN_VIEW_COLUMN (gtk_builder_get_object
 			    (builder, "j2o_ratio_column"));
+  target_delay_column =
+    GTK_COLUMN_VIEW_COLUMN (gtk_builder_get_object
+			    (builder, "target_delay_column"));
 
   jack_status_label =
     GTK_LABEL (gtk_builder_get_object (builder, "jack_status_label"));
-  target_delay_label =
-    GTK_LABEL (gtk_builder_get_object (builder, "target_delay_label"));
 
   g_signal_connect (main_window, "close-request",
 		    G_CALLBACK (delete_main_window), NULL);
