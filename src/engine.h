@@ -193,7 +193,7 @@
 
 #define OB2_PADDING_LEN 28
 
-#define OB1_OUT_PADDING_LEN 98
+#define OB1_OUT_PADDING_LEN 102
 
 #define OB_NAME_MAX_LEN 32
 
