@@ -65,6 +65,8 @@ static GtkColumnViewColumn *j2o_ratio_column;
 static GListStore *status_list_store;
 static GtkLabel *jack_status_label;
 
+static void control_service (const gchar * method);
+
 static gboolean
 overwitch_increment_debug_level (const gchar *option_name,
 				 const gchar *value,
@@ -208,6 +210,10 @@ click_save_preferences (GtkButton *self, gpointer data)
 
   g_free (pipewire_props);
   pipewire_props = strdup (props ? props : "");
+
+  save_preferences ();
+
+  control_service ("Start");	//Stop, reload and start
 }
 
 static void
@@ -221,7 +227,6 @@ app_exit ()
 {
   debug_print (1, "Exiting Overwitch...");
 
-  save_preferences ();
   g_free (pipewire_props);
   gtk_window_destroy (GTK_WINDOW (main_window));
 }
