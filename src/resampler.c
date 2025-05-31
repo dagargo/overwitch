@@ -102,6 +102,8 @@ ow_resampler_get_state (struct ow_resampler *resampler,
   state->ratio_h2o = resampler->h2o_ratio;
 
   state->status = ow_resampler_get_status (resampler);
+
+  state->target_delay = ow_resampler_get_target_delay_ms (resampler);
 }
 
 static inline void
