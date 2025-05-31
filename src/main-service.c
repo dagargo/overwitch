@@ -71,7 +71,7 @@ static const gchar introspection_xml[] =
   "      <arg type='u' name='id' direction='in'/>"
   "      <arg type='s' name='name' direction='in'/>"
   "      <arg type='i' name='error' direction='out'/>"
-  "    </method>" "  </interface>" "</node>";
+  "    </method>" "</interface>" "</node>";
 
 static void startup ();
 static void handle_stop ();
@@ -391,19 +391,16 @@ handle_get_state ()
 
   guint32 bufsize = 0;
   guint32 samplerate = 0;
-  gdouble target_delay_ms = 0;
 
   if (resampler)
     {
       samplerate = ow_resampler_get_samplerate (resampler);
       bufsize = ow_resampler_get_buffer_size (resampler);
-      target_delay_ms = ow_resampler_get_target_delay_ms (resampler);
     }
 
   pthread_spin_unlock (&lock);
 
-  return message_state_builder_end (builder, samplerate, bufsize,
-				    target_delay_ms);
+  return message_state_builder_end (builder, samplerate, bufsize);
 }
 
 static gint
