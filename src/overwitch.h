@@ -195,6 +195,7 @@ struct ow_resampler_state
   double latency_h2o_max;
   double ratio_o2h;
   double ratio_h2o;
+  double target_delay;
 };
 
 typedef void (*ow_hotplug_callback_t) (struct ow_device * device);
