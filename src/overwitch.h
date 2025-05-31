@@ -183,6 +183,7 @@ struct ow_resampler_state
   ow_resampler_status_t status;
   double ratio_o2h;
   double ratio_h2o;
+  double target_delay;
   //Time latency members
   double t_latency_o2h;
   double t_latency_o2h_min;

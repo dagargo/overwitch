@@ -91,7 +91,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
   <template class="GtkListItem">
     <property name="child">
       <object class="GtkLabel">
-        <property name="hexpand">TRUE</property>
+        <property name="hexpand">True</property>
         <property name="xalign">0</property>
         <binding name="label">
           <lookup name="device" type="OverwitchDevice">
@@ -142,7 +142,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
   <template class="GtkListItem">
     <property name="child">
       <object class="GtkLabel">
-        <property name="hexpand">TRUE</property>
+        <property name="hexpand">True</property>
         <property name="xalign">0</property>
         <binding name="label">
           <lookup name="status" type="OverwitchDevice">
@@ -168,7 +168,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
   <template class="GtkListItem">
     <property name="child">
       <object class="GtkLabel">
-        <property name="hexpand">TRUE</property>
+        <property name="hexpand">True</property>
         <property name="xalign">0</property>
         <binding name="label">
           <lookup name="bus" type="OverwitchDevice">
@@ -194,7 +194,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
   <template class="GtkListItem">
     <property name="child">
       <object class="GtkLabel">
-        <property name="hexpand">TRUE</property>
+        <property name="hexpand">True</property>
         <property name="xalign">0</property>
         <binding name="label">
           <lookup name="address" type="OverwitchDevice">
@@ -211,6 +211,29 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                   </object>
                 </child>
                 <child>
+                  <object class="GtkColumnViewColumn" id="target_delay_column">
+                    <property name="factory">
+                      <object class="GtkBuilderListItemFactory">
+                        <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkLabel">
+        <binding name="label">
+          <lookup name="target_delay" type="OverwitchDevice">
+            <lookup name="item">GtkListItem</lookup>
+          </lookup>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
+                      </object>
+                    </property>
+                    <property name="title" translatable="yes">Target Delay</property>
+                  </object>
+                </child>
+                <child>
                   <object class="GtkColumnViewColumn">
                     <property name="expand">True</property>
                     <property name="factory">
@@ -220,7 +243,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
   <template class="GtkListItem">
     <property name="child">
       <object class="GtkLabel">
-        <property name="hexpand">TRUE</property>
+        <property name="hexpand">True</property>
         <property name="xalign">0</property>
         <binding name="label">
           <lookup name="o2j_latency" type="OverwitchDevice">
@@ -246,7 +269,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
   <template class="GtkListItem">
     <property name="child">
       <object class="GtkLabel">
-        <property name="hexpand">TRUE</property>
+        <property name="hexpand">True</property>
         <property name="xalign">0</property>
         <binding name="label">
           <lookup name="j2o_latency" type="OverwitchDevice">
@@ -272,7 +295,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
   <template class="GtkListItem">
     <property name="child">
       <object class="GtkLabel">
-        <property name="hexpand">TRUE</property>
+        <property name="hexpand">True</property>
         <property name="xalign">0</property>
         <binding name="label">
           <lookup name="o2j_ratio" type="OverwitchDevice">
@@ -298,7 +321,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
   <template class="GtkListItem">
     <property name="child">
       <object class="GtkLabel">
-        <property name="hexpand">TRUE</property>
+        <property name="hexpand">True</property>
         <property name="xalign">0</property>
         <binding name="label">
           <lookup name="j2o_ratio" type="OverwitchDevice">

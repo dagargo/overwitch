@@ -34,6 +34,7 @@ enum list_store_columns
   PROP_J2O_LATENCY,
   PROP_O2J_RATIO,
   PROP_J2O_RATIO,
+  PROP_TARGET_DELAY,
   N_PROPERTIES
 };
 
@@ -87,6 +88,10 @@ overwitch_device_set_property (GObject *object, guint prop_id,
       d->j2o_ratio = g_value_get_double (value);
       break;
 
+    case PROP_TARGET_DELAY:
+      d->target_delay = g_value_get_double (value);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -135,6 +140,10 @@ overwitch_device_get_property (GObject *object, guint prop_id,
 
     case PROP_J2O_RATIO:
       g_value_set_double (value, d->j2o_ratio);
+      break;
+
+    case PROP_TARGET_DELAY:
+      g_value_set_double (value, d->target_delay);
       break;
 
     default:
@@ -190,6 +199,10 @@ overwitch_device_class_init (OverwitchDeviceClass *klass)
     g_param_spec_double ("j2o_ratio", "J2O ratio", "JACK to Overwitch ratio.",
 			 0, 32, 1, G_PARAM_READWRITE);
 
+  obj_properties[PROP_TARGET_DELAY] =
+    g_param_spec_double ("target_delay", "Target Delay",
+			 "Target Delay.", 0, 32, 1, G_PARAM_READWRITE);
+
   g_object_class_install_properties (object_class, N_PROPERTIES,
 				     obj_properties);
 }
@@ -198,9 +211,9 @@ OverwitchDevice *
 overwitch_device_new (const guint32 id, const gchar *name,
 		      const gchar *device, const guint8 bus,
 		      const guint8 address, const gchar *status,
-		      const gchar *o2j_latency,
-		      const gchar *j2o_latency,
-		      const gdouble o2j_ratio, const gdouble j2o_ratio)
+		      const gchar *o2j_latency, const gchar *j2o_latency,
+		      const gdouble o2j_ratio, const gdouble j2o_ratio,
+		      const gdouble target_delay)
 {
   OverwitchDevice *d = g_object_new (OVERWITCH_TYPE_DEVICE, NULL);
   d->id = id;
@@ -213,5 +226,6 @@ overwitch_device_new (const guint32 id, const gchar *name,
   g_snprintf (d->j2o_latency, OW_LABEL_MAX_LEN, "%s", j2o_latency);
   d->o2j_ratio = o2j_ratio;
   d->j2o_ratio = j2o_ratio;
+  d->target_delay = target_delay;
   return d;
 }

@@ -538,7 +538,6 @@ test_state_parser ()
   guint devices;
   OverwitchDevice *device;
   guint32 samplerate, buffer_size;
-  double target_delay_ms;
   JsonReader *reader;
   JsonBuilder *builder;
   struct ow_engine engine;
@@ -563,7 +562,7 @@ test_state_parser ()
 				    &state);
   message_state_builder_add_device (builder, 1, "name 2", engine.device,
 				    &state);
-  message = message_state_builder_end (builder, 1, 2, 3);
+  message = message_state_builder_end (builder, 1, 2);
 
 
   reader = message_state_reader_start (message, &devices);
@@ -576,12 +575,10 @@ test_state_parser ()
       g_object_unref (device);
     }
 
-  message_state_reader_end (reader, &samplerate, &buffer_size,
-			    &target_delay_ms);
+  message_state_reader_end (reader, &samplerate, &buffer_size);
 
   CU_ASSERT_EQUAL (samplerate, 1);
   CU_ASSERT_EQUAL (buffer_size, 2);
-  CU_ASSERT_EQUAL (target_delay_ms, 3);
 
   free (message);
   free (engine.device);

@@ -33,8 +33,7 @@ void message_state_builder_add_device (JsonBuilder * builder, guint32 id,
 				       struct ow_resampler_state *state);
 
 gchar *message_state_builder_end (JsonBuilder * builder, guint32 samplerate,
-				  guint32 buffer_size,
-				  gdouble target_delay_ms);
+				  guint32 buffer_size);
 
 JsonReader *message_state_reader_start (const gchar * state,
 					guint32 * devices);
@@ -43,5 +42,4 @@ OverwitchDevice *message_state_reader_get_device (JsonReader * reader,
 						  guint index);
 
 void message_state_reader_end (JsonReader * reader, guint32 * samplerate,
-			       guint32 * buffer_size,
-			       gdouble * target_delay_ms);
+			       guint32 * buffer_size);
