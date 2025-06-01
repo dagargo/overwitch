@@ -182,6 +182,7 @@ message_state_reader_get_device (JsonReader *reader, guint index)
   struct ow_resampler_state state;
   static gchar o2h_latency[OW_LABEL_MAX_LEN];
   static gchar h2o_latency[OW_LABEL_MAX_LEN];
+  static gchar target_delay[OW_LABEL_MAX_LEN];
   const gchar *name, *device_name;
 
   state.latency_o2h = 0;
@@ -348,7 +349,7 @@ message_state_reader_get_device (JsonReader *reader, guint index)
   if (state.latency_o2h >= 0)
     {
       g_snprintf (o2h_latency, OW_LABEL_MAX_LEN,
-		  "%.1f [%.1f, %.1f] ms", state.latency_o2h,
+		  "%.1f [%.1f, %.1f]", state.latency_o2h,
 		  state.latency_o2h_min, state.latency_o2h_max);
     }
   else
@@ -359,7 +360,7 @@ message_state_reader_get_device (JsonReader *reader, guint index)
   if (state.latency_h2o >= 0)
     {
       g_snprintf (h2o_latency, OW_LABEL_MAX_LEN,
-		  "%.1f [%.1f, %.1f] ms", state.latency_h2o,
+		  "%.1f [%.1f, %.1f]", state.latency_h2o,
 		  state.latency_h2o_min, state.latency_h2o_max);
     }
   else
@@ -367,11 +368,13 @@ message_state_reader_get_device (JsonReader *reader, guint index)
       h2o_latency[0] = '\0';
     }
 
+  g_snprintf (target_delay, OW_LABEL_MAX_LEN, "%.1f", state.target_delay);
+
   device = overwitch_device_new (id, name, device_name, bus, address,
 				 get_status_string (state.status),
 				 o2h_latency, h2o_latency,
 				 state.ratio_o2h, state.ratio_h2o,
-				 state.target_delay);
+				 target_delay);
 
 end:
   json_reader_end_element (reader);
