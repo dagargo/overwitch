@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2025-06-01 09:38+0200\n"
+"POT-Creation-Date: 2025-06-01 10:52+0200\n"
 "PO-Revision-Date: 2022-09-21 19:06+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: Spanish\n"
@@ -66,7 +66,7 @@ msgstr "Reajustando"
 msgid "Show All Columns"
 msgstr "Mostrar todas las columnas"
 
-#: res/overwitch.ui:17 res/overwitch.ui:552
+#: res/overwitch.ui:17 res/overwitch.ui:553
 msgid "Preferences"
 msgstr "Preferencias"
 
@@ -106,90 +106,90 @@ msgstr "Bus"
 msgid "Address"
 msgstr "Dirección"
 
-#: res/overwitch.ui:233
-msgid "Target Delay"
-msgstr "Retraso objetivo"
+#: res/overwitch.ui:236
+msgid "Overbridge to JACK latency (ms)"
+msgstr "Latencia de Overbridge a JACK (ms)"
 
-#: res/overwitch.ui:260
-msgid "Overbridge to JACK latency"
-msgstr "Latencia de Overbridge a JACK"
+#: res/overwitch.ui:262
+msgid "JACK to Overbridge latency (ms)"
+msgstr "Latencia de JACK a Overbridge (ms)"
 
-#: res/overwitch.ui:286
-msgid "JACK to Overbridge latency"
-msgstr "Latencia de JACK a Overbridge"
+#: res/overwitch.ui:287
+msgid "Target Delay (ms)"
+msgstr "Retraso objetivo (ms)"
 
-#: res/overwitch.ui:312
+#: res/overwitch.ui:313
 msgid "Overbridge to JACK ratio"
 msgstr "Ratio entre Overbridge y JACK"
 
-#: res/overwitch.ui:338
+#: res/overwitch.ui:339
 msgid "JACK to Overbridge ratio"
 msgstr "Ratio entre JACK y Overbridge"
 
-#: res/overwitch.ui:409
+#: res/overwitch.ui:410
 msgid "Overbridge 1 Blocks"
 msgstr "Bloques en Overbridge 1"
 
-#: res/overwitch.ui:410
+#: res/overwitch.ui:411
 msgid "Overbridge 1 Blocks (48 frames) per USB Transfer"
 msgstr "Bloques en Overbridge 1 (48 muestras) por transferencia USB"
 
-#: res/overwitch.ui:434
+#: res/overwitch.ui:435
 msgid "Overbridge 2 Blocks"
 msgstr "Bloques en Overbridge 2"
 
-#: res/overwitch.ui:435
+#: res/overwitch.ui:436
 msgid "Overbridge 2 Blocks (7 frames) per USB Transfer"
 msgstr "Bloques en Overbridge 2 (7 muestras) por transferencia USB"
 
-#: res/overwitch.ui:458
+#: res/overwitch.ui:459
 msgid "Transfer Timeout"
 msgstr "Tiempo de expiración"
 
-#: res/overwitch.ui:459
+#: res/overwitch.ui:460
 msgid "USB Transfer Timeout (ms)"
 msgstr "Tiempo de expiración de la transferencia USB (ms)"
 
-#: res/overwitch.ui:482
+#: res/overwitch.ui:483
 msgid "Resampler Quality"
 msgstr "Calidad de remuestreo"
 
-#: res/overwitch.ui:483
+#: res/overwitch.ui:484
 msgid "Resampler quality to balance out the CPU usage"
 msgstr "Calidad de remuestreo para equilibrar el uso de CPU"
 
-#: res/overwitch.ui:504
+#: res/overwitch.ui:505
 msgid "PipeWire Properties"
 msgstr "Propiedades de PipeWire"
 
-#: res/overwitch.ui:505
+#: res/overwitch.ui:506
 msgid "Value of the \"PIPEWIRE_PROPS\" environment variable"
 msgstr "Valor de la variable de entorno «PIPEWIRE_PROPS»"
 
-#: res/overwitch.ui:532
+#: res/overwitch.ui:533
 msgid "_Cancel"
 msgstr "Cancelar"
 
-#: res/overwitch.ui:540
+#: res/overwitch.ui:541
 msgid "_Save"
 msgstr "Guardar"
 
-#: res/overwitch.ui:557
+#: res/overwitch.ui:558
 msgid "Highest"
 msgstr "Máxima"
 
-#: res/overwitch.ui:558
+#: res/overwitch.ui:559
 msgid "High"
 msgstr "Alta"
 
-#: res/overwitch.ui:559
+#: res/overwitch.ui:560
 msgid "Medium"
 msgstr "Media"
 
-#: res/overwitch.ui:560
+#: res/overwitch.ui:561
 msgid "Low"
 msgstr "Baja"
 
-#: res/overwitch.ui:561
+#: res/overwitch.ui:562
 msgid "Lowest"
 msgstr "Mínima"
