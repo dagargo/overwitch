@@ -53,14 +53,6 @@ overwitch_device_dispose (GObject *gobject)
 static void
 overwitch_device_finalize (GObject *gobject)
 {
-  OverwitchDevice *d = OVERWITCH_DEVICE (gobject);
-
-  g_free (d->name);
-  g_free (d->status);
-  g_free (d->device);
-  g_free (d->o2j_latency);
-  g_free (d->j2o_latency);
-
   G_OBJECT_CLASS (overwitch_device_parent_class)->finalize (gobject);
 }
 
@@ -73,15 +65,18 @@ overwitch_device_set_property (GObject *object, guint prop_id,
   switch (prop_id)
     {
     case PROP_STATUS:
-      d->status = g_strdup (g_value_get_string (value));
+      g_snprintf (d->status, OW_LABEL_MAX_LEN, "%s",
+		  g_value_get_string (value));
       break;
 
     case PROP_O2J_LATENCY:
-      d->o2j_latency = g_strdup (g_value_get_string (value));
+      g_snprintf (d->o2j_latency, OW_LABEL_MAX_LEN, "%s",
+		  g_value_get_string (value));
       break;
 
     case PROP_J2O_LATENCY:
-      d->j2o_latency = g_strdup (g_value_get_string (value));
+      g_snprintf (d->j2o_latency, OW_LABEL_MAX_LEN, "%s",
+		  g_value_get_string (value));
       break;
 
     case PROP_O2J_RATIO:
@@ -209,13 +204,13 @@ overwitch_device_new (const guint32 id, const gchar *name,
 {
   OverwitchDevice *d = g_object_new (OVERWITCH_TYPE_DEVICE, NULL);
   d->id = id;
-  d->name = g_strdup (name);
-  d->device = g_strdup (device);
+  g_snprintf (d->name, OW_LABEL_MAX_LEN, "%s", name);
+  g_snprintf (d->device, OW_LABEL_MAX_LEN, "%s", device);
   d->bus = bus;
   d->address = address;
-  d->status = g_strdup (status);
-  d->o2j_latency = g_strdup (o2j_latency);
-  d->j2o_latency = g_strdup (j2o_latency);
+  g_snprintf (d->status, OW_LABEL_MAX_LEN, "%s", status);
+  g_snprintf (d->o2j_latency, OW_LABEL_MAX_LEN, "%s", o2j_latency);
+  g_snprintf (d->j2o_latency, OW_LABEL_MAX_LEN, "%s", j2o_latency);
   d->o2j_ratio = o2j_ratio;
   d->j2o_ratio = j2o_ratio;
   return d;

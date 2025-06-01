@@ -21,6 +21,7 @@
 #pragma once
 
 #include <glib-object.h>
+#include "overwitch.h"
 
 G_BEGIN_DECLS
 #define OVERWITCH_TYPE_DEVICE (overwitch_device_get_type())
@@ -32,13 +33,13 @@ struct _OverwitchDevice
   GObject parent_instance;
   //Properties
   guint32 id;
-  gchar *name;
-  gchar *device;
+  gchar name[OW_LABEL_MAX_LEN];
+  gchar device[OW_LABEL_MAX_LEN];
   guint8 bus;
   guint8 address;
-  gchar *status;
-  gchar *o2j_latency;
-  gchar *j2o_latency;
+  gchar status[OW_LABEL_MAX_LEN];
+  gchar o2j_latency[OW_LABEL_MAX_LEN];
+  gchar j2o_latency[OW_LABEL_MAX_LEN];
   gdouble o2j_ratio;
   gdouble j2o_ratio;
 };
