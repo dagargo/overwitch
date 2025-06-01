@@ -42,7 +42,7 @@ struct _OverwitchDevice
   gchar j2o_latency[OW_LABEL_MAX_LEN];
   gdouble o2j_ratio;
   gdouble j2o_ratio;
-  gdouble target_delay;
+  gchar target_delay[OW_LABEL_MAX_LEN];
 };
 
 struct _OverwitchDeviceClass
@@ -59,6 +59,6 @@ OverwitchDevice *overwitch_device_new (const guint32 id,
 				       const gchar * j2o_latency,
 				       const gdouble o2j_ratio,
 				       const gdouble j2o_ratio,
-				       const gdouble target_delay);
+				       const gchar * target_delay);
 
 G_END_DECLS
