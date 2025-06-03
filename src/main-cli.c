@@ -55,13 +55,14 @@ static struct option options[] = {
 static void
 signal_handler (int signum)
 {
+  int r;
+
   switch (signum)
     {
     case SIGHUP:
     case SIGINT:
     case SIGTERM:
     case SIGTSTP:
-      int r;
       pthread_spin_lock (&lock);
       stop = 1;
       r = running;
