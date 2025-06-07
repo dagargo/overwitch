@@ -27,7 +27,8 @@
 #include "utils.h"
 #include "common.h"
 
-#define TRACK_BUF_KB 256
+#define KIBI 1024
+#define DEF_DISK_BUF_KB 512
 #define MAX_FILENAME_LEN 128
 #define MAX_TIME_LEN 32
 #define REC_FRAMES_PER_BLOCK MAX(OB1_FRAMES_PER_BLOCK, OB2_FRAMES_PER_BLOCK)
@@ -38,7 +39,7 @@ static SF_INFO sfinfo;
 static SNDFILE *sf;
 static const struct ow_device_desc *desc;
 static const char *track_mask;
-static size_t track_buf_size_kb = TRACK_BUF_KB;
+static size_t disk_buf_size = DEF_DISK_BUF_KB * KIBI;
 static float max[OB_MAX_TRACKS];
 static float min[OB_MAX_TRACKS];
 static char filename[MAX_FILENAME_LEN];
@@ -54,8 +55,9 @@ static struct
 {
   char *mem;
   char *disk;
-  size_t len;
+  size_t size;
   pthread_t pthread;
+  size_t pos;
   size_t disk_samples;
   size_t disk_frames;
   pthread_spinlock_t lock;
@@ -69,7 +71,7 @@ static struct option options[] = {
   {"use-device", 1, NULL, 'd'},
   {"bus-device-address", 1, NULL, 'a'},
   {"track-mask", 1, NULL, 'm'},
-  {"track-buffer-size-kilobytes", 1, NULL, 's'},
+  {"disk-buffer-size-kilobytes", 1, NULL, 's'},
   {"blocks-per-transfer", 1, NULL, 'b'},
   {"usb-transfer-timeout", 1, NULL, 't'},
   {"list-devices", 0, NULL, 'l'},
@@ -85,45 +87,46 @@ print_status ()
 }
 
 static size_t
-buffer_dummy_rw_space (void *data)
+buffer_read_space (void *data)
 {
-  //Any block value will work here provided that is a reasonable value for both OB1 and OB2 devices.
-  return 12 * REC_FRAMES_PER_BLOCK * OB_MAX_TRACKS * OW_BYTES_PER_SAMPLE;
+  return buffer.pos;		//There is always space
 }
 
-static buffer_status_t
-get_buffer_status ()
+static size_t
+buffer_write_space (void *data)
 {
-  buffer_status_t status;
-
-  pthread_spin_lock (&buffer.lock);
-  status = buffer.status;
-  pthread_spin_unlock (&buffer.lock);
-
-  return status;
+  return buffer.size;		//There is always space
 }
 
 static void *
 dump_buffer (void *data)
 {
-  buffer_status_t status = get_buffer_status ();
-  while (status >= EMPTY)
+  while (1)
     {
+      buffer_status_t status;
+
+      pthread_spin_lock (&buffer.lock);
+      status = buffer.status;
+      pthread_spin_unlock (&buffer.lock);
+
       if (status == READY)
 	{
 	  pthread_spin_lock (&buffer.lock);
 	  debug_print (2, "Writing %ld frames to disk...",
 		       buffer.disk_frames);
+	  sfinfo.frames += buffer.disk_frames;
 	  sf_write_float (sf, (float *) buffer.disk, buffer.disk_samples);
 	  debug_print (2, "Done");
 
 	  buffer.status = EMPTY;
 	  pthread_spin_unlock (&buffer.lock);
 	}
+      else if (status == END)
+	{
+	  break;
+	}
 
       usleep (100);
-
-      status = get_buffer_status ();
     }
   return NULL;
 }
@@ -132,28 +135,30 @@ static size_t
 buffer_write (void *data, const char *buf, size_t size)
 {
   static int print_control = 0;
-  static size_t pos = 0;
   size_t new_pos;
   void *dst;
   size_t frames = size / (desc->outputs * OW_BYTES_PER_SAMPLE);
 
   debug_print (2, "Writing %ld bytes (%ld frames) to buffer...", size,
 	       frames);
-  new_pos = pos + frames * buffer.outputs * OW_BYTES_PER_SAMPLE;
-  if (new_pos >= buffer.len)
+  new_pos = buffer.pos + frames * buffer.outputs * OW_BYTES_PER_SAMPLE;
+  if (new_pos >= buffer.size)
     {
       pthread_spin_lock (&buffer.lock);
+      if (buffer.status == READY)
+	{
+	  error_print ("Buffer overflow");
+	}
       buffer.status = READY;
-      buffer.disk_samples = pos / OW_BYTES_PER_SAMPLE;
+      buffer.disk_samples = buffer.pos / OW_BYTES_PER_SAMPLE;
       buffer.disk_frames = buffer.disk_samples / buffer.outputs;
       memcpy (buffer.disk, buffer.mem,
 	      buffer.disk_frames * buffer.outputs * OW_BYTES_PER_SAMPLE);
       pthread_spin_unlock (&buffer.lock);
-      sfinfo.frames += buffer.disk_frames;
-      pos = 0;
+      buffer.pos = 0;
     }
 
-  dst = &buffer.mem[pos];
+  dst = &buffer.mem[buffer.pos];
   for (int i = 0; i < frames; i++)
     {
       for (int j = 0; j < desc->outputs; j++)
@@ -163,7 +168,7 @@ buffer_write (void *data, const char *buf, size_t size)
 	    {
 	      memcpy (dst, buf, OW_BYTES_PER_SAMPLE);
 	      dst += OW_BYTES_PER_SAMPLE;
-	      pos += OW_BYTES_PER_SAMPLE;
+	      buffer.pos += OW_BYTES_PER_SAMPLE;
 	      float x = *((float *) buf);
 	      if (x >= 0.0)
 		{
@@ -201,7 +206,7 @@ static void
 signal_handler (int signo)
 {
   print_status ();
-  if (debug_level)
+  if (desc && debug_level)
     {
       for (int i = 0; i < desc->outputs; i++)
 	{
@@ -230,6 +235,7 @@ run_record (int device_num, const char *device_name, uint8_t bus,
   time_t curr_time;
   struct tm tm;
   ow_err_t err;
+  size_t transfer_size;
   struct ow_device *device;
 
   if (ow_get_device_from_device_attrs (device_num, device_name, bus,
@@ -268,6 +274,20 @@ run_record (int device_num, const char *device_name, uint8_t bus,
   if (buffer.outputs == 0)
     {
       err = OW_GENERIC_ERROR;
+      error_print ("No outputs selected");
+      goto cleanup_engine;
+    }
+
+  transfer_size = ow_engine_get_blocks_per_transfer (engine) *
+    ow_engine_get_frames_per_block (engine) * buffer.outputs *
+    OW_BYTES_PER_SAMPLE;
+  debug_print (1, "Disk buffer size: %ld B", disk_buf_size);
+  debug_print (1, "Transfer size: %ld B", transfer_size);
+
+  if (transfer_size > disk_buf_size)
+    {
+      err = OW_GENERIC_ERROR;
+      error_print ("Disk buffer too small");
       goto cleanup_engine;
     }
 
@@ -286,22 +306,10 @@ run_record (int device_num, const char *device_name, uint8_t bus,
   debug_print (1, "Creating sample (%d channels)...", buffer.outputs);
   sf = sf_open (filename, SFM_WRITE, &sfinfo);
 
-  context.dll = NULL;
-  context.write_space = buffer_dummy_rw_space;
-  context.read_space = buffer_dummy_rw_space;
-  context.write = buffer_write;
-  context.o2h_audio = sf;
-  context.options = OW_ENGINE_OPTION_O2H_AUDIO;
-
-  err = ow_engine_start (engine, &context);
-  if (err)
-    {
-      goto cleanup;
-    }
-
-  buffer.len = track_buf_size_kb * 1000 * buffer.outputs;
-  buffer.mem = malloc (buffer.len * OW_BYTES_PER_SAMPLE);
-  buffer.disk = malloc (buffer.len * OW_BYTES_PER_SAMPLE);
+  buffer.pos = 0;
+  buffer.size = disk_buf_size;
+  buffer.mem = malloc (buffer.size);
+  buffer.disk = malloc (buffer.size);
   buffer.outputs_mask_len = track_mask ? strlen (track_mask) : 0;
 
   for (int i = 0; i < device->desc.outputs; i++)
@@ -320,6 +328,19 @@ run_record (int device_num, const char *device_name, uint8_t bus,
 
   pthread_setname_np (buffer.pthread, "recorder");
   ow_set_thread_rt_priority (buffer.pthread, OW_DEFAULT_RT_PRIORITY);
+
+  context.dll = NULL;
+  context.write_space = buffer_write_space;
+  context.read_space = buffer_read_space;
+  context.write = buffer_write;
+  context.o2h_audio = sf;
+  context.options = OW_ENGINE_OPTION_O2H_AUDIO;
+
+  err = ow_engine_start (engine, &context);
+  if (err)
+    {
+      goto cleanup;
+    }
 
   ow_engine_wait (engine);
 
@@ -390,7 +411,7 @@ main (int argc, char *argv[])
 	  mflg++;
 	  break;
 	case 's':
-	  track_buf_size_kb = atoi (optarg);
+	  disk_buf_size = atoi (optarg) * KIBI;
 	  sflg++;
 	  break;
 	case 'b':
