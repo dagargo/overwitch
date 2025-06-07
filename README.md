@@ -338,7 +338,7 @@ Options:
   --use-device, -d value
   --bus-device-address, -a value
   --track-mask, -m value
-  --track-buffer-size-kilobytes, -s value
+  --disk-buffer-size-kilobytes, -s value
   --blocks-per-transfer, -b value
   --usb-transfer-timeout, -t value
   --list-devices, -l

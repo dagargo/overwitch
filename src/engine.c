@@ -62,6 +62,18 @@ static void prepare_cycle_in_audio (struct ow_engine *engine);
 static void prepare_cycle_out_audio (struct ow_engine *engine);
 static void ow_engine_load_overbridge_name (struct ow_engine *engine);
 
+unsigned int
+ow_engine_get_blocks_per_transfer (struct ow_engine *engine)
+{
+  return engine->blocks_per_transfer;
+}
+
+unsigned int
+ow_engine_get_frames_per_block (struct ow_engine *engine)
+{
+  return engine->frames_per_block;
+}
+
 static void
 ow_engine_init_name (struct ow_engine *engine)
 {
@@ -691,9 +703,9 @@ usb_shutdown (struct ow_engine *engine)
 }
 
 unsigned int
-ow_engine_get_blocks_per_transfer (unsigned int blocks_per_transfer,
-				   unsigned int min, unsigned int max,
-				   unsigned int def)
+ow_engine_get_valid_blocks_per_transfer (unsigned int blocks_per_transfer,
+					 unsigned int min, unsigned int max,
+					 unsigned int def)
 {
   unsigned int v = blocks_per_transfer;
   if (v == 0 || v < min || v > max)
@@ -724,17 +736,19 @@ ow_engine_init_mem (struct ow_engine *engine,
   if (IS_DEVICE_TYPE_1 (engine->device))
     {
       engine->blocks_per_transfer =
-	ow_engine_get_blocks_per_transfer (blocks_per_transfer,
-					   OW1_MIN_BLOCKS, OW1_MAX_BLOCKS,
-					   OW1_DEFAULT_BLOCKS);
+	ow_engine_get_valid_blocks_per_transfer (blocks_per_transfer,
+						 OW1_MIN_BLOCKS,
+						 OW1_MAX_BLOCKS,
+						 OW1_DEFAULT_BLOCKS);
       engine->frames_per_block = OB1_FRAMES_PER_BLOCK;
     }
   else
     {
       engine->blocks_per_transfer =
-	ow_engine_get_blocks_per_transfer (blocks_per_transfer,
-					   OW2_MIN_BLOCKS, OW2_MAX_BLOCKS,
-					   OW2_DEFAULT_BLOCKS);
+	ow_engine_get_valid_blocks_per_transfer (blocks_per_transfer,
+						 OW2_MIN_BLOCKS,
+						 OW2_MAX_BLOCKS,
+						 OW2_DEFAULT_BLOCKS);
       engine->frames_per_block = OB2_FRAMES_PER_BLOCK;
     }
 
