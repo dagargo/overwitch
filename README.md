@@ -29,6 +29,7 @@ Utilities:
 * `overwitch-record`, which records multitrack audio from Overbridge devices.
 
 For a device manager application for Elektron devices, check [Elektroid](https://dagargo.github.io/elektroid/).
+
 ## Installation
 
 As with other autotools project, you need to run the commands below. There is a compilation option available.
@@ -86,16 +87,33 @@ To allow the service to be started at boot, running `systemctl --user enable ove
 
 ## Usage
 
-Overwitch contains three JACK clients, one for the desktop, one for the command line and one to be used as a service. Additionally, a recording and playing utilities for the command line are also included.
+Overwitch contains two JACK clients. One is a D-Bus and systemd compatible hotplug service, which is used by the GUI application; and the other is a CLI application. Additionally, a playing and recording utilities for the CLI are also included.
 
 Regarding the JACK clients, latency needs to be under control and it can be tuned with the following parameters.
 
-- Blocks, which controls the amount of data sent in a single USB operation. The higher, the higher latency but the lower CPU usage. 4 blocks keeps the latency quite low and does not impact on the CPU.
-- Quality, which controls the resampler accuracy. The higher, the more CPU consuming. A medium value is recommended. Notice that in `overwitch-cli`, a value of 0 means the highest quality while a value of 4 means the lowest.
+- Blocks, which controls the amount of data sent in a single USB operation. The more blocks, the higher latency but the lower CPU usage.
+- Quality, which controls the resampler accuracy. The higher the quality, the higher CPU usage. A medium value is recommended. Notice that in `overwitch-cli`, a value of 0 means the highest quality while a value of 4 means the lowest.
+
+### Use cases
+
+For all use cases, the default installation is needed.
+
+#### Typical desktop user
+
+Just use `overwitch` (GUI). This will start up the included D-Bus service when needed. No other tools are required.
+Notice that closing the application window does **not** terminate the D-Bus service, which means that the hotplug system is still running. Starting the application again will show the window with the ongoing state of all the devices. To terminate everything, click on the exit menu.
+
+#### Non GUI user
+
+Install the systemd service from the `systemd` directory and start it up. This uses the same code as the D-Bus service and runs the devices as soon as they are connected. No other tools are required. Stopping the service will stop all the devices.
+
+#### Testing
+
+In case of testing Overwitch, only the CLI utilities should be used. In this scenario, use all of these with `-vv` to add some debugging output.
 
 ### overwitch
 
-The GUI is self explanatory and does not requiere any parameter passed from the command line. It runs all found Overbridge device in different JACK clients.
+The GUI is self explanatory and does not requiere any parameter passed from the command line. It controls the D-Bus service, which will manage any Overbridge device.
 
 Notice that once an Overbridge device is running the options can not be changed so you will need to stop the running instances and refresh the list.
 
@@ -103,7 +121,7 @@ It is possible to rename Overbridge devices by simply editing its name on the li
 
 ### overwitch-service
 
-Using `overwitch-service` allows having a systemd unit which uses device hotplugging. This will load the configuration from the same config file the GUI uses.
+Using `overwitch-service` allows having a systemd unit which uses device hotplug. This will load the configuration from the same configuration file the GUI uses.
 
 This is a configuration example with the recommended properties. Not all the properties are shown here.
 
@@ -119,6 +137,8 @@ $ cat ~/.config/overwitch/preferences.json
 
 Obviously, when running the service there is no need for the GUI whatsoever.
 
+Notice that this binary is used by both the D-Bus service and the systemd service is rarely needed to be run like this.
+
 ### overwitch-cli
 
 The CLI interface allows the user to create a single JACK client and have full control the options to be used.
@@ -130,10 +150,15 @@ $ overwitch-cli -l
 0: Digitakt (ID 1935:000c) at bus 001, address 005
 ```
 
-Then, you can choose which device you want to use by using one of these options. Notice that the second option will only work for the first device found with that name.
+Then, you can choose which device you want to use by using `-n`.
 
 ```
 $ overwitch-cli -n 0
+```
+
+You can select the device by name too but the use of this option is discouraged and `-n` should be used instead. When using this option, the first device in the list will be used.
+
+```
 $ overwitch-cli -d Digitakt
 ```
 
