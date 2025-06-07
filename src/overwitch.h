@@ -250,6 +250,10 @@ int ow_engine_is_option (struct ow_engine *engine, ow_engine_option_t);
 
 void ow_engine_set_option (struct ow_engine *engine, ow_engine_option_t, int);
 
+unsigned int ow_engine_get_blocks_per_transfer (struct ow_engine *engine);
+
+unsigned int ow_engine_get_frames_per_block (struct ow_engine *engine);
+
 const struct ow_device *ow_engine_get_device (struct ow_engine *engine);
 
 void ow_engine_stop (struct ow_engine *engine);
