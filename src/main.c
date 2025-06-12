@@ -66,6 +66,7 @@ static GListStore *status_list_store;
 static GtkLabel *jack_status_label;
 
 static void control_service (const gchar * method);
+static gboolean refresh_state (gpointer data);
 
 static gboolean
 overwitch_increment_debug_level (const gchar *option_name,
@@ -213,7 +214,13 @@ click_save_preferences (GtkButton *self, gpointer data)
 
   save_preferences ();
 
+  g_source_remove (source_id);
+
+  g_list_store_remove_all (status_list_store);
+
   control_service ("Start");	//Stop, reload and start
+
+  source_id = g_timeout_add (REFRESH_TIMEOUT_MS, refresh_state, NULL);
 }
 
 static void
