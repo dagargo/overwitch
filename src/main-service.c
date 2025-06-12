@@ -325,6 +325,7 @@ static void
 handle_start ()
 {
   handle_stop ();
+  sleep (1);
   startup ();
 }
 
