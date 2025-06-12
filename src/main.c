@@ -218,6 +218,10 @@ click_save_preferences (GtkButton *self, gpointer data)
 
   g_list_store_remove_all (status_list_store);
 
+  g_source_remove (source_id);
+
+  g_list_store_remove_all (status_list_store);
+
   control_service ("Start");	//Stop, reload and start
 
   source_id = g_timeout_add (REFRESH_TIMEOUT_MS, refresh_state, NULL);
