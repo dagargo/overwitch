@@ -187,9 +187,13 @@
 #include "utils.h"
 #include "overwitch.h"
 
-#define GET_NTH_USB_BLK(blks,blk_len,n) ((void *) &blks[n * blk_len])
-#define GET_NTH_INPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_size, n))
-#define GET_NTH_OUTPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_size, n))
+#define MAX_TRANSFERS_TYPE_1 3
+#define MAX_TRANSFERS_TYPE_2_3 2
+
+#define GET_NTH_USB_BLK(buffer,blk_len,n) ((void *) &buffer[n * blk_len])
+#define GET_NTH_INPUT_USB_BLK(engine,buffer,n) (GET_NTH_USB_BLK(buffer, (engine)->usb.audio_in_blk_size, n))
+#define GET_NTH_OUTPUT_USB_BLK(engine,buffer,n) (GET_NTH_USB_BLK(buffer, (engine)->usb.audio_out_blk_size, n))
+#define GET_DEVICE_MAX_TRANSFERS(d) (IS_DEVICE_TYPE_1(d) ? MAX_TRANSFERS_TYPE_1 : MAX_TRANSFERS_TYPE_2_3)
 
 #define OB2_PADDING_LEN 28
 
@@ -236,10 +240,10 @@ struct ow_engine
     int audio_out_interface;
     uint32_t audio_frames_counter_ob1;
     uint16_t audio_frames_counter_ob2;
-    struct libusb_transfer *xfr_audio_in;
-    struct libusb_transfer *xfr_audio_out;
-    uint8_t *xfr_audio_in_data;
-    uint8_t *xfr_audio_out_data;
+    struct libusb_transfer *xfr_audio_in[MAX_TRANSFERS_TYPE_1];
+    struct libusb_transfer *xfr_audio_out[MAX_TRANSFERS_TYPE_1];
+    uint8_t *xfr_audio_in_data[MAX_TRANSFERS_TYPE_1];
+    uint8_t *xfr_audio_out_data[MAX_TRANSFERS_TYPE_1];
     size_t audio_in_blk_size;
     size_t audio_out_blk_size;
     int xfr_audio_in_data_size;
@@ -284,9 +288,11 @@ struct ow_engine_usb_blk_ob2
 
 int ow_bytes_to_frame_bytes (int, int);
 
-void ow_engine_read_usb_input_blocks (struct ow_engine *engine, int print);
+void ow_engine_read_usb_input_blocks (struct ow_engine *engine,
+				      uint8_t * buffer, int print);
 
-void ow_engine_write_usb_output_blocks (struct ow_engine *engine, int print);
+void ow_engine_write_usb_output_blocks (struct ow_engine *engine,
+					uint8_t * buffer, int print);
 
 unsigned int ow_engine_get_valid_blocks_per_transfer (unsigned int
 						      blocks_per_transfer,
