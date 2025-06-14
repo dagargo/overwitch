@@ -58,9 +58,20 @@
 
 static void cb_xfr_audio_in (struct libusb_transfer *xfr);
 static void cb_xfr_audio_out (struct libusb_transfer *xfr);
-static void prepare_cycle_in_audio (struct ow_engine *engine);
-static void prepare_cycle_out_audio (struct ow_engine *engine);
 static void ow_engine_load_overbridge_name (struct ow_engine *engine);
+
+static void
+submit_transfer (struct ow_engine *engine, struct libusb_transfer *xfr,
+		 ow_direction_t dir)
+{
+  int err = libusb_submit_transfer (xfr);
+  if (err)
+    {
+      error_print ("%s: Error when submitting USB audio out transfer: %s",
+		   GET_DIRECTION_NAME (dir), libusb_strerror (err));
+      ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
+    }
+}
 
 unsigned int
 ow_engine_get_blocks_per_transfer (struct ow_engine *engine)
@@ -480,13 +491,13 @@ set_blocks:
 }
 
 static inline void
-print_usb_blk (struct ow_engine *engine, int o2h)
+print_usb_blk (struct ow_engine *engine, ow_direction_t dir)
 {
   uint8_t *s;
   int frame_size;
   void *blkv;
 
-  if (o2h)
+  if (dir == OW_DIRECTION_O2H)
     {
       blkv = GET_NTH_INPUT_USB_BLK (engine, 0);
       frame_size = engine->o2h_frame_size;
@@ -502,7 +513,7 @@ print_usb_blk (struct ow_engine *engine, int o2h)
       uint16_t header;
       uint32_t frames;
 
-      if (o2h)
+      if (dir == OW_DIRECTION_O2H)
 	{
 	  struct ow_engine_usb_blk_ob1_in *blk = blkv;
 	  header = blk->header;
@@ -522,7 +533,7 @@ print_usb_blk (struct ow_engine *engine, int o2h)
 	}
 
       fprintf (stderr, "%s block: header: 0x%04x; frames: 0x%08x\n",
-	       o2h ? "O2H" : "H2O", be16toh (header), be32toh (frames));
+	       GET_DIRECTION_NAME (dir), be16toh (header), be32toh (frames));
 
     }
   else
@@ -530,7 +541,7 @@ print_usb_blk (struct ow_engine *engine, int o2h)
       struct ow_engine_usb_blk_ob2 *blk = blkv;
 
       fprintf (stderr, "%s block: header: 0x%04x; frames: 0x%04x\n",
-	       o2h ? "O2H" : "H2O", be16toh (blk->header),
+	       GET_DIRECTION_NAME (dir), be16toh (blk->header),
 	       be16toh (blk->frames));
 
       s = (uint8_t *) blk->data;
@@ -585,7 +596,7 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
 
       if (print)
 	{
-	  print_usb_blk (engine, 1);
+	  print_usb_blk (engine, OW_DIRECTION_O2H);
 	}
 
       set_usb_input_data_blks (engine, print);
@@ -599,7 +610,7 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
   if (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP)
     {
       // start new cycle even if this one did not succeed
-      prepare_cycle_in_audio (xfr->user_data);
+      submit_transfer (engine, xfr, OW_DIRECTION_O2H);
     }
 
   debug_counter++;
@@ -643,7 +654,7 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
 
       if (print)
 	{
-	  print_usb_blk (engine, 0);
+	  print_usb_blk (engine, OW_DIRECTION_H2O);
 	}
     }
   else
@@ -656,34 +667,10 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
     {
       // We have to make sure that the out cycle is always started after its callback
       // Race condition on slower systems!
-      prepare_cycle_out_audio (xfr->user_data);
+      submit_transfer (engine, xfr, OW_DIRECTION_H2O);
     }
 
   debug_counter++;
-}
-
-static void
-prepare_cycle_out_audio (struct ow_engine *engine)
-{
-  int err = libusb_submit_transfer (engine->usb.xfr_audio_out);
-  if (err)
-    {
-      error_print ("h2o: Error when submitting USB audio out transfer: %s",
-		   libusb_strerror (err));
-      ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
-    }
-}
-
-static void
-prepare_cycle_in_audio (struct ow_engine *engine)
-{
-  int err = libusb_submit_transfer (engine->usb.xfr_audio_in);
-  if (err)
-    {
-      error_print ("o2h: Error when submitting USB audio in transfer: %s",
-		   libusb_strerror (err));
-      ow_engine_set_status (engine, OW_ENGINE_STATUS_ERROR);
-    }
 }
 
 static void
@@ -1143,8 +1130,8 @@ run_audio (void *data)
     }
 
   // These calls are needed to initialize the Overbridge side before the host side.
-  prepare_cycle_in_audio (engine);
-  prepare_cycle_out_audio (engine);
+  submit_transfer (engine, engine->usb.xfr_audio_in, OW_DIRECTION_O2H);
+  submit_transfer (engine, engine->usb.xfr_audio_out, OW_DIRECTION_H2O);
 
   // status == OW_ENGINE_STATUS_STOP
 
