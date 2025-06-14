@@ -306,7 +306,7 @@ test_usb_blocks_t1 (const struct ow_device_desc *device_desc, float max_error)
   usb_audio_out_blk_size = sizeof (struct ow_engine_usb_blk_ob1_out) +
     OB1_FRAMES_PER_BLOCK *
     ow_get_frame_size_from_desc_tracks (engine.device->desc.inputs,
-					engine.device->desc.input_tracks) + 4;
+					engine.device->desc.input_tracks);
 
   ow_engine_init_mem (&engine, BLOCKS, usb_audio_in_blk_size,
 		      usb_audio_out_blk_size);
@@ -324,31 +324,33 @@ test_usb_blocks_t1 (const struct ow_device_desc *device_desc, float max_error)
 	}
     }
 
-  ow_engine_write_usb_output_blocks (&engine, 1);
+  ow_engine_write_usb_output_blocks (&engine,
+				     engine.usb.xfr_audio_out_data[0], 1);
 
   for (int i = 0; i < BLOCKS; i++)
     {
       struct ow_engine_usb_blk_ob1_out *blk =
-	GET_NTH_OUTPUT_USB_BLK (&engine, i);
+	GET_NTH_OUTPUT_USB_BLK (&engine, engine.usb.xfr_audio_out_data[0], i);
       CU_ASSERT_EQUAL (0x3ff, be16toh (blk->header));
       CU_ASSERT_EQUAL (i * OB1_FRAMES_PER_BLOCK,
 		       be32toh ((blk->frames_msb << 16) + blk->frames_lsb));
     }
 
-  ow_engine_print_blocks (&engine, engine.usb.xfr_audio_out_data,
+  ow_engine_print_blocks (&engine, engine.usb.xfr_audio_out_data[0],
 			  engine.usb.audio_out_blk_size);
 
   for (int i = 0; i < BLOCKS; i++)
     {
       struct ow_engine_usb_blk_ob1_out *out =
-	GET_NTH_OUTPUT_USB_BLK (&engine, i);
+	GET_NTH_OUTPUT_USB_BLK (&engine, engine.usb.xfr_audio_out_data[0], i);
       struct ow_engine_usb_blk_ob1_in *in =
-	GET_NTH_INPUT_USB_BLK (&engine, i);
+	GET_NTH_INPUT_USB_BLK (&engine, engine.usb.xfr_audio_in_data[0], i);
       memcpy (in->data, out->data,
 	      engine.frames_per_block * engine.o2h_frame_size);
     }
 
-  ow_engine_read_usb_input_blocks (&engine, 1);
+  ow_engine_read_usb_input_blocks (&engine, engine.usb.xfr_audio_in_data[0],
+				   1);
 
   a = engine.h2o_transfer_buf;
   b = engine.o2h_transfer_buf;
@@ -411,27 +413,32 @@ test_usb_blocks_2_3 (const struct ow_device_desc *device_desc,
 	}
     }
 
-  ow_engine_write_usb_output_blocks (&engine, 1);
+  ow_engine_write_usb_output_blocks (&engine,
+				     engine.usb.xfr_audio_out_data[0], 1);
 
   for (int i = 0; i < BLOCKS; i++)
     {
-      struct ow_engine_usb_blk_ob2 *blk = GET_NTH_OUTPUT_USB_BLK (&engine, i);
+      struct ow_engine_usb_blk_ob2 *blk =
+	GET_NTH_OUTPUT_USB_BLK (&engine, engine.usb.xfr_audio_out_data[0], i);
       CU_ASSERT_EQUAL (0x7ff, be16toh (blk->header));
       CU_ASSERT_EQUAL (i * OB2_FRAMES_PER_BLOCK, be16toh (blk->frames));
     }
 
-  ow_engine_print_blocks (&engine, engine.usb.xfr_audio_out_data,
+  ow_engine_print_blocks (&engine, engine.usb.xfr_audio_out_data[0],
 			  engine.usb.audio_out_blk_size);
 
   for (int i = 0; i < BLOCKS; i++)
     {
-      struct ow_engine_usb_blk_ob2 *out = GET_NTH_OUTPUT_USB_BLK (&engine, i);
-      struct ow_engine_usb_blk_ob2 *in = GET_NTH_INPUT_USB_BLK (&engine, i);
+      struct ow_engine_usb_blk_ob2 *out =
+	GET_NTH_OUTPUT_USB_BLK (&engine, engine.usb.xfr_audio_out_data[0], i);
+      struct ow_engine_usb_blk_ob2 *in =
+	GET_NTH_INPUT_USB_BLK (&engine, engine.usb.xfr_audio_in_data[0], i);
       memcpy (in->data, out->data,
 	      engine.frames_per_block * engine.o2h_frame_size);
     }
 
-  ow_engine_read_usb_input_blocks (&engine, 1);
+  ow_engine_read_usb_input_blocks (&engine, engine.usb.xfr_audio_in_data[0],
+				   1);
 
   a = engine.h2o_transfer_buf;
   b = engine.o2h_transfer_buf;
