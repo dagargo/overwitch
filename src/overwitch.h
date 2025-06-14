@@ -52,6 +52,10 @@
 
 #define IS_DEVICE_TYPE_1(d) (d->desc.type == OW_DEVICE_TYPE_1)
 
+#define O2H_DIRECTION_NAME "o2h"
+#define H2O_DIRECTION_NAME "h2o"
+#define GET_DIRECTION_NAME(dir) (dir ? O2H_DIRECTION_NAME : H2O_DIRECTION_NAME)
+
 typedef size_t (*ow_buffer_rw_space_t) (void *);
 typedef size_t (*ow_buffer_read_t) (void *, char *, size_t);
 typedef size_t (*ow_buffer_write_t) (void *, const char *, size_t);
@@ -128,6 +132,12 @@ typedef enum
   OW_DEVICE_TYPE_2 = 2,		//32 bits interrupt transfers
   OW_DEVICE_TYPE_3 = 3		//24 bits Interrupt transfers
 } ow_device_type_t;
+
+typedef enum
+{
+  OW_DIRECTION_H2O = 0,
+  OW_DIRECTION_O2H,
+} ow_direction_t;
 
 struct ow_context
 {
