@@ -850,7 +850,7 @@ ow_engine_init_mem (struct ow_engine *engine,
 	      struct ow_engine_usb_blk_ob1_out *blk =
 		GET_NTH_OUTPUT_USB_BLK (engine,
 					engine->usb.xfr_audio_out_data[i], j);
-	      blk->header = htobe16 (0x03ff);
+	      blk->header = htobe16 (0x30ff);
 	    }
 	  else
 	    {
