@@ -331,7 +331,7 @@ test_usb_blocks_t1 (const struct ow_device_desc *device_desc, float max_error)
     {
       struct ow_engine_usb_blk_ob1_out *blk =
 	GET_NTH_OUTPUT_USB_BLK (&engine, engine.usb.xfr_audio_out_data[0], i);
-      CU_ASSERT_EQUAL (0x3ff, be16toh (blk->header));
+      CU_ASSERT_EQUAL (0x30ff, be16toh (blk->header));
       CU_ASSERT_EQUAL (i * OB1_FRAMES_PER_BLOCK,
 		       be32toh ((blk->frames_msb << 16) + blk->frames_lsb));
     }
