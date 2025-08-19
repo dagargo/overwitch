@@ -61,6 +61,6 @@ This example is a self-explanatory `JSON` object for a device.
 
 Notice that there are 3 types of devices, depending on the transfer type and how many bytes are used to store samples in the USB blocks.
 
-* Type 1 (isochronous transfers) is reserved for Analog Rytm MKI and Analog Form MKI and Keys.
+* Type 1 (isochronous transfers) is reserved for Analog Rytm MKI and Analog Four MKI and Keys.
 * Type 2 (interrupt transfers) uses 4 bytes integers.
 * Type 3 (interrupt transfers) uses 3 bytes integers. Note that some tracks might use 4 bytes to store the samples even though the actual samples are only 3 bytes.

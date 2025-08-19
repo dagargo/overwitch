@@ -18,8 +18,8 @@ Overwitch consists of 5 different binaries divided in 2 categories: multi-device
 
 Multi-device applications:
 
-* `overwitch`, which is a GUI application.
-* `overwitch-service`, which is a CLI application meant to be used as a systemd service.
+* `overwitch`, which is a GUI application that uses a D-Bus service under the hood.
+* `overwitch-service`, which is a CLI application and also the same executable that the aforementioned D-Bus service uses.
 
 Utilities:
 

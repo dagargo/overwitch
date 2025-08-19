@@ -15,9 +15,9 @@ This value can be set in the GUI settings directly but any value passed at comma
 
 The proper way of setting this when using `overwitch-service` is in `~/.config/overwitch/preferences.json`, which is the same file the GUI uses.
 
-Under PipeWire, a JACK client always follows a driver and when no connections are created it follows the "Dummy-Driver". This might cause some latency issues when making connections as the clients will transit to a new driver, making the timing measurements to wobble for a moment and ultimately increasing the latency,
+Under PipeWire, a JACK client always follows a driver and when no connections are created it follows the "Dummy-Driver". This might cause some latency issues when making connections as the clients will transit to a new driver, making the timing measurements to wobble for a moment and ultimately increasing the latency.
 
-To avoid that, here are some recommendations. Still, always try to follow the official PipeWire documentation.
+To avoid this, here are some recommendations. Still, always try to follow the official PipeWire documentation.
 
 * Use the Pro audio profile.
 * Do not have passive PipeWire nodes (`node.passive` set to `true`) to avoid driver changes.
@@ -28,7 +28,7 @@ To avoid that, here are some recommendations. Still, always try to follow the of
 $ pw-cli info all | grep -i node.group
 
 # Set node.group to your output device (e.g. "pro-audio-0")
-$ PIPEWIRE_PROPS='{ node.group = "pro-audio-0" }' overwitch
+$ PIPEWIRE_PROPS='{ node.group = "pro-audio-0" }' overwitch-cli
 ```
 
 ### Latency
