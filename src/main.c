@@ -225,6 +225,10 @@ app_exit ()
 
   save_preferences ();
   g_free (pipewire_props);
+  if (source_id)
+    {
+      g_source_remove (source_id);
+    }
   gtk_window_destroy (GTK_WINDOW (main_window));
 }
 
