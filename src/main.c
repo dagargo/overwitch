@@ -39,7 +39,6 @@ static GDBusConnection *connection;
 
 static gint devices;
 static guint source_id;
-static gchar *pipewire_props;
 
 static GtkApplication *app;
 
@@ -61,6 +60,8 @@ static GtkColumnViewColumn *j2o_ratio_column;
 static GListStore *status_list_store;
 static GtkLabel *jack_status_label;
 static GtkLabel *target_delay_label;
+
+static void control_service (const gchar * method);
 
 static gboolean
 overwitch_increment_debug_level (const gchar *option_name,
@@ -108,6 +109,8 @@ static void
 save_preferences ()
 {
   struct ow_preferences prefs;
+  GtkEntryBuffer *buf;
+  const gchar *props;
   GVariant *v;
   GAction *a;
 
@@ -118,21 +121,24 @@ save_preferences ()
   prefs.blocks = gtk_spin_button_get_value_as_int (blocks_spin_button);
   prefs.timeout = gtk_spin_button_get_value_as_int (timeout_spin_button);
   prefs.quality = gtk_drop_down_get_selected (quality_drop_down);
-  prefs.pipewire_props = pipewire_props;
+
+  buf = gtk_entry_get_buffer (GTK_ENTRY (pipewire_props_dialog_entry));
+  props = gtk_entry_buffer_get_text (buf);
+  prefs.pipewire_props = strdup (props);
 
   ow_save_preferences (&prefs);
+  g_free (prefs.pipewire_props);
 }
 
 static void
 load_preferences ()
 {
   struct ow_preferences prefs;
+  GtkEntryBuffer *buf;
   GVariant *v;
   GAction *a;
 
   ow_load_preferences (&prefs);
-
-  pipewire_props = prefs.pipewire_props;
 
   a = g_action_map_lookup_action (G_ACTION_MAP (app), "show_all_columns");
   v = g_variant_new_boolean (prefs.show_all_columns);
@@ -141,6 +147,11 @@ load_preferences ()
   gtk_spin_button_set_value (blocks_spin_button, prefs.blocks);
   gtk_spin_button_set_value (timeout_spin_button, prefs.timeout);
   gtk_drop_down_set_selected (quality_drop_down, prefs.quality);
+
+  buf = gtk_entry_get_buffer (GTK_ENTRY (pipewire_props_dialog_entry));
+  gtk_entry_buffer_set_text (buf, prefs.pipewire_props, -1);
+  g_free (prefs.pipewire_props);
+
   update_all_metrics (prefs.show_all_columns);
 }
 
@@ -181,10 +192,8 @@ static void
 open_preferences (GSimpleAction *simple_action, GVariant *parameter,
 		  gpointer data)
 {
-  GtkEntryBuffer *buf;
+  load_preferences ();
 
-  buf = gtk_entry_get_buffer (GTK_ENTRY (pipewire_props_dialog_entry));
-  gtk_entry_buffer_set_text (buf, pipewire_props ? pipewire_props : "", -1);
   gtk_widget_set_visible (preferences_window, TRUE);
 }
 
@@ -197,16 +206,11 @@ close_preferences (GtkButton *self, gpointer data)
 static void
 click_save_preferences (GtkButton *self, gpointer data)
 {
-  const gchar *props;
-  GtkEntryBuffer *buf;
-
   gtk_widget_set_visible (preferences_window, FALSE);
 
-  buf = gtk_entry_get_buffer (GTK_ENTRY (pipewire_props_dialog_entry));
-  props = gtk_entry_buffer_get_text (buf);
+  save_preferences ();
 
-  g_free (pipewire_props);
-  pipewire_props = strdup (props ? props : "");
+  control_service ("Start");	//Stop, reload and start
 }
 
 static void
@@ -220,12 +224,13 @@ app_exit ()
 {
   debug_print (1, "Exiting Overwitch...");
 
-  save_preferences ();
-  g_free (pipewire_props);
+  save_preferences ();		//Needed for preference show_all_columns.
+
   if (source_id)
     {
       g_source_remove (source_id);
     }
+
   gtk_window_destroy (GTK_WINDOW (main_window));
 }
 

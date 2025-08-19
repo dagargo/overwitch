@@ -101,7 +101,6 @@ ow_load_preferences (struct ow_preferences *prefs)
   prefs->quality = 2;
   prefs->timeout = 10;
   prefs->show_all_columns = FALSE;
-  prefs->pipewire_props = NULL;
 
   error = NULL;
   json_parser_load_from_file (parser, preferences_file, &error);
@@ -143,10 +142,11 @@ ow_load_preferences (struct ow_preferences *prefs)
   if (json_reader_read_member (reader, PREF_PIPEWIRE_PROPS))
     {
       const gchar *v = json_reader_get_string_value (reader);
-      if (v && strlen (v))
-	{
-	  prefs->pipewire_props = strdup (v);
-	}
+      prefs->pipewire_props = strdup (v ? v : "");
+    }
+  else
+    {
+      prefs->pipewire_props = strdup ("");
     }
   json_reader_end_member (reader);
 
