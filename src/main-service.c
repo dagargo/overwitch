@@ -74,7 +74,7 @@ static const gchar introspection_xml[] =
   "    </method>" "  </interface>" "</node>";
 
 static void startup ();
-
+static void handle_stop ();
 static void handle_start ();
 
 static void
@@ -101,7 +101,7 @@ signal_handler (int signum)
 {
   if (signum == SIGTERM)
     {
-      stop_all ();
+      handle_stop ();
       g_application_release (app);
     }
   else if (signum == SIGHUP)
@@ -546,13 +546,6 @@ main (gint argc, gchar *argv[])
   g_object_unref (app);
 
   g_free (preferences.pipewire_props);
-
-  wait_all ();
-
-  if (hotplug_thread)
-    {
-      pthread_join (hotplug_thread, NULL);
-    }
 
   pthread_spin_destroy (&lock);
 
