@@ -165,7 +165,7 @@ start_single (struct pooled_jclient *pjc, guint id, struct ow_device *device)
     }
 
   gchar name[OW_LABEL_MAX_LEN];
-  snprintf (name, OW_LABEL_MAX_LEN, "service-worker-%d", id);
+  snprintf (name, OW_LABEL_MAX_LEN, "srv-%02d-%.8s", id, device->desc.name);
   pthread_setname_np (pjc->thread, name);
 }
 
@@ -486,7 +486,7 @@ startup ()
     }
   else
     {
-      pthread_setname_np (hotplug_thread, "hotplug-worker");
+      pthread_setname_np (hotplug_thread, "srv-hotplug");
     }
 }
 
@@ -532,6 +532,8 @@ main (gint argc, gchar *argv[])
   action.sa_flags = 0;
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGHUP, &action, NULL);
+
+  pthread_setname_np (pthread_self (), "overwitch-srv");
 
   pthread_spin_init (&lock, PTHREAD_PROCESS_PRIVATE);
 

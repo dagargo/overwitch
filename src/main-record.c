@@ -317,7 +317,7 @@ run_record (int device_num, const char *device_name, uint8_t bus,
       goto cleanup;
     }
 
-  pthread_setname_np (buffer.pthread, "recorder-worker");
+  pthread_setname_np (buffer.pthread, "recorder");
   ow_set_thread_rt_priority (buffer.pthread, OW_DEFAULT_RT_PROPERTY);
 
   ow_engine_wait (engine);

@@ -542,6 +542,7 @@ int
 jclient_start (struct jclient *jclient)
 {
   int running, err;
+  gchar buf[OW_LABEL_MAX_LEN];
 
   debug_print (1, "Starting thread...");
 
@@ -550,7 +551,9 @@ jclient_start (struct jclient *jclient)
       return err;
     }
 
-  pthread_setname_np (jclient->thread, "jclient-worker");
+  snprintf (buf, OW_LABEL_MAX_LEN, "jclient-%.7s",
+	    jclient->device->desc.name);
+  pthread_setname_np (jclient->thread, buf);
 
   while (1)
     {

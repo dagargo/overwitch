@@ -834,6 +834,14 @@ ow_engine_clear_buffers (struct ow_engine *engine)
   pthread_spin_unlock (&engine->lock);
 }
 
+static void
+ow_engine_set_thread_name (struct ow_engine *engine, const char *name)
+{
+  char buf[OW_LABEL_MAX_LEN];
+  snprintf (buf, OW_LABEL_MAX_LEN, "engine-%.8s", name);
+  pthread_setname_np (engine->thread, buf);
+}
+
 ow_err_t
 ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 {
@@ -903,7 +911,7 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
       error_print ("Could not start thread");
       return OW_GENERIC_ERROR;
     }
-  pthread_setname_np (engine->thread, "engine-worker");
+  ow_engine_set_thread_name (engine, engine->overbridge_name);
   if (context->set_rt_priority)
     {
       context->set_rt_priority (engine->thread, engine->context->priority);
