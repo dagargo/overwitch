@@ -1079,14 +1079,17 @@ cb_xfr_control_out (struct libusb_transfer *xfr)
 void
 ow_engine_set_overbridge_name (struct ow_engine *engine, const char *name)
 {
+  int err;
+  uint8_t *dst;
+
   libusb_fill_control_setup (engine->usb.xfr_control_out_data,
 			     LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR
 			     | LIBUSB_RECIPIENT_DEVICE, 1, 0, 0,
 			     OB_NAME_MAX_LEN);
 
-  memcpy ((char *) &engine->
-	  usb.xfr_control_out_data[sizeof (struct libusb_control_setup)],
-	  name, OB_NAME_MAX_LEN);
+  dst =
+    &engine->usb.xfr_control_out_data[sizeof (struct libusb_control_setup)];
+  memcpy (dst, name, OB_NAME_MAX_LEN);
 
   libusb_fill_control_transfer (engine->usb.xfr_control_out,
 				engine->usb.device_handle,
@@ -1094,7 +1097,7 @@ ow_engine_set_overbridge_name (struct ow_engine *engine, const char *name)
 				cb_xfr_control_out, engine,
 				engine->usb.xfr_timeout);
 
-  int err = libusb_submit_transfer (engine->usb.xfr_control_out);
+  err = libusb_submit_transfer (engine->usb.xfr_control_out);
   if (err)
     {
       error_print ("Error when submitting USB control transfer: %s",

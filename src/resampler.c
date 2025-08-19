@@ -254,12 +254,11 @@ resampler_o2h_reader (void *cb_data, float **data)
   size_t bytes;
   long frames;
   struct ow_resampler *resampler = cb_data;
+  struct ow_context *context = resampler->engine->context;
 
   *data = resampler->o2h_buf_in;
 
-  rso2h =
-    resampler->engine->context->read_space (resampler->engine->
-					    context->o2h_audio);
+  rso2h = context->read_space (context->o2h_audio);
   if (resampler->reading_at_o2h_end)
     {
       if (rso2h >= resampler->o2h_frame_size)
@@ -267,10 +266,8 @@ resampler_o2h_reader (void *cb_data, float **data)
 	  frames = rso2h / resampler->o2h_frame_size;
 	  frames = frames > MAX_READ_FRAMES ? MAX_READ_FRAMES : frames;
 	  bytes = frames * resampler->o2h_frame_size;
-	  resampler->engine->context->read (resampler->engine->context->
-					    o2h_audio,
-					    (void *) resampler->o2h_buf_in,
-					    bytes);
+	  context->read (context->o2h_audio, (void *) resampler->o2h_buf_in,
+			 bytes);
 	}
       else
 	{
@@ -291,8 +288,7 @@ resampler_o2h_reader (void *cb_data, float **data)
 	  bytes = ow_bytes_to_frame_bytes (rso2h, resampler->o2h_bufsize);
 	  debug_print (2, "o2h: Emptying buffer (%zu B) and running...",
 		       bytes);
-	  resampler->engine->context->read (resampler->engine->context->
-					    o2h_audio, NULL, bytes);
+	  context->read (context->o2h_audio, NULL, bytes);
 	  resampler->reading_at_o2h_end = 1;
 	}
       frames = MAX_READ_FRAMES;
@@ -328,6 +324,7 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
   size_t wsh2o;
   static double h2o_acc = .0;
   ow_resampler_status_t status = ow_resampler_get_status (resampler);
+  struct ow_context *context = resampler->engine->context;
 
   if (status < OW_RESAMPLER_STATUS_RUN)
     {
@@ -355,16 +352,12 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
     }
 
   bytes = gen_frames * resampler->h2o_frame_size;
-  wsh2o =
-    resampler->engine->context->write_space (resampler->engine->
-					     context->h2o_audio);
+  wsh2o = context->write_space (context->h2o_audio);
 
   if (bytes <= wsh2o)
     {
-      resampler->engine->context->write (resampler->engine->
-					 context->h2o_audio,
-					 (void *) resampler->h2o_buf_out,
-					 bytes);
+      context->write (context->h2o_audio, (void *) resampler->h2o_buf_out,
+		      bytes);
     }
   else
     {
