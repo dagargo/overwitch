@@ -51,7 +51,5 @@ struct ow_resampler
   size_t h2o_bufsize;
   uint32_t bufsize;
   double samplerate;
-  double max_target_ratio;
-  double min_target_ratio;
   struct ow_resampler_reporter reporter;
 };

@@ -914,7 +914,8 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
   ow_engine_set_thread_name (engine, engine->overbridge_name);
   if (context->set_rt_priority)
     {
-      context->set_rt_priority (engine->thread, engine->context->priority);
+      context->set_rt_priority (engine->thread,
+				engine->context->priority + 1);
     }
 
   //Wait till the thread has reached the USB loop

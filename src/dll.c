@@ -24,8 +24,6 @@
 #include "dll.h"
 
 #define ERR_TUNED_THRES 2
-#define USEC_PER_SEC 1.0e6
-#define SEC_PER_USEC 1.0e-6
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc
 //Transform us to seconds only considering the lowest 28 bits
@@ -54,9 +52,11 @@ ow_dll_overbridge_init (void *data, double samplerate, uint32_t frames)
   struct ow_dll *dll = data;
   struct ow_dll_overbridge *dll_ob = &dll->dll_overbridge;
 
-  debug_print (2, "Initializing Overbridge side of DLL...");
+  debug_print (2,
+	       "Initializing Overbridge side of DLL (%.1f Hz, %d frames)...",
+	       samplerate, frames);
 
-  dll_ob->dt = frames / (double) samplerate;
+  dll_ob->dt = frames / samplerate;
   w = 2 * M_PI * 0.1 * dll_ob->dt;
   dll_ob->w1 = 1.6 * w;
   dll_ob->w2 = w * w;

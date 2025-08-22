@@ -28,6 +28,9 @@
 
 #define CONF_DIR "~/.config/" PACKAGE
 
+#define USEC_PER_SEC 1.0e6
+#define SEC_PER_USEC 1.0e-6
+
 #define debug_print(level, format, ...) { \
   if (level <= debug_level) \
     { \

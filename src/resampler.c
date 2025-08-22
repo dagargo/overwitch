@@ -29,7 +29,7 @@
 
 #define OB_PERIOD_MS (1000.0 / OB_SAMPLE_RATE)
 
-#define RATIO_ERROR_TOLERANCE 4
+#define HOST_UPDATE_ERROR 0.05
 
 inline ow_resampler_status_t
 ow_resampler_get_status (struct ow_resampler *resampler)
@@ -191,7 +191,6 @@ static void
 ow_resampler_reset_dll (struct ow_resampler *resampler,
 			uint32_t new_samplerate)
 {
-  double target_ratio;
   double target_delay_ms;
 
   if (resampler->dll.set
@@ -219,9 +218,6 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
   resampler->o2h_ratio = resampler->dll.ratio;
   resampler->samplerate = new_samplerate;
 
-  target_ratio = new_samplerate / OB_SAMPLE_RATE;
-  resampler->max_target_ratio = target_ratio * RATIO_ERROR_TOLERANCE;
-  resampler->min_target_ratio = target_ratio / RATIO_ERROR_TOLERANCE;
   pthread_spin_unlock (&resampler->lock);
 }
 
@@ -417,22 +413,6 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
     }
 
   ow_dll_host_update (dll);
-
-  if (dll->ratio < resampler->min_target_ratio ||
-      dll->ratio > resampler->max_target_ratio)
-    {
-      error_print
-	("%s (%s): Invalid ratio %f detected. Stopping resampler...",
-	 resampler->engine->name, resampler->engine->overbridge_name,
-	 dll->ratio);
-
-      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_ERROR);
-
-      ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_ERROR);
-      ow_resampler_report_state (resampler);
-
-      return 1;
-    }
 
   resampler->o2h_ratio = dll->ratio;
   resampler->h2o_ratio = 1.0 / resampler->o2h_ratio;
