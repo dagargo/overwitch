@@ -497,11 +497,15 @@ jclient_run (struct jclient *jclient)
 
   jclient->context.options = OW_ENGINE_OPTION_O2H_AUDIO;
 
-  err = ow_resampler_start (jclient->resampler, &jclient->context);
+  err = ow_resampler_start (jclient->resampler, &jclient->context,
+			    jack_get_sample_rate (jclient->client),
+			    jack_get_buffer_size (jclient->client));
   if (err)
     {
       goto cleanup_jack;
     }
+
+  debug_print (1, "Activating...");
 
   if (jack_activate (jclient->client))
     {
@@ -509,6 +513,8 @@ jclient_run (struct jclient *jclient)
       err = OW_GENERIC_ERROR;
       goto cleanup_jack;
     }
+
+  debug_print (1, "Activated");
 
   ow_resampler_wait (jclient->resampler);
 

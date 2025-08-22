@@ -256,7 +256,8 @@ ow_err_t ow_resampler_init_from_device (struct ow_resampler **resampler,
 					unsigned int quality);
 
 ow_err_t ow_resampler_start (struct ow_resampler *resampler,
-			     struct ow_context *context);
+			     struct ow_context *context, uint32_t samplerate,
+			     uint32_t buffsize);
 
 void ow_resampler_wait (struct ow_resampler *resampler);
 
@@ -285,11 +286,13 @@ struct ow_engine *ow_resampler_get_engine (struct ow_resampler *resampler);
 
 void ow_resampler_stop (struct ow_resampler *resampler);
 
-void ow_resampler_set_buffer_size (struct ow_resampler *resampler, uint32_t);
+void ow_resampler_set_buffer_size (struct ow_resampler *resampler,
+				   uint32_t bufsize);
 
 uint32_t ow_resampler_get_buffer_size (struct ow_resampler *resampler);
 
-void ow_resampler_set_samplerate (struct ow_resampler *resampler, uint32_t);
+void ow_resampler_set_samplerate (struct ow_resampler *resampler,
+				  uint32_t samplerate);
 
 uint32_t ow_resampler_get_samplerate (struct ow_resampler *resampler);
 

@@ -526,8 +526,12 @@ ow_resampler_destroy (struct ow_resampler *resampler)
 
 ow_err_t
 ow_resampler_start (struct ow_resampler *resampler,
-		    struct ow_context *context)
+		    struct ow_context *context, uint32_t samplerate,
+		    uint32_t bufsize)
 {
+  ow_resampler_set_samplerate (resampler, samplerate);
+  ow_resampler_set_buffer_size (resampler, bufsize);
+
   context->dll = &resampler->dll;
   context->dll_overbridge_init = ow_dll_overbridge_init;
   context->dll_overbridge_update = ow_dll_overbridge_update;
