@@ -167,13 +167,6 @@ struct ow_device
   uint8_t address;
 };
 
-struct ow_resampler_reporter
-{
-  ow_resampler_report_t callback;
-  int period;
-  void *data;
-};
-
 struct ow_resampler_state
 {
   ow_resampler_status_t status;

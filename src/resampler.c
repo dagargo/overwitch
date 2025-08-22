@@ -120,11 +120,6 @@ ow_resampler_report_state (struct ow_resampler *resampler)
 	       state.latency_o2h_max, state.latency_h2o,
 	       state.latency_h2o_min, state.latency_h2o_max, state.ratio_o2h);
     }
-
-  if (resampler->reporter.callback)
-    {
-      resampler->reporter.callback (resampler->reporter.data, &state);
-    }
 }
 
 void
@@ -426,8 +421,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_TUNE);
 
       resampler->log_control_cycles =
-	resampler->reporter.period * resampler->samplerate /
-	resampler->bufsize;
+	resampler->report_period * resampler->samplerate / resampler->bufsize;
       resampler->log_cycles = 0;
 
       tuning_start_usecs = current_usecs;
@@ -449,6 +443,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 
       audio_running_cb (cb_data);
     }
+
 
   resampler->log_cycles++;
   if (resampler->log_cycles == resampler->log_control_cycles)
@@ -495,9 +490,7 @@ ow_resampler_init_from_device (struct ow_resampler **resampler_,
 					   device->desc.outputs, NULL,
 					   resampler);
 
-  resampler->reporter.callback = NULL;
-  resampler->reporter.data = NULL;
-  resampler->reporter.period = DEFAULT_REPORT_PERIOD;
+  resampler->report_period = DEFAULT_REPORT_PERIOD;
   resampler->log_control_cycles = 0;
 
   ow_dll_host_init (&resampler->dll);
@@ -641,12 +634,6 @@ inline float *
 ow_resampler_get_h2o_audio_buffer (struct ow_resampler *resampler)
 {
   return resampler->h2o_buf_in;
-}
-
-struct ow_resampler_reporter *
-ow_resampler_get_reporter (struct ow_resampler *resampler)
-{
-  return &resampler->reporter;
 }
 
 inline void

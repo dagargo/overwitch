@@ -51,5 +51,5 @@ struct ow_resampler
   size_t h2o_bufsize;
   uint32_t bufsize;
   double samplerate;
-  struct ow_resampler_reporter reporter;
+  int report_period;
 };
