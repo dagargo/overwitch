@@ -39,8 +39,6 @@
 #define AUDIO_IN_INTERFACE 1
 #define AUDIO_IN_ALT_SETTING 3
 
-#define PAUSE_TO_BE_WAITING_USECS 500000
-
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
 static void prepare_cycle_in_audio (struct ow_engine *engine);
@@ -533,7 +531,7 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   int err;
   ow_err_t ret = OW_OK;
 
-  engine->status = OW_ENGINE_STATUS_READY;
+  engine->status = OW_ENGINE_STATUS_STOP;
   engine->device = device;
   engine->usb.xfr_audio_in = NULL;
   engine->usb.xfr_audio_out = NULL;
@@ -735,25 +733,41 @@ run_audio (void *data)
   size_t rsh2o, bytes;
   struct ow_engine *engine = data;
 
+  // This needs to be set before the host side. We ensure this by changing the state after.
+  // The state is monitored at ow_engine_start and only returns after this transition.
+
   if (engine->context->dll)
     {
       engine->context->dll_overbridge_init (engine->context->dll,
 					    OB_SAMPLE_RATE,
 					    engine->frames_per_transfer);
-    }
 
-  //status == OW_ENGINE_STATUS_STEADY
-
-  //These calls are needed to initialize the Overbridge side before the host side.
-  prepare_cycle_in_audio (engine);
-  prepare_cycle_out_audio (engine);
-
-  if (engine->context->dll)
-    {
       engine->context->dll_overbridge_update (engine->context->dll,
 					      engine->frames_per_transfer,
 					      engine->context->get_time ());
     }
+
+  // These calls are needed to initialize the Overbridge side before the host side.
+  prepare_cycle_in_audio (engine);
+  prepare_cycle_out_audio (engine);
+
+  // status == OW_ENGINE_STATUS_STOP
+
+  ow_engine_set_status (engine, OW_ENGINE_STATUS_READY);
+
+  // status == OW_ENGINE_STATUS_READY
+
+  if (engine->context->dll)
+    {
+      // This needs to be fast to ensure the lowest latency.
+      while (ow_engine_get_status (engine) != OW_ENGINE_STATUS_STEADY);
+    }
+  else
+    {
+      ow_engine_set_status (engine, OW_ENGINE_STATUS_STEADY);
+    }
+
+  // status == OW_ENGINE_STATUS_STEADY
 
   pthread_spin_lock (&engine->lock);
   if (engine->status <= OW_ENGINE_STATUS_STOP)
@@ -772,7 +786,7 @@ run_audio (void *data)
       engine->o2h_latency = 0;
       engine->o2h_max_latency = 0;
 
-      //status == OW_ENGINE_STATUS_BOOT || status == OW_ENGINE_STATUS_CLEAR
+      // status == OW_ENGINE_STATUS_BOOT || status == OW_ENGINE_STATUS_CLEAR
 
       pthread_spin_lock (&engine->lock);
       if (engine->status == OW_ENGINE_STATUS_CLEAR)
@@ -803,7 +817,7 @@ run_audio (void *data)
 	  break;
 	}
 
-      //status == OW_ENGINE_STATUS_BOOT || status == OW_ENGINE_STATUS_CLEAR
+      // status == OW_ENGINE_STATUS_BOOT || status == OW_ENGINE_STATUS_CLEAR
 
       debug_print (1, "Clearing buffers...");
 
@@ -813,7 +827,7 @@ run_audio (void *data)
       memset (engine->h2o_transfer_buf, 0, engine->h2o_transfer_size);
     }
 
-  //status == OW_ENGINE_STATUS_STOP || status == OW_ENGINE_STATUS_ERROR
+  // status == OW_ENGINE_STATUS_STOP || status == OW_ENGINE_STATUS_ERROR
 
   //Handle completed events but not actually processed.
   //No new transfers will be submitted due to the status.
@@ -899,10 +913,6 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 	{
 	  return OW_INIT_ERROR_NO_GET_TIME;
 	}
-      if (!engine->context->dll)
-	{
-	  return OW_INIT_ERROR_NO_DLL;
-	}
     }
 
   debug_print (1, "Starting thread...");
@@ -918,12 +928,12 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
 				engine->context->priority + 1);
     }
 
-  //Wait till the thread has reached the USB loop
-  while (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP &&
-	 ow_engine_get_status (engine) < OW_ENGINE_STATUS_WAIT)
-    {
-      usleep (PAUSE_TO_BE_WAITING_USECS);
-    }
+  //status == OW_ENGINE_STATUS_STOP
+
+  //Wait till the thread has started
+  while (ow_engine_get_status (engine) == OW_ENGINE_STATUS_STOP);
+
+  //status == OW_ENGINE_STATUS_READY
 
   return OW_OK;
 }
@@ -976,7 +986,7 @@ inline void
 ow_engine_set_status (struct ow_engine *engine, ow_engine_status_t status)
 {
   pthread_spin_lock (&engine->lock);
-  if (engine->status >= OW_ENGINE_STATUS_READY)
+  if (engine->status >= OW_ENGINE_STATUS_STOP)
     {
       engine->status = status;
     }

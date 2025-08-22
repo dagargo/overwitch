@@ -193,8 +193,8 @@ ow_resampler_reset_dll (struct ow_resampler *resampler,
 {
   double target_delay_ms;
 
-  if (resampler->dll.set
-      && ow_engine_get_status (resampler->engine) == OW_ENGINE_STATUS_RUN)
+  if (resampler->dll.set &&
+      ow_engine_get_status (resampler->engine) == OW_ENGINE_STATUS_RUN)
     {
       debug_print (2, "Just adjusting DLL ratio...");
       resampler->log_cycles = 0;
@@ -375,16 +375,15 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   status = ow_resampler_get_status (resampler);
 
   if (status == OW_RESAMPLER_STATUS_READY &&
-      engine_status <= OW_ENGINE_STATUS_BOOT)
+      engine_status == OW_ENGINE_STATUS_READY)
     {
-      if (engine_status == OW_ENGINE_STATUS_READY)
-	{
-	  debug_print (1, "%s (%s): Booting Overbridge side...",
-		       resampler->engine->name,
-		       resampler->engine->overbridge_name);
+      debug_print (1,
+		   "%s (%s): Setting Overbridge side to steady (notifying readiness)...",
+		   resampler->engine->name,
+		   resampler->engine->overbridge_name);
 
-	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_STEADY);
-	}
+      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_STEADY);
+
       return 1;
     }
 
@@ -407,8 +406,6 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_BOOT);
       ow_resampler_report_state (resampler);
 
-      resampler->log_cycles = 0;
-
       return 0;
     }
 
@@ -417,7 +414,8 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   resampler->o2h_ratio = dll->ratio;
   resampler->h2o_ratio = 1.0 / resampler->o2h_ratio;
 
-  if (status == OW_RESAMPLER_STATUS_BOOT && ow_dll_tuned (dll))
+  if (status == OW_RESAMPLER_STATUS_BOOT &&
+      engine_status == OW_ENGINE_STATUS_WAIT && ow_dll_tuned (dll))
     {
       debug_print (1, "%s (%s): Tuning resampler...", resampler->engine->name,
 		   resampler->engine->overbridge_name);
@@ -430,6 +428,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       resampler->log_control_cycles =
 	resampler->reporter.period * resampler->samplerate /
 	resampler->bufsize;
+      resampler->log_cycles = 0;
 
       tuning_start_usecs = current_usecs;
     }
@@ -499,6 +498,7 @@ ow_resampler_init_from_device (struct ow_resampler **resampler_,
   resampler->reporter.callback = NULL;
   resampler->reporter.data = NULL;
   resampler->reporter.period = DEFAULT_REPORT_PERIOD;
+  resampler->log_control_cycles = 0;
 
   ow_dll_host_init (&resampler->dll);
 
