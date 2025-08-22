@@ -868,7 +868,7 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
       if (!context->set_rt_priority)
 	{
 	  context->set_rt_priority = ow_set_thread_rt_priority;
-	  context->priority = OW_DEFAULT_RT_PROPERTY;
+	  context->priority = OW_DEFAULT_RT_PRIORITY;
 	}
     }
 
@@ -889,7 +889,7 @@ ow_engine_start (struct ow_engine *engine, struct ow_context *context)
       if (!context->set_rt_priority)
 	{
 	  context->set_rt_priority = ow_set_thread_rt_priority;
-	  context->priority = OW_DEFAULT_RT_PROPERTY;
+	  context->priority = OW_DEFAULT_RT_PRIORITY;
 	}
     }
 

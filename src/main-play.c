@@ -175,7 +175,7 @@ run_play (int device_num, const char *device_name, uint8_t bus,
       min[i] = 0.0f;
     }
 
-  ow_set_thread_rt_priority (pthread_self (), OW_DEFAULT_RT_PROPERTY);
+  ow_set_thread_rt_priority (pthread_self (), OW_DEFAULT_RT_PRIORITY);
 
   context.dll = NULL;
   context.read_space = buffer_read_space;

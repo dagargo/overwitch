@@ -34,7 +34,7 @@
 //floats in the engine interface.
 #define OW_BYTES_PER_SAMPLE sizeof(float)
 
-#define OW_DEFAULT_RT_PROPERTY 20
+#define OW_DEFAULT_RT_PRIORITY 20
 
 #define OW_LABEL_MAX_LEN 32
 
