@@ -83,7 +83,7 @@ else
 fi
 ```
 
-With `rtirq-init` package installed I simply let the script reconfigure the priorities of IRQ handling threads and then I run JACK, Overwitch and the desired applications. Notice that real time priorities are set by default so there is **no need** to set explicitely these.
+With `rtirq-init` package installed, I simply let the script reconfigure the priorities of IRQ handling threads and then I run JACK, Overwitch and the desired applications. Notice that real time priorities are set by default so there is **no need** to set explicitely these.
 
 ```
 $ sudo /etc/init.d/rtirq start
@@ -92,12 +92,14 @@ $ overwitch -b 8 -q 2 -d Digitakt
 $ ardour
 ```
 
-Currently I'm using this RT kernel. You don't need an RT kernel but it will help even more to reduce latency and xruns.
+While using a RT kernel is not needed, it will help even more to reduce latency and xruns.
 
 ```
 $ uname -v
-#1 SMP PREEMPT_RT Debian 5.10.28-1 (2021-04-09)
+#1 SMP PREEMPT_RT Debian 6.12.41-1 (2025-08-12)
 ```
+
+Lastly, disable your system sounds.
 
 With all this configuration I get no JACK xruns with 64 frames buffer (2 periods) and occasional xruns with 32 frames buffer (3 periods) with network enabled and under normal usage conditions.
 
