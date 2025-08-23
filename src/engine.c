@@ -741,10 +741,6 @@ run_audio (void *data)
       engine->context->dll_overbridge_init (engine->context->dll,
 					    OB_SAMPLE_RATE,
 					    engine->frames_per_transfer);
-
-      engine->context->dll_overbridge_update (engine->context->dll,
-					      engine->frames_per_transfer,
-					      engine->context->get_time ());
     }
 
   // These calls are needed to initialize the Overbridge side before the host side.
