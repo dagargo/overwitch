@@ -122,7 +122,7 @@ stop_all ()
 static void
 signal_handler (int signum)
 {
-  if (signum == SIGTERM)
+  if (signum == SIGTERM || signum == SIGINT)
     {
       handle_stop ();
       g_application_release (app);
@@ -555,6 +555,7 @@ main (gint argc, gchar *argv[])
   action.sa_flags = 0;
   sigaction (SIGTERM, &action, NULL);
   sigaction (SIGHUP, &action, NULL);
+  sigaction (SIGINT, &action, NULL);
 
   pthread_setname_np (pthread_self (), "overwitch-srv");
 
