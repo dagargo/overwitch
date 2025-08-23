@@ -419,7 +419,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   if (status == OW_RESAMPLER_STATUS_READY &&
       engine_status == OW_ENGINE_STATUS_WAIT)
     {
-      debug_print (1, "%s (%s): Starting up resampler...",
+      debug_print (1, "%s (%s): Booting resampler...",
 		   resampler->engine->name,
 		   resampler->engine->overbridge_name);
 

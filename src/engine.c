@@ -729,7 +729,9 @@ static const char *ob_err_strgs[] = {
 static void *
 run_audio (void *data)
 {
+  int err;
   size_t rsh2o, bytes;
+  struct timeval tv = { 1, 0UL };
   struct ow_engine *engine = data;
 
   // This needs to be set before the host side. We ensure this by changing the state after.
@@ -742,20 +744,23 @@ run_audio (void *data)
 					    engine->frames_per_transfer);
     }
 
-  // These calls are needed to initialize the Overbridge side before the host side.
-  prepare_cycle_in_audio (engine);
-  prepare_cycle_out_audio (engine);
-
   // status == OW_ENGINE_STATUS_STOP
 
-  ow_engine_set_status (engine, OW_ENGINE_STATUS_READY);
+  // This can NOT use ow_engine_set_status as the transition is not allowed from OW_ENGINE_STATUS_STOP.
+  pthread_spin_lock (&engine->lock);
+  engine->status = OW_ENGINE_STATUS_READY;
+  pthread_spin_unlock (&engine->lock);
 
   // status == OW_ENGINE_STATUS_READY
 
   if (engine->context->dll)
     {
       // This needs to be fast to ensure the lowest latency.
-      while (ow_engine_get_status (engine) != OW_ENGINE_STATUS_STEADY);
+      while (ow_engine_get_status (engine) != OW_ENGINE_STATUS_STEADY)
+	{
+	}
+
+      debug_print (1, "Notification of readiness received from resampler");
     }
   else
     {
@@ -773,17 +778,28 @@ run_audio (void *data)
   engine->status = OW_ENGINE_STATUS_BOOT;
   pthread_spin_unlock (&engine->lock);
 
+  prepare_cycle_in_audio (engine);
+  prepare_cycle_out_audio (engine);
+
   while (1)
     {
+      // status == OW_ENGINE_STATUS_BOOT || status == OW_ENGINE_STATUS_CLEAR
+
+      debug_print (1, "Booting or clearing engine...");
+
       engine->h2o_latency = 0;
       engine->h2o_max_latency = 0;
       engine->reading_at_h2o_end = engine->context->dll ? 0 : 1;
       engine->o2h_latency = 0;
       engine->o2h_max_latency = 0;
 
-      // status == OW_ENGINE_STATUS_BOOT || status == OW_ENGINE_STATUS_CLEAR
-
       pthread_spin_lock (&engine->lock);
+      if (engine->status <= OW_ENGINE_STATUS_STOP)
+	{
+	  pthread_spin_unlock (&engine->lock);
+	  return NULL;
+	}
+
       if (engine->status == OW_ENGINE_STATUS_CLEAR)
 	{
 	  engine->status = OW_ENGINE_STATUS_RUN;
@@ -804,7 +820,11 @@ run_audio (void *data)
 
       while (ow_engine_get_status (engine) >= OW_ENGINE_STATUS_WAIT)
 	{
-	  libusb_handle_events_completed (engine->usb.context, NULL);
+	  err = libusb_handle_events_completed (engine->usb.context, NULL);
+	  if (err)
+	    {
+	      error_print ("USB error: %s", libusb_error_name (err));
+	    }
 	}
 
       if (ow_engine_get_status (engine) < OW_ENGINE_STATUS_BOOT)
@@ -826,8 +846,8 @@ run_audio (void *data)
 
   //Handle completed events but not actually processed.
   //No new transfers will be submitted due to the status.
-  debug_print (2, "Processing remaining event...");
-  libusb_handle_events_completed (engine->usb.context, NULL);
+  debug_print (2, "Processing remaining events...");
+  libusb_handle_events_timeout_completed (engine->usb.context, &tv, NULL);
 
   return NULL;
 }
@@ -981,7 +1001,7 @@ inline void
 ow_engine_set_status (struct ow_engine *engine, ow_engine_status_t status)
 {
   pthread_spin_lock (&engine->lock);
-  if (engine->status >= OW_ENGINE_STATUS_STOP)
+  if (engine->status > OW_ENGINE_STATUS_STOP)
     {
       engine->status = status;
     }
