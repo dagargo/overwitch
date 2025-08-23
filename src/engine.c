@@ -256,8 +256,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
     }
   else if (rsh2o > engine->h2o_frame_size)	//At least 2 frames to apply resampling to
     {
-      debug_print (2,
-		   "h2o: Audio ring buffer underflow (%zu B < %zu B). Resampling...",
+      debug_print (2, "h2o: Audio ring buffer underflow (%zu B < %zu B)",
 		   rsh2o, engine->h2o_transfer_size);
       frames = rsh2o / engine->h2o_frame_size;
       bytes = frames * engine->h2o_frame_size;
