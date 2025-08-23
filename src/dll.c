@@ -23,8 +23,6 @@
 #include "utils.h"
 #include "dll.h"
 
-#define ERR_TUNED_THRES 2
-
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/alsathread.cc
 //Transform us to seconds only considering the lowest 28 bits
 #define UINT64_USEC_TO_DOUBLE_SEC(t) (SEC_PER_USEC * (int)(t & 0x0FFFFFFF))
@@ -195,7 +193,7 @@ ow_dll_host_load_dll_overbridge (struct ow_dll *dll)
 }
 
 inline int
-ow_dll_tuned (struct ow_dll *dll)
+ow_dll_tuned (struct ow_dll *dll, double err)
 {
-  return abs (dll->err) < ERR_TUNED_THRES;
+  return abs (dll->err) < err;
 }

@@ -74,4 +74,4 @@ void ow_dll_host_update (struct ow_dll *);
 
 void ow_dll_host_load_dll_overbridge (struct ow_dll *);
 
-int ow_dll_tuned (struct ow_dll *);
+int ow_dll_tuned (struct ow_dll *, double err);

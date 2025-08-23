@@ -25,7 +25,12 @@
 
 #define MAX_READ_FRAMES 5
 #define DEFAULT_REPORT_PERIOD 2
-#define TUNING_PERIOD_US 5000000
+
+#define BOOTING_PERIOD_US (3 * USEC_PER_SEC)
+#define TUNING_PERIOD_US (4 * USEC_PER_SEC)
+
+#define BOOTING_ERROR 0.001
+#define TUNING_ERROR 0.00001
 
 #define OB_PERIOD_MS (1000.0 / OB_SAMPLE_RATE)
 
@@ -363,7 +368,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 {
   ow_engine_status_t engine_status;
   struct ow_dll *dll = &resampler->dll;
-  static uint64_t tuning_start_usecs;
+  static uint64_t booting_start_usecs, tuning_start_usecs;
   ow_resampler_status_t status;
 
   engine_status = ow_engine_get_status (resampler->engine);
@@ -401,6 +406,8 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_BOOT);
       ow_resampler_report_state (resampler);
 
+      booting_start_usecs = current_usecs;
+
       return 0;
     }
 
@@ -410,7 +417,8 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   resampler->h2o_ratio = 1.0 / resampler->o2h_ratio;
 
   if (status == OW_RESAMPLER_STATUS_BOOT &&
-      engine_status == OW_ENGINE_STATUS_WAIT && ow_dll_tuned (dll))
+      current_usecs - booting_start_usecs > BOOTING_PERIOD_US &&
+      ow_dll_tuned (dll, BOOTING_ERROR))
     {
       debug_print (1, "%s (%s): Tuning resampler...", resampler->engine->name,
 		   resampler->engine->overbridge_name);
@@ -428,7 +436,8 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
     }
 
   if (status == OW_RESAMPLER_STATUS_TUNE &&
-      current_usecs - tuning_start_usecs > TUNING_PERIOD_US)
+      current_usecs - tuning_start_usecs > TUNING_PERIOD_US &&
+      ow_dll_tuned (dll, TUNING_ERROR))
     {
       debug_print (1, "%s (%s): Running resampler...",
 		   resampler->engine->name,
