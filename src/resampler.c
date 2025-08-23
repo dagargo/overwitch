@@ -610,6 +610,7 @@ ow_resampler_get_engine (struct ow_resampler *resampler)
 inline void
 ow_resampler_stop (struct ow_resampler *resampler)
 {
+  debug_print (1, "Stopping resampler...");
   ow_engine_stop (resampler->engine);
 }
 

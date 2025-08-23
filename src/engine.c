@@ -1035,6 +1035,7 @@ ow_engine_get_device (struct ow_engine *engine)
 inline void
 ow_engine_stop (struct ow_engine *engine)
 {
+  debug_print (1, "Stopping engine...");
   ow_engine_set_status (engine, OW_ENGINE_STATUS_STOP);
 }
 

@@ -522,15 +522,20 @@ jclient_run (struct jclient *jclient)
     {
       error_print ("Cannot activate client");
       err = OW_GENERIC_ERROR;
-      goto cleanup_jack;
+      goto wait_resampler;
     }
 
   debug_print (1, "Activated");
 
+wait_resampler:
   ow_resampler_wait (jclient->resampler);
 
   debug_print (1, "Exiting...");
-  jack_deactivate (jclient->client);
+
+  if (!err)
+    {
+      jack_deactivate (jclient->client);
+    }
 
 cleanup_jack:
   if (jclient->context.h2o_audio)
