@@ -57,7 +57,7 @@ jclient_thread_xrun_cb (void *cb_data)
 {
   struct ow_resampler *resampler = cb_data;
   error_print ("JACK xrun");
-  ow_resampler_reset_latencies (resampler);
+  ow_resampler_reset (resampler);
   return 0;
 }
 
@@ -231,12 +231,13 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 			    &next_usecs, &period_usecs))
     {
       error_print ("Error while getting JACK time");
+      goto err;
     }
 
   if (ow_resampler_compute_ratios (jclient->resampler, current_usecs,
 				   jclient_audio_running, jclient->client))
     {
-      return 0;
+      goto err;
     }
 
   //o2h
@@ -247,7 +248,10 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
     }
 
   f = ow_resampler_get_o2h_audio_buffer (jclient->resampler);
-  ow_resampler_read_audio (jclient->resampler);
+  if (ow_resampler_read_audio (jclient->resampler))
+    {
+      goto err;
+    }
   jclient_copy_o2j_audio (f, nframes, buffer, desc);
 
   //h2o
@@ -261,10 +265,17 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 
       f = ow_resampler_get_h2o_audio_buffer (jclient->resampler);
       jclient_copy_j2o_audio (f, nframes, buffer, desc);
-      ow_resampler_write_audio (jclient->resampler);
+      if (ow_resampler_write_audio (jclient->resampler))
+	{
+	  goto err;
+	}
     }
 
   return 0;
+
+err:
+  jclient_stop (jclient);
+  return 1;
 }
 
 static void

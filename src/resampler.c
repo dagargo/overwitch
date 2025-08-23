@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "resampler.h"
+#include "overwitch.h"
 
 #define MAX_READ_FRAMES 5
 #define DEFAULT_REPORT_PERIOD 2
@@ -187,38 +188,37 @@ ow_resampler_get_target_delay_ms (struct ow_resampler *resampler)
   return resampler->dll.target_delay * 1000 / OB_SAMPLE_RATE;
 }
 
-static void
-ow_resampler_reset_dll (struct ow_resampler *resampler,
-			uint32_t new_samplerate)
+static inline void
+ow_resampler_set_ratios_from_dll (struct ow_resampler *resampler)
 {
-  double target_delay_ms;
+  resampler->o2h_ratio = resampler->dll.ratio;
+  resampler->h2o_ratio = 1.0 / resampler->o2h_ratio;
+}
 
-  if (resampler->dll.set &&
-      ow_engine_get_status (resampler->engine) == OW_ENGINE_STATUS_RUN)
-    {
-      debug_print (2, "Just adjusting DLL ratio...");
-      resampler->log_cycles = 0;
-    }
-  else
-    {
-      ow_dll_host_reset (&resampler->dll, new_samplerate, OB_SAMPLE_RATE,
-			 resampler->bufsize,
-			 resampler->engine->frames_per_transfer);
+static inline void
+ow_resampler_reset_dll (struct ow_resampler *resampler)
+{
+  ow_dll_host_reset (&resampler->dll, resampler->samplerate, OB_SAMPLE_RATE,
+		     resampler->bufsize,
+		     resampler->engine->frames_per_transfer);
 
-      target_delay_ms = ow_resampler_get_target_delay_ms (resampler);
-      debug_print (2, "DLL target delay: %d frames (%f ms)",
-		   resampler->dll.target_delay, target_delay_ms);
-    }
+  ow_resampler_set_ratios_from_dll (resampler);
+}
+
+void
+ow_resampler_reset (struct ow_resampler *resampler)
+{
+  debug_print (1, "Resetting resampler...");
+
+  pthread_spin_lock (&resampler->engine->lock);
+  ow_dll_host_init (&resampler->dll);
+  pthread_spin_unlock (&resampler->engine->lock);
+
+  ow_resampler_reset_dll (resampler);
 
   ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_BOOT);
-
-  pthread_spin_lock (&resampler->lock);
-  resampler->status = OW_RESAMPLER_STATUS_READY;
-
-  resampler->o2h_ratio = resampler->dll.ratio;
-  resampler->samplerate = new_samplerate;
-
-  pthread_spin_unlock (&resampler->lock);
+  ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_READY);
+  ow_resampler_clear_buffers (resampler);
 }
 
 static long
@@ -295,7 +295,7 @@ resampler_o2h_reader (void *cb_data, float **data)
   return frames;
 }
 
-void
+int
 ow_resampler_read_audio (struct ow_resampler *resampler)
 {
   long gen_frames;
@@ -307,10 +307,13 @@ ow_resampler_read_audio (struct ow_resampler *resampler)
       error_print
 	("o2h: Unexpected frames with ratio %f (output %ld, expected %d)",
 	 resampler->o2h_ratio, gen_frames, resampler->bufsize);
+      return -1;
     }
+
+  return 0;
 }
 
-void
+int
 ow_resampler_write_audio (struct ow_resampler *resampler)
 {
   long gen_frames;
@@ -324,7 +327,7 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
 
   if (status < OW_RESAMPLER_STATUS_RUN)
     {
-      return;
+      return 0;
     }
 
   memcpy (&resampler->h2o_queue
@@ -345,6 +348,8 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
       error_print
 	("h2o: Unexpected frames with ratio %f (output %ld, expected %d)",
 	 resampler->h2o_ratio, gen_frames, frames);
+
+      return -1;
     }
 
   bytes = gen_frames * resampler->h2o_frame_size;
@@ -359,6 +364,8 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
     {
       error_print ("h2o: Audio ring buffer overflow. Discarding data...");
     }
+
+  return 0;
 }
 
 int
@@ -375,16 +382,32 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   status = ow_resampler_get_status (resampler);
 
   if (status == OW_RESAMPLER_STATUS_READY &&
-      engine_status == OW_ENGINE_STATUS_READY)
+      engine_status <= OW_ENGINE_STATUS_BOOT)
     {
-      debug_print (1,
-		   "%s (%s): Setting Overbridge side to steady (notifying readiness)...",
-		   resampler->engine->name,
-		   resampler->engine->overbridge_name);
+      if (engine_status <= OW_ENGINE_STATUS_STOP)
+	{
+	  return 1;
+	}
+      else if (engine_status == OW_ENGINE_STATUS_READY)
+	{
+	  debug_print (1,
+		       "%s (%s): Setting Overbridge side to steady (notifying readiness)...",
+		       resampler->engine->name,
+		       resampler->engine->overbridge_name);
 
-      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_STEADY);
+	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_STEADY);
 
-      return 1;
+	  return 0;
+	}
+      else if (engine_status == OW_ENGINE_STATUS_STEADY)
+	{
+	  return 0;
+	}
+      else
+	{
+	  // OW_ENGINE_STATUS_BOOT
+	  return 0;
+	}
     }
 
   pthread_spin_lock (&resampler->engine->lock);
@@ -413,8 +436,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 
   ow_dll_host_update (dll);
 
-  resampler->o2h_ratio = dll->ratio;
-  resampler->h2o_ratio = 1.0 / resampler->o2h_ratio;
+  ow_resampler_set_ratios_from_dll (resampler);
 
   if (status == OW_RESAMPLER_STATUS_BOOT &&
       current_usecs - booting_start_usecs > BOOTING_PERIOD_US &&
@@ -502,7 +524,9 @@ ow_resampler_init_from_device (struct ow_resampler **resampler_,
   resampler->report_period = DEFAULT_REPORT_PERIOD;
   resampler->log_control_cycles = 0;
 
+  pthread_spin_lock (&resampler->engine->lock);
   ow_dll_host_init (&resampler->dll);
+  pthread_spin_unlock (&resampler->engine->lock);
 
   return OW_OK;
 }
@@ -526,13 +550,31 @@ ow_resampler_destroy (struct ow_resampler *resampler)
   free (resampler);
 }
 
+static inline void
+ow_resampler_init_buffer_size (struct ow_resampler *resampler,
+			       uint32_t bufsize)
+{
+  debug_print (1, "Setting resampler buffer size to %d", bufsize);
+  resampler->bufsize = bufsize;
+  ow_resampler_reset_buffers (resampler);
+}
+
+static inline void
+ow_resampler_init_samplerate (struct ow_resampler *resampler,
+			      uint32_t samplerate)
+{
+  debug_print (1, "Setting resampler sample rate to %d", samplerate);
+  resampler->samplerate = samplerate;
+}
+
 ow_err_t
 ow_resampler_start (struct ow_resampler *resampler,
 		    struct ow_context *context, uint32_t samplerate,
 		    uint32_t bufsize)
 {
-  ow_resampler_set_samplerate (resampler, samplerate);
-  ow_resampler_set_buffer_size (resampler, bufsize);
+  ow_resampler_init_samplerate (resampler, samplerate);
+  ow_resampler_init_buffer_size (resampler, bufsize);
+  ow_resampler_reset_dll (resampler);
 
   context->dll = &resampler->dll;
   context->dll_overbridge_init = ow_dll_overbridge_init;
@@ -575,12 +617,10 @@ inline void
 ow_resampler_set_buffer_size (struct ow_resampler *resampler,
 			      uint32_t bufsize)
 {
-  if (resampler->bufsize != bufsize)
+  if (resampler->bufsize && resampler->bufsize != bufsize)
     {
-      debug_print (1, "Setting resampler buffer size to %d", bufsize);
-      resampler->bufsize = bufsize;
-      ow_resampler_reset_buffers (resampler);
-      ow_resampler_reset_dll (resampler, resampler->samplerate);
+      ow_resampler_init_buffer_size (resampler, bufsize);
+      ow_resampler_reset (resampler);
     }
 }
 
@@ -594,17 +634,10 @@ inline void
 ow_resampler_set_samplerate (struct ow_resampler *resampler,
 			     uint32_t samplerate)
 {
-  if (resampler->samplerate != samplerate)
+  if (resampler->samplerate && resampler->samplerate != samplerate)
     {
-      debug_print (1, "Setting resampler sample rate to %d", samplerate);
-      if (resampler->h2o_aux)	//This means that ow_resampler_reset_buffers has been called and thus bufsize has been set.
-	{
-	  ow_resampler_reset_dll (resampler, samplerate);
-	}
-      else
-	{
-	  resampler->samplerate = samplerate;
-	}
+      ow_resampler_init_samplerate (resampler, samplerate);
+      ow_resampler_reset (resampler);
     }
 }
 
@@ -612,13 +645,6 @@ uint32_t
 ow_resampler_get_samplerate (struct ow_resampler *resampler)
 {
   return resampler->samplerate;
-}
-
-inline void
-ow_resampler_reset (struct ow_resampler *resampler)
-{
-  ow_resampler_clear_buffers (resampler);
-  ow_resampler_reset_dll (resampler, resampler->samplerate);
 }
 
 inline size_t

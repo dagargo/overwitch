@@ -54,7 +54,6 @@ struct ow_dll
   struct instant i0;
   struct instant i1;
   struct ow_dll_overbridge dll_overbridge;
-  int set;
   int boot;
 };
 
@@ -62,16 +61,16 @@ void ow_dll_overbridge_init (void *, double, uint32_t);
 
 void ow_dll_overbridge_update (void *, uint32_t, uint64_t);
 
-void ow_dll_host_init (struct ow_dll *);
+void ow_dll_host_init (struct ow_dll *dll);
 
 void ow_dll_host_reset (struct ow_dll *, double, double, uint32_t, uint32_t);
 
 void ow_dll_host_set_loop_filter (struct ow_dll *, double, uint32_t, double);
 
-void ow_dll_host_update_error (struct ow_dll *, uint64_t);
+void ow_dll_host_update_error (struct ow_dll *dll, uint64_t time);
 
-void ow_dll_host_update (struct ow_dll *);
+void ow_dll_host_update (struct ow_dll *dll);
 
-void ow_dll_host_load_dll_overbridge (struct ow_dll *);
+void ow_dll_host_load_dll_overbridge (struct ow_dll *dll);
 
-int ow_dll_tuned (struct ow_dll *, double err);
+int ow_dll_tuned (struct ow_dll *dll, double err);
