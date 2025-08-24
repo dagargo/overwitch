@@ -155,11 +155,12 @@ set_usb_input_data_blks (struct ow_engine *engine)
     }
 
   pthread_spin_lock (&engine->lock);
-  engine->o2h_latency =
-    engine->context->read_space (engine->context->o2h_audio);
-  if (engine->o2h_latency > engine->o2h_max_latency)
+  engine->latency_o2h =
+    engine->context->read_space (engine->context->o2h_audio) /
+    engine->o2h_frame_size;
+  if (engine->latency_o2h > engine->latency_o2h_max)
     {
-      engine->o2h_max_latency = engine->o2h_latency;
+      engine->latency_o2h_max = engine->latency_o2h;
     }
   pthread_spin_unlock (&engine->lock);
 }
@@ -234,17 +235,17 @@ set_usb_output_data_blks (struct ow_engine *engine)
 	  debug_print (2, "h2o: Clearing buffer and stopping...");
 	  memset (engine->h2o_transfer_buf, 0, engine->h2o_transfer_size);
 	  engine->reading_at_h2o_end = 0;
-	  engine->h2o_max_latency = 0;
+	  engine->latency_h2o_max = engine->latency_h2o_min;
 	  goto set_blocks;
 	}
       return;
     }
 
   pthread_spin_lock (&engine->lock);
-  engine->h2o_latency = rsh2o;
-  if (engine->h2o_latency > engine->h2o_max_latency)
+  engine->latency_h2o = rsh2o / engine->h2o_frame_size;
+  if (engine->latency_h2o > engine->latency_h2o_max)
     {
-      engine->h2o_max_latency = engine->h2o_latency;
+      engine->latency_h2o_max = engine->latency_h2o;
     }
   pthread_spin_unlock (&engine->lock);
 
@@ -282,6 +283,11 @@ set_usb_output_data_blks (struct ow_engine *engine)
 	     engine->h2o_data.src_ratio, engine->h2o_data.output_frames_gen,
 	     engine->frames_per_transfer);
 	}
+
+      // Any maximum value is invalid at this point
+      pthread_spin_lock (&engine->lock);
+      engine->latency_o2h_max = engine->latency_o2h_min;
+      pthread_spin_unlock (&engine->lock);
     }
   else
     {
@@ -478,8 +484,8 @@ ow_engine_init_mem (struct ow_engine *engine,
   debug_print (2, "h2o: audio transfer size: %zu B",
 	       engine->h2o_transfer_size);
 
-  engine->o2h_min_latency = engine->frames_per_transfer;
-  engine->h2o_min_latency = engine->frames_per_transfer;
+  engine->latency_o2h_min = engine->frames_per_transfer;
+  engine->latency_h2o_min = engine->frames_per_transfer;
 
   engine->usb.audio_frames_counter = 0;
   engine->usb.xfr_audio_in_data_len =
@@ -787,11 +793,12 @@ run_audio (void *data)
 
       debug_print (1, "Booting or clearing engine...");
 
-      engine->h2o_latency = 0;
-      engine->h2o_max_latency = 0;
+      engine->latency_h2o = engine->latency_h2o_min;
+      engine->latency_h2o_max = engine->latency_h2o_min;
+      engine->latency_o2h = engine->latency_o2h_min;
+      engine->latency_o2h_max = engine->latency_o2h_min;
+
       engine->reading_at_h2o_end = engine->context->dll ? 0 : 1;
-      engine->o2h_latency = 0;
-      engine->o2h_max_latency = 0;
 
       pthread_spin_lock (&engine->lock);
       if (engine->status <= OW_ENGINE_STATUS_STOP)

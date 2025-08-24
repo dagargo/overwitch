@@ -370,7 +370,7 @@ handle_get_state ()
 	  struct ow_engine *engine = ow_resampler_get_engine (resampler);
 	  const struct ow_device *device = ow_engine_get_device (engine);
 	  const gchar *name = ow_engine_get_overbridge_name (engine);
-	  ow_resampler_get_state (resampler, &state);
+	  ow_resampler_get_state_copy (resampler, &state);
 	  message_state_builder_add_device (builder, i, name, device, &state);
 	}
 

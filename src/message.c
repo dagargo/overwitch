@@ -74,17 +74,17 @@ message_state_builder_add_device (JsonBuilder *builder, guint32 id,
   json_builder_set_member_name (builder, STATE_DEVICE_STATUS);
   json_builder_add_int_value (builder, state->status);
   json_builder_set_member_name (builder, STATE_DEVICE_LATENCY_O2H);
-  json_builder_add_double_value (builder, state->latency_o2h);
+  json_builder_add_double_value (builder, state->t_latency_o2h);
   json_builder_set_member_name (builder, STATE_DEVICE_LATENCY_O2H_MAX);
-  json_builder_add_double_value (builder, state->latency_o2h_max);
+  json_builder_add_double_value (builder, state->t_latency_o2h_max);
   json_builder_set_member_name (builder, STATE_DEVICE_LATENCY_O2H_MIN);
-  json_builder_add_double_value (builder, state->latency_o2h_min);
+  json_builder_add_double_value (builder, state->t_latency_o2h_min);
   json_builder_set_member_name (builder, STATE_DEVICE_LATENCY_H2O);
-  json_builder_add_double_value (builder, state->latency_h2o);
+  json_builder_add_double_value (builder, state->t_latency_h2o);
   json_builder_set_member_name (builder, STATE_DEVICE_LATENCY_H2O_MAX);
-  json_builder_add_double_value (builder, state->latency_h2o_max);
+  json_builder_add_double_value (builder, state->t_latency_h2o_max);
   json_builder_set_member_name (builder, STATE_DEVICE_LATENCY_H2O_MIN);
-  json_builder_add_double_value (builder, state->latency_h2o_min);
+  json_builder_add_double_value (builder, state->t_latency_h2o_min);
   json_builder_set_member_name (builder, STATE_DEVICE_RATIO_O2H);
   json_builder_add_double_value (builder, state->ratio_o2h);
   json_builder_set_member_name (builder, STATE_DEVICE_RATIO_H2O);
@@ -184,8 +184,8 @@ message_state_reader_get_device (JsonReader *reader, guint index)
   static gchar h2o_latency[OW_LABEL_MAX_LEN];
   const gchar *name, *device_name;
 
-  state.latency_o2h = 0;
-  state.latency_h2o = 0;
+  state.t_latency_o2h = 0;
+  state.t_latency_h2o = 0;
   state.ratio_o2h = 0;
   state.ratio_o2h = 0;
 
@@ -256,7 +256,7 @@ message_state_reader_get_device (JsonReader *reader, guint index)
 
   if (json_reader_read_member (reader, STATE_DEVICE_LATENCY_O2H))
     {
-      state.latency_o2h = json_reader_get_double_value (reader);
+      state.t_latency_o2h = json_reader_get_double_value (reader);
       json_reader_end_member (reader);
     }
   else
@@ -266,7 +266,7 @@ message_state_reader_get_device (JsonReader *reader, guint index)
 
   if (json_reader_read_member (reader, STATE_DEVICE_LATENCY_O2H_MAX))
     {
-      state.latency_o2h_max = json_reader_get_double_value (reader);
+      state.t_latency_o2h_max = json_reader_get_double_value (reader);
       json_reader_end_member (reader);
     }
   else
@@ -276,7 +276,7 @@ message_state_reader_get_device (JsonReader *reader, guint index)
 
   if (json_reader_read_member (reader, STATE_DEVICE_LATENCY_O2H_MIN))
     {
-      state.latency_o2h_min = json_reader_get_double_value (reader);
+      state.t_latency_o2h_min = json_reader_get_double_value (reader);
       json_reader_end_member (reader);
     }
   else
@@ -296,7 +296,7 @@ message_state_reader_get_device (JsonReader *reader, guint index)
 
   if (json_reader_read_member (reader, STATE_DEVICE_LATENCY_H2O))
     {
-      state.latency_h2o = json_reader_get_double_value (reader);
+      state.t_latency_h2o = json_reader_get_double_value (reader);
       json_reader_end_member (reader);
     }
   else
@@ -306,7 +306,7 @@ message_state_reader_get_device (JsonReader *reader, guint index)
 
   if (json_reader_read_member (reader, STATE_DEVICE_LATENCY_H2O_MAX))
     {
-      state.latency_h2o_max = json_reader_get_double_value (reader);
+      state.t_latency_h2o_max = json_reader_get_double_value (reader);
       json_reader_end_member (reader);
     }
   else
@@ -316,7 +316,7 @@ message_state_reader_get_device (JsonReader *reader, guint index)
 
   if (json_reader_read_member (reader, STATE_DEVICE_LATENCY_H2O_MIN))
     {
-      state.latency_h2o_min = json_reader_get_double_value (reader);
+      state.t_latency_h2o_min = json_reader_get_double_value (reader);
       json_reader_end_member (reader);
     }
   else
@@ -334,22 +334,22 @@ message_state_reader_get_device (JsonReader *reader, guint index)
       goto end;
     }
 
-  if (state.latency_o2h >= 0)
+  if (state.t_latency_o2h >= 0)
     {
       g_snprintf (o2h_latency, OW_LABEL_MAX_LEN,
-		  "%.1f [%.1f, %.1f] ms", state.latency_o2h,
-		  state.latency_o2h_min, state.latency_o2h_max);
+		  "%.1f [%.1f, %.1f] ms", state.t_latency_o2h,
+		  state.t_latency_o2h_min, state.t_latency_o2h_max);
     }
   else
     {
       o2h_latency[0] = '\0';
     }
 
-  if (state.latency_h2o >= 0)
+  if (state.t_latency_h2o >= 0)
     {
       g_snprintf (h2o_latency, OW_LABEL_MAX_LEN,
-		  "%.1f [%.1f, %.1f] ms", state.latency_h2o,
-		  state.latency_h2o_min, state.latency_h2o_max);
+		  "%.1f [%.1f, %.1f] ms", state.t_latency_h2o,
+		  state.t_latency_h2o_min, state.t_latency_h2o_max);
     }
   else
     {

@@ -170,14 +170,22 @@ struct ow_device
 struct ow_resampler_state
 {
   ow_resampler_status_t status;
-  double latency_o2h;
-  double latency_o2h_min;
-  double latency_o2h_max;
-  double latency_h2o;
-  double latency_h2o_min;
-  double latency_h2o_max;
   double ratio_o2h;
   double ratio_h2o;
+  //Time latency members
+  double t_latency_o2h;
+  double t_latency_o2h_min;
+  double t_latency_o2h_max;
+  double t_latency_h2o;
+  double t_latency_h2o_min;
+  double t_latency_h2o_max;
+  //Frame latency members
+  uint32_t f_latency_o2h;
+  uint32_t f_latency_o2h_min;
+  uint32_t f_latency_o2h_max;
+  uint32_t f_latency_h2o;
+  uint32_t f_latency_h2o_min;
+  uint32_t f_latency_h2o_max;
 };
 
 typedef void (*ow_hotplug_callback_t) (struct ow_device * device);
@@ -256,9 +264,6 @@ void ow_resampler_wait (struct ow_resampler *resampler);
 
 void ow_resampler_destroy (struct ow_resampler *resampler);
 
-void ow_resampler_get_state (struct ow_resampler *resampler,
-			     struct ow_resampler_state *state);
-
 void ow_resampler_clear_buffers (struct ow_resampler *resampler);
 
 void ow_resampler_reset (struct ow_resampler *resampler);
@@ -300,10 +305,10 @@ float *ow_resampler_get_h2o_audio_buffer (struct ow_resampler *resampler);
 struct ow_resampler_reporter *ow_resampler_get_reporter (struct ow_resampler
 							 *);
 
-void ow_resampler_get_h2o_latency (struct ow_resampler *resampler, uint32_t *,
-				   uint32_t *, uint32_t *);
-
-void ow_resampler_get_o2h_latency (struct ow_resampler *resampler, uint32_t *,
-				   uint32_t *, uint32_t *);
-
 double ow_resampler_get_target_delay_ms (struct ow_resampler *resampler);
+
+struct ow_resampler_state *ow_resampler_get_state (struct ow_resampler
+						   *resampler);
+
+void ow_resampler_get_state_copy (struct ow_resampler *resampler,
+				  struct ow_resampler_state *state);

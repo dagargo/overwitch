@@ -52,4 +52,5 @@ struct ow_resampler
   uint32_t bufsize;
   double samplerate;
   int report_period;
+  struct ow_resampler_state state;
 };

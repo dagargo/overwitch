@@ -66,39 +66,38 @@ jclient_set_latency_cb (jack_latency_callback_mode_t mode, void *cb_data)
 {
   jack_latency_range_t range;
   struct jclient *jclient = cb_data;
-  uint32_t latency, min_latency, max_latency;
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
   const struct ow_device_desc *desc = &ow_engine_get_device (engine)->desc;
+  struct ow_resampler_state *state =
+    ow_resampler_get_state (jclient->resampler);
 
   debug_print (2, "JACK latency request");
 
   if (mode == JackPlaybackLatency)
     {
-      ow_resampler_get_o2h_latency (jclient->resampler, &latency,
-				    &min_latency, &max_latency);
-      debug_print (2, "o2h latency: [ %d, %d ]", min_latency, max_latency);
+      debug_print (2, "o2h latency: [ %d, %d ]", state->f_latency_o2h_min,
+		   state->f_latency_o2h_max);
 
       for (int i = 0; i < desc->outputs; i++)
 	{
 	  jack_port_get_latency_range (jclient->input_ports[0], mode, &range);
-	  range.min += min_latency;
-	  range.max += max_latency;
+	  range.min += state->f_latency_o2h_min;
+	  range.max += state->f_latency_o2h_max;
 	  jack_port_set_latency_range (jclient->output_ports[i], mode,
 				       &range);
 	}
     }
   else if (mode == JackCaptureLatency)
     {
-      ow_resampler_get_h2o_latency (jclient->resampler, &latency,
-				    &min_latency, &max_latency);
-      debug_print (2, "h2o latency: [ %d, %d ]", min_latency, max_latency);
+      debug_print (2, "h2o latency: [ %d, %d ]", state->f_latency_h2o_min,
+		   state->f_latency_h2o_max);
 
       for (int i = 0; i < desc->inputs; i++)
 	{
 	  jack_port_get_latency_range (jclient->output_ports[0], mode,
 				       &range);
-	  range.min += min_latency;
-	  range.max += max_latency;
+	  range.min += state->f_latency_h2o_min;
+	  range.max += state->f_latency_h2o_max;
 	  jack_port_set_latency_range (jclient->input_ports[i], mode, &range);
 	}
     }

@@ -171,13 +171,13 @@ struct ow_engine
   unsigned int blocks_per_transfer;
   unsigned int frames_per_transfer;
   pthread_spinlock_t lock;
-  //Latencies are measured in bytes
-  size_t o2h_latency;
-  size_t o2h_min_latency;
-  size_t o2h_max_latency;
-  size_t h2o_latency;
-  size_t h2o_min_latency;
-  size_t h2o_max_latency;
+  //Latencies are measured in frames
+  size_t latency_o2h;
+  size_t latency_o2h_min;
+  size_t latency_o2h_max;
+  size_t latency_h2o;
+  size_t latency_h2o_min;
+  size_t latency_h2o_max;
   pthread_t thread;
   size_t h2o_transfer_size;
   size_t o2h_transfer_size;

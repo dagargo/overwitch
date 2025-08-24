@@ -334,12 +334,12 @@ test_state_parser ()
 
   builder = message_state_builder_start ();
 
-  state.latency_o2h = 2;
-  state.latency_o2h_max = 3;
-  state.latency_o2h_min = 1;
-  state.latency_h2o = 2;
-  state.latency_h2o_max = 3;
-  state.latency_h2o_min = 1;
+  state.t_latency_o2h = 2;
+  state.t_latency_o2h_max = 3;
+  state.t_latency_o2h_min = 1;
+  state.t_latency_h2o = 2;
+  state.t_latency_h2o_max = 3;
+  state.t_latency_h2o_min = 1;
   state.ratio_o2h = 0.9;
   state.ratio_h2o = 1.0 / 0.9;
   state.status = OW_RESAMPLER_STATUS_RUN;
