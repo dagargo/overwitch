@@ -750,6 +750,10 @@ run_audio (void *data)
 					    engine->frames_per_transfer);
     }
 
+  // These calls are needed to initialize the Overbridge side before the host side.
+  prepare_cycle_in_audio (engine);
+  prepare_cycle_out_audio (engine);
+
   // status == OW_ENGINE_STATUS_STOP
 
   // This can NOT use ow_engine_set_status as the transition is not allowed from OW_ENGINE_STATUS_STOP.
@@ -783,9 +787,6 @@ run_audio (void *data)
     }
   engine->status = OW_ENGINE_STATUS_BOOT;
   pthread_spin_unlock (&engine->lock);
-
-  prepare_cycle_in_audio (engine);
-  prepare_cycle_out_audio (engine);
 
   while (1)
     {
