@@ -66,10 +66,10 @@ static const struct ow_device_desc TESTDEV_DESC_SIZE = {
 };
 
 static void
-ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
+ow_engine_print_blocks (struct ow_engine *engine, uint8_t *blks, size_t blk_len)
 {
   int32_t v;
-  unsigned char *s;
+  uint8_t *s;
   struct ow_engine_usb_blk *blk;
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
@@ -78,7 +78,7 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
       printf ("Block %d\n", i);
       printf ("0x%04x | 0x%04x\n", be16toh (blk->header),
 	      be16toh (blk->frames));
-      s = (unsigned char *) blk->data;
+      s = (uint8_t *) blk->data;
       for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
 	{
 	  if (engine->device->desc.type == OW_DEVICE_TYPE_2)
@@ -96,15 +96,15 @@ ow_engine_print_blocks (struct ow_engine *engine, char *blks, size_t blk_len)
 		engine->device->desc.output_tracks;
 	      for (int k = 0; k < engine->device->desc.outputs; k++)
 		{
-		  unsigned char *dst;
+		  uint8_t *dst;
 		  if (track->size == 4)
 		    {
-		      dst = (unsigned char *) &v;
+		      dst = (uint8_t *) &v;
 		      memcpy (dst, s, track->size);
 		    }
 		  else
 		    {
-		      dst = &((unsigned char *) &v)[1];
+		      dst = &((uint8_t *) &v)[1];
 		      memcpy (dst, s, track->size);
 		    }
 		  v = be32toh (v);
@@ -375,7 +375,7 @@ test_state_parser ()
 int
 main (int argc, char *argv[])
 {
-  int err;
+  int err = 0;
 
   debug_level = 2;
 
