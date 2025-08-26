@@ -1,24 +1,26 @@
 PKG_CONFIG ?= pkg-config
 
+AM_CFLAGS = -Wall -O3
+
 LIB_LIBS = libusb-1.0 json-glib-1.0
 
 CLI_LIBS = jack $(LIB_LIBS)
 SRV_LIBS = libsystemd glib-2.0 $(CLI_LIBS)
 GUI_LIBS = gtk4 $(CLI_LIBS)
 
-overwitch_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(GUI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
+overwitch_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(GUI_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(AM_CFLAGS)
 overwitch_LDFLAGS = `$(PKG_CONFIG) --libs $(GUI_LIBS)` $(SAMPLERATE_LIBS)
 
-overwitch_service_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(SRV_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
+overwitch_service_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(SRV_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(AM_CFLAGS)
 overwitch_service_LDFLAGS = `$(PKG_CONFIG) --libs $(SRV_LIBS)` $(SAMPLERATE_LIBS)
 
-overwitch_cli_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(CLI_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
+overwitch_cli_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(CLI_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(AM_CFLAGS)
 overwitch_cli_LDFLAGS = `$(PKG_CONFIG) --libs $(CLI_LIBS)` $(SAMPLERATE_LIBS)
 
-overwitch_play_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(LIB_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(SNDFILE_CFLAGS)
+overwitch_play_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(LIB_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(SNDFILE_CFLAGS) $(AM_CFLAGS)
 overwitch_play_LDFLAGS = `$(PKG_CONFIG) --libs $(CLI_LIBS)` $(SAMPLERATE_LIBS) $(SNDFILE_LIBS)
 
-overwitch_record_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(LIB_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(SNDFILE_CFLAGS)
+overwitch_record_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(LIB_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(SNDFILE_CFLAGS) $(AM_CFLAGS)
 overwitch_record_LDFLAGS = `$(PKG_CONFIG) --libs $(CLI_LIBS)` $(SAMPLERATE_LIBS) $(SNDFILE_LIBS)
 
 CLI_UTILS = overwitch-cli overwitch-service overwitch-record overwitch-play
@@ -53,4 +55,4 @@ SAMPLERATE_LIBS = @SAMPLERATE_LIBS@
 SNDFILE_CFLAGS = @SNDFILE_CFLAGS@
 SNDFILE_LIBS = @SNDFILE_LIBS@
 
-AM_CPPFLAGS = -Wall -O3 -DDATADIR='"$(datadir)/$(PACKAGE)"' -DLOCALEDIR='"$(localedir)"'
+AM_CPPFLAGS = -DDATADIR='"$(datadir)/$(PACKAGE)"' -DLOCALEDIR='"$(localedir)"'

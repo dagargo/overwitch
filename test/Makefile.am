@@ -1,13 +1,13 @@
 PKG_CONFIG ?= pkg-config
 
-AM_CFLAGS = -Wall
+AM_CFLAGS = -Wall -O3
 
 check_PROGRAMS = tests
 TESTS = $(check_PROGRAMS)
 
 TEST_LIBS = jack libusb-1.0 glib-2.0 json-glib-1.0 cunit
 
-tests_CFLAGS = -DDATADIR='"$(datadir)/$(PACKAGE)"' -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(TEST_LIBS)` -pthread $(SAMPLERATE_CFLAGS)
+tests_CFLAGS = -DDATADIR='"$(datadir)/$(PACKAGE)"' -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(TEST_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(AM_CFLAGS)
 tests_LDFLAGS = `$(PKG_CONFIG) --libs $(TEST_LIBS)` $(SAMPLERATE_LIBS)
 
 tests_SOURCES = tests.c ../src/engine.c ../src/engine.h \
