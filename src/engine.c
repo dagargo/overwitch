@@ -232,7 +232,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
     {
       if (engine->reading_at_h2o_end)
 	{
-	  debug_print (2, "h2o: Clearing buffer and stopping...");
+	  debug_print (2, "h2o: Clearing buffer and stopping reading...");
 	  memset (engine->h2o_transfer_buf, 0, engine->h2o_transfer_size);
 	  engine->reading_at_h2o_end = 0;
 	  engine->latency_h2o_max = engine->latency_h2o_min;
