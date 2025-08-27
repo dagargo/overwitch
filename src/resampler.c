@@ -228,6 +228,8 @@ ow_resampler_reset_dll (struct ow_resampler *resampler)
 void
 ow_resampler_reset (struct ow_resampler *resampler)
 {
+  ow_engine_status_t engine_status = ow_engine_get_status (resampler->engine);
+
   debug_print (1, "Resetting resampler...");
 
   pthread_spin_lock (&resampler->engine->lock);
@@ -236,7 +238,11 @@ ow_resampler_reset (struct ow_resampler *resampler)
 
   ow_resampler_reset_dll (resampler);
 
-  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_BOOT);
+  //If the engine has not booted yet, we need to let it boot by itself and can not force the transition.
+  if (engine_status > OW_ENGINE_STATUS_BOOT)
+    {
+      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_BOOT);
+    }
   ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_READY);
   ow_resampler_clear_buffers (resampler);
 }
