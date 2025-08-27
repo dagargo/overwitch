@@ -122,10 +122,20 @@ stop_all ()
 static void
 signal_handler (int signum)
 {
+  static int handling = 0;
+
   if (signum == SIGTERM || signum == SIGINT)
     {
+      if (handling)
+	{
+	  error_print
+	    ("A signal is already being processed. Doing nothing...") return;
+	}
+
+      handling = 1;
       handle_stop ();
       g_application_release (app);
+      handling = 0;
     }
   else if (signum == SIGHUP)
     {
@@ -140,6 +150,7 @@ signal_handler (int signum)
     {
       error_print ("Signal not handled");
     }
+
 }
 
 static void *
@@ -437,7 +448,7 @@ handle_method_call (GDBusConnection *connection, const gchar *sender,
     {
       handle_stop ();
       g_dbus_method_invocation_return_value (invocation, NULL);
-      g_application_quit (G_APPLICATION (app));
+      g_application_release (app);
     }
   else if (g_strcmp0 (method_name, "Start") == 0)
     {
