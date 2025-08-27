@@ -101,7 +101,7 @@ ow_resampler_set_state (struct ow_resampler *resampler)
 	{
 	  state->t_latency_h2o = state->f_latency_h2o * OB_PERIOD_MS;
 	  state->t_latency_h2o_max = state->f_latency_h2o_max * OB_PERIOD_MS;
-	  state->t_latency_h2o_min = state->f_latency_h2o_max * OB_PERIOD_MS;
+	  state->t_latency_h2o_min = state->f_latency_h2o_min * OB_PERIOD_MS;
 	}
       else
 	{
