@@ -476,6 +476,7 @@ ow_get_device_from_device_attrs (int device_num, const char *device_name,
   if (i == total)
     {
       err = 1;
+      error_print ("Device %d not found", device_num);
     }
   else
     {
