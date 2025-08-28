@@ -22,6 +22,12 @@
 #include "common.h"
 #include "utils.h"
 
+#define OW_XFR_TIMEOUT_MIN 0
+#define OW_XFR_TIMEOUT_MAX 25
+
+#define OW_BLOCKS_MIN 8
+#define OW_BLOCKS_MAX 32
+
 void
 print_help (const char *executable_path, const char *package_string,
 	    struct option *option, const char *fixed_params)
@@ -95,13 +101,13 @@ get_ow_xfr_timeout_argument (const char *optarg)
 
   errno = 0;
   xfr_timeout = (int) strtol (optarg, &endstr, 10);
-  if (errno || endstr == optarg || *endstr != '\0' || xfr_timeout < 0
-      || xfr_timeout > 25)
+  if (errno || endstr == optarg || *endstr != '\0' ||
+      xfr_timeout < OW_XFR_TIMEOUT_MIN || xfr_timeout > OW_XFR_TIMEOUT_MAX)
     {
       xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
       fprintf (stderr,
-	       "Timeout value must be in [0..25]. Using value %d...\n",
-	       xfr_timeout);
+	       "Timeout value must be in [%d..%d]. Using value %d...\n",
+	       OW_XFR_TIMEOUT_MIN, OW_XFR_TIMEOUT_MAX, xfr_timeout);
     }
   return xfr_timeout;
 }
@@ -114,13 +120,14 @@ get_ow_blocks_per_transfer_argument (const char *optarg)
 
   errno = 0;
   blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
-  if (errno || endstr == optarg || *endstr != '\0' || blocks_per_transfer < 2
-      || blocks_per_transfer > 32)
+  if (errno || endstr == optarg || *endstr != '\0' ||
+      blocks_per_transfer < OW_BLOCKS_MIN ||
+      blocks_per_transfer > OW_BLOCKS_MAX)
     {
       blocks_per_transfer = OW_DEFAULT_BLOCKS;
       fprintf (stderr,
-	       "Blocks value must be in [2..32]. Using value %d...\n",
-	       blocks_per_transfer);
+	       "Blocks value must be in [%d..%d]. Using value %d...\n",
+	       OW_BLOCKS_MIN, OW_BLOCKS_MAX, blocks_per_transfer);
     }
   return blocks_per_transfer;
 }
