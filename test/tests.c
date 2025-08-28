@@ -66,7 +66,8 @@ static const struct ow_device_desc TESTDEV_DESC_SIZE = {
 };
 
 static void
-ow_engine_print_blocks (struct ow_engine *engine, uint8_t *blks, size_t blk_len)
+ow_engine_print_blocks (struct ow_engine *engine, uint8_t *blks,
+			size_t blk_len)
 {
   int32_t v;
   uint8_t *s;
@@ -99,12 +100,12 @@ ow_engine_print_blocks (struct ow_engine *engine, uint8_t *blks, size_t blk_len)
 		  uint8_t *dst;
 		  if (track->size == 4)
 		    {
-		      dst = (uint8_t *) &v;
+		      dst = (uint8_t *) & v;
 		      memcpy (dst, s, track->size);
 		    }
 		  else
 		    {
-		      dst = &((uint8_t *) &v)[1];
+		      dst = &((uint8_t *) & v)[1];
 		      memcpy (dst, s, track->size);
 		    }
 		  v = be32toh (v);
