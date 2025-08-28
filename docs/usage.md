@@ -7,12 +7,16 @@ order: 3
 
 ## Usage
 
-Overwitch contains two JACK clients. One is a D-Bus and systemd compatible hotplug service, which is used by the GUI application; and the other is a CLI application. Additionally, a playing and recording utilities for the CLI are also included.
+Overwitch contains two JACK clients. One is a D-Bus and systemd compatible hotplug service what will manage all the connected devices, which is used by the GUI application; and the other is a single client CLI application. Additionally, a playing and recording utilities for the CLI are also included.
 
 Regarding the JACK clients, latency needs to be under control and it can be tuned with the following parameters.
 
-- Blocks, which controls the amount of data sent in a single USB operation. The more blocks, the higher latency but the lower CPU usage.
-- Quality, which controls the resampler accuracy. The higher the quality, the higher CPU usage. A medium value is recommended. Notice that in `overwitch-cli`, a value of 0 means the highest quality while a value of 4 means the lowest.
+- Quality, which controls the resampler accuracy. The higher the quality, the higher CPU usage. A medium value is recommended. Notice that a value of 0 means the highest quality while a value of 4 means the lowest.
+- Blocks, which controls the amount of data sent in a single USB operation. The more blocks, the higher latency but the lower CPU usage. As too lower values might stress the machines to the point of requiring a reboot, 10 is the minimum recommended value. If a device become unresponsive or you see the error below, increase the blocks and restart the device.
+
+```
+ERROR:engine.c:351:cb_xfr_audio_out: h2o: Error on USB audio transfer (0 B): LIBUSB_TRANSFER_TIMED_OUT
+```
 
 ### Use cases
 
@@ -25,7 +29,7 @@ Notice that closing the application window does **not** terminate the D-Bus serv
 
 #### Non GUI user
 
-Install the systemd service from the `systemd` directory and start it up. This uses the same code as the D-Bus service and runs the devices as soon as they are connected. No other tools are required. Stopping the service will stop all the devices.
+Install the systemd service from the `systemd` directory and start it up. This uses the same executable as the D-Bus service and will start a JACK client for any devices as soon as it is connected. No other tools are required. Stopping the service will stop all the devices.
 
 #### Testing
 
@@ -35,9 +39,9 @@ In case of testing Overwitch, only the CLI utilities should be used. In this sce
 
 The GUI is self explanatory and does not requiere any parameter passed from the command line. It controls the D-Bus service, which will manage any Overbridge device.
 
-Notice that once an Overbridge device is running the options can not be changed so you will need to stop the running instances and refresh the list.
+Notice that changing the preferences will restart all the clients.
 
-It is possible to rename Overbridge devices by simply editing its name on the list. Still, as JACK devices can not be renamed while running, the device will be restarted.
+It is possible to rename Overbridge devices by simply editing its name on the list. Still, as JACK devices can not be renamed while running, the clients will be restarted.
 
 ### overwitch-service
 
@@ -48,7 +52,7 @@ This is a configuration example with the recommended properties. Not all the pro
 ```
 $ cat ~/.config/overwitch/preferences.json
 {
-  "blocks" : 8,
+  "blocks" : 12,
   "timeout" : 10,
   "quality" : 2,
   "pipewireProps" : "{ node.group = \"pro-audio-0\" }"
@@ -67,7 +71,7 @@ First, list the available devices. The first element is an internal ID that allo
 
 ```
 $ overwitch-cli -l
-0: Digitakt (ID 1935:000c) at bus 001, address 005
+0: Digitakt (ID 1935:0b2c) at bus 003, address 021
 ```
 
 Then, you can choose which device you want to use by using `-n`.
@@ -85,40 +89,75 @@ $ overwitch-cli -d Digitakt
 To stop, just press `Ctrl+C`. You'll see an oputput like the one below. Notice that we are using the verbose option here but it is **not recommended** to use it and it is showed here for illustrative purposes only.
 
 ```
-$ overwitch-cli -n 0 -vv -b 8
+$ overwitch-cli -n 0 -vv -b 12
+DEBUG:overwitch.c:308:ow_get_device_desc_file: Searching device in /home/user/.config/overwitch/devices.json
+DEBUG:overwitch.c:314:ow_get_device_desc_file: Failed to open file “/home/user/.config/overwitch/devices.json”: No such file or directory
+DEBUG:overwitch.c:308:ow_get_device_desc_file: Searching device in /usr/local/share/overwitch/devices.json
+DEBUG:overwitch.c:161:ow_get_device_desc_reader: Device with PID 2860 found
+DEBUG:overwitch.c:90:ow_get_device_list: Found Digitakt (bus 003, address 018, ID 1935:0b2c)
+DEBUG:engine.c:550:ow_engine_init: USB transfer timeout: 10
+DEBUG:engine.c:432:ow_engine_init_mem: Blocks per transfer: 12
+DEBUG:engine.c:446:ow_engine_init_mem: o2h: USB in frame size: 48 B
+DEBUG:engine.c:447:ow_engine_init_mem: h2o: USB out frame size: 8 B
+DEBUG:engine.c:475:ow_engine_init_mem: o2h: USB in block size: 368 B
+DEBUG:engine.c:477:ow_engine_init_mem: h2o: USB out block size: 88 B
+DEBUG:engine.c:485:ow_engine_init_mem: o2h: audio transfer size: 4032 B
+DEBUG:engine.c:487:ow_engine_init_mem: h2o: audio transfer size: 672 B
+DEBUG:engine.c:1085:ow_engine_load_overbridge_name: USB control in data (32 B): Digitakt
+DEBUG:engine.c:1105:ow_engine_load_overbridge_name: USB control in data (16 B): 0097       1.52A
+DEBUG:dll.c:153:ow_dll_host_init: Initializing host side of DLL...
+DEBUG:jclient.c:568:jclient_start: Starting thread...
+DEBUG:jclient.c:175:jclient_set_sample_rate_cb: JACK sample rate: 48000
+DEBUG:jclient.c:446:jclient_run: Using RT priority 77...
+DEBUG:jclient.c:448:jclient_run: Registering ports...
+DEBUG:jclient.c:453:jclient_run: Registering output port Main L...
 [...]
-DEBUG:engine.c:972:ow_engine_start: Starting audio thread...
-DEBUG:dll.c:57:ow_dll_overbridge_init: Initializing Overbridge side of DLL...
-DEBUG:jclient.c:167:jclient_set_buffer_size_cb: JACK buffer size: 64
-DEBUG:resampler.c:584:ow_resampler_set_buffer_size: Setting resampler buffer size to 64
-DEBUG:resampler.c:129:ow_resampler_reset_buffers: Resetting buffers...
-DEBUG:resampler.c:111:ow_resampler_clear_buffers: Clearing buffers...
-DEBUG:dll.c:163:ow_dll_host_reset: Resetting the DLL...
-DEBUG:resampler.c:185:ow_resampler_reset_dll: DLL target delay: 208 frames (4.333333 ms)
-DEBUG:engine.c:872:run_audio: Clearing buffers...
-DEBUG:resampler.c:380:ow_resampler_compute_ratios: Digitakt @ 003,009 (Digitakt OG): Starting up resampler...
-Digitakt @ 003,009: o2h latency: -1.0 [-1.0, -1.0] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000000
-DEBUG:resampler.c:418:ow_resampler_compute_ratios: Digitakt @ 003,009 (Digitakt OG): Tuning resampler...
-Digitakt @ 003,009: o2h latency: -1.0 [-1.0, -1.0] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 0.999754
-Digitakt @ 003,009: o2h latency: -1.0 [-1.0, -1.0] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000129
-DEBUG:resampler.c:436:ow_resampler_compute_ratios: Digitakt @ 003,009 (Digitakt OG): Running resampler...
-DEBUG:jclient.c:73:jclient_set_latency_cb: JACK latency request
-DEBUG:jclient.c:79:jclient_set_latency_cb: o2h latency: [ 64, 0 ]
-DEBUG:resampler.c:265:resampler_o2h_reader: o2h: Emptying buffer (3072 B) and running...
-Digitakt @ 003,009: o2h latency:  2.3 [ 1.3,  2.7] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000031
+DEBUG:jclient.c:472:jclient_run: Registering input port Main R Input...
+DEBUG:resampler.c:594:ow_resampler_init_samplerate: Setting resampler sample rate to 48000
+DEBUG:resampler.c:585:ow_resampler_init_buffer_size: Setting resampler buffer size to 128
+DEBUG:resampler.c:175:ow_resampler_reset_buffers: Resetting buffers...
+DEBUG:resampler.c:157:ow_resampler_clear_buffers: Clearing buffers...
+DEBUG:dll.c:164:ow_dll_host_reset: Resetting the DLL...
+DEBUG:engine.c:944:ow_engine_start: Starting thread...
+DEBUG:dll.c:53:ow_dll_overbridge_init: Initializing Overbridge side of DLL (48000.0 Hz, 84 frames)...
+DEBUG:jclient.c:518:jclient_run: Activating...
+DEBUG:jclient.c:166:jclient_set_buffer_size_cb: JACK buffer size: 128
+DEBUG:jclient.c:527:jclient_run: Activated
+DEBUG:resampler.c:421:ow_resampler_compute_ratios: Digitakt @ 003,018 (Digitakt): Setting Overbridge side to steady (notifying readiness)...
+DEBUG:engine.c:776:run_audio: Notification of readiness received from resampler
+DEBUG:engine.c:798:run_audio: Booting or clearing engine...
+DEBUG:resampler.c:450:ow_resampler_compute_ratios: Digitakt @ 003,018 (Digitakt): Booting resampler...
+Digitakt @ 003,018 (Digitakt): o2h latency: -1.0 [-1.0, -1.0] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000000
+DEBUG:resampler.c:473:ow_resampler_compute_ratios: Digitakt @ 003,018 (Digitakt): Tuning resampler...
+Digitakt @ 003,018 (Digitakt): o2h latency: -1.0 [-1.0, -1.0] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000082
+Digitakt @ 003,018 (Digitakt): o2h latency: -1.0 [-1.0, -1.0] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000057
+DEBUG:resampler.c:492:ow_resampler_compute_ratios: Digitakt @ 003,018 (Digitakt): Running resampler...
+DEBUG:jclient.c:74:jclient_set_latency_cb: JACK latency request
+DEBUG:jclient.c:92:jclient_set_latency_cb: h2o latency: [ 128, 128 ]
+DEBUG:jclient.c:74:jclient_set_latency_cb: JACK latency request
+DEBUG:jclient.c:78:jclient_set_latency_cb: o2h latency: [ 128, 128 ]
+DEBUG:resampler.c:313:resampler_o2h_reader: o2h: Emptying buffer (6144 B) and running...
+DEBUG:resampler.c:296:resampler_o2h_reader: o2h: Audio ring buffer underflow (0 < 4032)
+[...]
+DEBUG:resampler.c:296:resampler_o2h_reader: o2h: Audio ring buffer underflow (0 < 4032)
+Digitakt @ 003,018 (Digitakt): o2h latency:  4.2 [ 2.7,  4.4] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000056
+[...]
+Digitakt @ 003,018 (Digitakt): o2h latency:  3.0 [ 2.7,  4.6] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000018
 ^C
-DEBUG:jclient.c:284:jclient_stop: Stopping client...
-Digitakt @ 003,009: o2h latency:  1.7 [ 1.3,  2.7] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000009
-DEBUG:engine.c:884:run_audio: Processing remaining event...
-Digitakt @ 003,009: o2h latency: -1.0 [-1.0, -1.0] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000009
-DEBUG:jclient.c:523:jclient_run: Exiting...
-DEBUG:jclient.c:159:jclient_jack_client_registration_cb: JACK client Digitakt OG is being unregistered...
+DEBUG:jclient.c:293:jclient_stop: Stopping client...
+DEBUG:resampler.c:641:ow_resampler_stop: Stopping resampler...
+DEBUG:engine.c:1069:ow_engine_stop: Stopping engine...
+DEBUG:engine.c:860:run_audio: Processing remaining events...
+Digitakt @ 003,018 (Digitakt): o2h latency: -1.0 [-1.0, -1.0] ms; h2o latency: -1.0 [-1.0, -1.0] ms, o2h ratio: 1.000014
+DEBUG:jclient.c:532:jclient_run: Exiting...
+DEBUG:jclient.c:158:jclient_jack_client_registration_cb: JACK client Digitakt is being unregistered...
 ```
 
 You can list all the available options with `-h`.
 
 ```
-$ overwitch 2.0
+$ overwitch-cli -h
+overwitch 2.1
 Usage: overwitch-cli [options]
 Options:
   --use-device-number, -n value
@@ -139,14 +178,14 @@ Options:
 This small utility let the user play an audio file thru the Overbridge devices.
 
 ```
-$ overwitch-play -d Digitakt audio_file
+$ overwitch-play -n 0 audio_file
 ```
 
 You can list all the available options with `-h`.
 
 ```
 $ overwitch-play -h
-overwitch 2.0
+overwitch 2.1
 Usage: overwitch-play [options] file
 Options:
   --use-device-number, -n value
@@ -164,18 +203,22 @@ Options:
 This small utility let the user record the audio output from the Overbridge devices into a WAVE file with the following command. To stop, just press `Ctrl+C`.
 
 ```
-$ overwitch-record -d Digitakt
+$ overwitch-record -n 0
 ^C
-2106720 frames written
-Digitakt_dump_2022-04-20T19:20:19.wav file created
+829920 frames written
+Digitakt_2025-08-28T11:00:08.wav file created
 ```
 
 By default, it records all the output tracks from the Overbridge device but it is possible to select which ones to record. First, list the devices in verbose mode to see all the available tracks.
 
 ```
 $ overwitch-record -l -v
-DEBUG:overwitch.c:206:(ow_get_devices): Found Digitakt (bus 001, address 005, ID 1935:000c)
-0: Digitakt (ID 1935:000c) at bus 001, address 005
+DEBUG:overwitch.c:308:ow_get_device_desc_file: Searching device in /home/user/.config/overwitch/devices.json
+DEBUG:overwitch.c:314:ow_get_device_desc_file: Failed to open file “/home/user/.config/overwitch/devices.json”: No such file or directory
+DEBUG:overwitch.c:308:ow_get_device_desc_file: Searching device in /usr/local/share/overwitch/devices.json
+DEBUG:overwitch.c:161:ow_get_device_desc_reader: Device with PID 2860 found
+DEBUG:overwitch.c:90:ow_get_device_list: Found Digitakt (bus 003, address 021, ID 1935:0b2c)
+0: Digitakt (ID 1935:0b2c) at bus 003, address 021
   Inputs:
     Main L Input
     Main R Input
@@ -194,22 +237,22 @@ DEBUG:overwitch.c:206:(ow_get_devices): Found Digitakt (bus 001, address 005, ID
     Input R
 ```
 
-Then, just select the output tracks to record as this. `0` means that the track is not recorded while any other character means it will. In this example, we are recording tracks 1, 2, 5 and 6.
+Then, just select the output tracks to record as this. `0` means that the track is not recorded while any other character means it will. In this example, we are recording outputs 1 and 2 (main output pair).
 
 ```
-$ overwitch-record -d Digitakt -m 001100110000
+$ $ overwitch-record -n 0 -m 110000000000
 ^C
-829920 frames written
-Digitakt_dump_2022-04-20T19:33:30.wav file created
+638400 frames written
+Digitakt_2025-08-28T11:21:38.wav file created
 ```
 
-It is not neccessary to provide all tracks, meaning that using `00110011` as the mask will behave exactly as the example above.
+It is not neccessary to provide all tracks, meaning that using `11` as the mask will behave exactly as the example above.
 
 You can list all the available options with `-h`.
 
 ```
 $ overwitch-record -h
-overwitch 2.0
+overwitch 2.1
 Usage: overwitch-record [options]
 Options:
   --use-device-number, -n value

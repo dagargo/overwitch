@@ -37,7 +37,11 @@ Device to JACK latency is different from JACK to device latency though they are 
 
 Thus, the minimum theoretical latency is the device frames plus the JACK buffer frames plus some additional buffer frames are used in the resamplers but it is unknown how many.
 
-To keep latency as low as possible, the amount of blocks can be configured in the JACK clients. Values between 2 and 32 can be used.
+To keep latency as low as possible, the amount of blocks can be configured in the JACK clients. Values between 2 and 32 can be used. However, values as high as `8` might cause the device to crash with the error below.
+
+```
+ERROR:engine.c:352:cb_xfr_audio_out: h2o: Error on USB 613 audio transfer (0 B): LIBUSB_TRANSFER_TIMED_OUT
+```
 
 ### Tuning
 
@@ -56,7 +60,7 @@ function disable() {
       if [ "$c" != "$id" ]; then
         echo 0 | sudo tee /sys/devices/system/cpu/cpu$c/online > /dev/null
       else
-        sudo cpufreq-set -c $c -g performance
+        sudo cpupower -c $c frequency-set -g performance
       fi
     fi
   done
@@ -65,7 +69,7 @@ function disable() {
 function enable() {
   for c in $(seq 1 $(cat /sys/devices/system/cpu/present | awk -F- '{print $2}')); do
     echo 1  | sudo tee /sys/devices/system/cpu/cpu$c/online > /dev/null
-    sudo cpufreq-set -c $c -g ondemand
+    sudo cpupower -c $c frequency-set -g ondemand
   done
 }
 
@@ -87,9 +91,6 @@ With `rtirq-init` package installed, I simply let the script reconfigure the pri
 
 ```
 $ sudo /etc/init.d/rtirq start
-$ jackd ...
-$ overwitch -b 8 -q 2 -d Digitakt
-$ ardour
 ```
 
 While using a RT kernel is not needed, it will help even more to reduce latency and xruns.

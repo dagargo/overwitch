@@ -43,7 +43,6 @@ sudo apt install automake libtool libusb-1.0-0-dev libjack-jackd2-dev libsampler
 
 For Fedora, run this to install the build dependencies.
 
-
 ```
 sudo yum install automake libtool libusb1-devel jack-audio-connection-kit-devel libsamplerate-devel libsndfile-devel gettext-devel json-glib-devel gtk4-devel systemd-devel
 ```

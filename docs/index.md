@@ -18,12 +18,12 @@ Overwitch consists of 5 different binaries divided in 2 categories: multi-device
 
 Multi-device applications:
 
-* `overwitch`, which is a GUI application that uses a D-Bus service under the hood.
-* `overwitch-service`, which is a CLI application and also the same executable that the aforementioned D-Bus service uses.
+* `overwitch`, which is a GUI application that uses the below D-Bus service under the hood.
+* `overwitch-service`, which is a D-Bus and CLI application that will create a JACK client for every device detected or plugged in later.
 
-Utilities:
+Single-device utilities:
 
-* `overwitch-cli`, which is a single-client program.
+* `overwitch-cli`, which is a single-device JACK client program.
 * `overwitch-play`, which plays multitrack audio thru Overbridge devices.
 * `overwitch-record`, which records multitrack audio from Overbridge devices.
 
