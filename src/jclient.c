@@ -107,25 +107,7 @@ static void
 jclient_port_connect_cb (jack_port_id_t a, jack_port_id_t b, int connect,
 			 void *cb_data)
 {
-  int total_connections = 0;
-  struct jclient *jclient = cb_data;
-  struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
-  const struct ow_device_desc *desc = &ow_engine_get_device (engine)->desc;
-
   debug_print (2, "JACK port connect request");
-
-  for (int i = 0; i < desc->inputs; i++)
-    {
-      total_connections += jack_port_connected (jclient->input_ports[i]);
-    }
-
-  ow_engine_set_option (engine, OW_ENGINE_OPTION_H2O_AUDIO,
-			total_connections != 0);
-
-  for (int i = 0; i < desc->outputs; i++)
-    {
-      total_connections += jack_port_connected (jclient->output_ports[i]);
-    }
 }
 
 static void
@@ -255,20 +237,18 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
 
   //h2o
 
-  if (ow_engine_is_option (engine, OW_ENGINE_OPTION_H2O_AUDIO))
+  for (int i = 0; i < desc->inputs; i++)
     {
-      for (int i = 0; i < desc->inputs; i++)
-	{
-	  buffer[i] = jack_port_get_buffer (jclient->input_ports[i], nframes);
-	}
-
-      f = ow_resampler_get_h2o_audio_buffer (jclient->resampler);
-      jclient_copy_j2o_audio (f, nframes, buffer, desc);
-      if (ow_resampler_write_audio (jclient->resampler))
-	{
-	  goto err;
-	}
+      buffer[i] = jack_port_get_buffer (jclient->input_ports[i], nframes);
     }
+
+  f = ow_resampler_get_h2o_audio_buffer (jclient->resampler);
+  jclient_copy_j2o_audio (f, nframes, buffer, desc);
+  if (ow_resampler_write_audio (jclient->resampler))
+    {
+      goto err;
+    }
+
 
   return 0;
 
@@ -505,7 +485,8 @@ jclient_run (struct jclient *jclient)
   jclient->context.set_rt_priority = set_rt_priority;
   jclient->context.priority = jclient->priority;
 
-  jclient->context.options = OW_ENGINE_OPTION_O2H_AUDIO;
+  jclient->context.options = OW_ENGINE_OPTION_O2H_AUDIO |
+    OW_ENGINE_OPTION_H2O_AUDIO;
 
   err = ow_resampler_start (jclient->resampler, &jclient->context,
 			    jack_get_sample_rate (jclient->client),
