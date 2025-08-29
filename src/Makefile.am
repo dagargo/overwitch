@@ -33,7 +33,7 @@ endif
 
 lib_LTLIBRARIES = liboverwitch.la
 liboverwitch_la_SOURCES = engine.c engine.h dll.c dll.h utils.c utils.h overwitch.c overwitch.h resampler.c resampler.h
-liboverwitch_la_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(LIB_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(SNDFILE_CFLAGS)
+liboverwitch_la_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(LIB_LIBS)` -pthread $(SAMPLERATE_CFLAGS) $(SNDFILE_CFLAGS) $(AM_CFLAGS)
 liboverwitch_la_LDFLAGS = `$(PKG_CONFIG) --libs $(LIB_LIBS)` $(SAMPLERATE_LIBS)
 include_HEADERS = overwitch.h
 
