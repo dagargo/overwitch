@@ -293,7 +293,8 @@ resampler_o2h_reader (void *cb_data, float **data)
 	}
       else
 	{
-	  debug_print (2, "o2h: Audio ring buffer underflow (%zu < %zu)",
+	  debug_print (2,
+		       "o2h: Audio ring buffer underflow (%zu B < %zu B). No fix possible.",
 		       rso2h, resampler->engine->o2h_transfer_size);
 
 	  // Any maximum value is invalid at this point
