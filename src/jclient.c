@@ -128,9 +128,7 @@ jclient_jack_freewheel (int starting, void *cb_data)
 static int
 jclient_jack_graph_order_cb (void *cb_data)
 {
-  struct jclient *jclient = cb_data;
   debug_print (1, "JACK calling graph order...");
-  ow_resampler_reset_latencies (jclient->resampler);
   return 0;
 }
 
