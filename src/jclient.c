@@ -55,9 +55,9 @@ jclient_buffer_read (void *buffer, char *src, size_t size)
 static int
 jclient_thread_xrun_cb (void *cb_data)
 {
-  struct ow_resampler *resampler = cb_data;
+  struct jclient *jclient = cb_data;
   error_print ("JACK xrun");
-  ow_resampler_reset (resampler);
+  ow_resampler_reset (jclient->resampler);
   return 0;
 }
 
@@ -128,9 +128,9 @@ jclient_jack_freewheel (int starting, void *cb_data)
 static int
 jclient_jack_graph_order_cb (void *cb_data)
 {
-  struct ow_resampler *resampler = cb_data;
+  struct jclient *jclient = cb_data;
   debug_print (1, "JACK calling graph order...");
-  ow_resampler_reset_latencies (resampler);
+  ow_resampler_reset_latencies (jclient->resampler);
   return 0;
 }
 
@@ -365,7 +365,7 @@ jclient_run (struct jclient *jclient)
     }
 
   if (jack_set_xrun_callback (jclient->client, jclient_thread_xrun_cb,
-			      jclient->resampler))
+			      jclient))
     {
       goto cleanup_jack;
     }
@@ -392,8 +392,7 @@ jclient_run (struct jclient *jclient)
     }
 
   if (jack_set_graph_order_callback (jclient->client,
-				     jclient_jack_graph_order_cb,
-				     jclient->resampler))
+				     jclient_jack_graph_order_cb, jclient))
     {
       error_print ("Cannot set JACK graph order callback");
     }
