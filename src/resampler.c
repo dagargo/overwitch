@@ -404,7 +404,6 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 {
   ow_engine_status_t engine_status;
   struct ow_dll *dll = &resampler->dll;
-  static uint64_t booting_start_usecs, tuning_start_usecs;
   ow_resampler_status_t status;
 
   engine_status = ow_engine_get_status (resampler->engine);
@@ -458,7 +457,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_BOOT);
       ow_resampler_report_state (resampler);
 
-      booting_start_usecs = current_usecs;
+      resampler->phase_start_usecs = current_usecs;
 
       return 0;
     }
@@ -468,7 +467,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   ow_resampler_set_ratios_from_dll (resampler);
 
   if (status == OW_RESAMPLER_STATUS_BOOT &&
-      current_usecs - booting_start_usecs > BOOTING_PERIOD_US &&
+      current_usecs - resampler->phase_start_usecs > BOOTING_PERIOD_US &&
       ow_dll_tuned (dll, BOOTING_ERROR))
     {
       debug_print (1, "%s (%s): Tuning resampler...", resampler->engine->name,
@@ -483,11 +482,11 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 	resampler->report_period * resampler->samplerate / resampler->bufsize;
       resampler->log_cycles = 0;
 
-      tuning_start_usecs = current_usecs;
+      resampler->phase_start_usecs = current_usecs;
     }
 
   if (status == OW_RESAMPLER_STATUS_TUNE &&
-      current_usecs - tuning_start_usecs > TUNING_PERIOD_US &&
+      current_usecs - resampler->phase_start_usecs > TUNING_PERIOD_US &&
       ow_dll_tuned (dll, TUNING_ERROR))
     {
       debug_print (1, "%s (%s): Running resampler...",

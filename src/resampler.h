@@ -53,4 +53,5 @@ struct ow_resampler
   double samplerate;
   int report_period;
   struct ow_resampler_state state;
+  uint64_t phase_start_usecs;
 };
