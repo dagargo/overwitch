@@ -18,9 +18,8 @@ minima:
     - title: GitHub
       icon: github
       url: "https://github.com/dagargo"
-
-header_pages:
-  - installation.md
-  - usage.md
-  - configuration.md
-  - adding.md
+  header_pages:
+    - installation.md
+    - usage.md
+    - configuration.md
+    - adding.md
