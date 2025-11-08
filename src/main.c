@@ -149,9 +149,12 @@ load_preferences ()
   gtk_spin_button_set_value (timeout_spin_button, prefs.timeout);
   gtk_drop_down_set_selected (quality_drop_down, prefs.quality);
 
-  buf = gtk_entry_get_buffer (GTK_ENTRY (pipewire_props_dialog_entry));
-  gtk_entry_buffer_set_text (buf, prefs.pipewire_props, -1);
-  g_free (prefs.pipewire_props);
+  if (prefs.pipewire_props)
+    {
+      buf = gtk_entry_get_buffer (GTK_ENTRY (pipewire_props_dialog_entry));
+      gtk_entry_buffer_set_text (buf, prefs.pipewire_props, -1);
+      g_free (prefs.pipewire_props);
+    }
 
   update_all_metrics (prefs.show_all_columns);
 }

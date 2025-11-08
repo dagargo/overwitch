@@ -92,6 +92,7 @@ ow_save_preferences (struct ow_preferences *prefs)
 gint
 ow_load_preferences (struct ow_preferences *prefs)
 {
+  gint err = 0;
   GError *error;
   JsonReader *reader;
   JsonParser *parser = json_parser_new ();
@@ -101,16 +102,18 @@ ow_load_preferences (struct ow_preferences *prefs)
   prefs->quality = 2;
   prefs->timeout = 10;
   prefs->show_all_columns = FALSE;
+  prefs->pipewire_props = NULL;
 
   error = NULL;
   json_parser_load_from_file (parser, preferences_file, &error);
   if (error)
     {
-      error_print ("Error wile loading preferences from `%s': %s",
+      debug_print (0,
+		   "Error wile loading preferences from '%s': %s. Using defaults...",
 		   CONF_DIR PREF_FILE, error->message);
       g_error_free (error);
-      g_object_unref (parser);
-      return -1;
+      err = -1;
+      goto end;
     }
 
   reader = json_reader_new (json_parser_get_root (parser));
@@ -142,18 +145,15 @@ ow_load_preferences (struct ow_preferences *prefs)
   if (json_reader_read_member (reader, PREF_PIPEWIRE_PROPS))
     {
       const gchar *v = json_reader_get_string_value (reader);
-      prefs->pipewire_props = strdup (v ? v : "");
-    }
-  else
-    {
-      prefs->pipewire_props = strdup ("");
+      prefs->pipewire_props = strdup (v ? v : NULL);
     }
   json_reader_end_member (reader);
 
   g_object_unref (reader);
-  g_object_unref (parser);
 
+end:
+  g_object_unref (parser);
   g_free (preferences_file);
 
-  return 0;
+  return err;
 }
