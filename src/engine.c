@@ -220,7 +220,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
 	      ow_engine_get_status (engine) == OW_ENGINE_STATUS_RUN)
 	    {
 	      bytes = ow_bytes_to_frame_bytes (rsh2o, engine->h2o_frame_size);
-	      debug_print (2, "h2o: Emptying buffer (%zu B) and running...",
+	      debug_print (3, "h2o: Emptying buffer (%zu B) and running...",
 			   bytes);
 	      engine->context->read (engine->context->h2o_audio, NULL, bytes);
 	      engine->reading_at_h2o_end = 1;
@@ -232,7 +232,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
     {
       if (engine->reading_at_h2o_end)
 	{
-	  debug_print (2, "h2o: Clearing buffer and stopping reading...");
+	  debug_print (3, "h2o: Clearing buffer and stopping reading...");
 	  memset (engine->h2o_transfer_buf, 0, engine->h2o_transfer_size);
 	  engine->reading_at_h2o_end = 0;
 	  engine->latency_h2o_max = engine->latency_h2o_min;
@@ -257,7 +257,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
     }
   else if (rsh2o > engine->h2o_frame_size)	//At least 2 frames to apply resampling to
     {
-      debug_print (2,
+      debug_print (3,
 		   "h2o: Audio ring buffer underflow (%zu B < %zu B). Fixed by resampling.",
 		   rsh2o, engine->h2o_transfer_size);
       frames = rsh2o / engine->h2o_frame_size;
@@ -292,7 +292,7 @@ set_usb_output_data_blks (struct ow_engine *engine)
     }
   else
     {
-      debug_print (2, "h2o: Not enough data (%zu B). Waiting...", rsh2o);
+      debug_print (3, "h2o: Not enough data (%zu B). Waiting...", rsh2o);
       memset (engine->h2o_transfer_buf, 0, engine->h2o_transfer_size);
     }
 
