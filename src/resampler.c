@@ -154,7 +154,7 @@ ow_resampler_clear_buffers (struct ow_resampler *resampler)
   size_t rso2h, bytes;
   struct ow_context *context = resampler->engine->context;
 
-  debug_print (2, "Clearing buffers...");
+  debug_print (3, "Clearing buffers...");
 
   resampler->h2o_queue_len = 0;
   resampler->reading_at_o2h_end = 0;
@@ -172,7 +172,7 @@ ow_resampler_clear_buffers (struct ow_resampler *resampler)
 static void
 ow_resampler_reset_buffers (struct ow_resampler *resampler)
 {
-  debug_print (2, "Resetting buffers...");
+  debug_print (3, "Resetting buffers...");
 
   resampler->o2h_bufsize = resampler->bufsize * resampler->o2h_frame_size;
   resampler->h2o_bufsize = resampler->bufsize * resampler->h2o_frame_size;
@@ -257,7 +257,7 @@ resampler_h2o_reader (void *cb_data, float **data)
 
   if (resampler->h2o_queue_len == 0)
     {
-      debug_print (2, "h2o: Can not read data from queue");
+      debug_print (3, "h2o: Can not read data from queue");
       return resampler->bufsize;
     }
 
@@ -293,7 +293,7 @@ resampler_o2h_reader (void *cb_data, float **data)
 	}
       else
 	{
-	  debug_print (2,
+	  debug_print (3,
 		       "o2h: Audio ring buffer underflow (%zu B < %zu B). No fix possible.",
 		       rso2h, resampler->engine->o2h_transfer_size);
 
@@ -311,7 +311,7 @@ resampler_o2h_reader (void *cb_data, float **data)
       if (rso2h >= resampler->o2h_bufsize)
 	{
 	  bytes = ow_bytes_to_frame_bytes (rso2h, resampler->o2h_bufsize);
-	  debug_print (2, "o2h: Emptying buffer (%zu B) and running...",
+	  debug_print (3, "o2h: Emptying buffer (%zu B) and running...",
 		       bytes);
 	  context->read (context->o2h_audio, NULL, bytes);
 	  resampler->reading_at_o2h_end = 1;
