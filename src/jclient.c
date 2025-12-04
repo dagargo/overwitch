@@ -57,7 +57,7 @@ jclient_thread_xrun_cb (void *cb_data)
 {
   struct jclient *jclient = cb_data;
   error_print ("JACK xrun");
-  ow_resampler_reset (jclient->resampler);
+  jclient->xrun = 1;
   return 0;
 }
 
@@ -197,6 +197,7 @@ static inline int
 jclient_process_cb (jack_nframes_t nframes, void *arg)
 {
   float *f;
+  int xrun;
   jack_default_audio_sample_t *buffer[OB_MAX_TRACKS];
   struct jclient *jclient = arg;
   jack_nframes_t current_frames;
@@ -206,6 +207,9 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
   struct ow_engine *engine = ow_resampler_get_engine (jclient->resampler);
   const struct ow_device_desc *desc = &ow_engine_get_device (engine)->desc;
 
+  xrun = jclient->xrun;
+  jclient->xrun = 0;
+
   if (jack_get_cycle_times (jclient->client, &current_frames, &current_usecs,
 			    &next_usecs, &period_usecs))
     {
@@ -213,7 +217,7 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
       goto err;
     }
 
-  if (ow_resampler_compute_ratios (jclient->resampler, current_usecs,
+  if (ow_resampler_compute_ratios (jclient->resampler, current_usecs, xrun,
 				   jclient_audio_running, jclient->client))
     {
       goto err;
@@ -318,6 +322,7 @@ jclient_run (struct jclient *jclient)
   struct ow_engine *engine;
   const struct ow_device_desc *desc;
 
+  jclient->xrun = 0;
   jclient->output_ports = NULL;
   jclient->input_ports = NULL;
   jclient->context.h2o_audio = NULL;

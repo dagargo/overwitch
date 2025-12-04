@@ -272,8 +272,9 @@ int ow_resampler_read_audio (struct ow_resampler *resampler);
 
 int ow_resampler_write_audio (struct ow_resampler *resampler);
 
-int ow_resampler_compute_ratios (struct ow_resampler *resampler, uint64_t,
-				 void (*)(void *), void *);
+int ow_resampler_compute_ratios (struct ow_resampler *resampler,
+				 uint64_t time, int xrun, void (*)(void *),
+				 void *);
 
 void ow_resampler_reset_latencies (struct ow_resampler *resampler);
 
