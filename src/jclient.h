@@ -45,6 +45,7 @@ struct jclient
   pthread_spinlock_t lock;
   int running;
   pthread_t thread;
+  int xrun;
 };
 
 void jclient_check_jack_server (jclient_notify_status_t);

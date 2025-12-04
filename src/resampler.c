@@ -399,7 +399,7 @@ ow_resampler_write_audio (struct ow_resampler *resampler)
 
 int
 ow_resampler_compute_ratios (struct ow_resampler *resampler,
-			     uint64_t current_usecs,
+			     uint64_t current_usecs, int xrun,
 			     void (*audio_running_cb) (void *), void *cb_data)
 {
   ow_engine_status_t engine_status;
@@ -503,6 +503,18 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       audio_running_cb (cb_data);
     }
 
+  if (status == OW_RESAMPLER_STATUS_RUN && xrun)
+    {
+      debug_print (1, "%s (%s): Tuning resampler...", resampler->engine->name,
+		   resampler->engine->overbridge_name);
+
+      ow_dll_host_set_loop_filter (dll, 0.5, resampler->bufsize,
+				   resampler->samplerate);
+
+      ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_TUNE);
+
+      resampler->phase_start_usecs = current_usecs;
+    }
 
   resampler->log_cycles++;
   if (resampler->log_cycles == resampler->log_control_cycles)
