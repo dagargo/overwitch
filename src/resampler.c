@@ -508,6 +508,8 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       debug_print (1, "%s (%s): Tuning resampler...", resampler->engine->name,
 		   resampler->engine->overbridge_name);
 
+      ow_resampler_clear_buffers (resampler);
+
       ow_dll_host_set_loop_filter (dll, 0.5, resampler->bufsize,
 				   resampler->samplerate);
 
