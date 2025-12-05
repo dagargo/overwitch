@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2025-08-19 12:36+0200\n"
+"POT-Creation-Date: 2025-12-06 10:11+0100\n"
 "PO-Revision-Date: 2022-09-21 19:06+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: Spanish\n"
@@ -17,25 +17,25 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/main.c:153
+#: src/main.c:168
 msgid "Stop All Devices"
 msgstr "Parar todos los dispositivos"
 
-#: src/main.c:154
+#: src/main.c:169
 msgid "Start All Devices"
 msgstr "Arrancar todos los dispositivos"
 
-#: src/main.c:165
+#: src/main.c:180
 #, c-format
 msgid "JACK at %.5g kHz, %u period"
 msgstr "JACK a %.5g kHz, periodo de %u"
 
-#: src/main.c:169
+#: src/main.c:184
 #, c-format
 msgid "Target latency: %.1f ms"
 msgstr "Latencia objetivo: %.1f ms"
 
-#: src/main.c:439
+#: src/main.c:454
 msgid "Acknowledgements"
 msgstr "Agradecimientos"
 
@@ -62,6 +62,10 @@ msgstr "Ajustando"
 #: src/message.c:144
 msgid "Running"
 msgstr "Ejecutando"
+
+#: src/message.c:146
+msgid "Retuning"
+msgstr "Reajustando"
 
 #: res/overwitch.ui:11
 msgid "Show All Columns"

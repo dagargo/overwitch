@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: overwitch 2.1\n"
+"Project-Id-Version: overwitch 2.1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2025-08-19 12:36+0200\n"
+"POT-Creation-Date: 2025-12-06 10:11+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,25 +17,25 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/main.c:153
+#: src/main.c:168
 msgid "Stop All Devices"
 msgstr ""
 
-#: src/main.c:154
+#: src/main.c:169
 msgid "Start All Devices"
 msgstr ""
 
-#: src/main.c:165
+#: src/main.c:180
 #, c-format
 msgid "JACK at %.5g kHz, %u period"
 msgstr ""
 
-#: src/main.c:169
+#: src/main.c:184
 #, c-format
 msgid "Target latency: %.1f ms"
 msgstr ""
 
-#: src/main.c:439
+#: src/main.c:454
 msgid "Acknowledgements"
 msgstr ""
 
@@ -61,6 +61,10 @@ msgstr ""
 
 #: src/message.c:144
 msgid "Running"
+msgstr ""
+
+#: src/message.c:146
+msgid "Retuning"
 msgstr ""
 
 #: res/overwitch.ui:11

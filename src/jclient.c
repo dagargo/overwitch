@@ -251,7 +251,6 @@ jclient_process_cb (jack_nframes_t nframes, void *arg)
       goto err;
     }
 
-
   return 0;
 
 err:
