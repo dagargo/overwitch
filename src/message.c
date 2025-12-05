@@ -142,6 +142,8 @@ get_status_string (ow_resampler_status_t status)
       return _("Tuning");
     case OW_RESAMPLER_STATUS_RUN:
       return _("Running");
+    case OW_RESAMPLER_STATUS_RETUNE:
+      return _("Retuning");
     }
   return NULL;
 }

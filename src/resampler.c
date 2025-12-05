@@ -336,6 +336,7 @@ ow_resampler_read_audio (struct ow_resampler *resampler)
       error_print
 	("o2h: Unexpected frames with ratio %f (output %ld, expected %d)",
 	 resampler->o2h_ratio, gen_frames, resampler->bufsize);
+
       return -1;
     }
 
@@ -485,36 +486,44 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       resampler->phase_start_usecs = current_usecs;
     }
 
-  if (status == OW_RESAMPLER_STATUS_TUNE &&
-      current_usecs - resampler->phase_start_usecs > TUNING_PERIOD_US &&
-      ow_dll_tuned (dll, TUNING_ERROR))
+  if (status == OW_RESAMPLER_STATUS_TUNE ||
+      status == OW_RESAMPLER_STATUS_RETUNE)
     {
-      debug_print (1, "%s (%s): Running resampler...",
-		   resampler->engine->name,
-		   resampler->engine->overbridge_name);
+      if (xrun)
+	{
+	  ow_resampler_clear_buffers (resampler);
+	  resampler->phase_start_usecs = current_usecs;
+	}
+      else if (current_usecs - resampler->phase_start_usecs > TUNING_PERIOD_US
+	       && ow_dll_tuned (dll, TUNING_ERROR))
+	{
+	  debug_print (1, "%s (%s): Running resampler...",
+		       resampler->engine->name,
+		       resampler->engine->overbridge_name);
 
-      ow_dll_host_set_loop_filter (dll, 0.05, resampler->bufsize,
-				   resampler->samplerate);
+	  ow_dll_host_set_loop_filter (dll, 0.05, resampler->bufsize,
+				       resampler->samplerate);
 
-      ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_RUN);
+	  ow_engine_set_status (resampler->engine, OW_ENGINE_STATUS_RUN);
 
-      ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_RUN);
+	  ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_RUN);
 
-      audio_running_cb (cb_data);
+	  audio_running_cb (cb_data);
+	}
     }
 
   if (status == OW_RESAMPLER_STATUS_RUN && xrun)
     {
-      debug_print (1, "%s (%s): Tuning resampler...", resampler->engine->name,
+      debug_print (1, "%s (%s): Retuning resampler...",
+		   resampler->engine->name,
 		   resampler->engine->overbridge_name);
-
-      ow_resampler_clear_buffers (resampler);
 
       ow_dll_host_set_loop_filter (dll, 0.5, resampler->bufsize,
 				   resampler->samplerate);
 
-      ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_TUNE);
+      ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_RETUNE);
 
+      ow_resampler_clear_buffers (resampler);
       resampler->phase_start_usecs = current_usecs;
     }
 
