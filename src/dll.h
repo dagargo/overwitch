@@ -41,6 +41,8 @@ struct ow_dll_overbridge
 struct ow_dll
 {
   double ratio;
+  double max_ratio;
+  double min_ratio;
   uint32_t frames;
   double w0;
   double w1;

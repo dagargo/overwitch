@@ -28,6 +28,8 @@
 #define UINT64_USEC_TO_DOUBLE_SEC(t) (SEC_PER_USEC * (int)(t & 0x0FFFFFFF))
 #define MODTIME_THRESHOLD 200	//A value smaller than the maximum returned by UINT64_USEC_TO_DOUBLE_SEC
 
+#define MAX_RATIO_ERROR 2
+
 double
 wrap_time (double d, double q)
 {
@@ -143,6 +145,16 @@ ow_dll_host_update (struct ow_dll *dll)
   dll->z2 += dll->w0 * (dll->z1 - dll->z2);
   dll->z3 += dll->w2 * dll->z2;
   dll->ratio = 1.0 - dll->z2 - dll->z3;
+  if (dll->ratio > dll->max_ratio)
+    {
+      error_print ("Using DLL max ratio instead of %f", dll->ratio);
+      dll->ratio = dll->max_ratio;
+    }
+  else if (dll->ratio < dll->min_ratio)
+    {
+      error_print ("Using DLL min ratio instead of %f", dll->ratio);
+      dll->ratio = dll->min_ratio;
+    }
 
   debug_print (5, "DLL ratio: %f", dll->ratio);
 }
@@ -168,6 +180,8 @@ ow_dll_host_reset (struct ow_dll *dll, double output_samplerate,
   dll->z3 = 0.0;
 
   dll->ratio = output_samplerate / input_samplerate;
+  dll->max_ratio = dll->ratio * MAX_RATIO_ERROR;
+  dll->min_ratio = dll->ratio / MAX_RATIO_ERROR;
 
   dll->frames = -input_frames / dll->ratio;
 
