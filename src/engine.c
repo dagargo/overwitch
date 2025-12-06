@@ -1108,6 +1108,8 @@ ow_engine_load_overbridge_name (struct ow_engine *engine)
       error_print ("Error on USB control in transfer: %s",
 		   libusb_strerror (res));
     }
+
+  usleep (100000);		// This is required to not send the next packet immediately, which can make devices crash.
 }
 
 static void LIBUSB_CALL

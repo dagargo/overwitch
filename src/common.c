@@ -25,7 +25,7 @@
 #define OW_XFR_TIMEOUT_MIN 0
 #define OW_XFR_TIMEOUT_MAX 25
 
-#define OW_BLOCKS_MIN 8
+#define OW_BLOCKS_MIN 6
 #define OW_BLOCKS_MAX 32
 
 void
