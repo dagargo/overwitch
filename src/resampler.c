@@ -403,6 +403,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 			     uint64_t current_usecs, int xrun,
 			     void (*audio_running_cb) (void *), void *cb_data)
 {
+  int retune_required = xrun;
   ow_engine_status_t engine_status;
   struct ow_dll *dll = &resampler->dll;
   ow_resampler_status_t status;
@@ -463,7 +464,10 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
       return 0;
     }
 
-  ow_dll_host_update (dll);
+  if (ow_dll_host_update (dll))
+    {
+      retune_required = 1;		// Something serious happened to the ratio.
+    }
 
   ow_resampler_set_ratios_from_dll (resampler);
 
@@ -489,9 +493,8 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
   if (status == OW_RESAMPLER_STATUS_TUNE ||
       status == OW_RESAMPLER_STATUS_RETUNE)
     {
-      if (xrun)
+      if (retune_required)
 	{
-	  ow_resampler_clear_buffers (resampler);
 	  resampler->phase_start_usecs = current_usecs;
 	}
       else if (current_usecs - resampler->phase_start_usecs > TUNING_PERIOD_US
@@ -509,10 +512,12 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 	  ow_resampler_set_status (resampler, OW_RESAMPLER_STATUS_RUN);
 
 	  audio_running_cb (cb_data);
+
+	  ow_resampler_clear_buffers (resampler);
 	}
     }
 
-  if (status == OW_RESAMPLER_STATUS_RUN && xrun)
+  if (status == OW_RESAMPLER_STATUS_RUN && retune_required)
     {
       debug_print (1, "%s (%s): Retuning resampler...",
 		   resampler->engine->name,

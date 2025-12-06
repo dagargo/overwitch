@@ -136,9 +136,11 @@ ow_dll_host_update_error (struct ow_dll *dll, uint64_t t)
 	       dll->target_delay, dll->err);
 }
 
-inline void
+inline int
 ow_dll_host_update (struct ow_dll *dll)
 {
+  int err = 0;
+
   debug_print (5, "Updating host side of DLL...");
 
   dll->z1 += dll->w0 * (dll->w1 * dll->err - dll->z1);
@@ -148,15 +150,19 @@ ow_dll_host_update (struct ow_dll *dll)
   if (dll->ratio > dll->max_ratio)
     {
       error_print ("Using DLL max ratio instead of %f", dll->ratio);
+      err = 1;
       dll->ratio = dll->max_ratio;
     }
   else if (dll->ratio < dll->min_ratio)
     {
       error_print ("Using DLL min ratio instead of %f", dll->ratio);
       dll->ratio = dll->min_ratio;
+      err = 1;
     }
 
   debug_print (5, "DLL ratio: %f", dll->ratio);
+
+  return err;
 }
 
 inline void
