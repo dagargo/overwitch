@@ -21,7 +21,9 @@
 #define _GNU_SOURCE
 #include <signal.h>
 #include <errno.h>
+#ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
+#endif
 #include <time.h>
 #include "../config.h"
 #include "jclient.h"
@@ -141,16 +143,19 @@ signal_handler (int signum)
     {
       struct timespec ts;
       clock_gettime (CLOCK_MONOTONIC, &ts);
+#ifdef HAVE_SYSTEMD
       sd_notifyf (0, "RELOADING=1\nMONOTONIC_USEC=%" PRIdMAX "%06d",
 		  (intmax_t) ts.tv_sec, (int) (ts.tv_nsec / 1000));
+#endif
       handle_start ();
+#ifdef HAVE_SYSTEMD
       sd_notify (0, "READY=1");
+#endif
     }
   else
     {
       error_print ("Signal not handled");
     }
-
 }
 
 static void *
@@ -544,7 +549,9 @@ app_startup (GApplication *app, gpointer *user_data)
       startup ();
       g_application_hold (app);
       g_application_activate (app);
+#ifdef HAVE_SYSTEMD
       sd_notify (0, "READY=1");
+#endif
     }
 }
 
