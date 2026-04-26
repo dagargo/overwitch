@@ -17,7 +17,7 @@ AC_DEFINE([PACKAGE_SERVICE_DBUS_NAME], ["io.github.dagargo.OverwitchService"], "
 AC_PROG_CC
 
 # Define conditional prior to package checks
-AM_CONDITIONAL([CLI_ONLY], [test "${CLI_ONLY}" == yes])
+AM_CONDITIONAL([CLI_ONLY], [test "${CLI_ONLY}" = yes])
 AM_CONDITIONAL([GUI], [test "${CLI_ONLY}" != yes])
 
 AM_COND_IF(GUI, [PKG_CHECK_MODULES(GTK4, gtk4 >= 4.14)])
