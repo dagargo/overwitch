@@ -20,7 +20,6 @@
 
 #define _GNU_SOURCE
 #include <errno.h>
-#include <libusb.h>
 #include <string.h>
 #include <gtk/gtk.h>
 #include <json-glib/json-glib.h>
