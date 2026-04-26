@@ -44,6 +44,12 @@ sudo make install
 sudo ldconfig
 ```
 
+On Void Linux, additional arguments need to be passed to `./configure`.
+
+```
+./configure CFLAGS="-I/usr/include/json-glib-1.0 -I/usr/include/glib-2.0 -I/usr/lib64/glib-2.0/include" LDFLAGS=-ljack
+```
+
 Some udev rules might need to be installed manually with `sudo make install` from the `udev` directory as they are not part of the `install` target. This is not needed when packaging or when distributions already provide them.
 
 The package dependencies for Debian based distributions are:
@@ -75,6 +81,12 @@ sudo yum install automake libtool libusb1-devel jack-audio-connection-kit-devel 
 For Arch, no additional dependencies are needed.
 
 As this will install `jackd2`, you would be asked to configure it to be run with real time priority. Be sure to answer yes. With this, the `audio` group would be able to run processes with real time priority. Be sure to be in the `audio` group too.
+
+For Void Linux, run this to install the dependencies. Notice that, since this distribution is not based on `systemd`, the Overwitch service based on it will not be installed.
+
+```
+sudo xbps-install base-devel gettext-devel pipewire libjack-pipewire jack-devel libusb-devel glib-devel json-glib-devel libsndfile-devel libsamplerate-devel gtk4-devel
+```
 
 ### systemd service
 
