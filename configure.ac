@@ -3,6 +3,10 @@
 
 AC_PREREQ([2.69])
 AC_INIT([overwitch],[2.2],[dagargo@gmail.com])
+
+# Needed to override the default value of CFLAGS, which is `-g -O2`
+: ${CFLAGS="-g"}
+
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
 LT_INIT
