@@ -45,6 +45,9 @@
 #define OW2_MAX_BLOCKS 24
 #define OW2_DEFAULT_BLOCKS 24
 
+#define OW_DEVICE_VERSION_2_STR     "2"
+#define OW_DEVICE_VERSION_2_1_STR   "2.1"
+
 typedef size_t (*ow_buffer_rw_space_t) (void *);
 typedef size_t (*ow_buffer_read_t) (void *, char *, size_t);
 typedef size_t (*ow_buffer_write_t) (void *, const char *, size_t);
@@ -117,10 +120,11 @@ typedef enum
 
 typedef enum
 {
-  OW_DEVICE_TYPE_1 = 1,		//16 bits isochronous transfers (Analog Rytm MKI and Analog Four MKI and Keys)
-  OW_DEVICE_TYPE_2 = 2,		//32 bits interrupt transfers
-  OW_DEVICE_TYPE_3 = 3		//24 bits Interrupt transfers
-} ow_device_type_t;
+  OW_DEVICE_VERSION_1,		//16 bits isochronous transfers (Analog Rytm MKI and Analog Four MKI and Keys)
+  OW_DEVICE_VERSION_2,		//32 bits interrupt transfers (classic Overbridge 2 devices)
+  OW_DEVICE_VERSION_2_1,	//24 bits Interrupt transfers (DTII and DNII)
+  OW_DEVICE_VERSION_3		//32 bits isochronous transfers (Tonverk)
+} ow_device_version_t;
 
 struct ow_context
 {
@@ -155,7 +159,7 @@ struct ow_device_desc
 {
   uint16_t pid;
   char name[OW_LABEL_MAX_LEN];
-  ow_device_type_t type;
+  ow_device_version_t version;
   int inputs;
   int outputs;
   struct ow_device_track input_tracks[OB_MAX_TRACKS];

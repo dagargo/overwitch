@@ -11,9 +11,9 @@
 #define TRACKS 6
 #define NFRAMES 64
 
-static const struct ow_device_desc TESTDEV_DESC_T2 = {
+static const struct ow_device_desc TESTDEV_DESC_V2 = {
   .pid = 0,
-  .type = OW_DEVICE_TYPE_2,
+  .version = OW_DEVICE_VERSION_2,
   .name = "Test Device Type 2",
   .inputs = TRACKS,
   .outputs = TRACKS,
@@ -31,9 +31,9 @@ static const struct ow_device_desc TESTDEV_DESC_T2 = {
 		    {.name = "T6",.size = 4}},
 };
 
-static const struct ow_device_desc TESTDEV_DESC_T3 = {
+static const struct ow_device_desc TESTDEV_DESC_V2_1 = {
   .pid = 0,
-  .type = OW_DEVICE_TYPE_3,
+  .version = OW_DEVICE_VERSION_2_1,
   .name = "Test Device Type 3",
   .inputs = TRACKS,
   .outputs = TRACKS,
@@ -53,7 +53,7 @@ static const struct ow_device_desc TESTDEV_DESC_T3 = {
 
 static const struct ow_device_desc TESTDEV_DESC_SIZE = {
   .pid = 0,
-  .type = OW_DEVICE_TYPE_2,
+  .version = OW_DEVICE_VERSION_2_1,
   .name = "Test Device Size",
   .inputs = 2,
   .outputs = 4,
@@ -219,15 +219,15 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
 }
 
 static void
-test_usb_blocks_t2 ()
+test_usb_blocks_v2 ()
 {
-  test_usb_blocks (&TESTDEV_DESC_T2, 1e-9);
+  test_usb_blocks (&TESTDEV_DESC_V2, 1e-9);
 }
 
 static void
-test_usb_blocks_t3 ()
+test_usb_blocks_v2_1 ()
 {
-  test_usb_blocks (&TESTDEV_DESC_T3, 1e-6);
+  test_usb_blocks (&TESTDEV_DESC_V2_1, 1e-6);
 }
 
 static void
@@ -242,7 +242,7 @@ test_jack_buffers ()
   printf ("\n");
 
   engine.device = malloc (sizeof (struct ow_device));
-  copy_device_desc (&engine.device->desc, &TESTDEV_DESC_T2);
+  copy_device_desc (&engine.device->desc, &TESTDEV_DESC_V2);
 
   for (int i = 0; i < TRACKS; i++)
     {
@@ -307,7 +307,7 @@ test_state_parser ()
   struct ow_resampler_state state;
 
   engine.device = malloc (sizeof (struct ow_device));
-  copy_device_desc (&engine.device->desc, &TESTDEV_DESC_T2);
+  copy_device_desc (&engine.device->desc, &TESTDEV_DESC_V2);
 
   builder = message_state_builder_start ();
 
@@ -381,12 +381,12 @@ main (int argc, char *argv[])
       goto cleanup;
     }
 
-  if (!CU_add_test (suite, "test_usb_blocks_t2", test_usb_blocks_t2))
+  if (!CU_add_test (suite, "test_usb_blocks_v2", test_usb_blocks_v2))
     {
       goto cleanup;
     }
 
-  if (!CU_add_test (suite, "test_usb_blocks_t3", test_usb_blocks_t3))
+  if (!CU_add_test (suite, "test_usb_blocks_v2.1", test_usb_blocks_v2_1))
     {
       goto cleanup;
     }

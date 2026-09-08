@@ -473,7 +473,7 @@ This example is a self-explanatory `JSON` object for a device.
 {
   "pid": 2899,
   "name": "Analog Heat +FX",
-  "type": 2,
+  "version": "2",
   "input_tracks": [
     {
       "name": "Main L Input",
@@ -513,8 +513,9 @@ This example is a self-explanatory `JSON` object for a device.
 }
 ```
 
-Notice that there are 3 types of devices, depending on the transfer type and how many bytes are used to store samples in the USB blocks.
+Notice that there are 4 versions, depending on the transfer type and how many bytes are used to store samples in the USB blocks.
 
-* Type 1 (isochronous transfers) is reserved for Analog Rytm MKI and Analog Four MKI and Keys.
-* Type 2 (interrupt transfers) uses 4 bytes integers.
-* Type 3 (interrupt transfers) uses 3 bytes integers. Note that some tracks might use 4 bytes to store the samples even though the actual samples are only 3 bytes.
+* Version 1 (isochronous transfers) is reserved for Analog Rytm MKI and Analog Four MKI and Keys.
+* Version 2 (interrupt transfers) uses 4 bytes integers and is used by classig Overbridge 2 devices.
+* Version 2.1 (interrupt transfers) uses 3 bytes integers. Note that some tracks might use 4 bytes to store the samples even though the actual samples are only 3 bytes. Used by Digitakt II and Digitone II.
+* Version 3 (isochronous transfers). Used by Tonverk.

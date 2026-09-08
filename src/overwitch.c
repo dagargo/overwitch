@@ -30,7 +30,7 @@
 
 #define DEV_TAG_PID "pid"
 #define DEV_TAG_NAME "name"
-#define DEV_TAG_TYPE "type"
+#define DEV_TAG_VERSION "version"
 #define DEV_TAG_INPUT_TRACKS "input_tracks"
 #define DEV_TAG_OUTPUT_TRACKS "output_tracks"
 #define DEV_TAG_TRACK_NAME "name"
@@ -110,13 +110,28 @@ ow_get_device_list (struct ow_device **ow_devices, size_t *size)
   return 0;
 }
 
-static int
-ow_check_track_size (ow_device_type_t type, int size)
+static const char *
+ow_get_version_str (ow_device_version_t version)
 {
-  if ((type == OW_DEVICE_TYPE_2 && size != 4) ||
-      (type == OW_DEVICE_TYPE_3 && (size < 3 || size > 4)))
+  switch (version)
     {
-      error_print ("Size '%d' not allowed for type '%d'", size, type);
+    case OW_DEVICE_VERSION_2:
+      return OW_DEVICE_VERSION_2_STR;
+    case OW_DEVICE_VERSION_2_1:
+      return OW_DEVICE_VERSION_2_1_STR;
+    default:
+      return "unknown";
+    }
+}
+
+static int
+ow_check_track_size (ow_device_version_t version, int size)
+{
+  if ((version == OW_DEVICE_VERSION_2 && size != 4) ||
+      (version == OW_DEVICE_VERSION_2_1 && (size < 3 || size > 4)))
+    {
+      error_print ("Size '%d' not allowed for version '%s'", size,
+		   ow_get_version_str (version));
       return -EINVAL;
     }
 
@@ -128,6 +143,7 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 			   JsonReader *reader)
 {
   gint dpid;
+  const char *version;
 
   device_desc->inputs = 0;
   device_desc->outputs = 0;
@@ -158,20 +174,27 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 	    json_reader_get_string_value (reader));
   json_reader_end_member (reader);
 
-  if (!json_reader_read_member (reader, DEV_TAG_TYPE))
+  if (!json_reader_read_member (reader, DEV_TAG_VERSION))
     {
-      error_print ("Cannot read member '%s'", DEV_TAG_TYPE);
+      error_print ("Cannot read member '%s'", DEV_TAG_VERSION);
       return -EINVAL;
     }
-  device_desc->type = json_reader_get_int_value (reader);
-  json_reader_end_member (reader);
+  version = json_reader_get_string_value (reader);
+  if (!strcmp (version, OW_DEVICE_VERSION_2_STR))
+    {
+      device_desc->version = OW_DEVICE_VERSION_2;
+    }
+  else if (!strcmp (version, OW_DEVICE_VERSION_2_1_STR))
+    {
+      device_desc->version = OW_DEVICE_VERSION_2_1;
+    }
+  else
+    {
+      error_print ("Invalid type version '%s'", version);
+      return -EINVAL;
+    }
 
-  if (device_desc->type < OW_DEVICE_TYPE_1 ||
-      device_desc->type > OW_DEVICE_TYPE_3)
-    {
-      error_print ("Invalid type version '%d'", device_desc->type);
-      return -EINVAL;
-    }
+  json_reader_end_member (reader);
 
   if (!json_reader_read_member (reader, DEV_TAG_INPUT_TRACKS))
     {
@@ -213,7 +236,7 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 	    }
 	  device_desc->input_tracks[j].size =
 	    json_reader_get_int_value (reader);
-	  if (ow_check_track_size (device_desc->type,
+	  if (ow_check_track_size (device_desc->version,
 				   device_desc->input_tracks[j].size))
 	    {
 	      return -EINVAL;
@@ -229,6 +252,7 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 	  return -EINVAL;
 	}
     }
+
   json_reader_end_member (reader);
 
   if (!json_reader_read_member (reader, DEV_TAG_OUTPUT_TRACKS))
@@ -270,7 +294,7 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 	    }
 	  device_desc->output_tracks[j].size =
 	    json_reader_get_int_value (reader);
-	  if (ow_check_track_size (device_desc->type,
+	  if (ow_check_track_size (device_desc->version,
 				   device_desc->output_tracks[j].size))
 	    {
 	      return -EINVAL;
@@ -286,6 +310,7 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 	  return -EINVAL;
 	}
     }
+
   json_reader_end_member (reader);
 
   return 0;

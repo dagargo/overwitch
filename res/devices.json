@@ -2,7 +2,7 @@
   {
     "pid": 2860,
     "name": "Digitakt",
-    "type": 2,
+    "version": "2",
     "input_tracks": [
       {
         "name": "Main L Input",
@@ -67,7 +67,7 @@
   {
     "pid": 2870,
     "name": "Digitone",
-    "type": 2,
+    "version": "2",
     "input_tracks": [
       {
         "name": "Main L Input",
@@ -132,7 +132,7 @@
   {
     "pid": 2887,
     "name": "Analog Four MKII",
-    "type": 2,
+    "version": "2",
     "input_tracks": [
       {
         "name": "Main L Input",
@@ -197,7 +197,7 @@
   {
     "pid": 2888,
     "name": "Analog Rytm MKII",
-    "type": 2,
+    "version": "2",
     "input_tracks": [
       {
         "name": "Main L Input",
@@ -302,7 +302,7 @@
   {
     "pid": 2869,
     "name": "Digitone Keys",
-    "type": 2,
+    "version": "2",
     "input_tracks": [
       {
         "name": "Main L Input",
@@ -367,7 +367,7 @@
   {
     "pid": 2896,
     "name": "Analog Heat",
-    "type": 2,
+    "version": "2",
     "input_tracks": [
       {
         "name": "Main L Input",
@@ -408,7 +408,7 @@
   {
     "pid": 2898,
     "name": "Analog Heat MKII",
-    "type": 2,
+    "version": "2",
     "input_tracks": [
       {
         "name": "Main L Input",
@@ -449,7 +449,7 @@
   {
     "pid": 2899,
     "name": "Analog Heat +FX",
-    "type": 2,
+    "version": "2",
     "input_tracks": [
       {
         "name": "Main L Input",
@@ -490,7 +490,7 @@
   {
     "pid": 2890,
     "name": "Syntakt",
-    "type": 2,
+    "version": "2",
     "input_tracks": [
       {
         "name": "Main L Input",
@@ -611,7 +611,7 @@
   {
     "pid": 2859,
     "name": "Digitakt II",
-    "type": 3,
+    "version": "2.1",
     "input_tracks": [
       {
         "name": "Main L Input",
@@ -820,7 +820,7 @@
   {
     "pid": 2868,
     "name": "Digitone II",
-    "type": 3,
+    "version": "2.1",
     "input_tracks": [
       {
         "name": "Main L Input",
