@@ -242,13 +242,13 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
 }
 
 static void
-test_usb_blocks_t1 ()
+test_usb_blocks_t2 ()
 {
   test_usb_blocks (&TESTDEV_DESC_T2, 1e-9);
 }
 
 static void
-test_usb_blocks_t2 ()
+test_usb_blocks_t3 ()
 {
   test_usb_blocks (&TESTDEV_DESC_T3, 1e-6);
 }
@@ -401,12 +401,12 @@ main (int argc, char *argv[])
       goto cleanup;
     }
 
-  if (!CU_add_test (suite, "test_usb_blocks_t1", test_usb_blocks_t1))
+  if (!CU_add_test (suite, "test_usb_blocks_t2", test_usb_blocks_t2))
     {
       goto cleanup;
     }
 
-  if (!CU_add_test (suite, "test_usb_blocks_t2", test_usb_blocks_t2))
+  if (!CU_add_test (suite, "test_usb_blocks_t3", test_usb_blocks_t3))
     {
       goto cleanup;
     }
