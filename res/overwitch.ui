@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<!-- Created with Cambalache 0.96.1 -->
+<!-- Created with Cambalache 1.0.3 -->
 <interface>
   <!-- interface-name overwitch.ui -->
+  <!-- interface-copyright Copyright © 2024 David García Goñi -->
   <requires lib="gio" version="2.44"/>
   <requires lib="gtk" version="4.14"/>
   <menu id="main_popover_model">
@@ -10,8 +11,6 @@
         <attribute name="action">app.show_all_columns</attribute>
         <attribute name="label" translatable="yes">Show All Columns</attribute>
       </item>
-    </section>
-    <section>
       <item>
         <attribute name="action">app.open_preferences</attribute>
         <attribute name="label" translatable="yes">Preferences</attribute>
