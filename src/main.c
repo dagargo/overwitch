@@ -97,15 +97,6 @@ update_all_metrics (gboolean active)
 }
 
 static void
-overwitch_show_all_columns (GSimpleAction *action,
-			    GVariant *value, gpointer data)
-{
-  gboolean show_all_columns = g_variant_get_boolean (value);
-  g_simple_action_set_state (action, value);
-  update_all_metrics (show_all_columns);
-}
-
-static void
 save_preferences ()
 {
   struct ow_preferences prefs;
@@ -156,6 +147,16 @@ load_preferences ()
     }
 
   update_all_metrics (prefs.show_all_columns);
+}
+
+static void
+overwitch_show_all_columns (GSimpleAction *action,
+			    GVariant *value, gpointer data)
+{
+  gboolean show_all_columns = g_variant_get_boolean (value);
+  g_simple_action_set_state (action, value);
+  update_all_metrics (show_all_columns);
+  save_preferences ();
 }
 
 static void
