@@ -27,7 +27,8 @@
 #define ELEKTRON_VID 0x1935
 
 #define OB_SAMPLE_RATE 48000.0
-#define OB_FRAMES_PER_BLOCK 7
+#define OB2_FRAMES_PER_BLOCK 7
+
 #define OB_MAX_TRACKS 64
 
 //While samples might use 3 or 4 bytes in the USB packets, Overwitch uses
@@ -40,7 +41,9 @@
 
 #define OW_DEFAULT_XFR_TIMEOUT 10
 
-#define OW_DEFAULT_BLOCKS 24
+#define OW2_MIN_BLOCKS 6
+#define OW2_MAX_BLOCKS 24
+#define OW2_DEFAULT_BLOCKS 24
 
 typedef size_t (*ow_buffer_rw_space_t) (void *);
 typedef size_t (*ow_buffer_read_t) (void *, char *, size_t);
@@ -236,6 +239,10 @@ void ow_engine_set_status (struct ow_engine *engine, ow_engine_status_t);
 int ow_engine_is_option (struct ow_engine *engine, ow_engine_option_t);
 
 void ow_engine_set_option (struct ow_engine *engine, ow_engine_option_t, int);
+
+unsigned int ow_engine_get_blocks_per_transfer (struct ow_engine *engine);
+
+unsigned int ow_engine_get_frames_per_block (struct ow_engine *engine);
 
 const struct ow_device *ow_engine_get_device (struct ow_engine *engine);
 

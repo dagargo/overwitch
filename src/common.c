@@ -121,13 +121,13 @@ get_ow_blocks_per_transfer_argument (const char *optarg)
   errno = 0;
   blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
   if (errno || endstr == optarg || *endstr != '\0' ||
-      blocks_per_transfer < OW_BLOCKS_MIN ||
-      blocks_per_transfer > OW_BLOCKS_MAX)
+      blocks_per_transfer < OW2_MIN_BLOCKS ||
+      blocks_per_transfer > OW2_MAX_BLOCKS)
     {
-      blocks_per_transfer = OW_DEFAULT_BLOCKS;
+      blocks_per_transfer = OW2_DEFAULT_BLOCKS;
       fprintf (stderr,
 	       "Blocks value must be in [%d..%d]. Using value %d...\n",
-	       OW_BLOCKS_MIN, OW_BLOCKS_MAX, blocks_per_transfer);
+	       OW2_MIN_BLOCKS, OW2_MAX_BLOCKS, blocks_per_transfer);
     }
   return blocks_per_transfer;
 }

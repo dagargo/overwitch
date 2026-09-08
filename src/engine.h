@@ -231,6 +231,12 @@ void ow_engine_write_usb_output_blocks (struct ow_engine *engine);
 
 int ow_engine_init_mem (struct ow_engine *engine, unsigned int);
 
+unsigned int ow_engine_get_valid_blocks_per_transfer (unsigned int
+						      blocks_per_transfer,
+						      unsigned int min,
+						      unsigned int max,
+						      unsigned int def);
+
 void ow_engine_free_mem (struct ow_engine *engine);
 
 void ow_engine_print_usb_block (struct ow_engine *engine, int block, int o2h,

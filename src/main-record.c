@@ -86,7 +86,7 @@ print_status ()
 static size_t
 buffer_dummy_rw_space (void *data)
 {
-  return OW_DEFAULT_BLOCKS * OB_FRAMES_PER_BLOCK * OB_MAX_TRACKS *
+  return OW2_DEFAULT_BLOCKS * OB2_FRAMES_PER_BLOCK * OB_MAX_TRACKS *
     OW_BYTES_PER_SAMPLE;
 }
 
@@ -355,7 +355,7 @@ main (int argc, char *argv[])
   ow_err_t ow_err;
   struct sigaction action;
   int device_num = -1;
-  unsigned int blocks_per_transfer = OW_DEFAULT_BLOCKS;
+  unsigned int blocks_per_transfer = OW2_DEFAULT_BLOCKS;
   unsigned int xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
 
   action.sa_handler = signal_handler;
