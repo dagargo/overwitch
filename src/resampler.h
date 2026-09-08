@@ -27,7 +27,7 @@ struct ow_resampler
   pthread_spinlock_t lock;
   ow_resampler_status_t status;
   struct ow_engine *engine;
-  struct ow_dll dll;		//The DLL is based on o2j data
+  struct ow_dll dll;		//The DLL is based on o2h data
   double o2h_ratio;
   double h2o_ratio;
   SRC_STATE *h2o_state;

@@ -207,7 +207,7 @@ struct ow_engine
     uint8_t *xfr_control_out_data;
     uint8_t *xfr_control_in_data;
   } usb;
-  //j2o resampler
+  //h2o resampler
   float *h2o_resampler_buf;
   SRC_DATA h2o_data;
   int reading_at_h2o_end;

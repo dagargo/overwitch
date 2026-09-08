@@ -512,7 +512,7 @@ ow_engine_init_mem (struct ow_engine *engine,
   memset (engine->h2o_transfer_buf, 0, engine->h2o_transfer_size);
   memset (engine->o2h_transfer_buf, 0, engine->o2h_transfer_size);
 
-  //o2h resampler
+  //h2o resampler
   engine->h2o_resampler_buf = malloc (engine->h2o_transfer_size);
   memset (engine->h2o_resampler_buf, 0, engine->h2o_transfer_size);
   engine->h2o_data.data_in = engine->h2o_resampler_buf;

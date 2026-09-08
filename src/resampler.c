@@ -466,7 +466,7 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
 
   if (ow_dll_host_update (dll))
     {
-      retune_required = 1;		// Something serious happened to the ratio.
+      retune_required = 1;	// Something serious happened to the ratio.
     }
 
   ow_resampler_set_ratios_from_dll (resampler);
