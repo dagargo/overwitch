@@ -110,31 +110,6 @@ ow_get_device_list (struct ow_device **ow_devices, size_t *size)
   return 0;
 }
 
-void
-ow_copy_device_desc (struct ow_device_desc *device_desc,
-		     const struct ow_device_desc *d)
-{
-  device_desc->pid = d->pid;
-  strncpy (device_desc->name, d->name, OW_LABEL_MAX_LEN);
-  device_desc->type = d->type;
-  device_desc->inputs = d->inputs;
-  device_desc->outputs = d->outputs;
-
-  for (int i = 0; i < device_desc->inputs; i++)
-    {
-      strncpy (device_desc->input_tracks[i].name, d->input_tracks[i].name,
-	       OW_LABEL_MAX_LEN);
-      device_desc->input_tracks[i].size = d->input_tracks[i].size;
-    }
-
-  for (int i = 0; i < device_desc->outputs; i++)
-    {
-      strncpy (device_desc->output_tracks[i].name, d->output_tracks[i].name,
-	       OW_LABEL_MAX_LEN);
-      device_desc->output_tracks[i].size = d->output_tracks[i].size;
-    }
-}
-
 static int
 ow_check_track_size (ow_device_type_t type, int size)
 {

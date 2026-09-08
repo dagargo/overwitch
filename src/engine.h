@@ -169,6 +169,7 @@ struct ow_engine
   struct ow_device *device;
   ow_engine_status_t status;
   unsigned int blocks_per_transfer;
+  unsigned int frames_per_block;
   unsigned int frames_per_transfer;
   pthread_spinlock_t lock;
   //Latencies are measured in frames
@@ -224,10 +225,13 @@ struct ow_engine_usb_blk
 
 int ow_bytes_to_frame_bytes (int, int);
 
-void ow_engine_read_usb_input_blocks (struct ow_engine *);
+void ow_engine_read_usb_input_blocks (struct ow_engine *engine);
 
-void ow_engine_write_usb_output_blocks (struct ow_engine *);
+void ow_engine_write_usb_output_blocks (struct ow_engine *engine);
 
-int ow_engine_init_mem (struct ow_engine *, unsigned int);
+int ow_engine_init_mem (struct ow_engine *engine, unsigned int);
 
-void ow_engine_free_mem (struct ow_engine *);
+void ow_engine_free_mem (struct ow_engine *engine);
+
+void ow_engine_print_usb_block (struct ow_engine *engine, int block, int o2h,
+				uint16_t * debug_counter);

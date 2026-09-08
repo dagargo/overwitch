@@ -66,56 +66,19 @@ static const struct ow_device_desc TESTDEV_DESC_SIZE = {
 };
 
 static void
-ow_engine_print_blocks (struct ow_engine *engine, uint8_t *blks,
-			size_t blk_len)
+copy_device_desc (struct ow_device_desc *dst,
+		  const struct ow_device_desc *src)
 {
-  int32_t v;
-  uint8_t *s;
-  struct ow_engine_usb_blk *blk;
+  memcpy (dst, src, sizeof (struct ow_device_desc));
+}
 
+static void
+print_blocks (struct ow_engine *engine)
+{
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
-      blk = GET_NTH_USB_BLK (blks, blk_len, i);
-      printf ("Block %d\n", i);
-      printf ("0x%04x | 0x%04x\n", be16toh (blk->header),
-	      be16toh (blk->frames));
-      s = (uint8_t *) blk->data;
-      for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
-	{
-	  if (engine->device->desc.type == OW_DEVICE_TYPE_2)
-	    {
-	      for (int k = 0; k < engine->device->desc.outputs; k++)
-		{
-		  v = be32toh (*((int32_t *) s));
-		  printf ("Frame %2d, track %2d: %d\n", j, k, v);
-		  s += sizeof (int32_t);
-		}
-	    }
-	  else if (engine->device->desc.type == OW_DEVICE_TYPE_3)
-	    {
-	      struct ow_device_track *track =
-		engine->device->desc.output_tracks;
-	      for (int k = 0; k < engine->device->desc.outputs; k++)
-		{
-		  uint8_t *dst;
-		  if (track->size == 4)
-		    {
-		      dst = (uint8_t *) & v;
-		      memcpy (dst, s, track->size);
-		    }
-		  else
-		    {
-		      dst = &((uint8_t *) & v)[1];
-		      memcpy (dst, s, track->size);
-		    }
-		  v = be32toh (v);
-		  v <<= 8;
-		  printf ("Frame %2d, track %2d: %d\n", j, k, v);
-		  s += track->size;
-		  track++;
-		}
-	    }
-	}
+      uint16_t debug_counter = 0;
+      ow_engine_print_usb_block (engine, i, 0, &debug_counter);
     }
 }
 
@@ -139,7 +102,7 @@ test_sizes ()
   printf ("\n");
 
   engine.device = malloc (sizeof (struct ow_device));
-  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_SIZE);
+  copy_device_desc (&engine.device->desc, &TESTDEV_DESC_SIZE);
   engine.usb.audio_in_blk_len = 0;
   engine.usb.audio_out_blk_len = 0;
   ow_engine_init_mem (&engine, BLOCKS);
@@ -182,7 +145,7 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
   printf ("\n");
 
   engine.device = malloc (sizeof (struct ow_device));
-  ow_copy_device_desc (&engine.device->desc, device_desc);
+  copy_device_desc (&engine.device->desc, device_desc);
   engine.usb.audio_in_blk_len = 0;
   engine.usb.audio_out_blk_len = 0;
   ow_engine_init_mem (&engine, BLOCKS);
@@ -213,8 +176,7 @@ test_usb_blocks (const struct ow_device_desc *device_desc, float max_error)
 		       be16toh (GET_NTH_OUTPUT_USB_BLK (&engine, i)->frames));
     }
 
-  ow_engine_print_blocks (&engine, engine.usb.xfr_audio_out_data,
-			  engine.usb.audio_out_blk_len);
+  print_blocks (&engine);
 
   memcpy (engine.usb.xfr_audio_in_data, engine.usb.xfr_audio_out_data,
 	  engine.usb.xfr_audio_in_data_len);
@@ -265,7 +227,7 @@ test_jack_buffers ()
   printf ("\n");
 
   engine.device = malloc (sizeof (struct ow_device));
-  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_T2);
+  copy_device_desc (&engine.device->desc, &TESTDEV_DESC_T2);
 
   for (int i = 0; i < TRACKS; i++)
     {
@@ -330,7 +292,7 @@ test_state_parser ()
   struct ow_resampler_state state;
 
   engine.device = malloc (sizeof (struct ow_device));
-  ow_copy_device_desc (&engine.device->desc, &TESTDEV_DESC_T2);
+  copy_device_desc (&engine.device->desc, &TESTDEV_DESC_T2);
 
   builder = message_state_builder_start ();
 
@@ -375,7 +337,7 @@ main (int argc, char *argv[])
 {
   int err = 0;
 
-  debug_level = 2;
+  debug_level = 3;
 
   if (CU_initialize_registry () != CUE_SUCCESS)
     {

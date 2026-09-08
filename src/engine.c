@@ -300,9 +300,51 @@ set_blocks:
   ow_engine_write_usb_output_blocks (engine);
 }
 
+inline void
+ow_engine_print_usb_block (struct ow_engine *engine, int blk_idx, int o2h,
+			   uint16_t *debug_counter)
+{
+  uint8_t *s;
+  size_t frame_size;
+  struct ow_engine_usb_blk *blk;
+
+  if (debug_level >= 3)
+    {
+      if (*debug_counter == 0)
+	{
+	  blk = o2h ? GET_NTH_INPUT_USB_BLK (engine, blk_idx) :
+	    GET_NTH_OUTPUT_USB_BLK (engine, blk_idx);
+	  s = (uint8_t *) blk->data;
+	  frame_size = o2h ? engine->o2h_frame_size : engine->h2o_frame_size;
+
+	  fprintf (stderr, "%s block: header: 0x%04x; frames: 0x%04x\n",
+		   o2h ? "O2H" : "H2O", be16toh (blk->header),
+		   be16toh (blk->frames));
+
+	  for (int j = 0; j < OB_FRAMES_PER_BLOCK; j++)
+	    {
+	      fprintf (stderr, "  Frame %d:", j);
+
+	      for (int k = 0; k < frame_size; k++, s++)
+		{
+		  fprintf (stderr, " %02x", *s);
+		}
+
+	      fprintf (stderr, "\n");
+	    }
+	}
+      *debug_counter += engine->frames_per_transfer;
+      if (*debug_counter >= OB_SAMPLE_RATE)
+	{
+	  *debug_counter = 0;
+	}
+    }
+}
+
 static void LIBUSB_CALL
 cb_xfr_audio_in (struct libusb_transfer *xfr)
 {
+  static uint16_t debug_counter = 0;
   struct ow_engine *engine = xfr->user_data;
 
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
@@ -317,6 +359,7 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
       struct ow_engine *engine = xfr->user_data;
       if (engine->context->options & OW_ENGINE_OPTION_O2H_AUDIO)
 	{
+	  ow_engine_print_usb_block (engine, 0, 1, &debug_counter);
 	  set_usb_input_data_blks (engine);
 	}
     }
@@ -336,6 +379,7 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
 static void LIBUSB_CALL
 cb_xfr_audio_out (struct libusb_transfer *xfr)
 {
+  static uint16_t debug_counter = 0;
   struct ow_engine *engine = xfr->user_data;
 
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
@@ -354,6 +398,7 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
     }
 
   set_usb_output_data_blks (xfr->user_data);
+  ow_engine_print_usb_block (engine, 0, 0, &debug_counter);
 
   if (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP)
     {
