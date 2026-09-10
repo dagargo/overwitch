@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 1.1\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2026-09-08 09:30+0200\n"
+"POT-Creation-Date: 2026-09-10 16:21+0200\n"
 "PO-Revision-Date: 2022-09-21 19:03+0200\n"
 "Last-Translator: David García Goñi <dagargo@gmail.com>\n"
 "Language-Team: English\n"
@@ -17,20 +17,20 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/main.c:168
+#: src/main.c:169
 msgid "Stop All Devices"
 msgstr ""
 
-#: src/main.c:169
+#: src/main.c:170
 msgid "Start All Devices"
 msgstr ""
 
-#: src/main.c:179
+#: src/main.c:180
 #, c-format
 msgid "JACK at %.5g kHz, %u period"
 msgstr ""
 
-#: src/main.c:446
+#: src/main.c:447
 msgid "Acknowledgements"
 msgstr ""
 
@@ -66,7 +66,7 @@ msgstr ""
 msgid "Show All Columns"
 msgstr ""
 
-#: res/overwitch.ui:16 res/overwitch.ui:525
+#: res/overwitch.ui:16 res/overwitch.ui:519
 msgid "Preferences"
 msgstr ""
 
@@ -107,15 +107,15 @@ msgid "Address"
 msgstr ""
 
 #: res/overwitch.ui:232
-msgid "Target Delay"
+msgid "Target Delay (ms)"
 msgstr ""
 
 #: res/overwitch.ui:258
-msgid "Overbridge to JACK latency"
+msgid "Overbridge to JACK latency (ms)"
 msgstr ""
 
 #: res/overwitch.ui:284
-msgid "JACK to Overbridge latency"
+msgid "JACK to Overbridge latency (ms)"
 msgstr ""
 
 #: res/overwitch.ui:310
@@ -126,62 +126,62 @@ msgstr ""
 msgid "JACK to Overbridge ratio"
 msgstr ""
 
-#: res/overwitch.ui:407
+#: res/overwitch.ui:401
 msgid "Overbridge Blocks"
 msgstr ""
 
-#: res/overwitch.ui:408
+#: res/overwitch.ui:402
 msgid "Overbridge Blocks (7 frames) per USB Transfer"
 msgstr ""
 
-#: res/overwitch.ui:431
+#: res/overwitch.ui:425
 msgid "Transfer Timeout"
 msgstr ""
 
-#: res/overwitch.ui:432
+#: res/overwitch.ui:426
 msgid "USB Transfer Timeout (ms)"
 msgstr ""
 
-#: res/overwitch.ui:455
+#: res/overwitch.ui:449
 msgid "Resampler Quality"
 msgstr ""
 
-#: res/overwitch.ui:456
+#: res/overwitch.ui:450
 msgid "Resampler quality to balance out the CPU usage"
 msgstr ""
 
-#: res/overwitch.ui:477
+#: res/overwitch.ui:471
 msgid "PipeWire Properties"
 msgstr ""
 
-#: res/overwitch.ui:478
+#: res/overwitch.ui:472
 msgid "Value of the \"PIPEWIRE_PROPS\" environment variable"
 msgstr ""
 
-#: res/overwitch.ui:505
+#: res/overwitch.ui:499
 msgid "_Cancel"
 msgstr ""
 
-#: res/overwitch.ui:513
+#: res/overwitch.ui:507
 msgid "_Save"
 msgstr ""
 
-#: res/overwitch.ui:530
+#: res/overwitch.ui:524
 msgid "Highest"
 msgstr ""
 
-#: res/overwitch.ui:531
+#: res/overwitch.ui:525
 msgid "High"
 msgstr ""
 
-#: res/overwitch.ui:532
+#: res/overwitch.ui:526
 msgid "Medium"
 msgstr ""
 
-#: res/overwitch.ui:533
+#: res/overwitch.ui:527
 msgid "Low"
 msgstr ""
 
-#: res/overwitch.ui:534
+#: res/overwitch.ui:528
 msgid "Lowest"
 msgstr ""

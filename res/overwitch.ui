@@ -168,7 +168,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
     <property name="child">
       <object class="GtkLabel">
         <property name="hexpand">True</property>
-        <property name="xalign">0</property>
+        <property name="xalign">1</property>
         <binding name="label">
           <lookup name="bus" type="OverwitchDevice">
             <lookup name="item">GtkListItem</lookup>
@@ -194,7 +194,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
     <property name="child">
       <object class="GtkLabel">
         <property name="hexpand">True</property>
-        <property name="xalign">0</property>
+        <property name="xalign">1</property>
         <binding name="label">
           <lookup name="address" type="OverwitchDevice">
             <lookup name="item">GtkListItem</lookup>
@@ -218,6 +218,8 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
   <template class="GtkListItem">
     <property name="child">
       <object class="GtkLabel">
+      <property name="hexpand">True</property>
+      <property name="xalign">1</property>
         <binding name="label">
           <lookup name="target_delay" type="OverwitchDevice">
             <lookup name="item">GtkListItem</lookup>
@@ -229,7 +231,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
 </interface>]]></property>
                       </object>
                     </property>
-                    <property name="title" translatable="yes">Target Delay</property>
+                    <property name="title" translatable="yes">Target Delay (ms)</property>
                   </object>
                 </child>
                 <child>
@@ -243,7 +245,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
     <property name="child">
       <object class="GtkLabel">
         <property name="hexpand">True</property>
-        <property name="xalign">0</property>
+        <property name="xalign">1</property>
         <binding name="label">
           <lookup name="o2j_latency" type="OverwitchDevice">
             <lookup name="item">GtkListItem</lookup>
@@ -255,7 +257,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
 </interface>]]></property>
                       </object>
                     </property>
-                    <property name="title" translatable="yes">Overbridge to JACK latency</property>
+                    <property name="title" translatable="yes">Overbridge to JACK latency (ms)</property>
                   </object>
                 </child>
                 <child>
@@ -269,7 +271,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
     <property name="child">
       <object class="GtkLabel">
         <property name="hexpand">True</property>
-        <property name="xalign">0</property>
+        <property name="xalign">1</property>
         <binding name="label">
           <lookup name="j2o_latency" type="OverwitchDevice">
             <lookup name="item">GtkListItem</lookup>
@@ -281,7 +283,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
 </interface>]]></property>
                       </object>
                     </property>
-                    <property name="title" translatable="yes">JACK to Overbridge latency</property>
+                    <property name="title" translatable="yes">JACK to Overbridge latency (ms)</property>
                   </object>
                 </child>
                 <child>
@@ -295,7 +297,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
     <property name="child">
       <object class="GtkLabel">
         <property name="hexpand">True</property>
-        <property name="xalign">0</property>
+        <property name="xalign">1</property>
         <binding name="label">
           <lookup name="o2j_ratio" type="OverwitchDevice">
             <lookup name="item">GtkListItem</lookup>
@@ -321,7 +323,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
     <property name="child">
       <object class="GtkLabel">
         <property name="hexpand">True</property>
-        <property name="xalign">0</property>
+        <property name="xalign">1</property>
         <binding name="label">
           <lookup name="j2o_ratio" type="OverwitchDevice">
             <lookup name="item">GtkListItem</lookup>
