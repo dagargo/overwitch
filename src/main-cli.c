@@ -39,7 +39,6 @@ static pthread_spinlock_t lock;	//Needed for signal handling
 
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
-  {"use-device", 1, NULL, 'd'},
   {"bus-device-address", 1, NULL, 'a'},
   {"resampling-quality", 1, NULL, 'q'},
   {"blocks-per-transfer", 1, NULL, 'b'},
@@ -84,14 +83,12 @@ signal_handler (int signum)
 }
 
 static int
-run_jclient (int device_num, const char *device_name, uint8_t bus,
-	     uint8_t address)
+run_jclient (int device_num, uint8_t bus, uint8_t address)
 {
   struct ow_device *device;
   int err;
 
-  if (ow_get_device_from_device_attrs (device_num, device_name, bus, address,
-				       &device))
+  if (ow_get_device_from_device_attrs (device_num, bus, address, &device))
     {
       return EXIT_FAILURE;
     }
@@ -131,16 +128,14 @@ run_jclient (int device_num, const char *device_name, uint8_t bus,
 }
 
 static int
-rename_device (int device_num, const char *device_name, uint8_t bus,
-	       uint8_t address, const char *name)
+rename_device (int device_num, uint8_t bus, uint8_t address, const char *name)
 {
   struct ow_device *device;
   struct ow_engine *engine;
   struct ow_context context;
   int err;
 
-  if (ow_get_device_from_device_attrs (device_num, device_name, bus,
-				       address, &device))
+  if (ow_get_device_from_device_attrs (device_num, bus, address, &device))
     {
       return EXIT_FAILURE;
     }
@@ -188,7 +183,7 @@ main (int argc, char *argv[])
   int vflg = 0, lflg = 0, dflg = 0, bflg = 0, pflg = 0, tflg = 0, nflg =
     0, aflg = 0, rflg = 0, errflg = 0;
   char *endstr;
-  char *device_name = NULL, *name = NULL;
+  char *name = NULL;
   uint8_t bus = 0, address = 0;
   int long_index = 0;
   ow_err_t ow_err;
@@ -208,7 +203,7 @@ main (int argc, char *argv[])
   sigaction (SIGUSR1, &action, NULL);
   sigaction (SIGUSR2, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "sn:d:a:q:b:t:p:r:lvh",
+  while ((opt = getopt_long (argc, argv, "sn:a:q:b:t:p:r:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
@@ -216,10 +211,6 @@ main (int argc, char *argv[])
 	case 'n':
 	  device_num = (int) strtol (optarg, &endstr, 10);
 	  nflg++;
-	  break;
-	case 'd':
-	  device_name = optarg;
-	  dflg++;
 	  break;
 	case 'a':
 	  err = get_bus_address_from_str (optarg, &bus, &address);
@@ -334,11 +325,11 @@ main (int argc, char *argv[])
     {
       if (rflg)
 	{
-	  err = rename_device (device_num, device_name, bus, address, name);
+	  err = rename_device (device_num, bus, address, name);
 	}
       else
 	{
-	  err = run_jclient (device_num, device_name, bus, address);
+	  err = run_jclient (device_num, bus, address);
 	}
     }
   else

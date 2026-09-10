@@ -1263,8 +1263,7 @@ ow_hotplug_callback (struct libusb_context *ctx, struct libusb_device *device,
       if (rc == LIBUSB_SUCCESS)
 	{
 	  struct ow_device *ow_device;
-	  if (!ow_get_device_from_device_attrs (-1, NULL,
-						libusb_get_bus_number
+	  if (!ow_get_device_from_device_attrs (-1, libusb_get_bus_number
 						(device),
 						libusb_get_device_address
 						(device), &ow_device))

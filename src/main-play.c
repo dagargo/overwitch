@@ -36,7 +36,6 @@ static sf_count_t frames;
 
 static struct option options[] = {
   {"use-device-number", 1, NULL, 'n'},
-  {"use-device", 1, NULL, 'd'},
   {"bus-device-address", 1, NULL, 'a'},
   {"blocks-per-transfer", 1, NULL, 'b'},
   {"usb-transfer-timeout", 1, NULL, 't'},
@@ -133,15 +132,14 @@ signal_handler (int signo)
 }
 
 static int
-run_play (int device_num, const char *device_name, uint8_t bus,
+run_play (int device_num, uint8_t bus,
 	  uint8_t address, unsigned int blocks_per_transfer,
 	  unsigned int xfr_timeout, const char *file)
 {
   ow_err_t err;
   struct ow_device *device;
 
-  if (ow_get_device_from_device_attrs (device_num, device_name, bus,
-				       address, &device))
+  if (ow_get_device_from_device_attrs (device_num, bus, address, &device))
     {
       return OW_GENERIC_ERROR;
     }
@@ -207,9 +205,8 @@ main (int argc, char *argv[])
 {
   int opt;
   int lflg = 0, vflg = 0, errflg = 0;
-  int nflg = 0, dflg = 0, aflg = 0, bflg = 0, tflg = 0;
+  int nflg = 0, aflg = 0, bflg = 0, tflg = 0;
   char *endstr;
-  const char *device_name = NULL;
   uint8_t bus = 0, address = 0;
   int long_index = 0;
   ow_err_t ow_err;
@@ -227,7 +224,7 @@ main (int argc, char *argv[])
   sigaction (SIGUSR1, &action, NULL);
   sigaction (SIGTSTP, &action, NULL);
 
-  while ((opt = getopt_long (argc, argv, "n:d:a:b:t:lvh",
+  while ((opt = getopt_long (argc, argv, "n:a:b:t:lvh",
 			     options, &long_index)) != -1)
     {
       switch (opt)
@@ -235,10 +232,6 @@ main (int argc, char *argv[])
 	case 'n':
 	  device_num = (int) strtol (optarg, &endstr, 10);
 	  nflg++;
-	  break;
-	case 'd':
-	  device_name = optarg;
-	  dflg++;
 	  break;
 	case 'a':
 	  get_bus_address_from_str (optarg, &bus, &address);
@@ -309,9 +302,9 @@ main (int argc, char *argv[])
       exit (EXIT_FAILURE);
     }
 
-  if (nflg + dflg == 1)
+  if (nflg == 1)
     {
-      return run_play (device_num, device_name, bus, address,
+      return run_play (device_num, bus, address,
 		       blocks_per_transfer, xfr_timeout, file);
     }
   else

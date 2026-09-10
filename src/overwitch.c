@@ -455,8 +455,7 @@ ow_get_device_desc (uint16_t pid, struct ow_device_desc *device_desc)
 }
 
 int
-ow_get_device_from_device_attrs (int device_num, const char *device_name,
-				 uint8_t bus, uint8_t address,
+ow_get_device_from_device_attrs (int device_num, uint8_t bus, uint8_t address,
 				 struct ow_device **dev)
 {
   int i;
@@ -476,13 +475,6 @@ ow_get_device_from_device_attrs (int device_num, const char *device_name,
       if (device_num >= 0)
 	{
 	  if (i == device_num)
-	    {
-	      break;
-	    }
-	}
-      else if (device_name)
-	{
-	  if (strcmp (device->desc.name, device_name) == 0)
 	    {
 	      break;
 	    }

@@ -171,12 +171,6 @@ Then, you can choose which device you want to use by using `-n`.
 $ overwitch-cli -n 0
 ```
 
-You can select the device by name too but the use of this option is discouraged and `-n` should be used instead. When using this option, the first device in the list will be used.
-
-```
-$ overwitch-cli -d Digitakt
-```
-
 To stop, just press `Ctrl+C`. You'll see an oputput like the one below. Notice that we are using the verbose option here but it is **not recommended** to use it and it is showed here for illustrative purposes only.
 
 ```
@@ -252,7 +246,6 @@ overwitch 2.1
 Usage: overwitch-cli [options]
 Options:
   --use-device-number, -n value
-  --use-device, -d value
   --bus-device-address, -a value
   --resampling-quality, -q value
   --blocks-per-transfer, -b value
@@ -280,7 +273,6 @@ overwitch 2.1
 Usage: overwitch-play [options] file
 Options:
   --use-device-number, -n value
-  --use-device, -d value
   --bus-device-address, -a value
   --blocks-per-transfer, -b value
   --usb-transfer-timeout, -t value
@@ -347,7 +339,6 @@ overwitch 2.1
 Usage: overwitch-record [options]
 Options:
   --use-device-number, -n value
-  --use-device, -d value
   --bus-device-address, -a value
   --track-mask, -m value
   --disk-buffer-size-kilobytes, -s value
