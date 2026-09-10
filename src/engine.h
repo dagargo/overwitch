@@ -150,11 +150,11 @@
 #include "utils.h"
 #include "overwitch.h"
 
-#define GET_NTH_USB_BLK(blks,blk_len,n) ((struct ow_engine_usb_blk *) &blks[n * blk_len])
-#define GET_NTH_INPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_len, n))
-#define GET_NTH_OUTPUT_USB_BLK(engine,n) (GET_NTH_USB_BLK((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_len, n))
+#define GET_NTH_USB_BLK_V2(blks,blk_len,n) ((struct ow_engine_usb_blk_v2 *) &blks[n * blk_len])
+#define GET_NTH_INPUT_USB_BLK_V2(engine,n) (GET_NTH_USB_BLK_V2((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_len, n))
+#define GET_NTH_OUTPUT_USB_BLK_V2(engine,n) (GET_NTH_USB_BLK_V2((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_len, n))
 
-#define OB_PADDING_LEN 28
+#define OB2_PRIVATE_LEN 28
 
 #define OB_NAME_MAX_LEN 32
 
@@ -215,21 +215,21 @@ struct ow_engine
   struct ow_context *context;
 };
 
-struct ow_engine_usb_blk
+struct ow_engine_usb_blk_v2
 {
   uint16_t header;
   uint16_t frames;
-  uint8_t padding[OB_PADDING_LEN];
+  uint8_t private[OB2_PRIVATE_LEN];
   int32_t data[];
 };
 
 int ow_bytes_to_frame_bytes (int, int);
 
-void ow_engine_read_usb_input_blocks (struct ow_engine *engine);
+void ow_engine_read_usb_input_blocks_v2 (struct ow_engine *engine);
 
-void ow_engine_write_usb_output_blocks (struct ow_engine *engine);
+void ow_engine_write_usb_output_blocks_v2 (struct ow_engine *engine);
 
-int ow_engine_init_mem (struct ow_engine *engine, unsigned int);
+int ow_engine_init_mem_v2 (struct ow_engine *engine, unsigned int);
 
 unsigned int ow_engine_get_valid_blocks_per_transfer (unsigned int
 						      blocks_per_transfer,
@@ -239,5 +239,5 @@ unsigned int ow_engine_get_valid_blocks_per_transfer (unsigned int
 
 void ow_engine_free_mem (struct ow_engine *engine);
 
-void ow_engine_print_usb_block (struct ow_engine *engine, int block, int o2h,
-				uint16_t * debug_counter);
+void ow_engine_print_usb_block_v2 (struct ow_engine *engine, int block,
+				   int o2h, uint16_t * debug_counter);

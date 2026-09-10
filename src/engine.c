@@ -46,8 +46,8 @@
 
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
-static void prepare_cycle_in_audio (struct ow_engine *engine);
-static void prepare_cycle_out_audio (struct ow_engine *engine);
+static void prepare_cycle_in_v2 (struct ow_engine *engine);
+static void prepare_cycle_out_v2 (struct ow_engine *engine);
 static void ow_engine_load_overbridge_name (struct ow_engine *engine);
 
 unsigned int
@@ -102,16 +102,16 @@ prepare_transfers (struct ow_engine *engine)
 }
 
 inline void
-ow_engine_read_usb_input_blocks (struct ow_engine *engine)
+ow_engine_read_usb_input_blocks_v2 (struct ow_engine *engine)
 {
   int32_t hv;
   uint8_t *s;
-  struct ow_engine_usb_blk *blk;
+  struct ow_engine_usb_blk_v2 *blk;
   float *f = engine->o2h_transfer_buf;
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
-      blk = GET_NTH_INPUT_USB_BLK (engine, i);
+      blk = GET_NTH_INPUT_USB_BLK_V2 (engine, i);
       s = (uint8_t *) blk->data;
       for (int j = 0; j < engine->frames_per_block; j++)
 	{
@@ -138,7 +138,7 @@ ow_engine_read_usb_input_blocks (struct ow_engine *engine)
 }
 
 static void
-set_usb_input_data_blks (struct ow_engine *engine)
+set_usb_input_data_blks_v2 (struct ow_engine *engine)
 {
   size_t wso2h;
   ow_engine_status_t status;
@@ -153,7 +153,7 @@ set_usb_input_data_blks (struct ow_engine *engine)
   status = engine->status;
   pthread_spin_unlock (&engine->lock);
 
-  ow_engine_read_usb_input_blocks (engine);
+  ow_engine_read_usb_input_blocks_v2 (engine);
 
   if (status < OW_ENGINE_STATUS_RUN)
     {
@@ -184,16 +184,16 @@ set_usb_input_data_blks (struct ow_engine *engine)
 }
 
 inline void
-ow_engine_write_usb_output_blocks (struct ow_engine *engine)
+ow_engine_write_usb_output_blocks_v2 (struct ow_engine *engine)
 {
   int32_t ov;
   uint8_t *s;
-  struct ow_engine_usb_blk *blk;
+  struct ow_engine_usb_blk_v2 *blk;
   float *f = engine->h2o_transfer_buf;
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
-      blk = GET_NTH_OUTPUT_USB_BLK (engine, i);
+      blk = GET_NTH_OUTPUT_USB_BLK_V2 (engine, i);
       blk->frames = htobe16 (engine->usb.audio_frames_counter);
       engine->usb.audio_frames_counter += engine->frames_per_block;
       s = (uint8_t *) blk->data;
@@ -222,7 +222,7 @@ ow_engine_write_usb_output_blocks (struct ow_engine *engine)
 }
 
 static void
-set_usb_output_data_blks (struct ow_engine *engine)
+set_usb_output_data_blks_v2 (struct ow_engine *engine)
 {
   size_t rsh2o;
   size_t bytes;
@@ -316,23 +316,23 @@ set_usb_output_data_blks (struct ow_engine *engine)
     }
 
 set_blocks:
-  ow_engine_write_usb_output_blocks (engine);
+  ow_engine_write_usb_output_blocks_v2 (engine);
 }
 
 inline void
-ow_engine_print_usb_block (struct ow_engine *engine, int blk_idx, int o2h,
-			   uint16_t *debug_counter)
+ow_engine_print_usb_block_v2 (struct ow_engine *engine, int blk_idx, int o2h,
+			      uint16_t *debug_counter)
 {
   uint8_t *s;
   size_t frame_size;
-  struct ow_engine_usb_blk *blk;
+  struct ow_engine_usb_blk_v2 *blk;
 
   if (debug_level >= 3)
     {
       if (*debug_counter == 0)
 	{
-	  blk = o2h ? GET_NTH_INPUT_USB_BLK (engine, blk_idx) :
-	    GET_NTH_OUTPUT_USB_BLK (engine, blk_idx);
+	  blk = o2h ? GET_NTH_INPUT_USB_BLK_V2 (engine, blk_idx) :
+	    GET_NTH_OUTPUT_USB_BLK_V2 (engine, blk_idx);
 	  s = (uint8_t *) blk->data;
 	  frame_size = o2h ? engine->o2h_frame_size : engine->h2o_frame_size;
 
@@ -361,7 +361,7 @@ ow_engine_print_usb_block (struct ow_engine *engine, int blk_idx, int o2h,
 }
 
 static void LIBUSB_CALL
-cb_xfr_audio_in (struct libusb_transfer *xfr)
+cb_xfr_audio_in_v2 (struct libusb_transfer *xfr)
 {
   static uint16_t debug_counter = 0;
   struct ow_engine *engine = xfr->user_data;
@@ -378,8 +378,8 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
       struct ow_engine *engine = xfr->user_data;
       if (engine->context->options & OW_ENGINE_OPTION_O2H_AUDIO)
 	{
-	  ow_engine_print_usb_block (engine, 0, 1, &debug_counter);
-	  set_usb_input_data_blks (engine);
+	  ow_engine_print_usb_block_v2 (engine, 0, 1, &debug_counter);
+	  set_usb_input_data_blks_v2 (engine);
 	}
     }
   else
@@ -391,12 +391,12 @@ cb_xfr_audio_in (struct libusb_transfer *xfr)
   if (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP)
     {
       // start new cycle even if this one did not succeed
-      prepare_cycle_in_audio (xfr->user_data);
+      prepare_cycle_in_v2 (xfr->user_data);
     }
 }
 
 static void LIBUSB_CALL
-cb_xfr_audio_out (struct libusb_transfer *xfr)
+cb_xfr_audio_out_v2 (struct libusb_transfer *xfr)
 {
   static uint16_t debug_counter = 0;
   struct ow_engine *engine = xfr->user_data;
@@ -416,26 +416,26 @@ cb_xfr_audio_out (struct libusb_transfer *xfr)
 		   xfr->actual_length, libusb_error_name (xfr->status));
     }
 
-  set_usb_output_data_blks (xfr->user_data);
-  ow_engine_print_usb_block (engine, 0, 0, &debug_counter);
+  set_usb_output_data_blks_v2 (xfr->user_data);
+  ow_engine_print_usb_block_v2 (engine, 0, 0, &debug_counter);
 
   if (ow_engine_get_status (engine) > OW_ENGINE_STATUS_STOP)
     {
       // We have to make sure that the out cycle is always started after its callback
       // Race condition on slower systems!
-      prepare_cycle_out_audio (xfr->user_data);
+      prepare_cycle_out_v2 (xfr->user_data);
     }
 }
 
 static void
-prepare_cycle_out_audio (struct ow_engine *engine)
+prepare_cycle_out_v2 (struct ow_engine *engine)
 {
   libusb_fill_interrupt_transfer (engine->usb.xfr_audio_out,
 				  engine->usb.device_handle,
 				  OB2_USB_AUDIO_OUT_EP,
 				  engine->usb.xfr_audio_out_data,
 				  engine->usb.xfr_audio_out_data_len,
-				  cb_xfr_audio_out, engine,
+				  cb_xfr_audio_out_v2, engine,
 				  engine->usb.xfr_timeout);
 
   int err = libusb_submit_transfer (engine->usb.xfr_audio_out);
@@ -448,14 +448,14 @@ prepare_cycle_out_audio (struct ow_engine *engine)
 }
 
 static void
-prepare_cycle_in_audio (struct ow_engine *engine)
+prepare_cycle_in_v2 (struct ow_engine *engine)
 {
   libusb_fill_interrupt_transfer (engine->usb.xfr_audio_in,
 				  engine->usb.device_handle,
 				  OB2_USB_AUDIO_IN_EP,
 				  engine->usb.xfr_audio_in_data,
 				  engine->usb.xfr_audio_in_data_len,
-				  cb_xfr_audio_in, engine,
+				  cb_xfr_audio_in_v2, engine,
 				  engine->usb.xfr_timeout);
 
   int err = libusb_submit_transfer (engine->usb.xfr_audio_in);
@@ -500,11 +500,11 @@ ow_engine_get_valid_blocks_per_transfer (unsigned int blocks_per_transfer,
 }
 
 int
-ow_engine_init_mem (struct ow_engine *engine,
-		    unsigned int blocks_per_transfer)
+ow_engine_init_mem_v2 (struct ow_engine *engine,
+		       unsigned int blocks_per_transfer)
 {
   size_t size;
-  struct ow_engine_usb_blk *blk;
+  struct ow_engine_usb_blk_v2 *blk;
 
   engine->context = NULL;
 
@@ -532,7 +532,7 @@ ow_engine_init_mem (struct ow_engine *engine,
   debug_print (2, "o2h: USB in frame size: %zu B", engine->o2h_frame_size);
   debug_print (2, "h2o: USB out frame size: %zu B", engine->h2o_frame_size);
 
-  size = sizeof (struct ow_engine_usb_blk) + engine->frames_per_block *
+  size = sizeof (struct ow_engine_usb_blk_v2) + engine->frames_per_block *
     engine->o2h_frame_size;
   if (engine->usb.audio_in_blk_len && engine->usb.audio_in_blk_len != size)
     {
@@ -545,7 +545,7 @@ ow_engine_init_mem (struct ow_engine *engine,
       engine->usb.audio_in_blk_len = size;
     }
 
-  size = sizeof (struct ow_engine_usb_blk) + engine->frames_per_block *
+  size = sizeof (struct ow_engine_usb_blk_v2) + engine->frames_per_block *
     engine->h2o_frame_size;
   if (engine->usb.audio_out_blk_len && engine->usb.audio_out_blk_len != size)
     {
@@ -591,7 +591,7 @@ ow_engine_init_mem (struct ow_engine *engine,
 
   for (int i = 0; i < engine->blocks_per_transfer; i++)
     {
-      blk = GET_NTH_OUTPUT_USB_BLK (engine, i);
+      blk = GET_NTH_OUTPUT_USB_BLK_V2 (engine, i);
       blk->header = htobe16 (0x07ff);
     }
 
@@ -619,8 +619,8 @@ ow_engine_init_mem (struct ow_engine *engine,
 // initialization taken from sniffed session
 
 static ow_err_t
-ow_engine_init (struct ow_engine *engine, struct ow_device *device,
-		unsigned int blocks_per_transfer, unsigned int xfr_timeout)
+ow_engine_init_v2 (struct ow_engine *engine, struct ow_device *device,
+		   unsigned int blocks_per_transfer, unsigned int xfr_timeout)
 {
   int err;
   ow_err_t ret = OW_OK;
@@ -722,7 +722,7 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
 #endif
 
   err = LIBUSB_SUCCESS;
-  ret = ow_engine_init_mem (engine, blocks_per_transfer);
+  ret = ow_engine_init_mem_v2 (engine, blocks_per_transfer);
 
 end:
   if (ret != OW_OK)
@@ -733,6 +733,21 @@ end:
     }
 
   return ret;
+}
+
+static ow_err_t
+ow_engine_init (struct ow_engine *engine, struct ow_device *device,
+		unsigned int blocks_per_transfer, unsigned int xfr_timeout)
+{
+  switch (device->desc.version)
+    {
+    case OW_DEVICE_VERSION_2:
+    case OW_DEVICE_VERSION_2_1:
+      return ow_engine_init_v2 (engine, device, blocks_per_transfer,
+				xfr_timeout);
+    default:
+      return OW_GENERIC_ERROR;
+    }
 }
 
 ow_err_t
@@ -849,8 +864,8 @@ run_audio (void *data)
     }
 
   // These calls are needed to initialize the Overbridge side before the host side.
-  prepare_cycle_in_audio (engine);
-  prepare_cycle_out_audio (engine);
+  prepare_cycle_in_v2 (engine);
+  prepare_cycle_out_v2 (engine);
 
   // status == OW_ENGINE_STATUS_STOP
 
