@@ -31,6 +31,8 @@
 #include <unistd.h>
 #include "engine.h"
 
+#define OBX_USB_CONFIGURATION 1
+
 #define OB2_USB_AUDIO_OUT_EP 0x03
 #define OB2_USB_AUDIO_OUT_INTERFACE 2
 #define OB2_USB_AUDIO_OUT_ALT_SETTING 3
@@ -38,6 +40,9 @@
 #define OB2_USB_AUDIO_IN_EP (OB2_USB_AUDIO_OUT_EP | 0x80)
 #define OB2_USB_AUDIO_IN_INTERFACE 1
 #define OB2_USB_AUDIO_IN_ALT_SETTING 3
+
+#define OB2_USB_CONTROL_INTERFACE 4
+#define OB2_USB_MIDI_INTERFACE 5
 
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
@@ -630,10 +635,13 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
   engine->usb.xfr_timeout = xfr_timeout;
   debug_print (1, "USB transfer timeout: %u", engine->usb.xfr_timeout);
 
-  libusb_detach_kernel_driver (engine->usb.device_handle, 4);
-  libusb_detach_kernel_driver (engine->usb.device_handle, 5);
+  libusb_detach_kernel_driver (engine->usb.device_handle,
+			       OB2_USB_CONTROL_INTERFACE);
+  libusb_detach_kernel_driver (engine->usb.device_handle,
+			       OB2_USB_MIDI_INTERFACE);
 
-  err = libusb_set_configuration (engine->usb.device_handle, 1);
+  err = libusb_set_configuration (engine->usb.device_handle,
+				  OBX_USB_CONFIGURATION);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_SET_USB_CONFIG;
@@ -691,8 +699,10 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
       goto end;
     }
 
-  libusb_attach_kernel_driver (engine->usb.device_handle, 4);
-  libusb_attach_kernel_driver (engine->usb.device_handle, 5);
+  libusb_attach_kernel_driver (engine->usb.device_handle,
+			       OB2_USB_CONTROL_INTERFACE);
+  libusb_attach_kernel_driver (engine->usb.device_handle,
+			       OB2_USB_MIDI_INTERFACE);
 
 #if LIBUSB_API_VERSION >= 0x0100010A
   engine->usb.audio_in_blk_len =
