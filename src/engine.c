@@ -31,13 +31,13 @@
 #include <unistd.h>
 #include "engine.h"
 
-#define AUDIO_OUT_EP 0x03
-#define AUDIO_OUT_INTERFACE 2
-#define AUDIO_OUT_ALT_SETTING 3
+#define OB2_USB_AUDIO_OUT_EP 0x03
+#define OB2_USB_AUDIO_OUT_INTERFACE 2
+#define OB2_USB_AUDIO_OUT_ALT_SETTING 3
 
-#define AUDIO_IN_EP  (AUDIO_OUT_EP | 0x80)
-#define AUDIO_IN_INTERFACE 1
-#define AUDIO_IN_ALT_SETTING 3
+#define OB2_USB_AUDIO_IN_EP (OB2_USB_AUDIO_OUT_EP | 0x80)
+#define OB2_USB_AUDIO_IN_INTERFACE 1
+#define OB2_USB_AUDIO_IN_ALT_SETTING 3
 
 #define USB_CONTROL_LEN (sizeof (struct libusb_control_setup) + OB_NAME_MAX_LEN)
 
@@ -426,7 +426,8 @@ static void
 prepare_cycle_out_audio (struct ow_engine *engine)
 {
   libusb_fill_interrupt_transfer (engine->usb.xfr_audio_out,
-				  engine->usb.device_handle, AUDIO_OUT_EP,
+				  engine->usb.device_handle,
+				  OB2_USB_AUDIO_OUT_EP,
 				  engine->usb.xfr_audio_out_data,
 				  engine->usb.xfr_audio_out_data_len,
 				  cb_xfr_audio_out, engine,
@@ -445,7 +446,8 @@ static void
 prepare_cycle_in_audio (struct ow_engine *engine)
 {
   libusb_fill_interrupt_transfer (engine->usb.xfr_audio_in,
-				  engine->usb.device_handle, AUDIO_IN_EP,
+				  engine->usb.device_handle,
+				  OB2_USB_AUDIO_IN_EP,
 				  engine->usb.xfr_audio_in_data,
 				  engine->usb.xfr_audio_in_data_len,
 				  cb_xfr_audio_in, engine,
@@ -639,43 +641,43 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
     }
 
   err = libusb_claim_interface (engine->usb.device_handle,
-				AUDIO_IN_INTERFACE);
+				OB2_USB_AUDIO_IN_INTERFACE);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
   err = libusb_set_interface_alt_setting (engine->usb.device_handle,
-					  AUDIO_IN_INTERFACE,
-					  AUDIO_IN_ALT_SETTING);
+					  OB2_USB_AUDIO_IN_INTERFACE,
+					  OB2_USB_AUDIO_IN_ALT_SETTING);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_SET_ALT_SETTING;
       goto end;
     }
   err = libusb_claim_interface (engine->usb.device_handle,
-				AUDIO_OUT_INTERFACE);
+				OB2_USB_AUDIO_OUT_INTERFACE);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLAIM_IF;
       goto end;
     }
   err = libusb_set_interface_alt_setting (engine->usb.device_handle,
-					  AUDIO_OUT_INTERFACE,
-					  AUDIO_OUT_ALT_SETTING);
+					  OB2_USB_AUDIO_OUT_INTERFACE,
+					  OB2_USB_AUDIO_OUT_ALT_SETTING);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_SET_ALT_SETTING;
       goto end;
     }
 
-  err = libusb_clear_halt (engine->usb.device_handle, AUDIO_IN_EP);
+  err = libusb_clear_halt (engine->usb.device_handle, OB2_USB_AUDIO_IN_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLEAR_EP;
       goto end;
     }
-  err = libusb_clear_halt (engine->usb.device_handle, AUDIO_OUT_EP);
+  err = libusb_clear_halt (engine->usb.device_handle, OB2_USB_AUDIO_OUT_EP);
   if (LIBUSB_SUCCESS != err)
     {
       ret = OW_USB_ERROR_CANT_CLEAR_EP;
@@ -694,12 +696,16 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
 
 #if LIBUSB_API_VERSION >= 0x0100010A
   engine->usb.audio_in_blk_len =
-    libusb_get_max_alt_packet_size (engine->usb.device, AUDIO_IN_INTERFACE,
-				    AUDIO_IN_ALT_SETTING, AUDIO_IN_EP);
+    libusb_get_max_alt_packet_size (engine->usb.device,
+				    OB2_USB_AUDIO_IN_INTERFACE,
+				    OB2_USB_AUDIO_IN_ALT_SETTING,
+				    OB2_USB_AUDIO_IN_EP);
 
   engine->usb.audio_out_blk_len =
-    libusb_get_max_alt_packet_size (engine->usb.device, AUDIO_OUT_INTERFACE,
-				    AUDIO_OUT_ALT_SETTING, AUDIO_OUT_EP);
+    libusb_get_max_alt_packet_size (engine->usb.device,
+				    OB2_USB_AUDIO_OUT_INTERFACE,
+				    OB2_USB_AUDIO_OUT_ALT_SETTING,
+				    OB2_USB_AUDIO_OUT_EP);
 #else
   engine->usb.audio_in_blk_len = 0;
   engine->usb.audio_out_blk_len = 0;
