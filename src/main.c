@@ -218,6 +218,20 @@ click_save_preferences (GtkButton *self, gpointer data)
   source_id = g_timeout_add (REFRESH_TIMEOUT_MS, refresh_state, NULL);
 }
 
+static gboolean
+preferences_window_on_key_pressed (GtkEventControllerKey *controller,
+				   guint keyval, guint keycode,
+				   GdkModifierType state, gpointer user_data)
+{
+  if (keyval == GDK_KEY_Escape)
+    {
+      gtk_widget_set_visible (preferences_window, FALSE);
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
 static void
 open_about (GSimpleAction *simple_action, GVariant *parameter, gpointer data)
 {
@@ -433,6 +447,10 @@ build_ui ()
   preferences_window_save_button =
     GTK_WIDGET (gtk_builder_get_object
 		(builder, "preferences_window_save_button"));
+  GtkEventController *key_controller = gtk_event_controller_key_new ();
+  g_signal_connect (key_controller, "key-pressed",
+		    G_CALLBACK (preferences_window_on_key_pressed), NULL);
+  gtk_widget_add_controller (GTK_WIDGET (preferences_window), key_controller);
 
   about_dialog =
     GTK_ABOUT_DIALOG (gtk_builder_get_object (builder, "about_dialog"));
