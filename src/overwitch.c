@@ -128,7 +128,8 @@ static int
 ow_check_track_size (ow_device_version_t version, int size)
 {
   if ((version == OW_DEVICE_VERSION_2 && size != 4) ||
-      (version == OW_DEVICE_VERSION_2_1 && (size < 3 || size > 4)))
+      (version == OW_DEVICE_VERSION_2_1 && (size < 3 || size > 4)) ||
+      (version == OW_DEVICE_VERSION_3 && (size < 3 || size > 4)))
     {
       error_print ("Size '%d' not allowed for version '%s'", size,
 		   ow_get_version_str (version));
@@ -187,6 +188,14 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
   else if (!strcmp (version, OW_DEVICE_VERSION_2_1_STR))
     {
       device_desc->version = OW_DEVICE_VERSION_2_1;
+    }
+  else if (!strcmp (version, "3"))
+    {
+      device_desc->version = OW_DEVICE_VERSION_3;
+    }
+  else if (!strcmp (version, "1"))
+    {
+      device_desc->version = OW_DEVICE_VERSION_1;
     }
   else
     {
@@ -510,7 +519,11 @@ ow_set_thread_rt_priority (pthread_t thread, int p)
   struct sched_param default_rt_param = {
     .sched_priority = p
   };
-  pthread_setschedparam (thread, SCHED_FIFO, &default_rt_param);
+  int err = pthread_setschedparam (thread, SCHED_FIFO, &default_rt_param);
+  if (err != 0)
+    {
+      debug_print (1, "Notice: Running without hard RT priority (sched_setschedparam: %s). Continuing under standard scheduling...", strerror(err));
+    }
 }
 
 size_t

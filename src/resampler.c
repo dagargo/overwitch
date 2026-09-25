@@ -199,7 +199,7 @@ ow_resampler_reset_buffers (struct ow_resampler *resampler)
   resampler->o2h_buf_out = malloc (resampler->o2h_bufsize);
 
   memset (resampler->h2o_aux, 0, resampler->h2o_bufsize);
-  memset (resampler->o2h_buf_in, 0, resampler->h2o_bufsize);
+  memset (resampler->o2h_buf_in, 0, resampler->o2h_bufsize);
 
   ow_resampler_clear_buffers (resampler);
 }
@@ -213,8 +213,22 @@ ow_resampler_get_target_delay_ms (struct ow_resampler *resampler)
 static inline void
 ow_resampler_set_ratios_from_dll (struct ow_resampler *resampler)
 {
+
   resampler->o2h_ratio = resampler->dll.ratio;
-  resampler->h2o_ratio = 1.0 / resampler->o2h_ratio;
+
+    if (resampler->engine->device->desc.version == OW_DEVICE_VERSION_3)
+    {
+      /*
+       * V3 H2O is USB-paced independently of the variable-frame
+       * O2H stream. Do not derive its rate from the O2H DLL.
+       */
+      resampler->h2o_ratio =
+        (double) OB_SAMPLE_RATE / resampler->samplerate;
+    }
+  else
+    {
+      resampler->h2o_ratio = 1.0 / resampler->o2h_ratio;
+    }
 }
 
 static inline void
@@ -285,28 +299,39 @@ resampler_o2h_reader (void *cb_data, float **data)
   rso2h = context->read_space (context->o2h_audio);
   if (resampler->reading_at_o2h_end)
     {
-      if (rso2h >= resampler->o2h_frame_size)
-	{
-	  frames = rso2h / resampler->o2h_frame_size;
-	  frames = frames > MAX_READ_FRAMES ? MAX_READ_FRAMES : frames;
-	  bytes = frames * resampler->o2h_frame_size;
-	  context->read (context->o2h_audio, (void *) resampler->o2h_buf_in,
-			 bytes);
-	}
-      else
-	{
-	  debug_print (3,
-		       "o2h: Audio ring buffer underflow (%zu B < %zu B). No fix possible.",
-		       rso2h, resampler->engine->o2h_transfer_size);
+        if (rso2h >= resampler->o2h_frame_size)
+            {
+                frames = rso2h / resampler->o2h_frame_size;
+                frames = frames > MAX_READ_FRAMES ? MAX_READ_FRAMES : frames;
+                bytes = frames * resampler->o2h_frame_size;
+                context->read (context->o2h_audio, (void *) resampler->o2h_buf_in,
+                               bytes);
+            }
+        else
+            {
+                static unsigned int underflows = 0;
 
-	  // Any maximum value is invalid at this point
-	  pthread_spin_lock (&resampler->engine->lock);
-	  resampler->engine->latency_o2h_max =
-	    resampler->engine->latency_o2h_min;
-	  pthread_spin_unlock (&resampler->engine->lock);
+                underflows++;
 
-	  frames = MAX_READ_FRAMES;
-	}
+                if ((underflows % 100) == 1)
+                    debug_print (2,
+                                 "o2h: underflow count=%u, available=%zu B",
+                                 underflows, rso2h);
+
+                /*
+                 * libsamplerate expects us to return MAX_READ_FRAMES frames.
+                 * Don't feed it stale contents from the previous callback.
+                 */
+                memset (resampler->o2h_buf_in, 0,
+                        MAX_READ_FRAMES * resampler->o2h_frame_size);
+
+                pthread_spin_lock (&resampler->engine->lock);
+                resampler->engine->latency_o2h_max =
+                    resampler->engine->latency_o2h_min;
+                pthread_spin_unlock (&resampler->engine->lock);
+
+                frames = MAX_READ_FRAMES;
+            }
     }
   else
     {
@@ -327,12 +352,11 @@ resampler_o2h_reader (void *cb_data, float **data)
 }
 
 int
-ow_resampler_read_audio (struct ow_resampler *resampler)
-{
+ow_resampler_read_audio(struct ow_resampler *resampler) {
   long gen_frames;
 
   gen_frames = src_callback_read (resampler->o2h_state, resampler->o2h_ratio,
-				  resampler->bufsize, resampler->o2h_buf_out);
+                                 resampler->bufsize, resampler->o2h_buf_out);
   if (gen_frames != resampler->bufsize)
     {
       error_print
@@ -346,8 +370,7 @@ ow_resampler_read_audio (struct ow_resampler *resampler)
 }
 
 int
-ow_resampler_write_audio (struct ow_resampler *resampler)
-{
+ow_resampler_write_audio(struct ow_resampler *resampler) {
   long gen_frames;
   int inc;
   int frames;
@@ -443,6 +466,18 @@ ow_resampler_compute_ratios (struct ow_resampler *resampler,
     }
 
   pthread_spin_lock (&resampler->engine->lock);
+  /*
+   * The host callback can run before the Overbridge-side DLL has received
+   * its first timing update, especially with small JACK/PipeWire quanta.
+   * Wait until that side has initialized its timing state instead of
+   * feeding uninitialized timestamps into the host DLL.
+   */
+  if (dll->dll_overbridge.boot)
+      {
+          pthread_spin_unlock (&resampler->engine->lock);
+          return 0;
+      }
+  
   ow_dll_host_load_dll_overbridge (dll);
   pthread_spin_unlock (&resampler->engine->lock);
 

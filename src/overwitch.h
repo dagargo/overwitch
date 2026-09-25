@@ -47,6 +47,16 @@
 
 #define OW_DEVICE_VERSION_2_STR     "2"
 #define OW_DEVICE_VERSION_2_1_STR   "2.1"
+#define OW_DEVICE_VERSION_3_STR "3"
+
+/* Tonverk V3 Isochronous Endpoints */
+#define OB3_USB_AUDIO_IN_INTERFACE 3
+#define OB3_USB_AUDIO_IN_ALT_SETTING 1
+#define OB3_USB_AUDIO_IN_EP 0x83
+
+#define OB3_USB_AUDIO_OUT_INTERFACE 4
+#define OB3_USB_AUDIO_OUT_ALT_SETTING 1
+#define OB3_USB_AUDIO_OUT_EP 0x03
 
 typedef size_t (*ow_buffer_rw_space_t) (void *);
 typedef size_t (*ow_buffer_read_t) (void *, char *, size_t);
