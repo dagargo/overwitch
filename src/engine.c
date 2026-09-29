@@ -35,6 +35,10 @@
 
 #define OBX_USB_CONFIGURATION 1
 
+#define OB2_USB_CONTROL_INTERFACE 4
+#define OB2_USB_MIDI_INTERFACE 5
+
+// Overbridge 2 interrupt endpoints
 #define OB2_USB_AUDIO_OUT_EP 0x03
 #define OB2_USB_AUDIO_OUT_INTERFACE 2
 #define OB2_USB_AUDIO_OUT_ALT_SETTING 3
@@ -43,8 +47,6 @@
 #define OB2_USB_AUDIO_IN_INTERFACE 1
 #define OB2_USB_AUDIO_IN_ALT_SETTING 3
 
-#define OB2_USB_CONTROL_INTERFACE 4
-#define OB2_USB_MIDI_INTERFACE 5
 /*
  * Overbridge V3 / Tonverk framing, derived from USBPcap captures.
  *
@@ -60,6 +62,16 @@
  * carrying 49. The apparent 8-byte "tail" of a 48-frame packet is the
  * storage occupied by frame 49 when the packet is marked 0xff31.
  */
+
+// Overbridge 3 isochronous endpoints
+#define OB3_USB_AUDIO_IN_INTERFACE 3
+#define OB3_USB_AUDIO_IN_ALT_SETTING 1
+#define OB3_USB_AUDIO_IN_EP 0x83
+
+#define OB3_USB_AUDIO_OUT_INTERFACE 4
+#define OB3_USB_AUDIO_OUT_ALT_SETTING 1
+#define OB3_USB_AUDIO_OUT_EP 0x03
+
 #define OB3_IN_FRAMES_PER_PACKET 6U
 #define OB3_IN_MAX_FRAMES_PER_PACKET 7U
 #define OB3_OUT_FRAMES_PER_PACKET 48U
