@@ -119,6 +119,8 @@ ow_get_version_str (ow_device_version_t version)
       return OW_DEVICE_VERSION_2_STR;
     case OW_DEVICE_VERSION_2_1:
       return OW_DEVICE_VERSION_2_1_STR;
+    case OW_DEVICE_VERSION_3:
+      return OW_DEVICE_VERSION_3_STR;
     default:
       return "unknown";
     }
@@ -128,7 +130,8 @@ static int
 ow_check_track_size (ow_device_version_t version, int size)
 {
   if ((version == OW_DEVICE_VERSION_2 && size != 4) ||
-      (version == OW_DEVICE_VERSION_2_1 && (size < 3 || size > 4)))
+      (version == OW_DEVICE_VERSION_2_1 && (size < 3 || size > 4)) ||
+      (version == OW_DEVICE_VERSION_3 && size != 4))
     {
       error_print ("Size '%d' not allowed for version '%s'", size,
 		   ow_get_version_str (version));

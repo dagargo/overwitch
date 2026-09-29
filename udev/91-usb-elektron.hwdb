@@ -117,3 +117,9 @@ usb:v1935p1034*
 
 usb:v1935p0B34*
  ID_MODEL_FROM_DATABASE=Digitone II Overbridge
+
+usb:v1935p102A*
+ ID_MODEL_FROM_DATABASE=Tonverk Audio/MIDI
+
+usb:v1935p0B2A*
+ ID_MODEL_FROM_DATABASE=Tonverk Overbridge

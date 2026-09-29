@@ -2,7 +2,7 @@
 layout: home
 ---
 
-Overwitch is a set of JACK (JACK Audio Connection Kit) clients for Overbridge 2 devices. Since PipeWire is ABI compatible with JACK, Overwitch works with PipeWire too.
+Overwitch is a set of JACK (JACK Audio Connection Kit) clients for Overbridge 2 y 3 devices. Since PipeWire is ABI compatible with JACK, Overwitch works with PipeWire too.
 
 ![Overwitch GUI screenshot](images/screenshot.png "Overwitch GUI")
 

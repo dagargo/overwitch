@@ -3,7 +3,7 @@
 [//]: # (Do not modify this file manually.)
 [//]: # (This file is generated from the docs directory by executing `make`.)
 
-Overwitch is a set of JACK (JACK Audio Connection Kit) clients for Overbridge 2 devices. Since PipeWire is ABI compatible with JACK, Overwitch works with PipeWire too.
+Overwitch is a set of JACK (JACK Audio Connection Kit) clients for Overbridge 2 y 3 devices. Since PipeWire is ABI compatible with JACK, Overwitch works with PipeWire too.
 
 ![Overwitch GUI screenshot](docs/images/screenshot.png "Overwitch GUI")
 

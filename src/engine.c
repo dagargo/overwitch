@@ -745,6 +745,8 @@ ow_engine_init (struct ow_engine *engine, struct ow_device *device,
     case OW_DEVICE_VERSION_2_1:
       return ow_engine_init_v2 (engine, device, blocks_per_transfer,
 				xfr_timeout);
+    case OW_DEVICE_VERSION_3:
+      return OW_GENERIC_ERROR;	// TODO
     default:
       return OW_GENERIC_ERROR;
     }
