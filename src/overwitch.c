@@ -35,6 +35,7 @@
 #define DEV_TAG_OUTPUT_TRACKS "output_tracks"
 #define DEV_TAG_TRACK_NAME "name"
 #define DEV_TAG_TRACK_SIZE "size"
+#define DEV_TAG_TRACK_CODE "code"
 
 static int ow_get_device_desc (uint16_t, struct ow_device_desc *);
 
@@ -115,6 +116,8 @@ ow_get_version_str (ow_device_version_t version)
 {
   switch (version)
     {
+    case OW_DEVICE_VERSION_1:
+      return OW_DEVICE_VERSION_1_STR;
     case OW_DEVICE_VERSION_2:
       return OW_DEVICE_VERSION_2_STR;
     case OW_DEVICE_VERSION_2_1:
@@ -127,7 +130,8 @@ ow_get_version_str (ow_device_version_t version)
 static int
 ow_check_track_size (ow_device_version_t version, int size)
 {
-  if ((version == OW_DEVICE_VERSION_2 && size != 4) ||
+  if ((version == OW_DEVICE_VERSION_1 && (size < 2 || size > 3)) ||
+      (version == OW_DEVICE_VERSION_2 && size != 4) ||
       (version == OW_DEVICE_VERSION_2_1 && (size < 3 || size > 4)))
     {
       error_print ("Size '%d' not allowed for version '%s'", size,
@@ -138,11 +142,90 @@ ow_check_track_size (ow_device_version_t version, int size)
   return 0;
 }
 
+//Overbridge 1 devices use the same bit depth for all the tracks in a direction.
+static int
+ow_check_track_sizes (ow_device_version_t version, int tracks,
+		      const struct ow_device_track *track)
+{
+  if (version != OW_DEVICE_VERSION_1)
+    {
+      return 0;
+    }
+
+  for (int i = 1; i < tracks; i++)
+    {
+      if (track[i].size != track[0].size)
+	{
+	  error_print
+	    ("All the tracks in a direction must have the same size for version '%s'",
+	     ow_get_version_str (version));
+	  return -EINVAL;
+	}
+    }
+
+  return 0;
+}
+
+//The code is optional.
+static int
+ow_read_track_code (JsonReader *reader, int *code)
+{
+  JsonNode *node;
+  gint64 value;
+
+  *code = OW_TRACK_CODE_NONE;
+
+  if (!json_reader_read_member (reader, DEV_TAG_TRACK_CODE))
+    {
+      json_reader_end_member (reader);
+      return 0;
+    }
+
+  //No reader errors must be set here as these would prevent the member end.
+  node = json_reader_is_value (reader) ? json_reader_get_value (reader) : NULL;
+  if (!node || json_node_get_value_type (node) != G_TYPE_INT64)
+    {
+      json_reader_end_member (reader);
+      error_print ("Track code is not an integer");
+      return -EINVAL;
+    }
+
+  value = json_node_get_int (node);
+  json_reader_end_member (reader);
+
+  if (value < 0 || value > 0xfe)
+    {
+      error_print ("Invalid track code %" G_GINT64_FORMAT, value);
+      return -EINVAL;
+    }
+
+  *code = value;
+  return 0;
+}
+
+//Returns 1 if all the tracks have a code, 0 if none has and -1 otherwise.
+static int
+ow_get_track_codes_state (int tracks, const struct ow_device_track *track)
+{
+  int codes = 0;
+
+  for (int i = 0; i < tracks; i++)
+    {
+      if (track[i].code != OW_TRACK_CODE_NONE)
+	{
+	  codes++;
+	}
+    }
+
+  return codes == tracks ? 1 : codes == 0 ? 0 : -1;
+}
+
 static int
 ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 			   JsonReader *reader)
 {
   gint dpid;
+  int codes_in, codes_out;
   const char *version;
 
   device_desc->inputs = 0;
@@ -180,7 +263,11 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
       return -EINVAL;
     }
   version = json_reader_get_string_value (reader);
-  if (!strcmp (version, OW_DEVICE_VERSION_2_STR))
+  if (!strcmp (version, OW_DEVICE_VERSION_1_STR))
+    {
+      device_desc->version = OW_DEVICE_VERSION_1;
+    }
+  else if (!strcmp (version, OW_DEVICE_VERSION_2_STR))
     {
       device_desc->version = OW_DEVICE_VERSION_2;
     }
@@ -244,6 +331,11 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 
 	  json_reader_end_member (reader);
 
+	  if (ow_read_track_code (reader, &device_desc->input_tracks[j].code))
+	    {
+	      return -EINVAL;
+	    }
+
 	  json_reader_end_element (reader);
 	}
       else
@@ -251,6 +343,12 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 	  error_print ("Cannot read input track name %d", j);
 	  return -EINVAL;
 	}
+    }
+
+  if (ow_check_track_sizes (device_desc->version, device_desc->inputs,
+			    device_desc->input_tracks))
+    {
+      return -EINVAL;
     }
 
   json_reader_end_member (reader);
@@ -302,6 +400,12 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 
 	  json_reader_end_member (reader);
 
+	  if (ow_read_track_code (reader,
+				  &device_desc->output_tracks[j].code))
+	    {
+	      return -EINVAL;
+	    }
+
 	  json_reader_end_element (reader);
 	}
       else
@@ -311,7 +415,25 @@ ow_get_device_desc_reader (uint16_t pid, struct ow_device_desc *device_desc,
 	}
     }
 
+  if (ow_check_track_sizes (device_desc->version, device_desc->outputs,
+			    device_desc->output_tracks))
+    {
+      return -EINVAL;
+    }
+
   json_reader_end_member (reader);
+
+  //Codes define the track layout of the device so these are either set for
+  //all the tracks or for none.
+  codes_in = ow_get_track_codes_state (device_desc->inputs,
+				       device_desc->input_tracks);
+  codes_out = ow_get_track_codes_state (device_desc->outputs,
+					device_desc->output_tracks);
+  if (codes_in < 0 || codes_out < 0 || codes_in != codes_out)
+    {
+      error_print ("Track codes must be set for all the tracks or for none");
+      return -EINVAL;
+    }
 
   return 0;
 }

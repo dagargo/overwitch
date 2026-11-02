@@ -25,6 +25,7 @@
 #include <systemd/sd-daemon.h>
 #endif
 #include <time.h>
+#include <libusb.h>
 #include "../config.h"
 #include "jclient.h"
 #include "utils.h"
@@ -38,6 +39,7 @@ typedef enum
   PJC_AVAILABLE = 0,
   PJC_RUNNING = 1,
   PJC_STOPPED = 2,
+  PJC_FAILED = 3,
 } pooled_jclient_status_t;
 
 struct pooled_jclient
@@ -45,6 +47,9 @@ struct pooled_jclient
   pooled_jclient_status_t status;
   pthread_t thread;
   struct jclient jclient;
+  //Devices that could not be started are kept until they are disconnected so
+  //that they are reported and can be fixed, e.g. by editing the track layout.
+  struct ow_device *failed_device;
 };
 
 static struct ow_preferences preferences;
@@ -185,11 +190,16 @@ jclient_runner (void *data)
 static void
 start_single (struct pooled_jclient *pjc, guint id, struct ow_device *device)
 {
-  if (jclient_init (&pjc->jclient, device, preferences.blocks,
+  unsigned int blocks = device->desc.version == OW_DEVICE_VERSION_1 ?
+    preferences.blocks_ob1 : preferences.blocks_ob2;
+
+  if (jclient_init (&pjc->jclient, device, blocks,
 		    preferences.timeout, preferences.quality,
 		    JCLIENT_DEFAULT_PRIORITY))
     {
-      free (device);
+      debug_print (1, "Pooled jclient %d failed", id);
+      pjc->failed_device = device;
+      pjc->status = PJC_FAILED;
       return;
     }
 
@@ -206,6 +216,89 @@ start_single (struct pooled_jclient *pjc, guint id, struct ow_device *device)
   gchar name[OW_LABEL_MAX_LEN];
   snprintf (name, OW_LABEL_MAX_LEN, "srv-%02d-%.8s", id, device->desc.name);
   pthread_setname_np (pjc->thread, name);
+}
+
+static void
+release_failed (struct pooled_jclient *pjc)
+{
+  free (pjc->failed_device);
+  pjc->failed_device = NULL;
+  pjc->status = PJC_AVAILABLE;
+}
+
+//Failed devices that are no longer connected are released.
+static void
+release_disconnected ()
+{
+  libusb_context *context;
+  libusb_device **usb_devices;
+  struct pooled_jclient *pjc;
+  gboolean failed[POOLED_JCLIENT_LEN];
+  uint8_t bus[POOLED_JCLIENT_LEN];
+  uint8_t address[POOLED_JCLIENT_LEN];
+  ssize_t total;
+  gboolean any = FALSE;
+
+  pthread_spin_lock (&lock);
+  pjc = jcpool;
+  for (guint32 i = 0; i < POOLED_JCLIENT_LEN; i++, pjc++)
+    {
+      failed[i] = pjc->status == PJC_FAILED;
+      if (failed[i])
+	{
+	  bus[i] = pjc->failed_device->bus;
+	  address[i] = pjc->failed_device->address;
+	  any = TRUE;
+	}
+    }
+  pthread_spin_unlock (&lock);
+
+  if (!any || libusb_init (&context) != LIBUSB_SUCCESS)
+    {
+      return;
+    }
+
+  total = libusb_get_device_list (context, &usb_devices);
+  if (total < 0)
+    {
+      libusb_exit (context);
+      return;
+    }
+
+  pthread_spin_lock (&lock);
+  pjc = jcpool;
+  for (guint32 i = 0; i < POOLED_JCLIENT_LEN; i++, pjc++)
+    {
+      gboolean connected = FALSE;
+
+      //The pool might have changed while the devices were listed.
+      if (!failed[i] || pjc->status != PJC_FAILED ||
+	  pjc->failed_device->bus != bus[i] ||
+	  pjc->failed_device->address != address[i])
+	{
+	  continue;
+	}
+
+      for (ssize_t j = 0; j < total; j++)
+	{
+	  if (libusb_get_bus_number (usb_devices[j]) == bus[i] &&
+	      libusb_get_device_address (usb_devices[j]) == address[i])
+	    {
+	      connected = TRUE;
+	      break;
+	    }
+	}
+
+      if (!connected)
+	{
+	  debug_print (1, "Releasing disconnected pooled jclient %d...", i);
+	  release_failed (pjc);
+	}
+    }
+  pthread_spin_unlock (&lock);
+
+  libusb_free_device_list (usb_devices, 1);
+  libusb_exit (context);
 }
 
 static int
@@ -262,9 +355,13 @@ wait_all ()
 
       pthread_spin_lock (&lock);
       status = pjc->status;
+      if (status == PJC_FAILED)
+	{
+	  release_failed (pjc);
+	}
       pthread_spin_unlock (&lock);
 
-      if (status != PJC_AVAILABLE)
+      if (status != PJC_AVAILABLE && status != PJC_FAILED)
 	{
 	  debug_print (1, "Waiting pooled jclient %d...", i);
 	  pthread_join (pjc->thread, NULL);
@@ -280,6 +377,8 @@ hotplug_callback (struct ow_device *device)
 {
   guint32 i;
   struct pooled_jclient *pjc;
+
+  release_disconnected ();
 
   pjc = jcpool;
 
@@ -373,6 +472,8 @@ handle_get_state ()
   struct pooled_jclient *pjc = jcpool;
   struct ow_resampler *resampler = NULL;
 
+  release_disconnected ();
+
   JsonBuilder *builder = message_state_builder_start ();
 
   pthread_spin_lock (&lock);
@@ -388,6 +489,17 @@ handle_get_state ()
 	  const gchar *name = ow_engine_get_overbridge_name (engine);
 	  ow_resampler_get_state_copy (resampler, &state);
 	  message_state_builder_add_device (builder, i, name, device, &state);
+	}
+      else if (pjc->status == PJC_FAILED)
+	{
+	  struct ow_resampler_state state = {
+	    .status = OW_RESAMPLER_STATUS_ERROR,
+	    .t_latency_o2h = -1,
+	    .t_latency_h2o = -1
+	  };
+	  message_state_builder_add_device (builder, i,
+					    pjc->failed_device->desc.name,
+					    pjc->failed_device, &state);
 	}
 
       pjc++;

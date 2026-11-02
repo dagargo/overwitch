@@ -35,6 +35,8 @@ enum list_store_columns
   PROP_O2J_RATIO,
   PROP_J2O_RATIO,
   PROP_TARGET_DELAY,
+  PROP_PID,
+  PROP_LAYOUT_EDITABLE,
   N_PROPERTIES
 };
 
@@ -147,6 +149,14 @@ overwitch_device_get_property (GObject *object, guint prop_id,
       g_value_set_string (value, d->target_delay);
       break;
 
+    case PROP_PID:
+      g_value_set_uint (value, d->pid);
+      break;
+
+    case PROP_LAYOUT_EDITABLE:
+      g_value_set_boolean (value, d->layout_editable);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -204,6 +214,15 @@ overwitch_device_class_init (OverwitchDeviceClass *klass)
     g_param_spec_string ("target_delay", "Target Delay", "Target Delay.",
 			 NULL, G_PARAM_READWRITE);
 
+  obj_properties[PROP_PID] =
+    g_param_spec_uint ("pid", "PID", "USB product ID.", 0, G_MAXUINT16, 0,
+		       G_PARAM_READABLE);
+
+  obj_properties[PROP_LAYOUT_EDITABLE] =
+    g_param_spec_boolean ("layout_editable", "Layout Editable",
+			  "Whether the track layout can be edited.", FALSE,
+			  G_PARAM_READABLE);
+
   g_object_class_install_properties (object_class, N_PROPERTIES,
 				     obj_properties);
 }
@@ -214,7 +233,8 @@ overwitch_device_new (const guint32 id, const gchar *name,
 		      const guint8 address, const gchar *status,
 		      const gchar *o2j_latency, const gchar *j2o_latency,
 		      const gdouble o2j_ratio, const gdouble j2o_ratio,
-		      const gchar *target_delay)
+		      const gchar *target_delay, const guint16 pid,
+		      const gboolean layout_editable)
 {
   OverwitchDevice *d = g_object_new (OVERWITCH_TYPE_DEVICE, NULL);
   d->id = id;
@@ -228,5 +248,7 @@ overwitch_device_new (const guint32 id, const gchar *name,
   d->o2j_ratio = o2j_ratio;
   d->j2o_ratio = j2o_ratio;
   g_snprintf (d->target_delay, OW_LABEL_MAX_LEN, "%s", target_delay);
+  d->pid = pid;
+  d->layout_editable = layout_editable;
   return d;
 }
