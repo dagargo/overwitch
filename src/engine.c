@@ -368,11 +368,10 @@ cb_xfr_audio_in_v2 (struct libusb_transfer *xfr)
 
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
-      if (xfr->length < xfr->actual_length)
+      if (xfr->actual_length < xfr->length)
 	{
-	  error_print
-	    ("o2h: incomplete USB audio transfer (%d B < %d B)", xfr->length,
-	     xfr->actual_length);
+	  error_print ("o2h: incomplete USB audio transfer (%d B < %d B)",
+		       xfr->actual_length, xfr->length);
 	}
 
       struct ow_engine *engine = xfr->user_data;
@@ -403,11 +402,10 @@ cb_xfr_audio_out_v2 (struct libusb_transfer *xfr)
 
   if (xfr->status == LIBUSB_TRANSFER_COMPLETED)
     {
-      if (xfr->length < xfr->actual_length)
+      if (xfr->actual_length < xfr->length)
 	{
-	  error_print
-	    ("h2o: incomplete USB audio transfer (%d B < %d B)", xfr->length,
-	     xfr->actual_length);
+	  error_print ("h2o: incomplete USB audio transfer (%d B < %d B)",
+		       xfr->actual_length, xfr->length);
 	}
     }
   else
