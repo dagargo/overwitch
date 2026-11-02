@@ -12,7 +12,7 @@ The papers [Controlling adaptive resampling](https://kokkinizita.linuxaudio.org/
 
 At the moment, it provides support for all Overbridge 2 devices, which are Analog Four MKII, Analog Rytm MKII, Digitakt, Digitakt II, Digitone, Digitone II, Digitone Keys, Analog Heat, Analog Heat MKII, Analog Heat +FX and Syntakt.
 
-Overbridge 1 devices, which are Analog Four MKI, Analog Keys and Analog Rytm MKI, are not supported yet.
+Overbridge 1 devices, which are Analog Four MKI, Analog Keys and Analog Rytm MKI, are supported with recent OS versions. As their track layout is configurable, their device definitions might need to be adjusted. Only the Analog Four MKI has been tested so far.
 
 Overwitch consists of 5 different binaries divided in 2 categories: multi-device applications (they can **not** be used simultaneously) and single-device utilities.
 

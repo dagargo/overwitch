@@ -16,6 +16,24 @@ usb:v1935p0003*
 usb:v1935p0004*
  ID_MODEL_FROM_DATABASE=Analog Four Overbridge
 
+usb:v1935p0B4B*
+ ID_MODEL_FROM_DATABASE=Analog Four Overbridge
+
+usb:v1935p0005*
+ ID_MODEL_FROM_DATABASE=Analog Keys MIDI
+
+usb:v1935p0006*
+ ID_MODEL_FROM_DATABASE=Analog Keys Overbridge
+
+usb:v1935p0B4C*
+ ID_MODEL_FROM_DATABASE=Analog Keys Overbridge
+
+usb:v1935p0008*
+ ID_MODEL_FROM_DATABASE=Analog Rytm Overbridge
+
+usb:v1935p0B4D*
+ ID_MODEL_FROM_DATABASE=Analog Rytm Overbridge
+
 usb:v1935p000E*
  ID_MODEL_FROM_DATABASE=Analog Four MKII Overbridge
 

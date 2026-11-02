@@ -27,6 +27,8 @@
 #define ELEKTRON_VID 0x1935
 
 #define OB_SAMPLE_RATE 48000.0
+#define OB1_FRAMES_PER_BLOCK 48
+#define OB1_MAX_FRAMES_PER_BLOCK 49
 #define OB2_FRAMES_PER_BLOCK 7
 
 #define OB_MAX_TRACKS 64
@@ -41,10 +43,15 @@
 
 #define OW_DEFAULT_XFR_TIMEOUT 10
 
+#define OW1_MIN_BLOCKS 1
+#define OW1_MAX_BLOCKS 5
+#define OW1_DEFAULT_BLOCKS 3
+
 #define OW2_MIN_BLOCKS 6
 #define OW2_MAX_BLOCKS 24
 #define OW2_DEFAULT_BLOCKS 24
 
+#define OW_DEVICE_VERSION_1_STR     "1"
 #define OW_DEVICE_VERSION_2_STR     "2"
 #define OW_DEVICE_VERSION_2_1_STR   "2.1"
 
@@ -86,7 +93,9 @@ typedef enum
   OW_INIT_ERROR_NO_O2H_AUDIO_BUF,
   OW_INIT_ERROR_NO_H2O_AUDIO_BUF,
   OW_INIT_ERROR_NO_GET_TIME,
-  OW_INIT_ERROR_NO_DLL
+  OW_INIT_ERROR_NO_DLL,
+  OW_USB_ERROR_UNSUPPORTED_PROTOCOL,
+  OW_USB_ERROR_LAYOUT_MISMATCH
 } ow_err_t;
 
 typedef enum
@@ -120,7 +129,7 @@ typedef enum
 
 typedef enum
 {
-  OW_DEVICE_VERSION_1,		//16 bits isochronous transfers (Analog Rytm MKI and Analog Four MKI and Keys)
+  OW_DEVICE_VERSION_1,		//16 or 24 bits isochronous transfers (Analog Rytm MKI and Analog Four MKI and Keys)
   OW_DEVICE_VERSION_2,		//32 bits interrupt transfers (classic Overbridge 2 devices)
   OW_DEVICE_VERSION_2_1,	//24 bits Interrupt transfers (DTII and DNII)
   OW_DEVICE_VERSION_3		//32 bits isochronous transfers (Tonverk)
@@ -149,10 +158,15 @@ struct ow_context
   int options;
 };
 
+//Overbridge 1 devices identify their tracks with a code, which is used to set
+//the device track layout. A track without a code has OW_TRACK_CODE_NONE.
+#define OW_TRACK_CODE_NONE -1
+
 struct ow_device_track
 {
   char name[OW_LABEL_MAX_LEN];
   int size;
+  int code;
 };
 
 struct ow_device_desc

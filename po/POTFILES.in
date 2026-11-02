@@ -1,3 +1,4 @@
 src/main.c
+src/layout.c
 src/message.c
 res/overwitch.ui

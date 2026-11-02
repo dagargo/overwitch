@@ -37,6 +37,8 @@
 #define STATE_DEVICE_RATIO_O2H "ratioO2H"
 #define STATE_DEVICE_RATIO_H2O "ratioH2O"
 #define STATE_DEVICE_TARGET_DELAY "targetDelay"
+#define STATE_DEVICE_PID "pid"
+#define STATE_DEVICE_LAYOUT_EDITABLE "layoutEditable"
 
 #define STATE_SERVER_SAMPLE_RATE "sampleRate"
 #define STATE_SERVER_BUFFER_SIZE "bufferSize"
@@ -91,6 +93,12 @@ message_state_builder_add_device (JsonBuilder *builder, guint32 id,
   json_builder_add_double_value (builder, state->ratio_h2o);
   json_builder_set_member_name (builder, STATE_DEVICE_TARGET_DELAY);
   json_builder_add_double_value (builder, state->target_delay);
+  json_builder_set_member_name (builder, STATE_DEVICE_PID);
+  json_builder_add_int_value (builder, device->pid);
+  json_builder_set_member_name (builder, STATE_DEVICE_LAYOUT_EDITABLE);
+  json_builder_add_boolean_value (builder,
+				  device->desc.version ==
+				  OW_DEVICE_VERSION_1);
   json_builder_end_object (builder);
 }
 
@@ -180,7 +188,8 @@ OverwitchDevice *
 message_state_reader_get_device (JsonReader *reader, guint index)
 {
   OverwitchDevice *device = NULL;
-  guint32 id, bus, address;
+  guint32 id, bus, address, pid;
+  gboolean layout_editable;
   struct ow_resampler_state state;
   static gchar o2h_latency[OW_LABEL_MAX_LEN];
   static gchar h2o_latency[OW_LABEL_MAX_LEN];
@@ -348,6 +357,21 @@ message_state_reader_get_device (JsonReader *reader, guint index)
       goto end;
     }
 
+  //These are optional.
+  pid = 0;
+  if (json_reader_read_member (reader, STATE_DEVICE_PID))
+    {
+      pid = json_reader_get_int_value (reader);
+    }
+  json_reader_end_member (reader);
+
+  layout_editable = FALSE;
+  if (json_reader_read_member (reader, STATE_DEVICE_LAYOUT_EDITABLE))
+    {
+      layout_editable = json_reader_get_boolean_value (reader);
+    }
+  json_reader_end_member (reader);
+
   if (state.t_latency_o2h >= 0)
     {
       g_snprintf (o2h_latency, OW_LABEL_MAX_LEN,
@@ -376,7 +400,7 @@ message_state_reader_get_device (JsonReader *reader, guint index)
 				 get_status_string (state.status),
 				 o2h_latency, h2o_latency,
 				 state.ratio_o2h, state.ratio_h2o,
-				 target_delay);
+				 target_delay, pid, layout_editable);
 
 end:
   json_reader_end_element (reader);
