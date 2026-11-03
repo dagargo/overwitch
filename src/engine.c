@@ -468,8 +468,10 @@ prepare_cycle_in_v2 (struct ow_engine *engine)
 static void
 usb_shutdown (struct ow_engine *engine)
 {
-  libusb_release_interface (engine->usb.device_handle, 1);
-  libusb_release_interface (engine->usb.device_handle, 3);
+  libusb_release_interface (engine->usb.device_handle,
+			    OB2_USB_AUDIO_IN_INTERFACE);
+  libusb_release_interface (engine->usb.device_handle,
+			    OB2_USB_AUDIO_OUT_INTERFACE);
   libusb_close (engine->usb.device_handle);
   libusb_unref_device (engine->usb.device);
   libusb_free_transfer (engine->usb.xfr_audio_in);
