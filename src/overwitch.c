@@ -432,7 +432,14 @@ ow_get_device_desc (uint16_t pid, struct ow_device_desc *device_desc)
 		  err = ow_get_device_desc_file (pid, device_desc, file, 0);
 		}
 	      g_free (file);
+
+	      if (!err)
+		{
+		  break;
+		}
 	    }
+
+	  g_dir_close (gdir);
 	}
     }
   g_free (dir);
