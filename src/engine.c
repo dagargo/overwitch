@@ -970,8 +970,7 @@ get_track_code_name_v1 (uint8_t code, char *buf, size_t len)
       snprintf (buf, len, "Synth Track %d Input", code + 1);
       return buf;
     }
-  snprintf (buf, len, "Unknown (0x%02x)", code);
-  return buf;
+  return "Unknown";
 }
 
 static int
@@ -1000,19 +999,20 @@ print_layout_v1 (struct ow_engine *engine, int direction, int error)
 	{
 	  continue;
 	}
+      //The code is printed too as the names are the Analog Four ones.
       if (error)
 	{
-	  error_print ("%s: Device track %d: %s",
+	  error_print ("%s: Device track %d: %s (0x%02x)",
 		       OB1_DIRECTION_NAMES[direction], i + 1,
 		       get_track_code_name_v1 (map[i], buf,
-					       OW_LABEL_MAX_LEN));
+					       OW_LABEL_MAX_LEN), map[i]);
 	}
       else
 	{
-	  debug_print (1, "%s: Device track %d: %s",
+	  debug_print (1, "%s: Device track %d: %s (0x%02x)",
 		       OB1_DIRECTION_NAMES[direction], i + 1,
 		       get_track_code_name_v1 (map[i], buf,
-					       OW_LABEL_MAX_LEN));
+					       OW_LABEL_MAX_LEN), map[i]);
 	}
     }
 }
@@ -2038,8 +2038,16 @@ ow_engine_init_v1 (struct ow_engine *engine, struct ow_device *device,
   if (err != OB1_USB_PROTOCOL_LEN ||
       memcmp (protocol, OB1_USB_PROTOCOL, OB1_USB_PROTOCOL_LEN))
     {
+      char data[OB1_USB_PROTOCOL_LEN * 3 + 1] = "";
+
+      //The received data is needed to support other protocols.
+      for (int i = 0; i < err; i++)
+	{
+	  snprintf (data + i * 3, 4, " %02x", protocol[i]);
+	}
       error_print
-	("Unsupported Overbridge protocol. Update the device OS to the latest version.");
+	("Unsupported Overbridge protocol (%d B:%s). Update the device OS to the latest version.",
+	 err > 0 ? err : 0, data);
       ret = OW_USB_ERROR_UNSUPPORTED_PROTOCOL;
       goto end;
     }
