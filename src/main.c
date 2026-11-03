@@ -28,6 +28,7 @@
 #include "utils.h"
 #include "preferences.h"
 #include "message.h"
+#include "layout.h"
 
 #define REFRESH_TIMEOUT_MS 2000
 
@@ -48,7 +49,8 @@ static GtkWidget *preferences_window_cancel_button;
 static GtkWidget *preferences_window_save_button;
 static GtkWidget *pipewire_props_dialog_entry;
 static GtkWidget *start_stop_button;
-static GtkSpinButton *blocks_spin_button;
+static GtkSpinButton *blocks_ob1_spin_button;
+static GtkSpinButton *blocks_ob2_spin_button;
 static GtkSpinButton *timeout_spin_button;
 static GtkDropDown *quality_drop_down;
 static GtkColumnViewColumn *device_column;
@@ -110,7 +112,10 @@ save_preferences ()
   v = g_action_get_state (a);
   g_variant_get (v, "b", &prefs.show_all_columns);
 
-  prefs.blocks = gtk_spin_button_get_value_as_int (blocks_spin_button);
+  prefs.blocks_ob1 =
+    gtk_spin_button_get_value_as_int (blocks_ob1_spin_button);
+  prefs.blocks_ob2 =
+    gtk_spin_button_get_value_as_int (blocks_ob2_spin_button);
   prefs.timeout = gtk_spin_button_get_value_as_int (timeout_spin_button);
   prefs.quality = gtk_drop_down_get_selected (quality_drop_down);
 
@@ -136,7 +141,8 @@ load_preferences ()
   v = g_variant_new_boolean (prefs.show_all_columns);
   g_simple_action_set_state (G_SIMPLE_ACTION (a), v);
 
-  gtk_spin_button_set_value (blocks_spin_button, prefs.blocks);
+  gtk_spin_button_set_value (blocks_ob1_spin_button, prefs.blocks_ob1);
+  gtk_spin_button_set_value (blocks_ob2_spin_button, prefs.blocks_ob2);
   gtk_spin_button_set_value (timeout_spin_button, prefs.timeout);
   gtk_drop_down_set_selected (quality_drop_down, prefs.quality);
 
@@ -175,7 +181,8 @@ static void
 set_service_state (guint32 samplerate, guint32 buffer_size)
 {
   static char msg[OW_LABEL_MAX_LEN];
-  if (devices > 0)
+  //Devices that failed do not have a sample rate.
+  if (devices > 0 && samplerate)
     {
       snprintf (msg, OW_LABEL_MAX_LEN, _("JACK at %.5g kHz, %u period"),
 		samplerate / 1000.f, buffer_size);
@@ -422,12 +429,34 @@ const GActionEntry APP_ENTRIES[] = {
 };
 
 static void
+layout_saved ()
+{
+  g_source_remove (source_id);
+
+  g_list_store_remove_all (status_list_store);
+
+  control_service ("Start");	//Stop, reload and start
+
+  source_id = g_timeout_add (REFRESH_TIMEOUT_MS, refresh_state, NULL);
+}
+
+static void
+edit_device_layout (GtkButton *button, GtkColumnViewCell *cell)
+{
+  OverwitchDevice *d = OVERWITCH_DEVICE (gtk_column_view_cell_get_item (cell));
+
+  layout_editor_open (GTK_WINDOW (main_window), d->pid, d->device,
+		      layout_saved);
+}
+
+static void
 build_ui ()
 {
   gchar *thanks;
   GtkBuilder *builder;
   GtkBuilderScope *scope = gtk_builder_cscope_new ();
   gtk_builder_cscope_add_callback (scope, device_name_changed);
+  gtk_builder_cscope_add_callback (scope, edit_device_layout);
 
   builder = gtk_builder_new ();
   gtk_builder_set_scope (builder, scope);
@@ -468,8 +497,12 @@ build_ui ()
       g_strfreev (lines);
     }
 
-  blocks_spin_button =
-    GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "blocks_spin_button"));
+  blocks_ob1_spin_button =
+    GTK_SPIN_BUTTON (gtk_builder_get_object
+		     (builder, "blocks_ob1_spin_button"));
+  blocks_ob2_spin_button =
+    GTK_SPIN_BUTTON (gtk_builder_get_object
+		     (builder, "blocks_ob2_spin_button"));
   timeout_spin_button =
     GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "timeout_spin_button"));
   quality_drop_down =

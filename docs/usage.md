@@ -12,7 +12,7 @@ Overwitch contains two JACK clients. One is a D-Bus and systemd compatible hotpl
 Regarding the JACK clients, latency needs to be under control and it can be tuned with the following parameters.
 
 - Quality, which controls the resampler accuracy. The higher the quality, the higher CPU usage. A medium value is recommended. Notice that a value of 0 means the highest quality while a value of 4 means the lowest.
-- Blocks, which controls the amount of data sent in a single USB operation. The more blocks, the higher latency but the lower CPU usage. As too lower values might stress the machines to the point of requiring a reboot, 10 is the minimum recommended value. If a device become unresponsive or you see the error below, increase the blocks and restart the device.
+- Blocks, which controls the amount of data sent in a single USB operation. The more blocks, the higher latency but the lower CPU usage. As too lower values might stress the machines to the point of requiring a reboot, 10 is the minimum recommended value. If a device become unresponsive or you see the error below, increase the blocks and restart the device. Overbridge 1 devices use their own setting, as their blocks contain 1 ms of audio, with values between 1 and 5 and 3 as the default.
 
 ```
 ERROR:engine.c:351:cb_xfr_audio_out: h2o: Error on USB audio transfer (0 B): LIBUSB_TRANSFER_TIMED_OUT
@@ -37,7 +37,7 @@ In case of testing Overwitch, only the CLI utilities should be used. In this sce
 
 ### overwitch
 
-The GUI is self explanatory and does not requiere any parameter passed from the command line. It controls the D-Bus service, which will manage any Overbridge device.
+The GUI is self explanatory and does not requiere any parameter passed from the command line. It controls the D-Bus service, which will manage any Overbridge device. The track layout of Overbridge 1 devices can be changed from the Layout column. See the Overbridge 1 devices section in Adding devices.
 
 Notice that changing the preferences will restart all the clients.
 
@@ -53,6 +53,7 @@ This is a configuration example with the recommended properties. Not all the pro
 $ cat ~/.config/overwitch/preferences.json
 {
   "blocks" : 12,
+  "blocksOverbridge1" : 3,
   "timeout" : 10,
   "quality" : 2,
   "pipewireProps" : "{ node.group = \"pro-audio-0\" }"

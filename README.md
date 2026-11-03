@@ -13,7 +13,7 @@ The papers [Controlling adaptive resampling](https://kokkinizita.linuxaudio.org/
 
 At the moment, it provides support for all Overbridge 2 devices, which are Analog Four MKII, Analog Rytm MKII, Digitakt, Digitakt II, Digitone, Digitone II, Digitone Keys, Analog Heat, Analog Heat MKII, Analog Heat +FX and Syntakt.
 
-Overbridge 1 devices, which are Analog Four MKI, Analog Keys and Analog Rytm MKI, are not supported yet.
+Overbridge 1 devices, which are Analog Four MKI, Analog Keys and Analog Rytm MKI, are supported with recent OS versions. As their track layout is configurable, their device definitions might need to be adjusted. Only the Analog Four MKI has been tested so far.
 
 Overwitch consists of 5 different binaries divided in 2 categories: multi-device applications (they can **not** be used simultaneously) and single-device utilities.
 
@@ -103,7 +103,7 @@ Overwitch contains two JACK clients. One is a D-Bus and systemd compatible hotpl
 Regarding the JACK clients, latency needs to be under control and it can be tuned with the following parameters.
 
 - Quality, which controls the resampler accuracy. The higher the quality, the higher CPU usage. A medium value is recommended. Notice that a value of 0 means the highest quality while a value of 4 means the lowest.
-- Blocks, which controls the amount of data sent in a single USB operation. The more blocks, the higher latency but the lower CPU usage. As too lower values might stress the machines to the point of requiring a reboot, 10 is the minimum recommended value. If a device become unresponsive or you see the error below, increase the blocks and restart the device.
+- Blocks, which controls the amount of data sent in a single USB operation. The more blocks, the higher latency but the lower CPU usage. As too lower values might stress the machines to the point of requiring a reboot, 10 is the minimum recommended value. If a device become unresponsive or you see the error below, increase the blocks and restart the device. Overbridge 1 devices use their own setting, as their blocks contain 1 ms of audio, with values between 1 and 5 and 3 as the default.
 
 ```
 ERROR:engine.c:351:cb_xfr_audio_out: h2o: Error on USB audio transfer (0 B): LIBUSB_TRANSFER_TIMED_OUT
@@ -128,7 +128,7 @@ In case of testing Overwitch, only the CLI utilities should be used. In this sce
 
 ### overwitch
 
-The GUI is self explanatory and does not requiere any parameter passed from the command line. It controls the D-Bus service, which will manage any Overbridge device.
+The GUI is self explanatory and does not requiere any parameter passed from the command line. It controls the D-Bus service, which will manage any Overbridge device. The track layout of Overbridge 1 devices can be changed from the Layout column. See the Overbridge 1 devices section in Adding devices.
 
 Notice that changing the preferences will restart all the clients.
 
@@ -144,6 +144,7 @@ This is a configuration example with the recommended properties. Not all the pro
 $ cat ~/.config/overwitch/preferences.json
 {
   "blocks" : 12,
+  "blocksOverbridge1" : 3,
   "timeout" : 10,
   "quality" : 2,
   "pipewireProps" : "{ node.group = \"pro-audio-0\" }"
@@ -506,7 +507,71 @@ This example is a self-explanatory `JSON` object for a device.
 
 Notice that there are 4 versions, depending on the transfer type and how many bytes are used to store samples in the USB blocks.
 
-* Version 1 (isochronous transfers) is reserved for Analog Rytm MKI and Analog Four MKI and Keys.
+* Version 1 (isochronous transfers) uses 2 or 3 bytes integers and is used by Overbridge 1 devices, which are Analog Four MKI, Analog Keys and Analog Rytm MKI.
 * Version 2 (interrupt transfers) uses 4 bytes integers and is used by classig Overbridge 2 devices.
 * Version 2.1 (interrupt transfers) uses 3 bytes integers. Note that some tracks might use 4 bytes to store the samples even though the actual samples are only 3 bytes. Used by Digitakt II and Digitone II.
 * Version 3 (isochronous transfers). Used by Tonverk.
+
+### Overbridge 1 devices
+
+Overbridge 1 devices need an OS that supports the Overbridge protocol used by Overbridge 2, like the Analog Four MKI OS 1.56. Overwitch shows an error with older versions.
+
+The tracks these devices send and receive, and their bit depth, are configured with the Overbridge Control Panel on Windows or macOS and stored in the device. The device definition must match this layout:
+
+* `output_tracks` are the tracks sent by the device and `input_tracks` the tracks sent to the device, in the same order as in the Control Panel.
+* The `size` is 2 for 16 bits and 3 for 24 bits and it must be the same for all the tracks in a direction.
+* At least one track per direction is required.
+
+Overwitch checks the definition against the layout stored in the device and, if they do not match, it shows the tracks in the device. For instance, this is the definition of an Analog Four MKI sending its main outputs and its first 2 synth tracks and receiving 2 tracks, all of them with 24 bits.
+
+```
+{
+  "pid": 2891,
+  "name": "Analog Four MKI",
+  "version": "1",
+  "input_tracks": [
+    {
+      "name": "Main L Input",
+      "size": 3
+    },
+    {
+      "name": "Main R Input",
+      "size": 3
+    }
+  ],
+  "output_tracks": [
+    {
+      "name": "Main L",
+      "size": 3
+    },
+    {
+      "name": "Main R",
+      "size": 3
+    },
+    {
+      "name": "Synth Track 1",
+      "size": 3
+    },
+    {
+      "name": "Synth Track 2",
+      "size": 3
+    }
+  ]
+}
+```
+
+The distributed devices file includes the Analog Four MKI and, untested, the Analog Keys and the Analog Rytm MKI, all of them with their main outputs and inputs with 16 bits.
+
+The layout can also be set from Overwitch. When every track has a `code`, which is the channel the device uses for it, Overwitch stores this layout in the device if it is different, so there is no need to use the Control Panel. Codes must be set for all the tracks or for none. These are the codes known for the Analog Four MKI.
+
+| Direction | Track | Code |
+| --- | --- | --- |
+| Output | Main L, Main R | 160, 161 |
+| Output | Synth Track 1 to Synth Track 4 | 128 to 131 |
+| Output | Input L, Input R | 192, 193 |
+| Input | Main L Input, Main R Input | 32, 33 |
+| Input | Synth Track 1 Input to Synth Track 4 Input | 0 to 3 |
+
+The GUI edits this layout with the button in the Layout column if the definition lists the tracks that can be chosen with `available_output_tracks` and `available_input_tracks`, which need a `name` and a `code` for every track. The distributed Analog Four MKI definition includes these. The layout is saved in a definition in `~/.config/overwitch/devices.d` and the device is restarted. Devices that can not be started, for instance because their definition does not match the layout stored in the device, are also shown, so their layout can be fixed this way. Like the Control Panel, the GUI does not allow more than 6 tracks with 24 bits or 10 tracks with 16 bits, adding both directions, nor more than 8 tracks per direction.
+
+For these devices, a block contains 1 ms of audio and the valid amount of blocks is between 1 and 5, being 3 the default.

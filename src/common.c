@@ -118,16 +118,15 @@ get_ow_blocks_per_transfer_argument (const char *optarg)
   char *endstr;
   int blocks_per_transfer;
 
+  //The valid values depend on the device so 0 is used for the default value.
   errno = 0;
   blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
   if (errno || endstr == optarg || *endstr != '\0' ||
-      blocks_per_transfer < OW2_MIN_BLOCKS ||
-      blocks_per_transfer > OW2_MAX_BLOCKS)
+      blocks_per_transfer < 1)
     {
-      blocks_per_transfer = OW2_DEFAULT_BLOCKS;
+      blocks_per_transfer = 0;
       fprintf (stderr,
-	       "Blocks value must be in [%d..%d]. Using value %d...\n",
-	       OW2_MIN_BLOCKS, OW2_MAX_BLOCKS, blocks_per_transfer);
+	       "Blocks value must be a positive number. Using the device default...\n");
     }
   return blocks_per_transfer;
 }

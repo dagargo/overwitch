@@ -1025,5 +1025,140 @@
         "size": 3
       }
     ]
+  },
+  {
+    "pid": 2891,
+    "name": "Analog Four MKI",
+    "version": "1",
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 2
+      },
+      {
+        "name": "Main R Input",
+        "size": 2
+      }
+    ],
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 2
+      },
+      {
+        "name": "Main R",
+        "size": 2
+      }
+    ],
+    "available_output_tracks": [
+      {
+        "name": "Main L",
+        "code": 160
+      },
+      {
+        "name": "Main R",
+        "code": 161
+      },
+      {
+        "name": "Synth Track 1",
+        "code": 128
+      },
+      {
+        "name": "Synth Track 2",
+        "code": 129
+      },
+      {
+        "name": "Synth Track 3",
+        "code": 130
+      },
+      {
+        "name": "Synth Track 4",
+        "code": 131
+      },
+      {
+        "name": "Input L",
+        "code": 192
+      },
+      {
+        "name": "Input R",
+        "code": 193
+      }
+    ],
+    "available_input_tracks": [
+      {
+        "name": "Main L Input",
+        "code": 32
+      },
+      {
+        "name": "Main R Input",
+        "code": 33
+      },
+      {
+        "name": "Synth Track 1 Input",
+        "code": 0
+      },
+      {
+        "name": "Synth Track 2 Input",
+        "code": 1
+      },
+      {
+        "name": "Synth Track 3 Input",
+        "code": 2
+      },
+      {
+        "name": "Synth Track 4 Input",
+        "code": 3
+      }
+    ]
+  },
+  {
+    "pid": 2892,
+    "name": "Analog Keys",
+    "version": "1",
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 2
+      },
+      {
+        "name": "Main R Input",
+        "size": 2
+      }
+    ],
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 2
+      },
+      {
+        "name": "Main R",
+        "size": 2
+      }
+    ]
+  },
+  {
+    "pid": 2893,
+    "name": "Analog Rytm MKI",
+    "version": "1",
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 2
+      },
+      {
+        "name": "Main R Input",
+        "size": 2
+      }
+    ],
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 2
+      },
+      {
+        "name": "Main R",
+        "size": 2
+      }
+    ]
   }
 ]

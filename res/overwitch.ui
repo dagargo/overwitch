@@ -29,7 +29,14 @@
       </item>
     </section>
   </menu>
-  <object class="GtkAdjustment" id="blocks_adjustment">
+  <object class="GtkAdjustment" id="blocks_ob1_adjustment">
+    <property name="lower">1</property>
+    <property name="page-increment">1</property>
+    <property name="step-increment">1</property>
+    <property name="upper">5</property>
+    <property name="value">3</property>
+  </object>
+  <object class="GtkAdjustment" id="blocks_ob2_adjustment">
     <property name="lower">6.0</property>
     <property name="page-increment">4</property>
     <property name="step-increment">1</property>
@@ -338,6 +345,33 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                     <property name="title" translatable="yes">JACK to Overbridge ratio</property>
                   </object>
                 </child>
+                <child>
+                  <object class="GtkColumnViewColumn">
+                    <property name="factory">
+                      <object class="GtkBuilderListItemFactory">
+                        <property name="bytes"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkColumnViewCell">
+    <property name="child">
+      <object class="GtkButton">
+        <property name="halign">center</property>
+        <property name="icon-name">document-edit-symbolic</property>
+        <property name="tooltip-text">Edit Track Layout</property>
+        <binding name="visible">
+          <lookup name="layout_editable" type="OverwitchDevice">
+            <lookup name="item">GtkColumnViewCell</lookup>
+          </lookup>
+        </binding>
+        <signal name="clicked" handler="edit_device_layout"/>
+      </object>
+    </property>
+  </template>
+</interface>]]></property>
+                      </object>
+                    </property>
+                    <property name="title" translatable="yes">Layout</property>
+                  </object>
+                </child>
               </object>
             </property>
             <property name="hexpand">1</property>
@@ -401,8 +435,8 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
             <child>
               <object class="GtkLabel">
                 <property name="halign">end</property>
-                <property name="label" translatable="yes">Overbridge Blocks</property>
-                <property name="tooltip-text" translatable="yes">Overbridge Blocks (7 frames) per USB Transfer</property>
+                <property name="label" translatable="yes">Overbridge 1 Blocks</property>
+                <property name="tooltip-text" translatable="yes">Overbridge 1 Blocks (1 ms) per USB Transfer</property>
                 <layout>
                   <property name="column">0</property>
                   <property name="row">0</property>
@@ -410,15 +444,39 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
               </object>
             </child>
             <child>
-              <object class="GtkSpinButton" id="blocks_spin_button">
-                <property name="adjustment">blocks_adjustment</property>
+              <object class="GtkSpinButton" id="blocks_ob1_spin_button">
+                <property name="adjustment">blocks_ob1_adjustment</property>
+                <property name="climb-rate">1</property>
+                <property name="halign">start</property>
+                <property name="text">3</property>
+                <property name="value">3</property>
+                <layout>
+                  <property name="column">1</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">end</property>
+                <property name="label" translatable="yes">Overbridge 2 Blocks</property>
+                <property name="tooltip-text" translatable="yes">Overbridge 2 Blocks (7 frames) per USB Transfer</property>
+                <layout>
+                  <property name="column">0</property>
+                  <property name="row">1</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="GtkSpinButton" id="blocks_ob2_spin_button">
+                <property name="adjustment">blocks_ob2_adjustment</property>
                 <property name="climb-rate">1</property>
                 <property name="halign">start</property>
                 <property name="text">24</property>
                 <property name="value">24</property>
                 <layout>
                   <property name="column">1</property>
-                  <property name="row">0</property>
+                  <property name="row">1</property>
                 </layout>
               </object>
             </child>
@@ -429,7 +487,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <property name="tooltip-text" translatable="yes">USB Transfer Timeout (ms)</property>
                 <layout>
                   <property name="column">0</property>
-                  <property name="row">1</property>
+                  <property name="row">2</property>
                 </layout>
               </object>
             </child>
@@ -442,7 +500,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <property name="value">10</property>
                 <layout>
                   <property name="column">1</property>
-                  <property name="row">1</property>
+                  <property name="row">2</property>
                 </layout>
               </object>
             </child>
@@ -453,7 +511,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <property name="tooltip-text" translatable="yes">Resampler quality to balance out the CPU usage</property>
                 <layout>
                   <property name="column">0</property>
-                  <property name="row">2</property>
+                  <property name="row">3</property>
                 </layout>
               </object>
             </child>
@@ -464,7 +522,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <property name="selected">0</property>
                 <layout>
                   <property name="column">1</property>
-                  <property name="row">2</property>
+                  <property name="row">3</property>
                 </layout>
               </object>
             </child>
@@ -475,7 +533,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <property name="tooltip-text" translatable="yes">Value of the "PIPEWIRE_PROPS" environment variable</property>
                 <layout>
                   <property name="column">0</property>
-                  <property name="row">3</property>
+                  <property name="row">4</property>
                 </layout>
               </object>
             </child>
@@ -486,7 +544,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
                 <property name="input-purpose">alpha</property>
                 <layout>
                   <property name="column">1</property>
-                  <property name="row">3</property>
+                  <property name="row">4</property>
                 </layout>
               </object>
             </child>

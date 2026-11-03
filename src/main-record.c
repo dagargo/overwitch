@@ -234,6 +234,7 @@ run_record (int device_num, uint8_t bus,
   struct tm tm;
   ow_err_t err;
   size_t transfer_size;
+  unsigned int frames_per_block;
   struct ow_device *device;
 
   if (ow_get_device_from_device_attrs (device_num, bus, address, &device))
@@ -275,9 +276,11 @@ run_record (int device_num, uint8_t bus,
       goto cleanup_engine;
     }
 
+  //Overbridge 1 blocks might have more frames than the nominal value.
+  frames_per_block = device->desc.version == OW_DEVICE_VERSION_1 ?
+    OB1_MAX_FRAMES_PER_BLOCK : ow_engine_get_frames_per_block (engine);
   transfer_size = ow_engine_get_blocks_per_transfer (engine) *
-    ow_engine_get_frames_per_block (engine) * buffer.outputs *
-    OW_BYTES_PER_SAMPLE;
+    frames_per_block * buffer.outputs * OW_BYTES_PER_SAMPLE;
   debug_print (1, "Disk buffer size: %ld B", disk_buf_size);
   debug_print (1, "Transfer size: %ld B", transfer_size);
 
@@ -373,7 +376,7 @@ main (int argc, char *argv[])
   ow_err_t ow_err;
   struct sigaction action;
   int device_num = -1;
-  unsigned int blocks_per_transfer = OW2_DEFAULT_BLOCKS;
+  unsigned int blocks_per_transfer = 0;
   unsigned int xfr_timeout = OW_DEFAULT_XFR_TIMEOUT;
 
   action.sa_handler = signal_handler;

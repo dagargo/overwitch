@@ -39,7 +39,7 @@ liboverwitch_la_CFLAGS = -I$(top_srcdir)/src `$(PKG_CONFIG) --cflags $(LIB_LIBS)
 liboverwitch_la_LDFLAGS = `$(PKG_CONFIG) --libs $(LIB_LIBS)` $(SAMPLERATE_LIBS)
 include_HEADERS = overwitch.h
 
-overwitch_SOURCES = main.c overwitch_device.c overwitch_device.h jclient.c jclient.h preferences.c preferences.h message.c message.h $(OVERWITCHLIB_FILES)
+overwitch_SOURCES = main.c layout.c layout.h overwitch_device.c overwitch_device.h jclient.c jclient.h preferences.c preferences.h message.c message.h $(OVERWITCHLIB_FILES)
 overwitch_service_SOURCES = main-service.c overwitch_device.c overwitch_device.h jclient.c jclient.h preferences.c preferences.h message.c message.h $(OVERWITCHLIB_FILES)
 overwitch_cli_SOURCES = main-cli.c jclient.c jclient.h common.c common.h
 overwitch_play_SOURCES = main-play.c common.c common.h
