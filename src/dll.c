@@ -192,6 +192,7 @@ ow_dll_host_reset (struct ow_dll *dll, double output_samplerate,
   dll->frames = -input_frames / dll->ratio;
 
   dll->target_delay = 2.0 * input_frames + 1.5 * output_frames;
+  dll->err = 0.0;
 }
 
 //Taken from https://github.com/jackaudio/tools/blob/master/zalsa/jackclient.cc.

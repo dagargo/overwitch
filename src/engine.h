@@ -154,9 +154,17 @@
 #define GET_NTH_INPUT_USB_BLK_V2(engine,n) (GET_NTH_USB_BLK_V2((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_len, n))
 #define GET_NTH_OUTPUT_USB_BLK_V2(engine,n) (GET_NTH_USB_BLK_V2((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_len, n))
 
+#define GET_NTH_INPUT_USB_BLK_V3(engine, n) \
+  ((struct ow_engine_usb_blk_v2 *)((engine)->usb.xfr_audio_in_data + ((n) * (engine)->usb.audio_in_blk_len)))
+  
+#define GET_NTH_OUTPUT_USB_BLK_V3(engine, n) \
+  ((struct ow_engine_usb_blk_v2 *)((engine)->usb.xfr_audio_out_data + ((n) * (engine)->usb.audio_out_blk_len)))
+
 #define OB2_PRIVATE_LEN 28
 
 #define OB_NAME_MAX_LEN 32
+
+#define OW_ISO_URBS 3
 
 //This stores "%s @ %03d,%03d" where the string is OW_LABEL_MAX_LEN so more
 //space than OW_LABEL_MAX_LEN is needed.
@@ -171,6 +179,7 @@ struct ow_engine
   unsigned int blocks_per_transfer;
   unsigned int frames_per_block;
   unsigned int frames_per_transfer;
+    int v3_streaming_started;
   pthread_spinlock_t lock;
   //Latencies are measured in frames
   size_t latency_o2h;
@@ -186,6 +195,8 @@ struct ow_engine
   float *o2h_transfer_buf;
   size_t o2h_frame_size;
   size_t h2o_frame_size;
+  uint16_t v3_counter_advance;
+  uint32_t v3_dll_frames_acc;
   struct
   {
     libusb_context *context;
@@ -194,6 +205,7 @@ struct ow_engine
     unsigned int xfr_timeout;
     //Audio
     uint16_t audio_frames_counter;
+
     struct libusb_transfer *xfr_audio_in;
     struct libusb_transfer *xfr_audio_out;
     uint8_t *xfr_audio_in_data;
@@ -202,6 +214,12 @@ struct ow_engine
     size_t audio_out_blk_len;
     int xfr_audio_in_data_len;
     int xfr_audio_out_data_len;
+      /* --- V3 ISO QUEUE --- */
+      struct libusb_transfer *xfr_audio_in_q[OW_ISO_URBS];
+      struct libusb_transfer *xfr_audio_out_q[OW_ISO_URBS];
+      uint8_t *xfr_audio_in_data_q[OW_ISO_URBS];
+      uint8_t *xfr_audio_out_data_q[OW_ISO_URBS];
+      /* -------------------- */
     //Control
     struct libusb_transfer *xfr_control_out;
     struct libusb_transfer *xfr_control_in;

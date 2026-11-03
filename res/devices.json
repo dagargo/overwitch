@@ -1025,5 +1025,52 @@
         "size": 3
       }
     ]
-  }
+  },
+  {
+  "pid": 2858,
+  "name": "Tonverk",
+  "version": "3",
+  "input_tracks": [
+    { "name": "Main L In", "size": 4 },
+    { "name": "Main R In", "size": 4 }
+  ],
+  "output_tracks": [
+    { "name": "Main L", "size": 4 },
+    { "name": "Main R", "size": 4 },
+    { "name": "Track 1 L", "size": 4 },
+    { "name": "Track 1 R", "size": 4 },
+    { "name": "Track 2 L", "size": 4 },
+    { "name": "Track 2 R", "size": 4 },
+    { "name": "Track 3 L", "size": 4 },
+    { "name": "Track 3 R", "size": 4 },
+    { "name": "Track 4 L", "size": 4 },
+    { "name": "Track 4 R", "size": 4 },
+    { "name": "Track 5 L", "size": 4 },
+    { "name": "Track 5 R", "size": 4 },
+    { "name": "Track 6 L", "size": 4 },
+    { "name": "Track 6 R", "size": 4 },
+    { "name": "Track 7 L", "size": 4 },
+    { "name": "Track 7 R", "size": 4 },
+    { "name": "Track 8 L", "size": 4 },
+    { "name": "Track 8 R", "size": 4 },
+    { "name": "Bus 1 L", "size": 4 },
+    { "name": "Bus 1 R", "size": 4 },
+    { "name": "Bus 2 L", "size": 4 },
+    { "name": "Bus 2 R", "size": 4 },
+    { "name": "Bus 3 L", "size": 4 },
+    { "name": "Bus 3 R", "size": 4 },
+    { "name": "Bus 4 L", "size": 4 },
+    { "name": "Bus 4 R", "size": 4 },
+    { "name": "Send 1 L", "size": 4 },
+    { "name": "Send 1 R", "size": 4 },
+    { "name": "Send 2 L", "size": 4 },
+    { "name": "Send 2 R", "size": 4 },
+    { "name": "Send 3 L", "size": 4 },
+    { "name": "Send 3 R", "size": 4 },
+    { "name": "Out C", "size": 4 },
+    { "name": "Out D", "size": 4 },
+    { "name": "Out E", "size": 4 },
+    { "name": "Out F", "size": 4 }
+  ]
+}
 ]
