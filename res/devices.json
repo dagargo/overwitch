@@ -1110,5 +1110,55 @@
         "code": 3
       }
     ]
+  },
+  {
+    "pid": 2892,
+    "name": "Analog Keys",
+    "version": "1",
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 2
+      },
+      {
+        "name": "Main R Input",
+        "size": 2
+      }
+    ],
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 2
+      },
+      {
+        "name": "Main R",
+        "size": 2
+      }
+    ]
+  },
+  {
+    "pid": 2893,
+    "name": "Analog Rytm MKI",
+    "version": "1",
+    "input_tracks": [
+      {
+        "name": "Main L Input",
+        "size": 2
+      },
+      {
+        "name": "Main R Input",
+        "size": 2
+      }
+    ],
+    "output_tracks": [
+      {
+        "name": "Main L",
+        "size": 2
+      },
+      {
+        "name": "Main R",
+        "size": 2
+      }
+    ]
   }
 ]

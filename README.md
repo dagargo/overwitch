@@ -560,7 +560,7 @@ Overwitch checks the definition against the layout stored in the device and, if 
 }
 ```
 
-The distributed devices file includes the Analog Four MKI with its main outputs and inputs with 16 bits. The other devices need a user definition.
+The distributed devices file includes the Analog Four MKI and, untested, the Analog Keys and the Analog Rytm MKI, all of them with their main outputs and inputs with 16 bits.
 
 The layout can also be set from Overwitch. When every track has a `code`, which is the channel the device uses for it, Overwitch stores this layout in the device if it is different, so there is no need to use the Control Panel. Codes must be set for all the tracks or for none. These are the codes known for the Analog Four MKI.
 
