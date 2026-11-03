@@ -295,6 +295,7 @@ test_sizes_v2 ()
 		   BLOCKS * OB2_FRAMES_PER_BLOCK * 2 * OW_BYTES_PER_SAMPLE);
 
   ow_engine_free_mem (&engine);
+  free (engine.device);
 }
 
 static void
@@ -373,6 +374,7 @@ test_usb_blocks_v2_error (const struct ow_device_desc *device_desc,
     }
 
   ow_engine_free_mem (&engine);
+  free (engine.device);
 }
 
 static void
