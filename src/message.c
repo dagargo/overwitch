@@ -156,8 +156,10 @@ message_state_reader_start (const gchar *state, guint32 *devices)
 
   parser = json_parser_new_immutable ();
   json_parser_load_from_data (parser, state, -1, NULL);
-  reader = json_reader_new (json_parser_steal_root (parser));
-  g_object_unref (parser);
+  reader = json_reader_new (json_parser_get_root (parser));
+  //Keep the original tree alive while the reader follows parent links.
+  g_object_set_data_full (G_OBJECT (reader), "state-parser", parser,
+			  g_object_unref);
 
   if (!json_reader_read_member (reader, STATE_DEVICES))
     {

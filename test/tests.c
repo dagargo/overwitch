@@ -348,6 +348,10 @@ test_state_parser ()
 
   free (message);
   free (engine.device);
+
+  CU_ASSERT_PTR_NULL (message_state_reader_start ("{}", &devices));
+  CU_ASSERT_PTR_NULL (message_state_reader_start ("{\"devices\":{}}",
+						 &devices));
 }
 
 int
