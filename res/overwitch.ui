@@ -436,7 +436,7 @@ Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
               <object class="GtkLabel">
                 <property name="halign">end</property>
                 <property name="label" translatable="yes">Overbridge 1 Blocks</property>
-                <property name="tooltip-text" translatable="yes">Overbridge 1 Blocks (1 ms) per USB Transfer</property>
+                <property name="tooltip-text" translatable="yes">Overbridge 1 Blocks (48 frames) per USB Transfer</property>
                 <layout>
                   <property name="column">0</property>
                   <property name="row">0</property>

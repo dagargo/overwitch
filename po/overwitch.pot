@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: overwitch 2.3\n"
 "Report-Msgid-Bugs-To: dagargo@gmail.com\n"
-"POT-Creation-Date: 2026-09-10 16:21+0200\n"
+"POT-Creation-Date: 2026-11-16 21:13+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,48 +17,97 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/main.c:169
+#: src/main.c:175
 msgid "Stop All Devices"
 msgstr ""
 
-#: src/main.c:170
+#: src/main.c:176
 msgid "Start All Devices"
 msgstr ""
 
-#: src/main.c:180
+#: src/main.c:187
 #, c-format
 msgid "JACK at %.5g kHz, %u period"
 msgstr ""
 
-#: src/main.c:447
+#: src/main.c:494
 msgid "Acknowledgements"
 msgstr ""
 
-#: src/message.c:134
-msgid "Error"
+#: src/layout.c:208
+msgid "At least one output and one input are needed"
 msgstr ""
 
-#: src/message.c:136
-msgid "Stopped"
+#: src/layout.c:214
+#, c-format
+msgid "At most %d tracks per direction"
 msgstr ""
 
-#: src/message.c:138
-msgid "Ready"
+#: src/layout.c:220
+#, c-format
+msgid "%d of %d tracks"
 msgstr ""
 
-#: src/message.c:140
-msgid "Booting"
+#: src/layout.c:344
+msgid "The track layout could not be saved"
+msgstr ""
+
+#: src/layout.c:558
+msgid "The track layout can not be edited"
+msgstr ""
+
+#: src/layout.c:561
+msgid "The device definition does not list the available tracks."
+msgstr ""
+
+#: src/layout.c:574
+#, c-format
+msgid "%s Track Layout"
+msgstr ""
+
+#: src/layout.c:590
+#, c-format
+msgid "From %s"
+msgstr ""
+
+#: src/layout.c:593
+#, c-format
+msgid "To %s"
+msgstr ""
+
+#: src/layout.c:604 res/overwitch.ui:560
+msgid "_Cancel"
+msgstr ""
+
+#: src/layout.c:605 res/overwitch.ui:568
+msgid "_Save"
 msgstr ""
 
 #: src/message.c:142
-msgid "Tuning"
+msgid "Error"
 msgstr ""
 
 #: src/message.c:144
-msgid "Running"
+msgid "Stopped"
 msgstr ""
 
 #: src/message.c:146
+msgid "Ready"
+msgstr ""
+
+#: src/message.c:148
+msgid "Booting"
+msgstr ""
+
+#: src/message.c:150
+msgid "Tuning"
+msgstr ""
+
+#: src/message.c:152
+msgid "Running"
+msgstr ""
+
+#: src/message.c:154
 msgid "Retuning"
 msgstr ""
 
@@ -66,7 +115,7 @@ msgstr ""
 msgid "Show All Columns"
 msgstr ""
 
-#: res/overwitch.ui:16 res/overwitch.ui:519
+#: res/overwitch.ui:16 res/overwitch.ui:580
 msgid "Preferences"
 msgstr ""
 
@@ -78,110 +127,114 @@ msgstr ""
 msgid "Exit"
 msgstr ""
 
-#: res/overwitch.ui:49
+#: res/overwitch.ui:56
 msgid "Overbridge 2 device client for JACK"
 msgstr ""
 
-#: res/overwitch.ui:57
+#: res/overwitch.ui:64
 msgid "translator-credits"
 msgstr ""
 
-#: res/overwitch.ui:106
+#: res/overwitch.ui:113
 msgid "Device"
 msgstr ""
 
-#: res/overwitch.ui:131
+#: res/overwitch.ui:138
 msgid "Name"
 msgstr ""
 
-#: res/overwitch.ui:157
+#: res/overwitch.ui:164
 msgid "Status"
 msgstr ""
 
-#: res/overwitch.ui:183
+#: res/overwitch.ui:190
 msgid "Bus"
 msgstr ""
 
-#: res/overwitch.ui:209
+#: res/overwitch.ui:216
 msgid "Address"
 msgstr ""
 
-#: res/overwitch.ui:232
+#: res/overwitch.ui:241
 msgid "Target Delay (ms)"
 msgstr ""
 
-#: res/overwitch.ui:258
+#: res/overwitch.ui:267
 msgid "Overbridge to JACK latency (ms)"
 msgstr ""
 
-#: res/overwitch.ui:284
+#: res/overwitch.ui:293
 msgid "JACK to Overbridge latency (ms)"
 msgstr ""
 
-#: res/overwitch.ui:310
+#: res/overwitch.ui:319
 msgid "Overbridge to JACK ratio"
 msgstr ""
 
-#: res/overwitch.ui:336
+#: res/overwitch.ui:345
 msgid "JACK to Overbridge ratio"
 msgstr ""
 
-#: res/overwitch.ui:401
-msgid "Overbridge Blocks"
+#: res/overwitch.ui:372
+msgid "Layout"
 msgstr ""
 
-#: res/overwitch.ui:402
-msgid "Overbridge Blocks (7 frames) per USB Transfer"
+#: res/overwitch.ui:438
+msgid "Overbridge 1 Blocks"
 msgstr ""
 
-#: res/overwitch.ui:425
+#: res/overwitch.ui:439
+msgid "Overbridge 1 Blocks (48 frames) per USB Transfer"
+msgstr ""
+
+#: res/overwitch.ui:462
+msgid "Overbridge 2 Blocks"
+msgstr ""
+
+#: res/overwitch.ui:463
+msgid "Overbridge 2 Blocks (7 frames) per USB Transfer"
+msgstr ""
+
+#: res/overwitch.ui:486
 msgid "Transfer Timeout"
 msgstr ""
 
-#: res/overwitch.ui:426
+#: res/overwitch.ui:487
 msgid "USB Transfer Timeout (ms)"
 msgstr ""
 
-#: res/overwitch.ui:449
+#: res/overwitch.ui:510
 msgid "Resampler Quality"
 msgstr ""
 
-#: res/overwitch.ui:450
+#: res/overwitch.ui:511
 msgid "Resampler quality to balance out the CPU usage"
 msgstr ""
 
-#: res/overwitch.ui:471
+#: res/overwitch.ui:532
 msgid "PipeWire Properties"
 msgstr ""
 
-#: res/overwitch.ui:472
+#: res/overwitch.ui:533
 msgid "Value of the \"PIPEWIRE_PROPS\" environment variable"
 msgstr ""
 
-#: res/overwitch.ui:499
-msgid "_Cancel"
-msgstr ""
-
-#: res/overwitch.ui:507
-msgid "_Save"
-msgstr ""
-
-#: res/overwitch.ui:524
+#: res/overwitch.ui:585
 msgid "Highest"
 msgstr ""
 
-#: res/overwitch.ui:525
+#: res/overwitch.ui:586
 msgid "High"
 msgstr ""
 
-#: res/overwitch.ui:526
+#: res/overwitch.ui:587
 msgid "Medium"
 msgstr ""
 
-#: res/overwitch.ui:527
+#: res/overwitch.ui:588
 msgid "Low"
 msgstr ""
 
-#: res/overwitch.ui:528
+#: res/overwitch.ui:589
 msgid "Lowest"
 msgstr ""
