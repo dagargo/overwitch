@@ -458,12 +458,13 @@ test_sizes_v1 ()
 
   for (int i = 0; i < OB1_TRANSFERS; i++)
     {
+      guint len;
       CU_ASSERT_EQUAL (engine.usb.xfr_audio_in_v1[i]->num_iso_packets,
 		       OW1_DEFAULT_BLOCKS);
-      CU_ASSERT_EQUAL (engine.usb.xfr_audio_in_v1[i]->iso_packet_desc[0].
-		       length, 594);
-      CU_ASSERT_EQUAL (engine.usb.xfr_audio_out_v1[i]->iso_packet_desc[0].
-		       length, 398);
+      len = engine.usb.xfr_audio_in_v1[i]->iso_packet_desc[0].length;
+      CU_ASSERT_EQUAL (len, 594);
+      len = engine.usb.xfr_audio_out_v1[i]->iso_packet_desc[0].length;
+      CU_ASSERT_EQUAL (len, 398);
     }
 
   //The blocks of the queued transfers and one more transfer.
