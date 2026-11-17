@@ -1,5 +1,5 @@
 resdir = $(datadir)/overwitch
-res_DATA =  devices.json THANKS
+res_DATA = devices.json AUTHORS THANKS
 
 if ! CLI_ONLY
 res_DATA += overwitch.ui

@@ -51,8 +51,6 @@
     <property name="value">10</property>
   </object>
   <object class="GtkAboutDialog" id="about_dialog">
-    <property name="authors">David García Goñi&lt;dagargo@gmail.com&gt;
-Stefan Rehm &lt;droelfdroelf@gmail.com&gt;</property>
     <property name="comments" translatable="yes">Overbridge 2 device client for JACK</property>
     <property name="copyright">Copyright © 2024 David García Goñi</property>
     <property name="hide-on-close">1</property>

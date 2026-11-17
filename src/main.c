@@ -450,10 +450,57 @@ edit_device_layout (GtkButton *button, GtkColumnViewCell *cell)
 		      layout_saved);
 }
 
+static gchar **
+get_file_as_lines (const gchar *file)
+{
+  gchar *content;
+
+  if (g_file_get_contents (file, &content, NULL, NULL))
+    {
+      gchar **lines;
+      gchar *last_new_line = strrchr (content, '\n');
+
+      if (last_new_line != NULL)
+	{
+	  *last_new_line = 0;
+	}
+      lines = g_strsplit (content, "\n", 0);
+      g_free (content);
+
+      return lines;
+    }
+  else
+    {
+      return NULL;
+    }
+}
+
+static void
+about_set_authors (const gchar *file)
+{
+  gchar **lines = get_file_as_lines (file);
+  if (lines)
+    {
+      gtk_about_dialog_set_authors (about_dialog, (const gchar **) lines);
+      g_strfreev (lines);
+    }
+}
+
+static void
+about_add_credit_section (const gchar *section_name, const gchar *file)
+{
+  gchar **lines = get_file_as_lines (file);
+  if (lines)
+    {
+      gtk_about_dialog_add_credit_section (about_dialog, section_name,
+					   (const gchar **) lines);
+      g_strfreev (lines);
+    }
+}
+
 static void
 build_ui ()
 {
-  gchar *thanks;
   GtkBuilder *builder;
   GtkBuilderScope *scope = gtk_builder_cscope_new ();
   gtk_builder_cscope_add_callback (scope, device_name_changed);
@@ -486,17 +533,8 @@ build_ui ()
     GTK_ABOUT_DIALOG (gtk_builder_get_object (builder, "about_dialog"));
   gtk_about_dialog_set_version (about_dialog, PACKAGE_VERSION);
 
-  if (g_file_get_contents (DATADIR "/THANKS", &thanks, NULL, NULL))
-    {
-      gchar *last_new_line = strrchr (thanks, '\n');
-      *last_new_line = 0;
-      gchar **lines = g_strsplit (thanks, "\n", 0);
-      gtk_about_dialog_add_credit_section (about_dialog,
-					   _("Acknowledgements"),
-					   (const gchar **) lines);
-      g_free (thanks);
-      g_strfreev (lines);
-    }
+  about_set_authors (DATADIR "/AUTHORS");
+  about_add_credit_section (_("Acknowledgements"), DATADIR "/THANKS");
 
   blocks_ob1_spin_button =
     GTK_SPIN_BUTTON (gtk_builder_get_object
