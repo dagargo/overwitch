@@ -121,8 +121,7 @@ get_ow_blocks_per_transfer_argument (const char *optarg)
   //The valid values depend on the device so 0 is used for the default value.
   errno = 0;
   blocks_per_transfer = (int) strtol (optarg, &endstr, 10);
-  if (errno || endstr == optarg || *endstr != '\0' ||
-      blocks_per_transfer < 1)
+  if (errno || endstr == optarg || *endstr != '\0' || blocks_per_transfer < 1)
     {
       blocks_per_transfer = 0;
       fprintf (stderr,

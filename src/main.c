@@ -443,7 +443,8 @@ layout_saved ()
 static void
 edit_device_layout (GtkButton *button, GtkColumnViewCell *cell)
 {
-  OverwitchDevice *d = OVERWITCH_DEVICE (gtk_column_view_cell_get_item (cell));
+  OverwitchDevice *d =
+    OVERWITCH_DEVICE (gtk_column_view_cell_get_item (cell));
 
   layout_editor_open (GTK_WINDOW (main_window), d->pid, d->device,
 		      layout_saved);

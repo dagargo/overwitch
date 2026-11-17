@@ -38,6 +38,7 @@
 
 //Output tracks go from the device to the host and input tracks the other way.
 static const gchar *TRACKS_MEMBERS[] = { "output_tracks", "input_tracks" };
+
 static const gchar *AVAILABLE_TRACKS_MEMBERS[] = {
   "available_output_tracks", "available_input_tracks"
 };
@@ -406,7 +407,8 @@ create_direction (struct layout_editor *editor, int direction,
   GtkWidget *box, *label;
   JsonArray *available =
     get_definition_array (editor, AVAILABLE_TRACKS_MEMBERS[direction]);
-  JsonArray *tracks = get_definition_array (editor, TRACKS_MEMBERS[direction]);
+  JsonArray *tracks =
+    get_definition_array (editor, TRACKS_MEMBERS[direction]);
   guint selected_depth = 0;
 
   box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);

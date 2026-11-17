@@ -1343,8 +1343,7 @@ stop_stream_v1 (struct ow_engine *engine)
 
   for (int i = 0; i < 10 && engine->usb.xfrs_in_flight > 0; i++)
     {
-      libusb_handle_events_timeout_completed (engine->usb.context, &tv,
-					      NULL);
+      libusb_handle_events_timeout_completed (engine->usb.context, &tv, NULL);
     }
 
   if (engine->usb.xfrs_in_flight > 0)

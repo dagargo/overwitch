@@ -460,10 +460,10 @@ test_sizes_v1 ()
     {
       CU_ASSERT_EQUAL (engine.usb.xfr_audio_in_v1[i]->num_iso_packets,
 		       OW1_DEFAULT_BLOCKS);
-      CU_ASSERT_EQUAL (engine.usb.xfr_audio_in_v1[i]->
-		       iso_packet_desc[0].length, 594);
-      CU_ASSERT_EQUAL (engine.usb.xfr_audio_out_v1[i]->
-		       iso_packet_desc[0].length, 398);
+      CU_ASSERT_EQUAL (engine.usb.xfr_audio_in_v1[i]->iso_packet_desc[0].
+		       length, 594);
+      CU_ASSERT_EQUAL (engine.usb.xfr_audio_out_v1[i]->iso_packet_desc[0].
+		       length, 398);
     }
 
   //The blocks of the queued transfers and one more transfer.
@@ -598,8 +598,10 @@ static void
 test_check_layout_v1 ()
 {
   struct ow_engine engine;
-  const uint8_t o2h_map[] = { 0xa0, 0xa1, 0x80, 0x81, 0xff, 0xff, 0xff, 0xff };
-  const uint8_t h2o_map[] = { 0x20, 0x21, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+  const uint8_t o2h_map[] =
+    { 0xa0, 0xa1, 0x80, 0x81, 0xff, 0xff, 0xff, 0xff };
+  const uint8_t h2o_map[] =
+    { 0x20, 0x21, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
   printf ("\n");
 
@@ -629,8 +631,10 @@ test_get_desc_layout_v1 ()
   uint8_t depth[2];
   const uint8_t o2h_codes[] = { 0xa0, 0xa1, 0x80, 0x81 };
   const uint8_t h2o_codes[] = { 0x20, 0x21 };
-  const uint8_t o2h_map[] = { 0xa0, 0xa1, 0x80, 0x81, 0xff, 0xff, 0xff, 0xff };
-  const uint8_t h2o_map[] = { 0x20, 0x21, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+  const uint8_t o2h_map[] =
+    { 0xa0, 0xa1, 0x80, 0x81, 0xff, 0xff, 0xff, 0xff };
+  const uint8_t h2o_map[] =
+    { 0x20, 0x21, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
   printf ("\n");
 
@@ -669,8 +673,7 @@ test_get_desc_layout_v1 ()
       desc.output_tracks[i].size = 3;
       desc.output_tracks[i].code = 0x80;
     }
-  CU_ASSERT_EQUAL (ow_engine_get_desc_layout_v1 (&desc, map, depth),
-		   -EINVAL);
+  CU_ASSERT_EQUAL (ow_engine_get_desc_layout_v1 (&desc, map, depth), -EINVAL);
 }
 
 static void

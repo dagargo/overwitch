@@ -182,7 +182,8 @@ ow_read_track_code (JsonReader *reader, int *code)
     }
 
   //No reader errors must be set here as these would prevent the member end.
-  node = json_reader_is_value (reader) ? json_reader_get_value (reader) : NULL;
+  node =
+    json_reader_is_value (reader) ? json_reader_get_value (reader) : NULL;
   if (!node || json_node_get_value_type (node) != G_TYPE_INT64)
     {
       json_reader_end_member (reader);

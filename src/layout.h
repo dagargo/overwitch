@@ -27,4 +27,5 @@ typedef void (*layout_editor_saved_cb_t) (void);
 //Opens the track layout editor of an Overbridge 1 device. The layout is saved
 //in its device definition and the callback is called afterwards.
 void layout_editor_open (GtkWindow * parent, guint16 pid,
-			 const gchar * device, layout_editor_saved_cb_t saved_cb);
+			 const gchar * device,
+			 layout_editor_saved_cb_t saved_cb);
