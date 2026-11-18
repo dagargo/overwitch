@@ -150,6 +150,7 @@ ow_engine_read_usb_input_blocks_v2 (struct ow_engine *engine)
 	    {
 	      int size = engine->device->desc.output_tracks[k].size;
 
+	      hv = 0;
 	      memcpy (&hv, s, size);
 
 	      if (engine->device->desc.version == OW_DEVICE_VERSION_2_1

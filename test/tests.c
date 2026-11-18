@@ -389,6 +389,74 @@ test_usb_blocks_v2_1 ()
   test_usb_blocks_v2_error (&TESTDEV_DESC_V2_1, 1e-6);
 }
 
+//Every 3-byte sample must be decoded only from its own 3 bytes.
+//A loud sample is followed by a quiet one so that a byte left over
+//from the previous conversion would change the quiet one.
+static void
+test_usb_blocks_v2_1_3_byte_samples ()
+{
+  struct ow_engine engine;
+  uint8_t *s;
+  float *f;
+  static const uint8_t samples[TRACKS][4] = {
+    {0x00, 0x00, 0x00, 0x00},
+    {0x00, 0x00, 0x00, 0x00},
+    {0x7f, 0x00, 0x00},
+    {0x00, 0x00, 0x01},
+    {0x80, 0x00, 0x00},
+    {0x00, 0x00, 0x02}
+  };
+  static const int32_t expected[TRACKS] = {
+    0, 0, 0x7f000000, 0x00000100, (int32_t) 0x80000000, 0x00000200
+  };
+
+  printf ("\n");
+
+  engine.device = malloc (sizeof (struct ow_device));
+  copy_device_desc (&engine.device->desc, &TESTDEV_DESC_V2_1);
+  engine.usb.audio_in_blk_len = 0;
+  engine.usb.audio_out_blk_len = 0;
+  ow_engine_init_mem_v2 (&engine, BLOCKS);
+
+  for (int i = 0; i < engine.blocks_per_transfer; i++)
+    {
+      s = (uint8_t *) GET_NTH_INPUT_USB_BLK_V2 (&engine, i)->data;
+      for (int j = 0; j < engine.frames_per_block; j++)
+	{
+	  for (int k = 0; k < engine.device->desc.outputs; k++)
+	    {
+	      int size = engine.device->desc.output_tracks[k].size;
+	      memcpy (s, samples[k], size);
+	      s += size;
+	    }
+	}
+    }
+
+  ow_engine_read_usb_input_blocks_v2 (&engine);
+
+  f = engine.o2h_transfer_buf;
+  for (int i = 0; i < engine.blocks_per_transfer; i++)
+    {
+      for (int j = 0; j < engine.frames_per_block; j++)
+	{
+	  for (int k = 0; k < engine.device->desc.outputs; k++)
+	    {
+	      float e = expected[k] / (float) INT32_MAX;
+	      if (*f != e)
+		{
+		  printf ("block %d, frame %d, track %d: %.12g != %.12g\n",
+			  i, j, k, *f, e);
+		}
+	      CU_ASSERT_EQUAL (*f, e);
+	      f++;
+	    }
+	}
+    }
+
+  ow_engine_free_mem (&engine);
+  free (engine.device);
+}
+
 static void
 init_engine_v1 (struct ow_engine *engine,
 		const struct ow_device_desc *device_desc,
@@ -1083,6 +1151,12 @@ main (int argc, char *argv[])
     }
 
   if (!CU_add_test (suite, "test_usb_blocks_v2.1", test_usb_blocks_v2_1))
+    {
+      goto cleanup;
+    }
+
+  if (!CU_add_test (suite, "test_usb_blocks_v2.1_3_byte_samples",
+		    test_usb_blocks_v2_1_3_byte_samples))
     {
       goto cleanup;
     }
