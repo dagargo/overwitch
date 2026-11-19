@@ -522,7 +522,9 @@ ow_set_thread_rt_priority (pthread_t thread, int p)
   int err = pthread_setschedparam (thread, SCHED_FIFO, &default_rt_param);
   if (err != 0)
     {
-      debug_print (1, "Notice: Running without hard RT priority (sched_setschedparam: %s). Continuing under standard scheduling...", strerror(err));
+      debug_print (1,
+		   "Notice: Running without hard RT priority (sched_setschedparam: %s). Continuing under standard scheduling...",
+		   strerror (err));
     }
 }
 

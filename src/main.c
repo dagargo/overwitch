@@ -134,7 +134,7 @@ load_preferences ()
 
   a = g_action_map_lookup_action (G_ACTION_MAP (app), "show_all_columns");
   v = g_variant_new_boolean (prefs.show_all_columns);
-  g_simple_action_set_state (G_SIMPLE_ACTION(a), v);
+  g_simple_action_set_state (G_SIMPLE_ACTION (a), v);
 
   gtk_spin_button_set_value (blocks_spin_button, prefs.blocks);
   gtk_spin_button_set_value (timeout_spin_button, prefs.timeout);

@@ -156,7 +156,7 @@
 
 #define GET_NTH_INPUT_USB_BLK_V3(engine, n) \
   ((struct ow_engine_usb_blk_v2 *)((engine)->usb.xfr_audio_in_data + ((n) * (engine)->usb.audio_in_blk_len)))
-  
+
 #define GET_NTH_OUTPUT_USB_BLK_V3(engine, n) \
   ((struct ow_engine_usb_blk_v2 *)((engine)->usb.xfr_audio_out_data + ((n) * (engine)->usb.audio_out_blk_len)))
 
@@ -179,7 +179,7 @@ struct ow_engine
   unsigned int blocks_per_transfer;
   unsigned int frames_per_block;
   unsigned int frames_per_transfer;
-    int v3_streaming_started;
+  int v3_streaming_started;
   pthread_spinlock_t lock;
   //Latencies are measured in frames
   size_t latency_o2h;
@@ -214,12 +214,12 @@ struct ow_engine
     size_t audio_out_blk_len;
     int xfr_audio_in_data_len;
     int xfr_audio_out_data_len;
-      /* --- V3 ISO QUEUE --- */
-      struct libusb_transfer *xfr_audio_in_q[OW_ISO_URBS];
-      struct libusb_transfer *xfr_audio_out_q[OW_ISO_URBS];
-      uint8_t *xfr_audio_in_data_q[OW_ISO_URBS];
-      uint8_t *xfr_audio_out_data_q[OW_ISO_URBS];
-      /* -------------------- */
+    /* --- V3 ISO QUEUE --- */
+    struct libusb_transfer *xfr_audio_in_q[OW_ISO_URBS];
+    struct libusb_transfer *xfr_audio_out_q[OW_ISO_URBS];
+    uint8_t *xfr_audio_in_data_q[OW_ISO_URBS];
+    uint8_t *xfr_audio_out_data_q[OW_ISO_URBS];
+    /* -------------------- */
     //Control
     struct libusb_transfer *xfr_control_out;
     struct libusb_transfer *xfr_control_in;
