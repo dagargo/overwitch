@@ -259,7 +259,7 @@
 
 #define OW_ENGINE_MAX_INTERFACES 32
 
-#define OW_ISO_URBS 3
+#define OB3_TRANSFERS 3
 
 //This stores "%s @ %03d,%03d" where the string is OW_LABEL_MAX_LEN so more
 //space than OW_LABEL_MAX_LEN is needed.
@@ -359,10 +359,10 @@ struct ow_engine
     int xfr_audio_out_data_len;
 
     // Audio Overbridge 3
-    struct libusb_transfer *xfr_audio_in_q[OW_ISO_URBS];
-    struct libusb_transfer *xfr_audio_out_q[OW_ISO_URBS];
-    uint8_t *xfr_audio_in_data_q[OW_ISO_URBS];
-    uint8_t *xfr_audio_out_data_q[OW_ISO_URBS];
+    struct libusb_transfer *xfr_audio_in_q[OB3_TRANSFERS];
+    struct libusb_transfer *xfr_audio_out_q[OB3_TRANSFERS];
+    uint8_t *xfr_audio_in_data_q[OB3_TRANSFERS];
+    uint8_t *xfr_audio_out_data_q[OB3_TRANSFERS];
 
     // Control common
     struct libusb_transfer *xfr_control_out;

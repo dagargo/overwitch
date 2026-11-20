@@ -235,7 +235,7 @@ prepare_iso_transfers (struct ow_engine *engine)
   const unsigned int in_packets = engine->blocks_per_transfer;
   const unsigned int out_packets = ow_engine_v3_out_packets (engine);
 
-  for (int i = 0; i < OW_ISO_URBS; i++)
+  for (int i = 0; i < OB3_TRANSFERS; i++)
     {
       engine->usb.xfr_audio_in_q[i] = libusb_alloc_transfer (in_packets);
       if (!engine->usb.xfr_audio_in_q[i])
@@ -1632,7 +1632,7 @@ ow_engine_init_usb (struct ow_engine *engine, struct ow_device *device,
   engine->usb.xfr_audio_out_data = NULL;
 
   // V3
-  for (int i = 0; i < OW_ISO_URBS; i++)
+  for (int i = 0; i < OB3_TRANSFERS; i++)
     {
       engine->usb.xfr_audio_in_q[i] = NULL;
       engine->usb.xfr_audio_out_q[i] = NULL;
@@ -1860,7 +1860,7 @@ usb_shutdown_v3 (struct ow_engine *engine)
   libusb_release_interface (engine->usb.device_handle,
 			    OB3_USB_AUDIO_IN_INTERFACE);
 
-  for (int i = 0; i < OW_ISO_URBS; i++)
+  for (int i = 0; i < OB3_TRANSFERS; i++)
     {
       if (engine->usb.xfr_audio_in_q[i])
 	libusb_free_transfer (engine->usb.xfr_audio_in_q[i]);
@@ -2120,7 +2120,7 @@ ow_engine_init_mem_v3 (struct ow_engine *engine,
   engine->usb.xfr_audio_out_data_len =
     engine->usb.audio_out_blk_len * ow_engine_v3_out_packets (engine);
 
-  for (int i = 0; i < OW_ISO_URBS; i++)
+  for (int i = 0; i < OB3_TRANSFERS; i++)
     {
       engine->usb.xfr_audio_in_data_q[i] =
 	malloc (engine->usb.xfr_audio_in_data_len);
@@ -2791,7 +2791,7 @@ prepare_cycle_in_v3 (struct ow_engine *engine)
 {
   const int num_packets = engine->blocks_per_transfer;
 
-  for (int i = 0; i < OW_ISO_URBS; i++)
+  for (int i = 0; i < OB3_TRANSFERS; i++)
     {
       libusb_fill_iso_transfer (engine->usb.xfr_audio_in_q[i],
 				engine->usb.device_handle,
@@ -2818,7 +2818,7 @@ prepare_cycle_out_v3 (struct ow_engine *engine)
 {
   const int num_packets = ow_engine_v3_out_packets (engine);
 
-  for (int i = 0; i < OW_ISO_URBS; i++)
+  for (int i = 0; i < OB3_TRANSFERS; i++)
     {
       libusb_fill_iso_transfer (engine->usb.xfr_audio_out_q[i],
 				engine->usb.device_handle,
@@ -3112,7 +3112,7 @@ ow_engine_free_mem (struct ow_engine *engine)
 
   if (engine->device && engine->device->desc.version == OW_DEVICE_VERSION_3)
     {
-      for (int i = 0; i < OW_ISO_URBS; i++)
+      for (int i = 0; i < OB3_TRANSFERS; i++)
 	{
 	  free (engine->usb.xfr_audio_in_data_q[i]);
 	  free (engine->usb.xfr_audio_out_data_q[i]);
