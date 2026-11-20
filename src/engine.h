@@ -234,6 +234,12 @@
 #define GET_NTH_INPUT_USB_BLK_V2(engine,n) (GET_NTH_USB_BLK_V2((engine)->usb.xfr_audio_in_data, (engine)->usb.audio_in_blk_len, n))
 #define GET_NTH_OUTPUT_USB_BLK_V2(engine,n) (GET_NTH_USB_BLK_V2((engine)->usb.xfr_audio_out_data, (engine)->usb.audio_out_blk_len, n))
 
+#define GET_NTH_INPUT_USB_BLK_V3(engine, n) \
+  ((struct ow_engine_usb_blk_v2 *)((engine)->usb.xfr_audio_in_data + ((n) * (engine)->usb.audio_in_blk_len)))
+
+#define GET_NTH_OUTPUT_USB_BLK_V3(engine, n) \
+  ((struct ow_engine_usb_blk_v2 *)((engine)->usb.xfr_audio_out_data + ((n) * (engine)->usb.audio_out_blk_len)))
+
 #define OB2_PRIVATE_LEN 28
 
 #define OB1_TRANSFERS 3
@@ -253,21 +259,28 @@
 
 #define OW_ENGINE_MAX_INTERFACES 32
 
+#define OB3_TRANSFERS 3
+
 //This stores "%s @ %03d,%03d" where the string is OW_LABEL_MAX_LEN so more
 //space than OW_LABEL_MAX_LEN is needed.
 #define OW_ENGINE_NAME_MAX_LEN (OW_LABEL_MAX_LEN * 2)
 
 struct ow_engine;
 
-//Version specific steps of the audio thread
+// Version specific steps of the audio thread
 struct ow_engine_ops
 {
-  //Called before notifying readiness to the host side. Optional.
+  // Called at engine init. This sets the USB and all the required memory. Mandatory.
+  ow_err_t (*init) (struct ow_engine * engine, struct ow_device * device,
+		    unsigned int blocks_per_transfer);
+  // Called before notifying readiness to the host side. Optional.
   void (*prepare) (struct ow_engine *);
-  //Called when booting, right before handling the USB events. Optional.
+  // Called when booting, right before handling the USB events. Optional.
   int (*start) (struct ow_engine *);
-  //Called when the engine has stopped.
+  // Called when the engine has stopped. Mandatory.
   void (*stop) (struct ow_engine *);
+  // Called at engine shutdown. This stops the USB and frees all the reserved memory during init(). Mandatory.
+  void (*shutdown) (struct ow_engine *);
 };
 
 struct ow_engine
@@ -280,6 +293,7 @@ struct ow_engine
   unsigned int blocks_per_transfer;
   unsigned int frames_per_block;
   unsigned int frames_per_transfer;
+  int v3_streaming_started;
   pthread_spinlock_t lock;
   //Latencies are measured in frames
   size_t latency_o2h;
@@ -304,19 +318,13 @@ struct ow_engine
     libusb_device *device;
     libusb_device_handle *device_handle;
     unsigned int xfr_timeout;
-    //Audio
+
+    //Audio common
     int audio_in_interface;
     int audio_out_interface;
     uint16_t audio_frames_counter;
-    struct libusb_transfer *xfr_audio_in;
-    struct libusb_transfer *xfr_audio_out;
-    uint8_t *xfr_audio_in_data;
-    uint8_t *xfr_audio_out_data;
-    size_t audio_in_blk_len;
-    size_t audio_out_blk_len;
-    int xfr_audio_in_data_len;
-    int xfr_audio_out_data_len;
-    //Overbridge 1 audio
+
+    // Audio Overbridge 1
     int audio_in_alt_setting;
     int audio_out_alt_setting;
     struct libusb_transfer *xfr_audio_in_v1[OB1_TRANSFERS];
@@ -339,7 +347,24 @@ struct ow_engine
     int detached_count;
     uint8_t layout_map[2][OB1_MAP_LEN];
     uint8_t layout_depth[2];
-    //Control
+
+    // Audio Overbridge 2
+    struct libusb_transfer *xfr_audio_in;
+    struct libusb_transfer *xfr_audio_out;
+    uint8_t *xfr_audio_in_data;
+    uint8_t *xfr_audio_out_data;
+    size_t audio_in_blk_len;
+    size_t audio_out_blk_len;
+    int xfr_audio_in_data_len;
+    int xfr_audio_out_data_len;
+
+    // Audio Overbridge 3
+    struct libusb_transfer *xfr_audio_in_q[OB3_TRANSFERS];
+    struct libusb_transfer *xfr_audio_out_q[OB3_TRANSFERS];
+    uint8_t *xfr_audio_in_data_q[OB3_TRANSFERS];
+    uint8_t *xfr_audio_out_data_q[OB3_TRANSFERS];
+
+    // Control common
     struct libusb_transfer *xfr_control_out;
     struct libusb_transfer *xfr_control_in;
     uint8_t *xfr_control_out_data;
