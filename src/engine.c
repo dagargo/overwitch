@@ -1616,30 +1616,6 @@ ow_engine_init_usb (struct ow_engine *engine, struct ow_device *device,
   engine->usb.xfr_timeout = xfr_timeout;
   debug_print (1, "USB transfer timeout: %u", engine->usb.xfr_timeout);
 
-  // V1
-  for (int i = 0; i < OB1_TRANSFERS; i++)
-    {
-      engine->usb.xfr_audio_in_v1[i] = NULL;
-      engine->usb.xfr_audio_out_v1[i] = NULL;
-    }
-  engine->usb.xfrs_in_flight = 0;
-  engine->usb.detached_count = 0;
-
-  // V2
-  engine->usb.xfr_audio_in = NULL;
-  engine->usb.xfr_audio_out = NULL;
-  engine->usb.xfr_audio_in_data = NULL;
-  engine->usb.xfr_audio_out_data = NULL;
-
-  // V3
-  for (int i = 0; i < OB3_TRANSFERS; i++)
-    {
-      engine->usb.xfr_audio_in_q[i] = NULL;
-      engine->usb.xfr_audio_out_q[i] = NULL;
-      engine->usb.xfr_audio_in_data_q[i] = NULL;
-      engine->usb.xfr_audio_out_data_q[i] = NULL;
-    }
-
   return ops->init (engine, device, blocks_per_transfer);
 }
 
@@ -2194,6 +2170,11 @@ usb_init_v2 (struct ow_engine *engine, struct ow_device *device,
   int err;
   ow_err_t ret = OW_OK;
 
+  engine->usb.xfr_audio_in = NULL;
+  engine->usb.xfr_audio_out = NULL;
+  engine->usb.xfr_audio_in_data = NULL;
+  engine->usb.xfr_audio_out_data = NULL;
+
   libusb_detach_kernel_driver (engine->usb.device_handle,
 			       OB2_USB_CONTROL_INTERFACE);
   libusb_detach_kernel_driver (engine->usb.device_handle,
@@ -2312,6 +2293,14 @@ usb_init_v1 (struct ow_engine *engine, struct ow_device *device,
   uint8_t depth[2];
   uint8_t protocol[OB1_USB_PROTOCOL_LEN];
   struct libusb_config_descriptor *config = NULL;
+
+  for (int i = 0; i < OB1_TRANSFERS; i++)
+    {
+      engine->usb.xfr_audio_in_v1[i] = NULL;
+      engine->usb.xfr_audio_out_v1[i] = NULL;
+    }
+  engine->usb.xfrs_in_flight = 0;
+  engine->usb.detached_count = 0;
 
   err = libusb_get_active_config_descriptor (engine->usb.device, &config);
   if (LIBUSB_SUCCESS != err)
@@ -2502,6 +2491,14 @@ usb_init_v3 (struct ow_engine *engine, struct ow_device *device,
   int err;
   int mem_initialized = 0;
   ow_err_t ret = OW_OK;
+
+  for (int i = 0; i < OB3_TRANSFERS; i++)
+    {
+      engine->usb.xfr_audio_in_q[i] = NULL;
+      engine->usb.xfr_audio_out_q[i] = NULL;
+      engine->usb.xfr_audio_in_data_q[i] = NULL;
+      engine->usb.xfr_audio_out_data_q[i] = NULL;
+    }
 
 /* Tonverk is a composite USB device.  On Linux, other interfaces may
    * already be bound to kernel drivers (for example storage/MIDI).
